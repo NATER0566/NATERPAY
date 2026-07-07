@@ -320,9 +320,8 @@ async function start() {
     await connectDatabase();
     await registerRoutes();
     
-    // Create HTTP server for Socket.io
-    const server = http.createServer(fastify.server);
-    const io = setupSocketIO(server);
+    // Pass Fastify's native server to Socket.io
+    const io = setupSocketIO(fastify.server);
     
     // Make io accessible globally
     fastify.io = io;
@@ -330,13 +329,9 @@ async function start() {
     // Start cron jobs
     startCronJobs();
     
-    // Start listening
+    // Start listening on the port just ONCE
     await fastify.listen({ port: config.port, host: config.host });
-    
-    // Override the server with our custom one
-    server.listen(config.port, config.host, () => {
-      console.log(`Server running on port ${config.port}`);
-    });
+    console.log(`Server running on port ${config.port}`);
     
   } catch (error) {
     fastify.log.error(error);
