@@ -10,6 +10,7 @@ const {
   validatePassword,
   sanitizeUser
 } = require('../utils/auth');
+const { sendOTPEmail, sendPasswordResetEmail } = require('../utils/email');
 const config = require('../config');
 
 /**
@@ -100,8 +101,8 @@ async function register(request, reply) {
       userAgent: request.headers['user-agent']
     });
     
-    // Send OTP email (implementation depends on email service)
-    // await sendOTPEmail(user.email, user.otp);
+    // Send OTP email via Resend
+    await sendOTPEmail(user.email, user.otp);
     
     reply.status(201).send({
       success: true,
@@ -396,8 +397,8 @@ async function forgotPassword(request, reply) {
     
     await user.generateOTP();
     
-    // Send OTP email
-    // await sendPasswordResetEmail(user.email, user.otp);
+    // Send password reset email via Resend
+    await sendPasswordResetEmail(user.email, user.otp);
     
     reply.send({
       success: true,
