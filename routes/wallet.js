@@ -5,6 +5,7 @@ const AuditLog = require('../models/AuditLog');
 const Notification = require('../models/Notification');
 const { generateTransactionReference, generateIdempotencyKey } = require('../utils/auth');
 const config = require('../config');
+const axios = require('axios'); // Added for API requests
 
 /**
  * Get wallet
@@ -34,14 +35,15 @@ async function getWallet(request, reply) {
 }
 
 /**
- * Fund wallet
+ * STEP 1: Initiate Wallet Funding
  */
 async function fundWallet(request, reply) {
   const session = await Wallet.startSession();
   session.startTransaction();
   
   try {
-    const { amount, paymentMethod, provider } = request.body;
+    const { amount, provider } = request.body;
+    const paymentProvider = (provider || 'paystack').toLowerCase();
     
     if (!amount || amount < config.business.minWithdrawal) {
       await session.abortTransaction();
@@ -53,28 +55,31 @@ async function fundWallet(request, reply) {
     }
     
     const wallet = await Wallet.findByUser(request.user._id);
-    if (!wallet) {
+    const user = await User.findById(request.user._id); // Needed for email/name
+    
+    if (!wallet || !user) {
       await session.abortTransaction();
       session.endSession();
       return reply.status(404).send({
         success: false,
-        message: 'Wallet not found'
+        message: 'User or Wallet not found'
       });
     }
     
-    const balanceBefore = wallet.availableBalance.toString();
+    const paymentReference = generateTransactionReference();
     
-    // Create transaction
+    // Create pending transaction
     const transaction = new Transaction({
       user: request.user._id,
       type: 'funding',
-      description: 'Wallet funding',
+      description: `Wallet funding via ${paymentProvider}`,
       amount,
       fee: 0,
-      balanceBefore,
-      balanceAfter: balanceBefore,
+      balanceBefore: wallet.availableBalance.toString(),
+      balanceAfter: wallet.availableBalance.toString(),
       status: 'pending',
-      provider: provider || 'paystack',
+      provider: paymentProvider,
+      providerReference: paymentReference,
       idempotencyKey: generateIdempotencyKey(),
       ipAddress: request.ip,
       userAgent: request.headers['user-agent']
@@ -82,59 +87,188 @@ async function fundWallet(request, reply) {
     
     await transaction.save({ session });
     
-    // Initiate payment with provider (simplified - would integrate with Paystack/Flutterwave)
-    // For now, we'll simulate successful funding
-    const paymentReference = generateTransactionReference();
-    transaction.providerReference = paymentReference;
-    transaction.status = 'success';
-    transaction.balanceAfter = (parseFloat(balanceBefore) + amount).toString();
+    let checkoutUrl = '';
+
+    // -----------------------------------------------------
+    // PAYSTACK INITIALIZATION
+    // -----------------------------------------------------
+    if (paymentProvider === 'paystack') {
+      const paystackResponse = await axios.post(
+        'https://api.paystack.co/transaction/initialize',
+        {
+          email: user.email,
+          amount: amount * 100, // Paystack expects amount in Kobo
+          reference: paymentReference,
+          callback_url: `${request.protocol}://${request.hostname}/dashboard.html` // Where to redirect after payment
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      checkoutUrl = paystackResponse.data.data.authorization_url;
+    } 
+    // -----------------------------------------------------
+    // MONNIFY INITIALIZATION
+    // -----------------------------------------------------
+    else if (paymentProvider === 'monnify') {
+      const baseUrl = process.env.MONNIFY_URL || 'https://sandbox.monnify.com';
+      
+      // 1. Get Monnify Access Token
+      const encodedKeys = Buffer.from(`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`).toString('base64');
+      const authResponse = await axios.post(`${baseUrl}/api/v1/auth/login`, {}, {
+        headers: { Authorization: `Basic ${encodedKeys}` }
+      });
+      const accessToken = authResponse.data.responseBody.accessToken;
+
+      // 2. Initialize Transaction
+      const initResponse = await axios.post(
+        `${baseUrl}/api/v1/merchant/transactions/init-transaction`,
+        {
+          amount: amount,
+          customerName: user.name,
+          customerEmail: user.email,
+          paymentReference: paymentReference,
+          paymentDescription: 'NATERPAY Wallet Funding',
+          currencyCode: 'NGN',
+          contractCode: process.env.MONNIFY_CONTRACT_CODE,
+          redirectUrl: `${request.protocol}://${request.hostname}/dashboard.html`
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      checkoutUrl = initResponse.data.responseBody.checkoutUrl;
+    } else {
+      throw new Error('Unsupported payment provider');
+    }
+
+    await session.commitTransaction();
+    session.endSession();
     
-    await wallet.credit(amount);
+    // Return the checkout URL to the frontend so the user can pay
+    reply.send({
+      success: true,
+      message: 'Payment initialized',
+      paymentReference,
+      checkoutUrl, // Frontend should redirect the user to this URL
+      provider: paymentProvider
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error('Fund wallet error:', error.response?.data || error.message);
+    reply.status(500).send({
+      success: false,
+      message: 'Failed to initiate payment gateway. Check API Keys.'
+    });
+  }
+}
+
+/**
+ * STEP 2: Verify Wallet Funding
+ * (Call this endpoint after the user returns from the payment page)
+ */
+async function verifyFunding(request, reply) {
+  const session = await Wallet.startSession();
+  session.startTransaction();
+  
+  try {
+    const { reference } = request.body;
+    
+    if (!reference) {
+      return reply.status(400).send({ success: false, message: 'Payment reference is required' });
+    }
+    
+    const transaction = await Transaction.findOne({ providerReference: reference });
+    
+    if (!transaction) {
+      return reply.status(404).send({ success: false, message: 'Transaction not found' });
+    }
+    
+    if (transaction.status === 'success') {
+      return reply.send({ success: true, message: 'Wallet already credited' });
+    }
+
+    let isSuccessful = false;
+
+    // -----------------------------------------------------
+    // VERIFY PAYSTACK
+    // -----------------------------------------------------
+    if (transaction.provider === 'paystack') {
+      const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
+        headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
+      });
+      if (response.data.data.status === 'success') isSuccessful = true;
+    } 
+    // -----------------------------------------------------
+    // VERIFY MONNIFY
+    // -----------------------------------------------------
+    else if (transaction.provider === 'monnify') {
+      const baseUrl = process.env.MONNIFY_URL || 'https://sandbox.monnify.com';
+      const encodedKeys = Buffer.from(`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`).toString('base64');
+      const authResponse = await axios.post(`${baseUrl}/api/v1/auth/login`, {}, {
+        headers: { Authorization: `Basic ${encodedKeys}` }
+      });
+      const accessToken = authResponse.data.responseBody.accessToken;
+
+      const response = await axios.get(`${baseUrl}/api/v1/merchant/transactions/query?paymentReference=${reference}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (response.data.responseBody.paymentStatus === 'PAID') isSuccessful = true;
+    }
+
+    if (!isSuccessful) {
+      throw new Error('Payment not successful at gateway');
+    }
+
+    // Give the user their money!
+    const wallet = await Wallet.findByUser(transaction.user);
+    await wallet.credit(transaction.amount);
+    
+    transaction.status = 'success';
+    transaction.balanceAfter = wallet.availableBalance.toString();
     await transaction.save({ session });
     
     await session.commitTransaction();
     session.endSession();
     
-    // Log audit
+    // Log audit & Send notification
     await AuditLog.logAction({
-      user: request.user._id,
-      action: 'funding',
-      description: `Wallet funded with ₦${amount}`,
-      details: { amount, paymentMethod, provider },
+      user: transaction.user,
+      action: 'funding_verified',
+      description: `Wallet funded with ₦${transaction.amount}`,
       ipAddress: request.ip,
       userAgent: request.headers['user-agent']
     });
     
-    // Send notification
     await Notification.create({
-      user: request.user._id,
+      user: transaction.user,
       title: 'Wallet Funded',
-      message: `Your wallet has been funded with ₦${amount.toLocaleString()}`,
+      message: `Your wallet has been credited with ₦${transaction.amount.toLocaleString()}`,
       type: 'transaction',
-      priority: 'medium'
+      priority: 'high'
     });
     
-    // Emit socket event
     if (request.server.io) {
-      request.server.io.to(`user:${request.user._id}`).emit('wallet:update', {
+      request.server.io.to(`user:${transaction.user}`).emit('wallet:update', {
         balance: wallet.availableBalance.toString()
       });
     }
     
-    reply.send({
-      success: true,
-      message: 'Wallet funded successfully',
-      transaction,
-      paymentReference
-    });
+    reply.send({ success: true, message: 'Payment verified and wallet credited!' });
+
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    console.error('Fund wallet error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fund wallet'
-    });
+    console.error('Verify funding error:', error.message);
+    reply.status(500).send({ success: false, message: 'Failed to verify payment' });
   }
 }
 
@@ -524,6 +658,7 @@ async function setPin(request, reply) {
 module.exports = {
   getWallet,
   fundWallet,
+  verifyFunding, // NEW FUNCTION ADDED
   withdraw,
   transfer,
   setPin
