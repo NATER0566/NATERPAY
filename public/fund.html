@@ -85,50 +85,43 @@
     
     <div class="fund-card">
         <label class="small text-muted mb-2 d-block">ENTER AMOUNT (₦)</label>
-        <input type="number" id="fundAmount" class="amount-input mb-4" placeholder="0.00" min="100">
+        <input type="number" id="fundAmount" class="amount-input mb-4" placeholder="0.00" min="1000">
         
         <div class="d-flex gap-2 mb-4 flex-wrap justify-content-center">
-            <button class="quick-amount-btn" onclick="setAmount(500)">₦500</button>
             <button class="quick-amount-btn" onclick="setAmount(1000)">₦1,000</button>
             <button class="quick-amount-btn" onclick="setAmount(2000)">₦2,000</button>
             <button class="quick-amount-btn" onclick="setAmount(5000)">₦5,000</button>
             <button class="quick-amount-btn" onclick="setAmount(10000)">₦10,000</button>
             <button class="quick-amount-btn" onclick="setAmount(20000)">₦20,000</button>
+            <button class="quick-amount-btn" onclick="setAmount(50000)">₦50,000</button>
         </div>
         
         <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">SELECT PAYMENT METHOD</h5>
         
-        <div class="row g-3 mb-4">
-            <div class="col-md-4">
+        <div class="row g-3 mb-4 justify-content-center">
+            <div class="col-md-5">
                 <div class="provider-card active" onclick="selectProvider(this, 'paystack')">
                     <i class="fas fa-credit-card fa-2x mb-2" style="color: var(--gold);"></i>
                     <div class="fw-bold">Paystack</div>
                     <small class="text-muted">Card, Bank Transfer</small>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="provider-card" onclick="selectProvider(this, 'flutterwave')">
-                    <i class="fas fa-mobile-alt fa-2x mb-2" style="color: var(--gold);"></i>
-                    <div class="fw-bold">Flutterwave</div>
-                    <small class="text-muted">Card, USSD, Bank</small>
-                </div>
-            </div>
-            <div class="col-md-4">
+            <div class="col-md-5">
                 <div class="provider-card" onclick="selectProvider(this, 'monnify')">
                     <i class="fas fa-university fa-2x mb-2" style="color: var(--gold);"></i>
                     <div class="fw-bold">Monnify</div>
-                    <small class="text-muted">Bank Transfer</small>
+                    <small class="text-muted">Dedicated Account Transfer</small>
                 </div>
             </div>
         </div>
         
-        <button class="btn-fund" onclick="processFunding()">
+        <button class="btn-fund" id="payBtn" onclick="processFunding()">
             <i class="fas fa-wallet me-2"></i> PROCEED TO PAYMENT
         </button>
     </div>
     
     <div class="text-center text-muted small">
-        <p class="mb-1">Payments powered by Paystack and Flutterwave</p>
+        <p class="mb-1">Payments powered by Paystack and Monnify</p>
         <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
@@ -172,11 +165,11 @@
     async function processFunding() {
         const amount = parseFloat(document.getElementById('fundAmount').value);
         
-        if (!amount || amount < 100) {
+        if (!amount || amount < 1000) {
             Swal.fire({
                 icon: 'error',
                 title: 'Invalid Amount',
-                text: 'Minimum funding amount is ₦100',
+                text: 'Minimum funding amount is ₦1,000',
                 confirmButtonColor: '#d32f2f',
                 background: '#0a0a0a',
                 color: '#fff'
@@ -190,47 +183,48 @@
             return;
         }
         
+        const btn = document.getElementById('payBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> CONNECTING GATEWAY...';
+        
         try {
-            Swal.fire({
-                title: 'Processing...',
-                text: 'Initializing payment gateway',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
-                background: '#0a0a0a',
-                color: '#fff'
-            });
-            
             const res = await fetch('/api/wallet/fund', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${authToken}`
                 },
-                body: JSON.stringify({ amount, paymentMethod: selectedProvider, provider: selectedProvider })
+                body: JSON.stringify({ amount, provider: selectedProvider })
             });
             
             const data = await res.json();
             
-            if (data.success) {
+            if (data.success && data.checkoutUrl) {
+                // Save the reference so the dashboard knows to verify it when the user returns
+                localStorage.setItem('pending_funding_ref', data.paymentReference);
+                
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Funding Successful',
-                    text: `₦${amount.toLocaleString()} has been added to your wallet`,
-                    confirmButtonColor: '#d4af37',
+                    icon: 'info',
+                    title: 'Redirecting...',
+                    text: 'Taking you to the secure payment gateway.',
+                    showConfirmButton: false,
+                    timer: 2000,
                     background: '#0a0a0a',
                     color: '#fff'
                 }).then(() => {
-                    window.location.href = '/dashboard.html';
+                    window.location.href = data.checkoutUrl;
                 });
             } else {
                 Swal.fire({
                     icon: 'error',
                     title: 'Funding Failed',
-                    text: data.message,
+                    text: data.message || 'Gateway failed to initialize.',
                     confirmButtonColor: '#d32f2f',
                     background: '#0a0a0a',
                     color: '#fff'
                 });
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-wallet me-2"></i> PROCEED TO PAYMENT';
             }
         } catch (error) {
             Swal.fire({
@@ -241,6 +235,8 @@
                 background: '#0a0a0a',
                 color: '#fff'
             });
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-wallet me-2"></i> PROCEED TO PAYMENT';
         }
     }
     
