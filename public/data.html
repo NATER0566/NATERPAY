@@ -62,7 +62,8 @@
         
         .plan-card {
             background: rgba(30,30,30,0.95); border: 1px solid #444; border-radius: 15px;
-            padding: 20px; cursor: pointer; transition: 0.3s;
+            padding: 15px; cursor: pointer; transition: 0.3s; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
         }
         .plan-card:hover, .plan-card.active {
             border-color: var(--gold); background: rgba(212,175,55,0.1);
@@ -74,6 +75,7 @@
             transition: 0.3s;
         }
         .btn-buy:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
+        .btn-buy:disabled { background: #555; color: #888; transform: none; box-shadow: none; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -96,25 +98,25 @@
         
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-3">
-                <div class="network-btn active" onclick="selectNetwork(this, 'mtn')">
+                <div class="network-btn active" onclick="selectNetwork(this, 'mtn-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #ffcc00;"></i>
                     <div class="fw-bold">MTN</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="network-btn" onclick="selectNetwork(this, 'airtel')">
+                <div class="network-btn" onclick="selectNetwork(this, 'airtel-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #ff0000;"></i>
                     <div class="fw-bold">Airtel</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="network-btn" onclick="selectNetwork(this, 'glo')">
+                <div class="network-btn" onclick="selectNetwork(this, 'glo-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #00ff00;"></i>
                     <div class="fw-bold">Glo</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="network-btn" onclick="selectNetwork(this, '9mobile')">
+                <div class="network-btn" onclick="selectNetwork(this, 'etisalat-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #00bfff;"></i>
                     <div class="fw-bold">9mobile</div>
                 </div>
@@ -126,56 +128,12 @@
             <input type="tel" id="phoneNumber" placeholder="e.g. 08012345678">
         </div>
         
-        <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">SELECT DATA PLAN</h5>
+        <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">SELECT LIVE DATA PLAN</h5>
         
         <div class="row g-3 mb-4" id="planContainer">
-            <div class="col-6 col-md-4">
-                <div class="plan-card active" onclick="selectPlan(this, '100MB', 100)">
-                    <div class="fw-bold">100MB</div>
-                    <div class="text-warning">₦100</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="plan-card" onclick="selectPlan(this, '200MB', 200)">
-                    <div class="fw-bold">200MB</div>
-                    <div class="text-warning">₦200</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="plan-card" onclick="selectPlan(this, '500MB', 350)">
-                    <div class="fw-bold">500MB</div>
-                    <div class="text-warning">₦350</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="plan-card" onclick="selectPlan(this, '1GB', 500)">
-                    <div class="fw-bold">1GB</div>
-                    <div class="text-warning">₦500</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="plan-card" onclick="selectPlan(this, '2GB', 900)">
-                    <div class="fw-bold">2GB</div>
-                    <div class="text-warning">₦900</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="plan-card" onclick="selectPlan(this, '3GB', 1200)">
-                    <div class="fw-bold">3GB</div>
-                    <div class="text-warning">₦1,200</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="plan-card" onclick="selectPlan(this, '5GB', 1800)">
-                    <div class="fw-bold">5GB</div>
-                    <div class="text-warning">₦1,800</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4">
-                <div class="plan-card" onclick="selectPlan(this, '10GB', 3000)">
-                    <div class="fw-bold">10GB</div>
-                    <div class="text-warning">₦3,000</div>
-                </div>
+            <div class="col-12 text-center py-4">
+                <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--gold);"></i>
+                <p class="mt-2 text-muted">Connecting to VTpass Gateway...</p>
             </div>
         </div>
         
@@ -187,25 +145,25 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <small class="text-muted">TOTAL AMOUNT</small>
-                <div class="h3 fw-bold" style="color: var(--gold);" id="totalAmount">₦100</div>
+                <div class="h3 fw-bold" style="color: var(--gold);" id="totalAmount">₦0.00</div>
             </div>
         </div>
         
-        <button class="btn-buy" onclick="buyData()">
-            <i class="fas fa-wifi me-2"></i> PURCHASE DATA
+        <button class="btn-buy" id="btnBuy" onclick="buyData()" disabled>
+            <i class="fas fa-wifi me-2"></i> WAITING FOR VT-PASS...
         </button>
     </div>
     
     <div class="text-center text-muted small">
-        <p class="mb-1">Data bundles powered by VTpass</p>
+        <p class="mb-1">Data bundles powered by VTpass Live API</p>
         <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
 
 <script>
-    let selectedNetwork = 'mtn';
-    let selectedPlan = '100MB';
-    let selectedAmount = 100;
+    let selectedNetwork = 'mtn-data';
+    let selectedPlan = null;
+    let selectedAmount = 0;
     
     function initStars() {
         const canvas = document.getElementById('starCanvas');
@@ -234,14 +192,77 @@
         document.querySelectorAll('.network-btn').forEach(btn => btn.classList.remove('active'));
         element.classList.add('active');
         selectedNetwork = network;
+        
+        // Fetch new plans for the selected network
+        fetchLivePlans(network);
     }
     
-    function selectPlan(element, plan, amount) {
+    function selectPlan(element, variationCode, amount) {
         document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('active'));
         element.classList.add('active');
-        selectedPlan = plan;
+        selectedPlan = variationCode;
         selectedAmount = amount;
         document.getElementById('totalAmount').innerText = '₦' + amount.toLocaleString();
+    }
+
+    // NEW FUNCTION: Fetch real plans from backend (which fetches from VTpass)
+    async function fetchLivePlans(network) {
+        const container = document.getElementById('planContainer');
+        const btnBuy = document.getElementById('btnBuy');
+        
+        container.innerHTML = `
+            <div class="col-12 text-center py-4">
+                <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--gold);"></i>
+                <p class="mt-2 text-muted">Syncing with VTpass Servers...</p>
+            </div>
+        `;
+        btnBuy.disabled = true;
+        btnBuy.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> WAITING FOR VT-PASS...';
+        document.getElementById('totalAmount').innerText = '₦0.00';
+        selectedPlan = null;
+        selectedAmount = 0;
+
+        const authToken = localStorage.getItem("naterpay_token");
+        
+        try {
+            const response = await fetch(`/api/vtu/plans?network=${network}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const data = await response.json();
+            
+            if (data.success && data.plans && data.plans.length > 0) {
+                let html = '';
+                
+                data.plans.forEach((plan, index) => {
+                    const isActive = index === 0 ? 'active' : '';
+                    const planAmount = parseFloat(plan.variation_amount);
+                    
+                    // Auto-select the very first plan in the list
+                    if (index === 0) {
+                        selectedPlan = plan.variation_code;
+                        selectedAmount = planAmount;
+                        document.getElementById('totalAmount').innerText = '₦' + planAmount.toLocaleString();
+                    }
+                    
+                    html += `
+                        <div class="col-6 col-md-4">
+                            <div class="plan-card ${isActive}" onclick="selectPlan(this, '${plan.variation_code}', ${planAmount})">
+                                <div class="fw-bold mb-1" style="font-size: 0.85rem; line-height: 1.2;">${plan.name}</div>
+                                <div class="text-warning fw-bold">₦${planAmount.toLocaleString()}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                btnBuy.disabled = false;
+                btnBuy.innerHTML = '<i class="fas fa-wifi me-2"></i> PURCHASE DATA';
+            } else {
+                container.innerHTML = `<div class="col-12 text-center py-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p>VTpass API Error: Could not load data plans.</p></div>`;
+            }
+        } catch (error) {
+            container.innerHTML = `<div class="col-12 text-center py-4 text-danger"><i class="fas fa-wifi fa-2x mb-2"></i><p>Network Error connecting to server.</p></div>`;
+        }
     }
     
     async function buyData() {
@@ -272,6 +293,18 @@
             return;
         }
         
+        if (!selectedPlan) {
+             Swal.fire({
+                icon: 'warning',
+                title: 'No Plan Selected',
+                text: 'Please wait for VTpass to load the plans and select one.',
+                confirmButtonColor: '#d4af37',
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+            return;
+        }
+
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) {
             window.location.href = '/index.html';
@@ -281,7 +314,7 @@
         try {
             Swal.fire({
                 title: 'Processing...',
-                text: 'Purchasing data bundle',
+                text: 'Transmitting purchase request to VTpass',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading(),
                 background: '#0a0a0a',
@@ -309,7 +342,7 @@
                 Swal.fire({
                     icon: 'success',
                     title: 'Data Purchase Successful',
-                    text: `${selectedPlan} data has been sent to ${phoneNumber}`,
+                    text: `Data has been sent to ${phoneNumber}`,
                     confirmButtonColor: '#d4af37',
                     background: '#0a0a0a',
                     color: '#fff'
@@ -338,7 +371,11 @@
         }
     }
     
-    window.onload = initStars;
+    // Start by fetching MTN plans automatically on load
+    window.onload = () => {
+        initStars();
+        fetchLivePlans('mtn-data');
+    };
 </script>
 
 </body>
