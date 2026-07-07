@@ -56,10 +56,16 @@ async function register(request, reply) {
       });
     }
     
-    // Check referral code
+    // Check referral code (Bulletproof Version)
     let referrer = null;
-    if (referralCode) {
-      referrer = await User.findByReferralCode(referralCode);
+    if (referralCode && referralCode.trim() !== '') {
+      const cleanCode = referralCode.trim(); // Removes accidental blank spaces
+      
+      // Search database ignoring uppercase/lowercase differences
+      referrer = await User.findOne({ 
+        referralCode: { $regex: new RegExp(`^${cleanCode}$`, 'i') } 
+      });
+      
       if (!referrer) {
         return reply.status(400).send({
           success: false,
