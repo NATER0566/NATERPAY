@@ -126,9 +126,8 @@ async function buyAirtime(request, reply) {
     
     await transaction.save({ session });
     
-    // Process with VTU provider (simplified - would integrate with VTpass/VTUGate)
+    // Process with VTU provider (NOW REAL VTPASS INTEGRATION)
     try {
-      // Simulate VTU API call
       const providerResponse = await processVTURequest('airtime', {
         phone,
         network,
@@ -137,7 +136,7 @@ async function buyAirtime(request, reply) {
       
       transaction.providerReference = providerResponse.reference;
       transaction.status = 'success';
-      transaction.providerResponse = providerResponse;
+      transaction.providerResponse = providerResponse.raw;
       
       await wallet.debit(amount);
       transaction.balanceAfter = wallet.availableBalance.toString();
@@ -293,7 +292,7 @@ async function buyData(request, reply) {
       
       transaction.providerReference = providerResponse.reference;
       transaction.status = 'success';
-      transaction.providerResponse = providerResponse;
+      transaction.providerResponse = providerResponse.raw;
       
       await wallet.debit(amount);
       transaction.balanceAfter = wallet.availableBalance.toString();
@@ -446,7 +445,7 @@ async function buyElectricity(request, reply) {
       
       transaction.providerReference = providerResponse.reference;
       transaction.status = 'success';
-      transaction.providerResponse = providerResponse;
+      transaction.providerResponse = providerResponse.raw;
       
       await wallet.debit(amount);
       transaction.balanceAfter = wallet.availableBalance.toString();
@@ -600,7 +599,7 @@ async function buyCable(request, reply) {
       
       transaction.providerReference = providerResponse.reference;
       transaction.status = 'success';
-      transaction.providerResponse = providerResponse;
+      transaction.providerResponse = providerResponse.raw;
       
       await wallet.debit(amount);
       transaction.balanceAfter = wallet.availableBalance.toString();
@@ -659,25 +658,64 @@ async function buyCable(request, reply) {
   }
 }
 
-// Helper function to process VTU requests (would integrate with actual providers)
+// ------------------------------------------------------------------
+// REAL VTPASS INTEGRATION CORE
+// ------------------------------------------------------------------
 async function processVTURequest(type, data) {
-  // This is a simplified version - in production, integrate with VTpass/VTUGate
-  // For now, we'll simulate successful responses
+  // Use sandbox URL by default. Override with live URL in .env later.
+  const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
   
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (Math.random() > 0.1) {
-        // 90% success rate simulation
-        resolve({
-          reference: 'VTU_' + Date.now(),
-          token: type === 'electricity' ? '1234567890123456' : null,
-          status: 'success'
-        });
-      } else {
-        reject(new Error('VTU provider temporarily unavailable'));
-      }
-    }, 2000);
-  });
+  // VTpass expects these exact headers for authentication
+  const headers = {
+    'api-key': process.env.VTPASS_API_KEY,
+    'secret-key': process.env.VTPASS_SECRET_KEY,
+    'public-key': process.env.VTPASS_PUBLIC_KEY,
+    'Content-Type': 'application/json'
+  };
+
+  // Base payload required by VTpass
+  let payload = {
+    request_id: generateTransactionReference(), // E.g., YYYYMMDDHHMMSS + random
+    amount: data.amount,
+    phone: data.phone || data.meterNumber || data.smartcardNumber
+  };
+
+  // Map your internal data to VTpass specific fields
+  if (type === 'airtime') {
+    payload.serviceID = data.network; 
+  } else if (type === 'data') {
+    payload.serviceID = data.network;
+    payload.variation_code = data.plan; 
+  } else if (type === 'electricity') {
+    payload.serviceID = data.disco;
+    payload.billersCode = data.meterNumber;
+    payload.variation_code = data.meterType; 
+  } else if (type === 'cable') {
+    payload.serviceID = data.provider;
+    payload.billersCode = data.smartcardNumber;
+    payload.variation_code = data.package;
+  }
+
+  try {
+    // Send request to VTpass
+    const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
+    
+    // VTpass returns "000" for successful transactions
+    if (response.data.code === '000') {
+      return {
+        reference: response.data.content.transactions.transactionId,
+        token: response.data.token || response.data.purchased_code || null,
+        status: 'success',
+        raw: response.data
+      };
+    } else {
+      // Transaction failed at VTpass level (e.g., wrong meter number, insufficient VTpass balance)
+      throw new Error(response.data.response_description || 'Transaction failed at provider');
+    }
+  } catch (error) {
+    // Network errors or 4xx/5xx responses from VTpass
+    throw new Error(error.response?.data?.response_description || error.message || 'VTpass connection failed');
+  }
 }
 
 module.exports = {
