@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="dynamicTitle">NATER-PAY | Enterprise Terminal Dashboard</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <style>
+        :root { --red: #d32f2f; --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); --glass: rgba(255, 255, 255, 0.03); }
+        
+        body { 
+            background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; 
+            margin: 0; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; 
+        }
+
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; 
+            z-index: 1000; backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(0,0,0,0.8); 
+            gap: clamp(25px, 6vw, 50px);
+            flex-wrap: nowrap;
+        }
+
+        .brand-wrapper {
+            display: flex; align-items: center; gap: 12px; cursor: pointer;
+            padding: 5px 15px 5px 5px;
+            border-radius: 12px; transition: all 0.3s ease; flex-shrink: 0;
+        }
+        .menu-trigger-icon {
+            background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.4);
+            color: var(--gold); width: 42px; height: 42px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+            box-shadow: 0 0 10px rgba(212,175,55,0.2); flex-shrink: 0;
+        }
+        
+        .brand-text { 
+            font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
+            text-transform: uppercase; line-height: 0.85; flex-shrink: 0;
+            display: flex; flex-direction: column; align-items: flex-start;
+        }
+        .site-part-1 { color: var(--gold); font-size: clamp(1.4rem, 5vw, 1.8rem); text-shadow: 0 2px 5px rgba(212,175,55,0.3); } 
+        .site-part-2 { color: var(--red); font-size: clamp(1rem, 3.5vw, 1.4rem); letter-spacing: 3px; }
+
+        .gateway-btn-wrapper { margin-left: auto; flex-shrink: 1; display: flex; justify-content: flex-end; min-width: 80px; }
+        .gateway-btn-wrapper .btn {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            text-align: left; line-height: 1.1; padding: 8px 12px;
+        }
+
+        .dashboard-container { max-width: 1300px; margin: 30px auto; padding: 0 20px; flex: 1; width: 100%; }
+        
+        .stat-card { 
+            background: var(--glass); border: 1px solid #222; border-radius: 20px; padding: 15px; 
+            text-align: left; transition: 0.3s; min-height: 85px; display: flex; flex-direction: column; 
+            justify-content: center; animation: continuous-plumbing-pulse 4s infinite ease-in-out; 
+        }
+        .stat-label { color: #ffffff !important; font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; text-shadow: 0 1px 2px #000; }
+        .stat-value { font-family: 'Cinzel', serif; font-size: clamp(1rem, 4vw, 1.2rem); color: #fff; margin-top: 5px; font-weight: 900; }
+
+        .biographic-identity-card {
+            background: linear-gradient(135deg, rgba(15,15,15,0.95) 0%, rgba(5,5,5,0.98) 100%);
+            border: 1.5px solid rgba(212, 175, 55, 0.3); border-radius: 24px; padding: 20px 25px;
+            margin-bottom: 25px; box-shadow: 0 12px 35px rgba(0,0,0,0.6);
+            animation: continuous-plumbing-pulse 4.5s infinite ease-in-out;
+        }
+        .identity-badge-title { font-size: 1.25rem; font-weight: 800; color: #ffffff; text-shadow: 0 2px 4px #000; margin: 0; }
+        
+        .security-guard-warning-pill {
+            padding: 4px 12px; border-radius: 50px; border: 1px solid transparent;
+            font-size: 0.68rem; font-weight: 800; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .balance-card { background: linear-gradient(145deg, #111 0%, #222 100%); border: 2px solid var(--gold); border-radius: 30px; padding: clamp(25px, 5vw, 45px); margin: 25px 0 40px 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; animation: continuous-plumbing-pulse 5s infinite ease-in-out; }
+        .amount-text { font-family: 'Cinzel', serif; font-size: clamp(2rem, 8vw, 3.5rem); color: var(--gold); font-weight: 900; margin: 10px 0; }
+
+        .ecosystem-section-title { font-family: 'Cinzel', serif; font-size: 1.2rem; font-weight: 900; color: var(--gold); border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 10px; margin-bottom: 20px; margin-top: 40px; display: flex; align-items: center; gap: 10px; }
+
+        .service-wrapper-node { transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; }
+        .service-link { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; padding: 15px 8px; text-align: center; transition: 0.4s; text-decoration: none; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 110px; position: relative; overflow: hidden; }
+        .service-link:hover { border-color: #ffffff; transform: translateY(-5px); box-shadow: 0 8px 25px rgba(214,175,55,0.25); background: rgba(30, 30, 30, 0.95); }
+        .service-link i { font-size: 1.6rem; margin-bottom: 10px; color: var(--gold); text-shadow: 0 0 10px rgba(214,175,55,0.4); position: relative; z-index: 2; }
+        .service-link span { font-size: clamp(0.6rem, 2vw, 0.72rem); color: #ffffff !important; font-weight: 800; text-transform: uppercase; width: 100%; word-wrap: break-word; line-height: 1.3; letter-spacing: 0.5px; text-shadow: 0 1px 2px #000; position: relative; z-index: 2; }
+
+        .service-wrapper-node[data-priority="high"] .service-link { 
+            border: 2px solid var(--gold); 
+            animation: intense-module-liquid-pumping 2.5s infinite ease-in-out; 
+            box-shadow: 0 0 15px rgba(212,175,55,0.4);
+        }
+        .service-wrapper-node[data-priority="high"] .service-link::after {
+            content: ''; position: absolute; top: 0; left: -150%; width: 60%; height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
+            transform: skewX(-25deg); animation: metallic-reflect-sweep 2.5s infinite linear;
+            z-index: 1; pointer-events: none;
+        }
+
+        @keyframes intense-module-liquid-pumping {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(212,175,55,0.3); border-color: var(--gold); }
+            50% { transform: scale(1.06); box-shadow: 0 0 45px rgba(212,175,55,0.8), 0 0 20px #ffffff; border-color: #ffffff; }
+        }
+        @keyframes metallic-reflect-sweep {
+            0% { left: -150%; }
+            15% { left: 200%; }
+            100% { left: 200%; }
+        }
+
+        .widget-self-hide-cross-trigger { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; background: rgba(213,47,47,0.15); border: 1px solid var(--red); color: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; cursor: pointer; z-index: 10; opacity: 0; transition: all 0.2s ease; }
+        .service-wrapper-node:hover .widget-self-hide-cross-trigger { opacity: 1; }
+
+        @keyframes continuous-plumbing-pulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.15), inset 0 0 5px rgba(212, 175, 55, 0.1); border-color: rgba(212, 175, 55, 0.3); }
+            50% { box-shadow: 0 0 35px rgba(212, 175, 55, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.15); border-color: #ffffff; }
+        }
+
+        .transaction-box { background: var(--card-bg); border-radius: 25px; padding: 25px; border: 1px solid #333; margin-top: 50px; margin-bottom: 50px; }
+        .table-scroll-container { width: 100%; overflow-x: auto; }
+        .table { color: #eee; margin-bottom: 0; min-width: 600px; }
+        .status-pill { padding: 5px 12px; border-radius: 50px; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .promo-banner { background: linear-gradient(90deg, #d32f2f, #8b0000); border-radius: 20px; padding: 20px; margin-bottom: 35px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap; gap: 10px; }
+
+        .custom-terminal-sidebar { background: rgba(10, 10, 10, 0.95) !important; border-right: 2px solid var(--gold); backdrop-filter: blur(25px); box-shadow: 15px 0 40px rgba(0,0,0,0.8); width: 280px !important; }
+        .sidebar-menu-link { display: flex; align-items: center; gap: 15px; padding: 16px 24px; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: all 0.3s ease; }
+        .sidebar-menu-link:hover { background: rgba(212,175,55,0.05); color: var(--gold); padding-left: 32px; }
+        .sidebar-menu-link i { color: var(--gold); font-size: 1.1rem; width: 24px; text-align: center; }
+        
+        footer { background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%; margin-top: 60px; position: relative; z-index: 5; }
+        .footer-compliance-tag { color: #ffffff !important; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<div class="offcanvas offcanvas-start custom-terminal-sidebar" tabindex="-1" id="terminalHubSidebar" aria-labelledby="terminalHubSidebarLabel">
+    <div class="offcanvas-header border-bottom border-secondary border-opacity-25 py-4 px-4">
+        <h5 class="offcanvas-title brand-text m-0" id="terminalHubSidebarLabel">
+            <span class="site-part-1">NATER</span><span class="site-part-2">PAY</span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <nav class="d-flex flex-column">
+            <a href="dashboard.html" class="sidebar-menu-link"><i class="fas fa-th-large"></i> Hub Central</a>
+            <a href="profile.html" class="sidebar-menu-link"><i class="fas fa-id-card"></i> Profile Terminal</a>
+            <a href="merchant-dashboard.html" class="sidebar-menu-link"><i class="fas fa-store"></i> Merchant Hub</a>
+            <a href="agent-pos.html" class="sidebar-menu-link"><i class="fas fa-cash-register"></i> Agent POS Node</a>
+            <a href="security.html" class="sidebar-menu-link"><i class="fas fa-lock"></i> Vault Security</a>
+            <a href="support.html" class="sidebar-menu-link"><i class="fas fa-headset"></i> Support Tickets</a>
+            <a href="api.html" class="sidebar-menu-link"><i class="fas fa-code"></i> Developer APIs</a>
+        </nav>
+    </div>
+</div>
+
+<header>
+    <div class="brand-wrapper" data-bs-toggle="offcanvas" data-bs-target="#terminalHubSidebar" aria-controls="terminalHubSidebar" title="Launch Navigation Hub Console">
+        <div class="menu-trigger-icon"><i class="fas fa-bars"></i></div>
+        <div class="brand-text" id="siteBranding">
+            <span class="site-part-1">NATER</span>
+            <span class="site-part-2">PAY</span>
+        </div>
+    </div>
+    
+    <div class="gateway-btn-wrapper dropdown">
+        <button class="btn btn-warning text-dark rounded-pill fw-bold dropdown-toggle" type="button" id="gatewayMenuDropdownLinkBtn" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid var(--gold); box-shadow: 0 4px 15px rgba(212,175,55,0.4);">
+            <i class="fas fa-terminal me-sm-1" style="font-size: 1.1rem;"></i>
+            <span class="d-none d-sm-inline">GATEWAY TERMINAL</span>
+            <span class="d-inline d-sm-none" style="font-size: 0.72rem; font-weight: 900;">GATEWAY<br>NODE</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-warning shadow-lg" aria-labelledby="gatewayMenuDropdownLinkBtn">
+            <li id="adminMenuWrapper" style="display: none;">
+                <a class="dropdown-item text-warning fw-bold" href="admin.html">
+                    <i class="fas fa-user-shield me-2"></i> ADMIN TERMINAL
+                </a>
+            </li>
+            <li id="adminDivider" style="display: none;"><hr class="dropdown-divider"></li>
+            
+            <li><a class="dropdown-item fw-bold" href="profile.html"><i class="fas fa-id-card me-2"></i> Profile Setup</a></li>
+            <li><a class="dropdown-item fw-bold" href="security.html"><i class="fas fa-lock me-2"></i> Security Pins</a></li>
+            <li><a class="dropdown-item fw-bold" href="referrals.html"><i class="fas fa-users me-2"></i> Network Tree</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger fw-bold" href="logout.html"><i class="fas fa-sign-out-alt me-2"></i> Disconnect Session</a></li>
+        </ul>
+    </div>
+</header>
+
+<div class="dashboard-container">
+    <div class="biographic-identity-card">
+        <div class="row align-items-center g-3">
+            <div class="col-auto">
+                <div class="user-avatar-shell"><i class="fas fa-user-shield text-warning h4 m-0"></i></div>
+            </div>
+            <div class="col-auto">
+                <h5 class="identity-badge-title" id="profileBadgeName">Terminal Node Core</h5>
+            </div>
+            <div class="col-auto ms-auto d-flex flex-wrap gap-2 justify-content-end">
+                <span class="badge bg-secondary text-light fw-bolder px-3 py-2 rounded-pill" id="profileBadgeLevel" style="font-size:0.65rem;">SYNCING...</span>
+                <div class="security-guard-warning-pill bg-dark border-secondary text-secondary" id="securityStatusPill"><i class="fas fa-sync fa-spin"></i> Checking Vault...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-label">Total Volume</div><div class="stat-value" id="statTrans">0 Logs</div></div></div>
+        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-label">Total Outflow</div><div class="stat-value" id="statSpent">₦0.00</div></div></div>
+        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-label">Active Referrals</div><div class="stat-value" id="statRefs">0 Nodes</div></div></div>
+        <div class="col-6 col-md-3"><div class="stat-card"><div class="stat-label">Total Earnings</div><div class="stat-value" id="statBonus" style="color: var(--gold);">₦0.00</div></div></div>
+    </div>
+
+    <div class="balance-card">
+        <div class="row align-items-center">
+            <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                <span class="small text-white fw-bold" style="letter-spacing: 2px;">AVAILABLE LEDGER FUND</span>
+                <div id="walletBalance" class="amount-text">₦0.00</div>
+            </div>
+            <div class="col-md-6 d-flex flex-wrap gap-2">
+                <button class="btn btn-warning fw-bold py-3 rounded-pill flex-grow-1" onclick="location.href='fund.html'" style="box-shadow: 0 0 20px rgba(214,175,55,0.4);">
+                    <i class="fas fa-wallet me-1"></i> ADD FUND
+                </button>
+                <button class="btn btn-outline-warning fw-bold py-3 rounded-pill flex-grow-1" onclick="location.href='withdraw.html'">
+                    <i class="fas fa-university me-1"></i> WITHDRAW
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="promo-banner" id="dashboardPromoEngine">
+        <div>
+            <h6 class="mb-0 fw-bold small text-white"><i class="fas fa-bolt me-1"></i> RESELLER OPPORTUNITY</h6>
+            <p class="mb-0 text-white opacity-100 fw-bold" style="font-size: 0.75rem;">Upgrade to Sub-Agent to unlock wholesale data pricing.</p>
+        </div>
+        <button class="btn btn-light btn-sm rounded-pill fw-bold px-4 py-2" onclick="location.href='reseller.html'">UPGRADE NOW</button>
+    </div>
+
+    <h5 class="ecosystem-section-title"><i class="fas fa-plug"></i> Utilities & Fast Payments</h5>
+    <div class="row g-2" id="gridUtilities">
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="data" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('data')"><i class="fas fa-times"></i></div><a href="data.html" class="service-link"><i class="fas fa-wifi"></i><span>Buy Data</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="airtime" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('airtime')"><i class="fas fa-times"></i></div><a href="airtime.html" class="service-link"><i class="fas fa-phone"></i><span>Airtime</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="power"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('power')"><i class="fas fa-times"></i></div><a href="power.html" class="service-link"><i class="fas fa-bolt"></i><span>Electricity</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="cable"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('cable')"><i class="fas fa-times"></i></div><a href="cable.html" class="service-link"><i class="fas fa-satellite-dish"></i><span>Cable TV</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="exams"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('exams')"><i class="fas fa-times"></i></div><a href="exams.html" class="service-link"><i class="fas fa-key"></i><span>Exam Pins</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="betting"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('betting')"><i class="fas fa-times"></i></div><a href="betting.html" class="service-link"><i class="fas fa-dice"></i><span>Bet Funding</span></a></div>
+    </div>
+
+    <h5 class="ecosystem-section-title"><i class="fas fa-store"></i> Business & Merchant Nodes</h5>
+    <div class="row g-2" id="gridBusiness">
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="merchant_dash"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('merchant_dash')"><i class="fas fa-times"></i></div><a href="merchant-dashboard.html" class="service-link"><i class="fas fa-chart-line"></i><span>Biz Analytics</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="pos_agent" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('pos_agent')"><i class="fas fa-times"></i></div><a href="agent-pos.html" class="service-link"><i class="fas fa-cash-register"></i><span>POS Agent</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="reseller"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('reseller')"><i class="fas fa-times"></i></div><a href="reseller.html" class="service-link"><i class="fas fa-network-wired"></i><span>Reseller Hub</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="pay_links"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('pay_links')"><i class="fas fa-times"></i></div><a href="payment-links.html" class="service-link"><i class="fas fa-link"></i><span>Pay Links</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="qr_pay"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('qr_pay')"><i class="fas fa-times"></i></div><a href="qr-pay.html" class="service-link"><i class="fas fa-qrcode"></i><span>QR Collect</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="invoices"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('invoices')"><i class="fas fa-times"></i></div><a href="invoices.html" class="service-link"><i class="fas fa-file-invoice-dollar"></i><span>Invoicing</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="ads_promo"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('ads_promo')"><i class="fas fa-times"></i></div><a href="ads.html" class="service-link"><i class="fas fa-bullhorn"></i><span>Adverts</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="marketplace"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('marketplace')"><i class="fas fa-times"></i></div><a href="marketplace.html" class="service-link"><i class="fas fa-store-alt"></i><span>Marketplace</span></a></div>
+    </div>
+
+    <h5 class="ecosystem-section-title"><i class="fas fa-university"></i> Banking & Digital Assets</h5>
+    <div class="row g-2" id="gridWealth">
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="loan"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('loan')"><i class="fas fa-times"></i></div><a href="loan.html" class="service-link"><i class="fas fa-hand-holding-usd"></i><span>Credit Loans</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="savings"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('savings')"><i class="fas fa-times"></i></div><a href="savings.html" class="service-link"><i class="fas fa-piggy-bank"></i><span>Savings Vault</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="escrow"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('escrow')"><i class="fas fa-times"></i></div><a href="escrow.html" class="service-link"><i class="fas fa-shield-alt"></i><span>Escrow Guard</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="cards" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('cards')"><i class="fas fa-times"></i></div><a href="virtual-card.html" class="service-link"><i class="fas fa-credit-card"></i><span>Virtual USD</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="crypto"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('crypto')"><i class="fas fa-times"></i></div><a href="crypto.html" class="service-link"><i class="fas fa-coins"></i><span>Sell Crypto</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="giftcards"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('giftcards')"><i class="fas fa-times"></i></div><a href="giftcards.html" class="service-link"><i class="fas fa-gift"></i><span>Trade Cards</span></a></div>
+    </div>
+
+    <h5 class="ecosystem-section-title"><i class="fas fa-rocket"></i> Rewards & Value-Add</h5>
+    <div class="row g-2" id="gridGrowth">
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="cashback" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('cashback')"><i class="fas fa-times"></i></div><a href="cashback.html" class="service-link"><i class="fas fa-undo-alt"></i><span>Cashback</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="spin"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('spin')"><i class="fas fa-times"></i></div><a href="spin.html" class="service-link"><i class="fas fa-dharmachakra"></i><span>Spin & Win</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="tasks"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('tasks')"><i class="fas fa-times"></i></div><a href="tasks.html" class="service-link"><i class="fas fa-tasks"></i><span>Task & Earn</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="airtime_cash" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('airtime_cash')"><i class="fas fa-times"></i></div><a href="airtime-cash.html" class="service-link"><i class="fas fa-exchange-alt"></i><span>Airtime2Cash</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="bulk_sms"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('bulk_sms')"><i class="fas fa-times"></i></div><a href="bulk-sms.html" class="service-link"><i class="fas fa-envelope"></i><span>Bulk SMS</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="leaderboard"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('leaderboard')"><i class="fas fa-times"></i></div><a href="leaderboard.html" class="service-link"><i class="fas fa-trophy"></i><span>Leaderboard</span></a></div>
+    </div>
+
+    <div class="transaction-box">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="text-white fw-bold m-0"><i class="fas fa-history me-2 text-warning"></i> Audit Ledger Logs</h5>
+            <a href="transactions.html" class="btn btn-sm btn-outline-secondary rounded-pill">View All</a>
+        </div>
+        <div class="table-scroll-container">
+            <table class="table table-dark table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th class="text-secondary small fw-bold">DATE/TIME</th>
+                        <th class="text-secondary small fw-bold">TYPE & DESC</th>
+                        <th class="text-secondary small fw-bold">AMOUNT</th>
+                        <th class="text-secondary small fw-bold text-end">STATUS</th>
+                    </tr>
+                </thead>
+                <tbody id="txBody">
+                    <tr><td colspan="4" class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Fetching live transactions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <div class="text-center">
+        <p class="footer-compliance-tag m-0">v3.0 SECURED BY NATER-PAY INFRASTRUCTURES PROTOCOL</p>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let stars = [];
+    let socketConnectionLink = null;
+    
+    function initStars() {
+        const c = document.getElementById('starCanvas');
+        if(!c) return;
+        c.width = window.innerWidth; c.height = window.innerHeight;
+        stars = [];
+        for(let i = 0; i < 150; i++) {
+            stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1.5, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        }
+    }
+
+    function animate() {
+        const c = document.getElementById('starCanvas');
+        if(!c) return;
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, c.width, c.height);
+        stars.forEach(s => {
+            ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white";
+            ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5;
+        });
+        requestAnimationFrame(animate);
+    }
+
+    async function syncDashboardData() {
+        const authToken = localStorage.getItem("naterpay_token");
+        if(!authToken) {
+            window.location.href = '/index.html';
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/user/dashboard-data', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const data = await res.json();
+
+            if(data.success) {
+                document.getElementById('profileBadgeName').innerText = data.userFullName || "Verified Terminal Operator";
+                
+                const kycLevel = data.kycLevel || 0;
+                const badgeEl = document.getElementById('profileBadgeLevel');
+                if(kycLevel === 0) {
+                    badgeEl.className = "badge bg-danger text-white fw-bolder px-3 py-2 rounded-pill";
+                    badgeEl.innerText = "UNVERIFIED";
+                } else if(kycLevel === 1) {
+                    badgeEl.className = "badge bg-warning text-dark fw-bolder px-3 py-2 rounded-pill";
+                    badgeEl.innerText = "LEVEL 1 KYC";
+                } else {
+                    badgeEl.className = "badge bg-success text-white fw-bolder px-3 py-2 rounded-pill";
+                    badgeEl.innerText = `LEVEL ${kycLevel} KYC`;
+                }
+
+                const secPill = document.getElementById('securityStatusPill');
+                const isSecured = data.isSecured !== undefined ? data.isSecured : true; 
+                if(isSecured) { 
+                    secPill.className = "security-guard-warning-pill bg-success bg-opacity-10 border-success text-success";
+                    secPill.innerHTML = '<i class="fas fa-shield-check"></i> Vault Secured';
+                } else {
+                    secPill.className = "security-guard-warning-pill bg-danger bg-opacity-10 border-danger text-danger";
+                    secPill.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Security Alert';
+                }
+
+                if (data.userRole === 'admin') {
+                    document.getElementById('adminMenuWrapper').style.display = 'block';
+                    document.getElementById('adminDivider').style.display = 'block';
+                }
+
+                document.getElementById('walletBalance').innerText = '₦' + Number(data.balance || 0).toLocaleString(undefined, {minimumFractionDigits:2});
+                document.getElementById('statTrans').innerText = `${data.totalLogs || 0} Logs`;
+                document.getElementById('statSpent').innerText = '₦' + Number(data.totalSpent || 0).toLocaleString();
+                document.getElementById('statRefs').innerText = `${data.referralCount || 0} Nodes`;
+                document.getElementById('statBonus').innerText = '₦' + Number(data.referralBonus || 0).toLocaleString();
+
+                if (data.hiddenWidgets && data.hiddenWidgets.length > 0) {
+                    data.hiddenWidgets.forEach(widgetId => {
+                        const targetNode = document.querySelector(`[data-widget="${widgetId}"]`);
+                        if (targetNode) targetNode.style.display = 'none';
+                    });
+                }
+
+                const tbody = document.getElementById('txBody');
+                tbody.innerHTML = '';
+                if(data.recentTransactions && data.recentTransactions.length > 0) {
+                    data.recentTransactions.forEach(tx => {
+                        const dateString = new Date(tx.date).toLocaleDateString() + ' <br><small class="opacity-50">' + new Date(tx.date).toLocaleTimeString() + '</small>';
+                        const statusClass = tx.status === 'success' ? 'bg-success' : (tx.status === 'pending' ? 'bg-warning text-dark' : 'bg-danger');
+                        
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${dateString}</td>
+                                <td><strong class="d-block">${tx.type.toUpperCase()}</strong><span class="small opacity-75">${tx.description || 'System Log'}</span></td>
+                                <td class="fw-bold">₦${Number(tx.amount).toLocaleString()}</td>
+                                <td class="text-end"><span class="status-pill ${statusClass} text-white">${tx.status}</span></td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-5 opacity-50">No reconciliation logs found in current cycle.</td></tr>';
+                }
+            }
+        } catch (e) { 
+            console.warn("Network degradation. Dashboard relying on cached client state.");
+        }
+    }
+
+    async function dismissDashboardWidget(widgetId) {
+        const authToken = localStorage.getItem("naterpay_token");
+        const targetNode = document.querySelector(`[data-widget="${widgetId}"]`);
+        
+        if (targetNode) {
+            targetNode.style.opacity = '0';
+            targetNode.style.transform = 'scale(0.8)';
+            setTimeout(() => targetNode.style.display = 'none', 300);
+        }
+
+        try {
+            if(authToken) {
+                await fetch('/api/user/dashboard-preferences', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    body: JSON.stringify({ action: 'hide', target: widgetId })
+                });
+            }
+        } catch (err) {
+            console.warn("Visibility cache queued for async sync.");
+        }
+    }
+
+    window.onresize = initStars;
+    window.onload = () => { 
+        initStars(); 
+        animate(); 
+        syncDashboardData(); 
+        
+        try {
+            socketConnectionLink = io(window.location.origin, {
+                query: { token: localStorage.getItem("naterpay_token") }
+            });
+            
+            socketConnectionLink.on('wallet:update', (payload) => {
+                if(payload.balance !== undefined) {
+                    const balanceElement = document.getElementById('walletBalance');
+                    balanceElement.style.color = '#fff';
+                    balanceElement.innerText = '₦' + Number(payload.balance).toLocaleString(undefined, {minimumFractionDigits: 2});
+                    setTimeout(() => balanceElement.style.color = 'var(--gold)', 500);
+                }
+            });
+
+            socketConnectionLink.on('dashboard:refresh', () => { syncDashboardData(); });
+        } catch(err) {
+            console.warn("Realtime WebSocket channel unavailable.");
+        }
+    };
+</script>
+</body>
+</html>

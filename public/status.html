@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | System Status</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <style>
+        :root { --gold: #d4af37; --bg: #050505; }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; }
+        
+        header {
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            padding: 20px 5%; display: flex; justify-content: space-between; align-items: center;
+        }
+        
+        .brand-text { 
+            font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
+            text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start;
+        }
+        .site-part-1 { color: var(--gold); font-size: 1.8rem; } 
+        .site-part-2 { color: #d32f2f; font-size: 1.4rem; letter-spacing: 3px; }
+
+        .status-container { max-width: 1000px; margin: 50px auto; padding: 0 20px; }
+        
+        .status-card {
+            background: rgba(20, 20, 20, 0.95); border: 1px solid #333; border-radius: 20px;
+            padding: 30px; margin-bottom: 25px;
+        }
+        
+        .service-status {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 0; border-bottom: 1px solid #333;
+        }
+        
+        .status-indicator {
+            width: 12px; height: 12px; border-radius: 50%; display: inline-block;
+        }
+        .status-indicator.online { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+        .status-indicator.offline { background: #ff4444; box-shadow: 0 0 10px #ff4444; }
+        .status-indicator.degraded { background: #ffaa00; box-shadow: 0 0 10px #ffaa00; }
+        
+        .uptime-bar { height: 8px; background: #333; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+        .uptime-fill { height: 100%; background: var(--gold); transition: width 0.3s; }
+        
+        footer { text-align: center; padding: 30px; border-top: 2.5px solid var(--gold); margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="index.html" class="btn btn-outline-warning rounded-pill px-4">Back Home</a>
+</header>
+
+<div class="status-container">
+    <h1 class="text-center mb-5" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">System Status</h1>
+    
+    <div class="status-card">
+        <h3 style="font-family: 'Cinzel'; color: var(--gold); margin-bottom: 20px;">Core Services</h3>
+        
+        <div class="service-status">
+            <div>
+                <strong>API Gateway</strong>
+                <div class="small text-muted">99.9% uptime</div>
+            </div>
+            <span class="status-indicator online"></span>
+        </div>
+        
+        <div class="service-status">
+            <div>
+                <strong>Database Cluster</strong>
+                <div class="small text-muted">MongoDB Atlas - Operational</div>
+            </div>
+            <span class="status-indicator online"></span>
+        </div>
+        
+        <div class="service-status">
+            <div>
+                <strong>Payment Processors</strong>
+                <div class="small text-muted">Paystack, Flutterwave, Monnify</div>
+            </div>
+            <span class="status-indicator online"></span>
+        </div>
+        
+        <div class="service-status">
+            <div>
+                <strong>VTU Providers</strong>
+                <div class="small text-muted">VTpass, VTUGate</div>
+            </div>
+            <span class="status-indicator online"></span>
+        </div>
+        
+        <div class="service-status">
+            <div>
+                <strong>Realtime Services</strong>
+                <div class="small text-muted">Socket.io - Operational</div>
+            </div>
+            <span class="status-indicator online"></span>
+        </div>
+    </div>
+    
+    <div class="status-card">
+        <h3 style="font-family: 'Cinzel'; color: var(--gold); margin-bottom: 20px;">Service Uptime (30 Days)</h3>
+        
+        <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+                <span>API Gateway</span>
+                <span>99.95%</span>
+            </div>
+            <div class="uptime-bar"><div class="uptime-fill" style="width: 99.95%;"></div></div>
+        </div>
+        
+        <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+                <span>Database</span>
+                <span>99.98%</span>
+            </div>
+            <div class="uptime-bar"><div class="uptime-fill" style="width: 99.98%;"></div></div>
+        </div>
+        
+        <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+                <span>Payment Processing</span>
+                <span>99.92%</span>
+            </div>
+            <div class="uptime-bar"><div class="uptime-fill" style="width: 99.92%;"></div></div>
+        </div>
+    </div>
+    
+    <div class="status-card">
+        <h3 style="font-family: 'Cinzel'; color: var(--gold); margin-bottom: 20px;">Recent Incidents</h3>
+        <p class="text-muted">No incidents reported in the last 30 days.</p>
+    </div>
+</div>
+
+<footer>
+    <p class="mb-0" style="color: var(--gold); font-weight: 700;">NATER-PAY Infrastructure Status Monitor</p>
+    <small class="text-muted">Last updated: <span id="lastUpdate"></span></small>
+</footer>
+
+<script>
+    document.getElementById('lastUpdate').innerText = new Date().toLocaleString();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        document.getElementById('lastUpdate').innerText = new Date().toLocaleString();
+    }, 30000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Support</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; }
+        
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+        }
+
+        .brand-text { 
+            font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
+            text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start;
+        }
+        .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
+        .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
+
+        .container { max-width: 1200px; margin: 50px auto; padding: 0 20px; }
+        
+        .support-card {
+            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
+            padding: 30px; margin-bottom: 30px;
+        }
+        
+        .input-group-custom {
+            background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212,175,55,0.35);
+            border-radius: 15px; padding: 20px; margin-bottom: 20px;
+        }
+        .input-group-custom label {
+            display: block; font-size: 0.75rem; color: var(--gold); font-weight: 800;
+            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;
+        }
+        .input-group-custom input, .input-group-custom textarea, .input-group-custom select {
+            background: transparent; border: none; color: white; width: 100%;
+            font-size: 1.1rem; font-weight: 700; outline: none;
+        }
+        
+        .btn-submit {
+            background: var(--gold); color: black; font-weight: 900; border-radius: 15px;
+            padding: 18px; width: 100%; border: none; font-size: 1.1rem; letter-spacing: 2px;
+            transition: 0.3s;
+        }
+        .btn-submit:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
+        
+        .ticket-item {
+            background: rgba(30,30,30,0.95); border: 1px solid #444; border-radius: 15px;
+            padding: 20px; margin-bottom: 15px; cursor: pointer; transition: 0.3s;
+        }
+        .ticket-item:hover { border-color: var(--gold); background: rgba(212,175,55,0.1); }
+        
+        .status-pill { padding: 5px 12px; border-radius: 50px; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+        .status-open { background: #00bfff; color: black; }
+        .status-in_progress { background: #ffaa00; color: black; }
+        .status-resolved { background: #00ff88; color: black; }
+        .status-closed { background: #666; color: white; }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4">Back to Dashboard</a>
+</header>
+
+<div class="container">
+    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">SUPPORT CENTER</h1>
+    
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="support-card">
+                <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">CREATE TICKET</h5>
+                
+                <div class="input-group-custom">
+                    <label>SUBJECT</label>
+                    <input type="text" id="ticketSubject" placeholder="Brief description of your issue">
+                </div>
+                
+                <div class="input-group-custom">
+                    <label>CATEGORY</label>
+                    <select id="ticketCategory">
+                        <option value="transaction">Transaction Issue</option>
+                        <option value="account">Account Problem</option>
+                        <option value="kyc">KYC Verification</option>
+                        <option value="payment">Payment Issue</option>
+                        <option value="technical">Technical Problem</option>
+                        <option value="feature_request">Feature Request</option>
+                        <option value="bug_report">Bug Report</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="input-group-custom">
+                    <label>PRIORITY</label>
+                    <select id="ticketPriority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                
+                <div class="input-group-custom">
+                    <label>DESCRIPTION</label>
+                    <textarea id="ticketDescription" rows="5" placeholder="Please provide detailed information about your issue"></textarea>
+                </div>
+                
+                <button class="btn-submit" onclick="createTicket()">
+                    <i class="fas fa-paper-plane me-2"></i> SUBMIT TICKET
+                </button>
+            </div>
+            
+            <div class="support-card">
+                <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">CONTACT US</h5>
+                
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <i class="fab fa-whatsapp fa-2x text-success"></i>
+                    <div>
+                        <div class="fw-bold">WhatsApp</div>
+                        <a href="https://wa.me/2348160979620" class="text-warning">Chat with us</a>
+                    </div>
+                </div>
+                
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <i class="fas fa-envelope fa-2x text-warning"></i>
+                    <div>
+                        <div class="fw-bold">Email</div>
+                        <a href="mailto:nmbashau@gmail.com" class="text-warning">nmbashau@gmail.com</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-8">
+            <div class="support-card">
+                <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">YOUR TICKETS</h5>
+                
+                <div id="ticketsContainer">
+                    <div class="text-center py-5 opacity-50">
+                        <i class="fas fa-spinner fa-spin me-2"></i> Loading tickets...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-center text-muted small mt-4">
+        <p class="mb-1">Our support team is available 24/7</p>
+        <p>Secured by NATER-PAY Protocol v3.0</p>
+    </div>
+</div>
+
+<script>
+    function initStars() {
+        const canvas = document.getElementById('starCanvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        const stars = [];
+        
+        for(let i = 0; i < 150; i++) {
+            stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(s => {
+                ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white";
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0; s.y += s.v; if(s.y > canvas.height) s.y = -5;
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+    
+    async function createTicket() {
+        const subject = document.getElementById('ticketSubject').value;
+        const category = document.getElementById('ticketCategory').value;
+        const priority = document.getElementById('ticketPriority').value;
+        const description = document.getElementById('ticketDescription').value;
+        
+        if (!subject || !description) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Missing Information',
+                text: 'Please provide a subject and description',
+                confirmButtonColor: '#d32f2f',
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+            return;
+        }
+        
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) {
+            window.location.href = '/index.html';
+            return;
+        }
+        
+        try {
+            Swal.fire({
+                title: 'Creating Ticket...',
+                text: 'Submitting your support request',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+            
+            const res = await fetch('/api/support/tickets', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ subject, category, priority, description })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Ticket Created',
+                    text: `Your support ticket ${data.ticket.ticketId} has been created`,
+                    confirmButtonColor: '#d4af37',
+                    background: '#0a0a0a',
+                    color: '#fff'
+                });
+                loadTickets();
+                
+                // Clear form
+                document.getElementById('ticketSubject').value = '';
+                document.getElementById('ticketDescription').value = '';
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Creation Failed',
+                    text: data.message,
+                    confirmButtonColor: '#d32f2f',
+                    background: '#0a0a0a',
+                    color: '#fff'
+                });
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Creation Error',
+                text: 'Unable to create ticket. Please try again.',
+                confirmButtonColor: '#d32f2f',
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+        }
+    }
+    
+    async function loadTickets() {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) {
+            window.location.href = '/index.html';
+            return;
+        }
+        
+        try {
+            const res = await fetch('/api/support/tickets', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                const container = document.getElementById('ticketsContainer');
+                
+                if (data.tickets && data.tickets.length > 0) {
+                    const statusClassMap = {
+                        'open': 'status-open',
+                        'in_progress': 'status-in_progress',
+                        'resolved': 'status-resolved',
+                        'closed': 'status-closed'
+                    };
+                    
+                    container.innerHTML = data.tickets.map(ticket => `
+                        <div class="ticket-item" onclick="viewTicket('${ticket.ticketId}')">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="fw-bold mb-1">${ticket.subject}</h6>
+                                    <small class="text-muted">${ticket.category} • ${ticket.priority}</small>
+                                </div>
+                                <span class="status-pill ${statusClassMap[ticket.status] || 'status-open'}">${ticket.status.replace('_', ' ')}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Created: ${new Date(ticket.createdAt).toLocaleDateString()}</small>
+                                ${ticket.resolvedAt ? `<small class="text-success">Resolved: ${new Date(ticket.resolvedAt).toLocaleDateString()}</small>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="text-center py-5 opacity-50">No support tickets created yet</div>';
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load tickets');
+            document.getElementById('ticketsContainer').innerHTML = '<div class="text-center py-5 opacity-50">Failed to load tickets</div>';
+        }
+    }
+    
+    function viewTicket(ticketId) {
+        // For now, just show a message that ticket viewing would open a modal
+        Swal.fire({
+            title: 'Ticket Details',
+            text: `Viewing ticket ${ticketId} - Full ticket view would open in a modal`,
+            icon: 'info',
+            confirmButtonColor: '#d4af37',
+            background: '#0a0a0a',
+            color: '#fff'
+        });
+    }
+    
+    window.onload = () => {
+        initStars();
+        loadTickets();
+    };
+</script>
+
+</body>
+</html>

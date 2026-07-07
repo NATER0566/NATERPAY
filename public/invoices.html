@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Invoices</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; }
+        
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+        }
+
+        .brand-text { 
+            font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
+            text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start;
+        }
+        .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
+        .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
+
+        .container { max-width: 1200px; margin: 50px auto; padding: 0 20px; }
+        
+        .invoice-card {
+            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
+            padding: 30px; margin-bottom: 30px;
+        }
+        
+        .input-group-custom {
+            background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212,175,55,0.35);
+            border-radius: 15px; padding: 20px; margin-bottom: 20px;
+        }
+        .input-group-custom label {
+            display: block; font-size: 0.75rem; color: var(--gold); font-weight: 800;
+            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;
+        }
+        .input-group-custom input, .input-group-custom textarea, .input-group-custom input[type="date"] {
+            background: transparent; border: none; color: white; width: 100%;
+            font-size: 1.1rem; font-weight: 700; outline: none;
+        }
+        
+        .btn-create {
+            background: var(--gold); color: black; font-weight: 900; border-radius: 15px;
+            padding: 18px; width: 100%; border: none; font-size: 1.1rem; letter-spacing: 2px;
+            transition: 0.3s;
+        }
+        .btn-create:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
+        
+        .existing-invoice {
+            background: rgba(30,30,30,0.95); border: 1px solid #444; border-radius: 15px;
+            padding: 20px; margin-bottom: 15px;
+        }
+        
+        .status-pill { padding: 5px 12px; border-radius: 50px; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+        .status-draft { background: #666; color: white; }
+        .status-sent { background: #00bfff; color: black; }
+        .status-paid { background: #00ff88; color: black; }
+        .status-overdue { background: #ff4444; color: white; }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4">Back to Dashboard</a>
+</header>
+
+<div class="container">
+    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">INVOICES</h1>
+    
+    <div class="invoice-card">
+        <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">CREATE NEW INVOICE</h5>
+        
+        <div class="input-group-custom">
+            <label>CUSTOMER NAME</label>
+            <input type="text" id="customerName" placeholder="Client or business name">
+        </div>
+        
+        <div class="input-group-custom">
+            <label>CUSTOMER EMAIL</label>
+            <input type="email" id="customerEmail" placeholder="client@example.com">
+        </div>
+        
+        <div class="input-group-custom">
+            <label>CUSTOMER PHONE (OPTIONAL)</label>
+            <input type="tel" id="customerPhone" placeholder="08012345678">
+        </div>
+        
+        <div class="input-group-custom">
+            <label>INVOICE ITEMS</label>
+            <div id="itemsContainer">
+                <div class="row g-2 mb-2 item-row">
+                    <div class="col-md-5">
+                        <input type="text" class="form-control bg-transparent text-white border-secondary" placeholder="Description">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control bg-transparent text-white border-secondary" placeholder="Qty" value="1">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" class="form-control bg-transparent text-white border-secondary" placeholder="Unit Price">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-danger w-100" onclick="removeItem(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-outline-warning btn-sm rounded-pill mt-2" onclick="addItem()">
+                <i class="fas fa-plus me-1"></i> Add Item
+            </button>
+        </div>
+        
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="input-group-custom">
+                    <label>TAX RATE (%)</label>
+                    <input type="number" id="taxRate" placeholder="0" value="0">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group-custom">
+                    <label>DISCOUNT RATE (%)</label>
+                    <input type="number" id="discountRate" placeholder="0" value="0">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group-custom">
+                    <label>DUE DATE</label>
+                    <input type="date" id="dueDate">
+                </div>
+            </div>
+        </div>
+        
+        <div class="input-group-custom">
+            <label>NOTES (OPTIONAL)</label>
+            <textarea id="invoiceNotes" rows="2" placeholder="Additional notes for the customer"></textarea>
+        </div>
+        
+        <button class="btn-create" onclick="createInvoice()">
+            <i class="fas fa-file-invoice-dollar me-2"></i> CREATE INVOICE
+        </button>
+    </div>
+    
+    <div class="invoice-card">
+        <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">YOUR INVOICES</h5>
+        
+        <div id="invoicesContainer">
+            <div class="text-center py-5 opacity-50">
+                <i class="fas fa-spinner fa-spin me-2"></i> Loading invoices...
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-center text-muted small">
+        <p class="mb-1">Send professional invoices to your customers</p>
+        <p>Secured by NATER-PAY Protocol v3.0</p>
+    </div>
+</div>
+
+<script>
+    function initStars() {
+        const canvas = document.getElementById('starCanvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        const stars = [];
+        
+        for(let i = 0; i < 150; i++) {
+            stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(s => {
+                ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white";
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0; s.y += s.v; if(s.y > canvas.height) s.y = -5;
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+    
+    function addItem() {
+        const container = document.getElementById('itemsContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'row g-2 mb-2 item-row';
+        newRow.innerHTML = `
+            <div class="col-md-5">
+                <input type="text" class="form-control bg-transparent text-white border-secondary" placeholder="Description">
+            </div>
+            <div class="col-md-2">
+                <input type="number" class="form-control bg-transparent text-white border-secondary" placeholder="Qty" value="1">
+            </div>
+            <div class="col-md-3">
+                <input type="number" class="form-control bg-transparent text-white border-secondary" placeholder="Unit Price">
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-danger w-100" onclick="removeItem(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(newRow);
+    }
+    
+    function removeItem(button) {
+        const row = button.closest('.item-row');
+        if (document.querySelectorAll('.item-row').length > 1) {
+            row.remove();
+        }
+    }
+    
+    async function createInvoice() {
+        const customerName = document.getElementById('customerName').value;
+        const customerEmail = document.getElementById('customerEmail').value;
+        const customerPhone = document.getElementById('customerPhone').value;
+        const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+        const discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
+        const dueDate = document.getElementById('dueDate').value;
+        const notes = document.getElementById('invoiceNotes').value;
+        
+        // Collect items
+        const items = [];
+        document.querySelectorAll('.item-row').forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            const description = inputs[0].value;
+            const quantity = parseFloat(inputs[1].value) || 1;
+            const unitPrice = parseFloat(inputs[2].value) || 0;
+            
+            if (description && unitPrice > 0) {
+                items.push({ description, quantity, unitPrice });
+            }
+        });
+        
+        if (!customerName || !customerEmail || items.length === 0) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Missing Information',
+                text: 'Please provide customer name, email, and at least one item',
+                confirmButtonColor: '#d32f2f',
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+            return;
+        }
+        
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) {
+            window.location.href = '/index.html';
+            return;
+        }
+        
+        try {
+            Swal.fire({
+                title: 'Creating Invoice...',
+                text: 'Generating your invoice',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+            
+            const res = await fetch('/api/invoices', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ 
+                    customerName, customerEmail, customerPhone, items,
+                    taxRate, discountRate, dueDate, notes
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Invoice Created',
+                    text: `Your invoice has been created and can be shared`,
+                    confirmButtonColor: '#d4af37',
+                    background: '#0a0a0a',
+                    color: '#fff'
+                });
+                loadInvoices();
+                
+                // Clear form
+                document.getElementById('customerName').value = '';
+                document.getElementById('customerEmail').value = '';
+                document.getElementById('customerPhone').value = '';
+                document.getElementById('taxRate').value = '0';
+                document.getElementById('discountRate').value = '0';
+                document.getElementById('dueDate').value = '';
+                document.getElementById('invoiceNotes').value = '';
+                document.getElementById('itemsContainer').innerHTML = `
+                    <div class="row g-2 mb-2 item-row">
+                        <div class="col-md-5">
+                            <input type="text" class="form-control bg-transparent text-white border-secondary" placeholder="Description">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control bg-transparent text-white border-secondary" placeholder="Qty" value="1">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="number" class="form-control bg-transparent text-white border-secondary" placeholder="Unit Price">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-outline-danger w-100" onclick="removeItem(this)">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Creation Failed',
+                    text: data.message,
+                    confirmButtonColor: '#d32f2f',
+                    background: '#0a0a0a',
+                    color: '#fff'
+                });
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Creation Error',
+                text: 'Unable to create invoice. Please try again.',
+                confirmButtonColor: '#d32f2f',
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+        }
+    }
+    
+    async function loadInvoices() {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) {
+            window.location.href = '/index.html';
+            return;
+        }
+        
+        try {
+            const res = await fetch('/api/invoices', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                const container = document.getElementById('invoicesContainer');
+                
+                if (data.invoices && data.invoices.length > 0) {
+                    const statusClassMap = {
+                        'draft': 'status-draft',
+                        'sent': 'status-sent',
+                        'paid': 'status-paid',
+                        'overdue': 'status-overdue'
+                    };
+                    
+                    container.innerHTML = data.invoices.map(inv => `
+                        <div class="existing-invoice">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="fw-bold mb-1">${inv.customerName}</h6>
+                                    <small class="text-muted">${inv.customerEmail}</small>
+                                </div>
+                                <span class="status-pill ${statusClassMap[inv.status] || 'status-draft'}">${inv.status}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-bold text-warning">₦${Number(inv.total).toLocaleString()}</span>
+                                    <small class="text-muted ms-2">Due: ${new Date(inv.dueDate).toLocaleDateString()}</small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-warning rounded-pill" onclick="copyInvoiceLink('${inv.invoiceId}')">
+                                    <i class="fas fa-link me-1"></i> Copy Link
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="text-center py-5 opacity-50">No invoices created yet</div>';
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load invoices');
+            document.getElementById('invoicesContainer').innerHTML = '<div class="text-center py-5 opacity-50">Failed to load invoices</div>';
+        }
+    }
+    
+    function copyInvoiceLink(invoiceId) {
+        const linkUrl = `${window.location.origin}/invoice/${invoiceId}`;
+        navigator.clipboard.writeText(linkUrl).then(() => {
+            Swal.fire({
+                icon: 'success',
+                title: 'Link Copied',
+                text: 'Invoice link copied to clipboard',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 2000,
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+        });
+    }
+    
+    window.onload = () => {
+        initStars();
+        loadInvoices();
+    };
+</script>
+
+</body>
+</html>

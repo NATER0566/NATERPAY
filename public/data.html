@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Buy Data</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <style>
+        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; }
+        
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+        }
+
+        .brand-text { 
+            font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
+            text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start;
+        }
+        .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
+        .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
+
+        .container { max-width: 900px; margin: 50px auto; padding: 0 20px; }
+        
+        .data-card {
+            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
+            padding: 40px; margin-bottom: 30px;
+        }
+        
+        .network-btn {
+            background: rgba(30,30,30,0.95); border: 2px solid #444; border-radius: 15px;
+            padding: 20px; cursor: pointer; transition: 0.3s; text-align: center;
+        }
+        .network-btn:hover, .network-btn.active {
+            border-color: var(--gold); background: rgba(212,175,55,0.1);
+            transform: translateY(-3px);
+        }
+        
+        .input-group-custom {
+            background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212,175,55,0.35);
+            border-radius: 15px; padding: 20px; margin-bottom: 20px;
+        }
+        .input-group-custom label {
+            display: block; font-size: 0.75rem; color: var(--gold); font-weight: 800;
+            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;
+        }
+        .input-group-custom input, .input-group-custom select {
+            background: transparent; border: none; color: white; width: 100%;
+            font-size: 1.1rem; font-weight: 700; outline: none;
+        }
+        
+        .plan-card {
+            background: rgba(30,30,30,0.95); border: 1px solid #444; border-radius: 15px;
+            padding: 20px; cursor: pointer; transition: 0.3s;
+        }
+        .plan-card:hover, .plan-card.active {
+            border-color: var(--gold); background: rgba(212,175,55,0.1);
+        }
+        
+        .btn-buy {
+            background: var(--gold); color: black; font-weight: 900; border-radius: 15px;
+            padding: 18px; width: 100%; border: none; font-size: 1.1rem; letter-spacing: 2px;
+            transition: 0.3s;
+        }
+        .btn-buy:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4">Back to Dashboard</a>
+</header>
+
+<div class="container">
+    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">BUY DATA</h1>
+    
+    <div class="data-card">
+        <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">SELECT NETWORK</h5>
+        
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="network-btn active" onclick="selectNetwork(this, 'mtn')">
+                    <i class="fas fa-signal fa-2x mb-2" style="color: #ffcc00;"></i>
+                    <div class="fw-bold">MTN</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="network-btn" onclick="selectNetwork(this, 'airtel')">
+                    <i class="fas fa-signal fa-2x mb-2" style="color: #ff0000;"></i>
+                    <div class="fw-bold">Airtel</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="network-btn" onclick="selectNetwork(this, 'glo')">
+                    <i class="fas fa-signal fa-2x mb-2" style="color: #00ff00;"></i>
+                    <div class="fw-bold">Glo</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="network-btn" onclick="selectNetwork(this, '9mobile')">
+                    <i class="fas fa-signal fa-2x mb-2" style="color: #00bfff;"></i>
+                    <div class="fw-bold">9mobile</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="input-group-custom">
+            <label>PHONE NUMBER</label>
+            <input type="tel" id="phoneNumber" placeholder="e.g. 08012345678">
+        </div>
+        
+        <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">SELECT DATA PLAN</h5>
+        
+        <div class="row g-3 mb-4" id="planContainer">
+            <div class="col-6 col-md-4">
+                <div class="plan-card active" onclick="selectPlan(this, '100MB', 100)">
+                    <div class="fw-bold">100MB</div>
+                    <div class="text-warning">₦100</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card" onclick="selectPlan(this, '200MB', 200)">
+                    <div class="fw-bold">200MB</div>
+                    <div class="text-warning">₦200</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card" onclick="selectPlan(this, '500MB', 350)">
+                    <div class="fw-bold">500MB</div>
+                    <div class="text-warning">₦350</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card" onclick="selectPlan(this, '1GB', 500)">
+                    <div class="fw-bold">1GB</div>
+                    <div class="text-warning">₦500</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card" onclick="selectPlan(this, '2GB', 900)">
+                    <div class="fw-bold">2GB</div>
+                    <div class="text-warning">₦900</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card" onclick="selectPlan(this, '3GB', 1200)">
+                    <div class="fw-bold">3GB</div>
+                    <div class="text-warning">₦1,200</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card" onclick="selectPlan(this, '5GB', 1800)">
+                    <div class="fw-bold">5GB</div>
+                    <div class="text-warning">₦1,800</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card" onclick="selectPlan(this, '10GB', 3000)">
+                    <div class="fw-bold">10GB</div>
+                    <div class="text-warning">₦3,000</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="input-group-custom">
+            <label>WITHDRAWAL PIN</label>
+            <input type="password" id="withdrawalPin" placeholder="Enter your 4-digit PIN" maxlength="4">
+        </div>
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <small class="text-muted">TOTAL AMOUNT</small>
+                <div class="h3 fw-bold" style="color: var(--gold);" id="totalAmount">₦100</div>
+            </div>
+        </div>
+        
+        <button class="btn-buy" onclick="buyData()">
+            <i class="fas fa-wifi me-2"></i> PURCHASE DATA
+        </button>
+    </div>
+    
+    <div class="text-center text-muted small">
+        <p class="mb-1">Data bundles powered by VTpass</p>
+        <p>Secured by NATER-PAY Protocol v3.0</p>
+    </div>
+</div>
+
+<script>
+    let selectedNetwork = 'mtn';
+    let selectedPlan = '100MB';
+    let selectedAmount = 100;
+    
+    function initStars() {
+        const canvas = document.getElementById('starCanvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        const stars = [];
+        
+        for(let i = 0; i < 150; i++) {
+            stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(s => {
+                ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white";
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0; s.y += s.v; if(s.y > canvas.height) s.y = -5;
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+    
+    function selectNetwork(element, network) {
+        document.querySelectorAll('.network-btn').forEach(btn => btn.classList.remove('active'));
+        element.classList.add('active');
+        selectedNetwork = network;
+    }
+    
+    function selectPlan(element, plan, amount) {
+        document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('active'));
+        element.classList.add('active');
+        selectedPlan = plan;
+        selectedAmount = amount;
+        document.getElementById('totalAmount').innerText = '₦' + amount.toLocaleString();
+    }
+    
+    async function buyData() {
+        const phoneNumber = document.getElementById('phoneNumber').value;
+        const pin = document.getElementById('withdrawalPin').value;
+        
+        if (!phoneNumber || phoneNumber.length < 11) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Phone Number',
+                text: 'Please enter a valid phone number',
+                confirmButtonColor: '#d32f2f',
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+            return;
+        }
+        
+        if (!pin || pin.length !== 4) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid PIN',
+                text: 'Please enter your 4-digit withdrawal PIN',
+                confirmButtonColor: '#d32f2f',
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+            return;
+        }
+        
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) {
+            window.location.href = '/index.html';
+            return;
+        }
+        
+        try {
+            Swal.fire({
+                title: 'Processing...',
+                text: 'Purchasing data bundle',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+            
+            const res = await fetch('/api/vtu/data', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ 
+                    phone: phoneNumber,
+                    network: selectedNetwork,
+                    plan: selectedPlan,
+                    amount: selectedAmount,
+                    pin
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Data Purchase Successful',
+                    text: `${selectedPlan} data has been sent to ${phoneNumber}`,
+                    confirmButtonColor: '#d4af37',
+                    background: '#0a0a0a',
+                    color: '#fff'
+                }).then(() => {
+                    window.location.href = '/dashboard.html';
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Purchase Failed',
+                    text: data.message,
+                    confirmButtonColor: '#d32f2f',
+                    background: '#0a0a0a',
+                    color: '#fff'
+                });
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Processing Error',
+                text: 'Unable to process data purchase. Please try again.',
+                confirmButtonColor: '#d32f2f',
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+        }
+    }
+    
+    window.onload = initStars;
+</script>
+
+</body>
+</html>
