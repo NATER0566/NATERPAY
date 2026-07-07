@@ -8,13 +8,13 @@ const AuditLog = require('../models/AuditLog');
 async function getApiKeys(request, reply) {
   try {
     const user = request.user;
-    
+
     const apiKeys = {
       publicKey: user.apiKeys?.publicKey || null,
       testPublicKey: user.apiKeys?.testPublicKey || null,
       createdAt: user.apiKeys?.createdAt || null
     };
-    
+
     reply.send({
       success: true,
       apiKeys
@@ -31,27 +31,27 @@ async function getApiKeys(request, reply) {
 /**
  * Generate new API key
  */
-async function generateApiKey(request, reply) {
+async function handleGenerateApiKey(request, reply) {
   try {
     const { type } = request.body; // 'live' or 'test'
-    
+
     const user = request.user;
-    
+
     if (!user.apiKeys) {
       user.apiKeys = {};
     }
-    
+
     const newKey = generateApiKey();
-    
+
     if (type === 'live') {
       user.apiKeys.publicKey = newKey;
     } else {
       user.apiKeys.testPublicKey = newKey;
     }
-    
+
     user.apiKeys.createdAt = new Date();
     await user.save();
-    
+
     await AuditLog.logAction({
       user: user._id,
       action: 'api_key_create',
@@ -59,7 +59,7 @@ async function generateApiKey(request, reply) {
       ipAddress: request.ip,
       userAgent: request.headers['user-agent']
     });
-    
+
     reply.send({
       success: true,
       message: 'API key generated successfully',
@@ -81,24 +81,24 @@ async function generateApiKey(request, reply) {
 async function revokeApiKey(request, reply) {
   try {
     const { type } = request.body; // 'live' or 'test'
-    
+
     const user = request.user;
-    
+
     if (!user.apiKeys) {
       return reply.status(404).send({
         success: false,
         message: 'No API keys found'
       });
     }
-    
+
     if (type === 'live') {
       user.apiKeys.publicKey = null;
     } else {
       user.apiKeys.testPublicKey = null;
     }
-    
+
     await user.save();
-    
+
     await AuditLog.logAction({
       user: user._id,
       action: 'api_key_revoke',
@@ -106,7 +106,7 @@ async function revokeApiKey(request, reply) {
       ipAddress: request.ip,
       userAgent: request.headers['user-agent']
     });
-    
+
     reply.send({
       success: true,
       message: 'API key revoked successfully'
@@ -126,35 +126,35 @@ async function revokeApiKey(request, reply) {
 async function authenticateApiKey(request, reply) {
   try {
     const apiKey = request.headers['x-api-key'] || request.headers.authorization?.replace('Bearer ', '');
-    
+
     if (!apiKey) {
       return reply.status(401).send({
         success: false,
         message: 'API key is required'
       });
     }
-    
+
     const user = await User.findOne({
       $or: [
         { 'apiKeys.publicKey': apiKey },
         { 'apiKeys.testPublicKey': apiKey }
       ]
     });
-    
+
     if (!user) {
       return reply.status(401).send({
         success: false,
         message: 'Invalid API key'
       });
     }
-    
+
     if (!user.isActive || user.isSuspended) {
       return reply.status(403).send({
         success: false,
         message: 'Account is inactive or suspended'
       });
     }
-    
+
     request.user = user;
     request.userId = user._id;
     request.isTestKey = user.apiKeys?.testPublicKey === apiKey;
@@ -173,7 +173,7 @@ async function apiGetBalance(request, reply) {
   try {
     const Wallet = require('../models/Wallet');
     const wallet = await Wallet.findByUser(request.user._id);
-    
+
     reply.send({
       success: true,
       balance: wallet ? wallet.availableBalance.toString() : '0',
@@ -193,81 +193,72 @@ async function apiGetBalance(request, reply) {
 async function apiCreateTransaction(request, reply) {
   const session = await require('../models/Wallet').startSession();
   session.startTransaction();
-  
+
   try {
     const { type, amount, description, metadata } = request.body;
+
+    if (!type || !amount) { 
+      await session.abortTransaction(); 
+      session.endSession(); 
+      return reply.status(400).send({ success: false, message: 'Type and amount are required' }); 
+    } 
     
-    if (!type || !amount) {
-      await session.abortTransaction();
-      session.endSession();
-      return reply.status(400).send({
-        success: false,
-        message: 'Type and amount are required'
-      });
-    }
+    const Wallet = require('../models/Wallet'); 
+    const Transaction = require('../models/Transaction'); 
     
-    const Wallet = require('../models/Wallet');
-    const Transaction = require('../models/Transaction');
+    const wallet = await Wallet.findByUser(request.user._id); 
     
-    const wallet = await Wallet.findByUser(request.user._id);
-    if (!wallet) {
-      await session.abortTransaction();
-      session.endSession();
-      return reply.status(404).send({
-        success: false,
-        message: 'Wallet not found'
-      });
-    }
+    if (!wallet) { 
+      await session.abortTransaction(); 
+      session.endSession(); 
+      return reply.status(404).send({ success: false, message: 'Wallet not found' }); 
+    } 
     
-    const balanceBefore = wallet.availableBalance.toString();
+    const balanceBefore = wallet.availableBalance.toString(); 
     
-    if (parseFloat(balanceBefore) < amount) {
-      await session.abortTransaction();
-      session.endSession();
-      return reply.status(400).send({
-        success: false,
-        message: 'Insufficient balance'
-      });
-    }
+    if (parseFloat(balanceBefore) < amount) { 
+      await session.abortTransaction(); 
+      session.endSession(); 
+      return reply.status(400).send({ success: false, message: 'Insufficient balance' }); 
+    } 
     
-    const transaction = new Transaction({
-      user: request.user._id,
-      type,
-      description: description || 'API Transaction',
-      amount,
-      fee: 0,
-      balanceBefore,
-      balanceAfter: balanceBefore,
-      status: 'success',
-      provider: 'api',
-      metadata: metadata || {},
-      ipAddress: request.ip,
-      userAgent: request.headers['user-agent']
-    });
+    const transaction = new Transaction({ 
+      user: request.user._id, 
+      type, 
+      description: description || 'API Transaction', 
+      amount, 
+      fee: 0, 
+      balanceBefore, 
+      balanceAfter: balanceBefore, 
+      status: 'success', 
+      provider: 'api', 
+      metadata: metadata || {}, 
+      ipAddress: request.ip, 
+      userAgent: request.headers['user-agent'] 
+    }); 
     
-    await transaction.save({ session });
+    await transaction.save({ session }); 
+    await wallet.debit(amount); 
+    transaction.balanceAfter = wallet.availableBalance.toString(); 
+    await transaction.save({ session }); 
     
-    await wallet.debit(amount);
-    transaction.balanceAfter = wallet.availableBalance.toString();
+    await session.commitTransaction(); 
+    session.endSession(); 
     
-    await transaction.save({ session });
-    
-    await session.commitTransaction();
-    session.endSession();
-    
-    reply.send({
-      success: true,
-      transaction: {
-        id: transaction._id,
-        type: transaction.type,
-        amount: transaction.amount.toString(),
-        status: transaction.status,
-        balanceBefore: transaction.balanceBefore.toString(),
-        balanceAfter: transaction.balanceAfter.toString(),
-        createdAt: transaction.createdAt
-      },
-      isTest: request.isTestKey
-    });
+    reply.send({ 
+      success: true, 
+      transaction: { 
+        id: transaction._id, 
+        type: transaction.type, 
+        amount: transaction.amount.toString(), 
+        status: transaction.status, 
+        balanceBefore: transaction.balanceBefore.toString(), 
+        balanceAfter: transaction.balanceAfter.toString(), 
+        createdAt: transaction.createdAt 
+      }, 
+      isTest: request.isTestKey 
+    }); 
+
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -281,7 +272,7 @@ async function apiCreateTransaction(request, reply) {
 
 module.exports = {
   getApiKeys,
-  generateApiKey,
+  generateApiKey: handleGenerateApiKey,
   revokeApiKey,
   authenticateApiKey,
   apiGetBalance,
