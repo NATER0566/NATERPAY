@@ -1,4 +1,4 @@
-require('dotenv').config(); // FIXED: lowercase 'require'
+require('dotenv').config();
 const Fastify = require('fastify');
 const mongoose = require('mongoose');
 const socketIo = require('socket.io');
@@ -83,7 +83,7 @@ async function registerRoutes() {
   const walletRoutes = require('./routes/wallet');
   fastify.get('/api/wallet', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.getWallet);
   fastify.post('/api/wallet/fund', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.fundWallet);
-  fastify.post('/api/wallet/verify', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.verifyFunding); // NEW: Verify funding route!
+  fastify.post('/api/wallet/verify', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.verifyFunding);
   fastify.post('/api/wallet/withdraw', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.withdraw);
   fastify.post('/api/wallet/transfer', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.transfer);
   fastify.post('/api/wallet/set-pin', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.setPin);
@@ -95,6 +95,7 @@ async function registerRoutes() {
   fastify.post('/api/vtu/electricity', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyElectricity);
   fastify.post('/api/vtu/cable', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyCable);
   fastify.get('/api/vtu/rates', vtuRoutes.getRates);
+  fastify.get('/api/vtu/variations', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getVariations);
   
   // Transaction routes
   const transactionRoutes = require('./routes/transaction');
