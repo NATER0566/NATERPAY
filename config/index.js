@@ -106,7 +106,7 @@ const config = {
   
   business: {
     defaultReferralBonus: parseFloat(process.env.DEFAULT_REFERRAL_BONUS) || 100,
-    minWithdrawal: parseFloat(process.env.MIN_WITHDRAWAL) || 1000,
+    minWithdrawal: parseFloat(process.env.MIN_WITHDRAWAL) || 100,
     maxWithdrawal: parseFloat(process.env.MAX_WITHDRAWAL) || 500000,
     transactionFeePercentage: parseFloat(process.env.TRANSACTION_FEE_PERCENTAGE) || 1.5
   },
