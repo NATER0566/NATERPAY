@@ -6,6 +6,8 @@ const SupportTicket = require('../models/SupportTicket');
 const Analytics = require('../models/Analytics');
 const AuditLog = require('../models/AuditLog');
 const Notification = require('../models/Notification');
+const mongoose = require('mongoose');
+const { generateTransactionReference } = require('../utils/auth');
 
 /**
  * Get all users (admin)
@@ -27,11 +29,19 @@ async function getUsers(request, reply) {
     if (status === 'inactive') query.isActive = false;
     if (status === 'suspended') query.isSuspended = true;
     
+    // Fetch users and their wallet balances to display in the ledger
     const users = await User.find(query)
       .select('-password -withdrawalPin -otp')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .lean();
+      
+    // Attach wallet balance for the admin table
+    for (let user of users) {
+        const wallet = await Wallet.findOne({ user: user._id });
+        user.walletBalance = wallet ? wallet.availableBalance.toString() : 0;
+    }
     
     const total = await User.countDocuments(query);
     
@@ -47,10 +57,7 @@ async function getUsers(request, reply) {
     });
   } catch (error) {
     console.error('Get users error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch users'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch users' });
   }
 }
 
@@ -60,33 +67,18 @@ async function getUsers(request, reply) {
 async function getUser(request, reply) {
   try {
     const { id } = request.params;
-    
     const user = await User.findById(id).select('-password -withdrawalPin -otp');
     
-    if (!user) {
-      return reply.status(404).send({
-        success: false,
-        message: 'User not found'
-      });
-    }
+    if (!user) return reply.status(404).send({ success: false, message: 'User not found' });
     
     const wallet = await Wallet.findByUser(user._id);
     const kyc = await KYC.findByUser(user._id);
     const recentTransactions = await Transaction.findByUser(user._id, { limit: 10 });
     
-    reply.send({
-      success: true,
-      user,
-      wallet,
-      kyc,
-      recentTransactions
-    });
+    reply.send({ success: true, user, wallet, kyc, recentTransactions });
   } catch (error) {
     console.error('Get user error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch user'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch user' });
   }
 }
 
@@ -99,13 +91,7 @@ async function updateUser(request, reply) {
     const { name, role, isActive, isSuspended, suspensionReason, isSecured } = request.body;
     
     const user = await User.findById(id);
-    
-    if (!user) {
-      return reply.status(404).send({
-        success: false,
-        message: 'User not found'
-      });
-    }
+    if (!user) return reply.status(404).send({ success: false, message: 'User not found' });
     
     if (name) user.name = name;
     if (role) user.role = role;
@@ -124,22 +110,14 @@ async function updateUser(request, reply) {
       action: 'admin_action',
       description: `Admin updated user ${user.email}`,
       details: { userId: user._id, changes: request.body },
-      performedBy: request.user._id,
       ipAddress: request.ip,
       userAgent: request.headers['user-agent']
     });
     
-    reply.send({
-      success: true,
-      message: 'User updated successfully',
-      user
-    });
+    reply.send({ success: true, message: 'User updated successfully', user });
   } catch (error) {
     console.error('Update user error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to update user'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to update user' });
   }
 }
 
@@ -163,26 +141,25 @@ async function getTransactions(request, reply) {
       .populate('user', 'name email phoneNumber')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .lean();
+      
+    // Format user data for the frontend
+    const formattedTx = transactions.map(tx => ({
+        ...tx,
+        userEmail: tx.user ? tx.user.email : 'Unknown User'
+    }));
     
     const total = await Transaction.countDocuments(query);
     
     reply.send({
       success: true,
-      transactions,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
+      transactions: formattedTx,
+      pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / limit) }
     });
   } catch (error) {
     console.error('Get transactions error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch transactions'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch transactions' });
   }
 }
 
@@ -192,7 +169,6 @@ async function getTransactions(request, reply) {
 async function getAnalytics(request, reply) {
   try {
     const { days = 30 } = request.query;
-    
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
     
@@ -204,6 +180,10 @@ async function getAnalytics(request, reply) {
     const pendingKYC = await KYC.countDocuments({ status: 'under_review' });
     const openTickets = await SupportTicket.countDocuments({ status: 'open' });
     
+    // Calculate total vault balance safely
+    const wallets = await Wallet.find({});
+    const totalVaultBalance = wallets.reduce((acc, w) => acc + parseFloat(w.availableBalance.toString()), 0);
+    
     reply.send({
       success: true,
       dailyAnalytics,
@@ -212,15 +192,13 @@ async function getAnalytics(request, reply) {
         totalUsers: userCount,
         totalTransactions: transactionCount,
         pendingKYC,
-        openTickets
+        openTickets,
+        totalVaultBalance
       }
     });
   } catch (error) {
     console.error('Get analytics error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch analytics'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch analytics' });
   }
 }
 
@@ -230,17 +208,10 @@ async function getAnalytics(request, reply) {
 async function getPendingKYC(request, reply) {
   try {
     const pendingKYC = await KYC.findPending();
-    
-    reply.send({
-      success: true,
-      kycRequests: pendingKYC
-    });
+    reply.send({ success: true, kycRequests: pendingKYC });
   } catch (error) {
     console.error('Get pending KYC error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch pending KYC requests'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch pending KYC requests' });
   }
 }
 
@@ -253,32 +224,14 @@ async function approveKYC(request, reply) {
     const { level } = request.body;
     
     const kyc = await KYC.findById(id);
-    
-    if (!kyc) {
-      return reply.status(404).send({
-        success: false,
-        message: 'KYC record not found'
-      });
-    }
+    if (!kyc) return reply.status(404).send({ success: false, message: 'KYC record not found' });
     
     const user = await User.findById(kyc.user);
-    if (!user) {
-      return reply.status(404).send({
-        success: false,
-        message: 'User not found'
-      });
-    }
+    if (!user) return reply.status(404).send({ success: false, message: 'User not found' });
     
-    if (level === 1) {
-      await kyc.approveLevel1(request.user._id);
-      user.kycLevel = Math.max(user.kycLevel, 1);
-    } else if (level === 2) {
-      await kyc.approveLevel2(request.user._id);
-      user.kycLevel = Math.max(user.kycLevel, 2);
-    } else if (level === 3) {
-      await kyc.approveLevel3(request.user._id);
-      user.kycLevel = 3;
-    }
+    if (level === 1) { await kyc.approveLevel1(request.user._id); user.kycLevel = Math.max(user.kycLevel, 1); }
+    else if (level === 2) { await kyc.approveLevel2(request.user._id); user.kycLevel = Math.max(user.kycLevel, 2); }
+    else if (level === 3) { await kyc.approveLevel3(request.user._id); user.kycLevel = 3; }
     
     await user.save();
     
@@ -286,30 +239,16 @@ async function approveKYC(request, reply) {
       user: request.user._id,
       action: 'kyc_approve',
       description: `Admin approved Level ${level} KYC for ${user.email}`,
-      details: { userId: user._id, level },
-      performedBy: request.user._id,
       ipAddress: request.ip,
       userAgent: request.headers['user-agent']
     });
     
-    await Notification.create({
-      user: user._id,
-      title: 'KYC Approved',
-      message: `Your Level ${level} KYC has been approved`,
-      type: 'kyc',
-      priority: 'high'
-    });
+    await Notification.create({ user: user._id, title: 'KYC Approved', message: `Your Level ${level} KYC has been approved`, type: 'kyc', priority: 'high' });
     
-    reply.send({
-      success: true,
-      message: 'KYC approved successfully'
-    });
+    reply.send({ success: true, message: 'KYC approved successfully' });
   } catch (error) {
     console.error('Approve KYC error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to approve KYC'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to approve KYC' });
   }
 }
 
@@ -322,48 +261,20 @@ async function rejectKYC(request, reply) {
     const { reason, level } = request.body;
     
     const kyc = await KYC.findById(id);
-    
-    if (!kyc) {
-      return reply.status(404).send({
-        success: false,
-        message: 'KYC record not found'
-      });
-    }
+    if (!kyc) return reply.status(404).send({ success: false, message: 'KYC record not found' });
     
     await kyc.reject(reason);
     if (level) await kyc.resetLevel(level);
     
-    await AuditLog.logAction({
-      user: request.user._id,
-      action: 'kyc_reject',
-      description: `Admin rejected KYC`,
-      details: { kycId: kyc._id, reason, level },
-      performedBy: request.user._id,
-      ipAddress: request.ip,
-      userAgent: request.headers['user-agent']
-    });
-    
     const user = await User.findById(kyc.user);
     if (user) {
-      await Notification.create({
-        user: user._id,
-        title: 'KYC Rejected',
-        message: `Your KYC has been rejected: ${reason}`,
-        type: 'kyc',
-        priority: 'high'
-      });
+      await Notification.create({ user: user._id, title: 'KYC Rejected', message: `Your KYC has been rejected: ${reason}`, type: 'kyc', priority: 'high' });
     }
     
-    reply.send({
-      success: true,
-      message: 'KYC rejected successfully'
-    });
+    reply.send({ success: true, message: 'KYC rejected successfully' });
   } catch (error) {
     console.error('Reject KYC error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to reject KYC'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to reject KYC' });
   }
 }
 
@@ -373,36 +284,21 @@ async function rejectKYC(request, reply) {
 async function getSupportTickets(request, reply) {
   try {
     const { status, priority, page = 1, limit = 50 } = request.query;
-    
     const query = {};
     if (status) query.status = status;
     if (priority) query.priority = priority;
     
     const tickets = await SupportTicket.find(query)
       .populate('user', 'name email phoneNumber')
-      .populate('assignedTo', 'name email')
       .sort({ priority: -1, createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
     
     const total = await SupportTicket.countDocuments(query);
-    
-    reply.send({
-      success: true,
-      tickets,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
+    reply.send({ success: true, tickets, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / limit) } });
   } catch (error) {
     console.error('Get support tickets error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch support tickets'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch support tickets' });
   }
 }
 
@@ -412,36 +308,14 @@ async function getSupportTickets(request, reply) {
 async function assignTicket(request, reply) {
   try {
     const { id } = request.params;
-    
     const ticket = await SupportTicket.findById(id);
-    
-    if (!ticket) {
-      return reply.status(404).send({
-        success: false,
-        message: 'Ticket not found'
-      });
-    }
+    if (!ticket) return reply.status(404).send({ success: false, message: 'Ticket not found' });
     
     await ticket.assignTo(request.user._id);
-    
-    await Notification.create({
-      user: ticket.user,
-      title: 'Support Ticket Assigned',
-      message: `Your support ticket ${ticket.ticketId} has been assigned to an agent`,
-      type: 'support',
-      priority: 'medium'
-    });
-    
-    reply.send({
-      success: true,
-      message: 'Ticket assigned successfully'
-    });
+    reply.send({ success: true, message: 'Ticket assigned successfully' });
   } catch (error) {
     console.error('Assign ticket error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to assign ticket'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to assign ticket' });
   }
 }
 
@@ -452,37 +326,180 @@ async function resolveTicket(request, reply) {
   try {
     const { id } = request.params;
     const { resolution } = request.body;
-    
     const ticket = await SupportTicket.findById(id);
-    
-    if (!ticket) {
-      return reply.status(404).send({
-        success: false,
-        message: 'Ticket not found'
-      });
-    }
+    if (!ticket) return reply.status(404).send({ success: false, message: 'Ticket not found' });
     
     await ticket.resolve(resolution, request.user._id);
-    
-    await Notification.create({
-      user: ticket.user,
-      title: 'Support Ticket Resolved',
-      message: `Your support ticket ${ticket.ticketId} has been resolved`,
-      type: 'support',
-      priority: 'high'
-    });
-    
-    reply.send({
-      success: true,
-      message: 'Ticket resolved successfully'
-    });
+    reply.send({ success: true, message: 'Ticket resolved successfully' });
   } catch (error) {
     console.error('Resolve ticket error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to resolve ticket'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to resolve ticket' });
   }
+}
+
+// ============================================================================
+// NEW ENTERPRISE ADMIN FEATURES
+// ============================================================================
+
+/**
+ * Admin: Update User Ledger Balance Manually (Credit/Debit)
+ */
+async function updateUserBalance(request, reply) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const { id } = request.params;
+        const { action, amount, reason } = request.body; // action: 'credit' or 'debit'
+
+        if (!amount || amount <= 0 || !reason) {
+            await session.abortTransaction();
+            return reply.status(400).send({ success: false, message: 'Valid amount and reason are required' });
+        }
+
+        const wallet = await Wallet.findOne({ user: id }).session(session);
+        if (!wallet) {
+            await session.abortTransaction();
+            return reply.status(404).send({ success: false, message: 'User wallet not found' });
+        }
+
+        const balanceBefore = wallet.availableBalance.toString();
+
+        if (action === 'credit') {
+            await wallet.credit(amount, session);
+        } else if (action === 'debit') {
+            if (parseFloat(balanceBefore) < amount) {
+                await session.abortTransaction();
+                return reply.status(400).send({ success: false, message: 'Insufficient balance to deduct that amount' });
+            }
+            await wallet.debit(amount, session);
+        } else {
+            await session.abortTransaction();
+            return reply.status(400).send({ success: false, message: 'Invalid action type' });
+        }
+
+        // Create an audit transaction
+        const adminTx = new Transaction({
+            user: id,
+            type: 'admin_adjustment',
+            description: `Admin ${action.toUpperCase()}: ${reason}`,
+            amount: amount,
+            fee: 0,
+            balanceBefore,
+            balanceAfter: wallet.availableBalance.toString(),
+            status: 'success',
+            provider: 'internal',
+            reference: `ADM-${generateTransactionReference()}`
+        });
+        await adminTx.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        // Notify user dashboard in realtime
+        if (request.server.io) {
+            request.server.io.to(`user:${id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+        }
+
+        reply.send({ success: true, message: `Wallet ${action}ed successfully`, newBalance: wallet.availableBalance.toString() });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error('Admin balance update error:', error);
+        reply.status(500).send({ success: false, message: 'Failed to update ledger balance' });
+    }
+}
+
+/**
+ * Admin: Force Verify Stuck Transaction
+ */
+async function verifyTransaction(request, reply) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const { transactionId } = request.body;
+        
+        const tx = await Transaction.findById(transactionId).session(session);
+        if (!tx) {
+            await session.abortTransaction();
+            return reply.status(404).send({ success: false, message: 'Transaction not found' });
+        }
+
+        if (tx.status === 'success') {
+            await session.abortTransaction();
+            return reply.status(400).send({ success: false, message: 'Transaction is already verified and successful' });
+        }
+
+        // Apply logic depending on type. E.g., if it's funding, credit the user.
+        if (tx.type === 'funding' || tx.type === 'wallet_fund') {
+            const wallet = await Wallet.findOne({ user: tx.user }).session(session);
+            await wallet.credit(tx.amount, session);
+            tx.balanceAfter = wallet.availableBalance.toString();
+            
+            // Realtime update
+            if (request.server.io) {
+                request.server.io.to(`user:${tx.user}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+            }
+        }
+
+        tx.status = 'success';
+        await tx.save({ session });
+
+        await AuditLog.logAction({
+            user: request.user._id,
+            action: 'admin_force_verify',
+            description: `Admin force verified transaction ${tx._id}`,
+            ipAddress: request.ip
+        });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        reply.send({ success: true, message: 'Transaction force-verified successfully' });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error('Admin force verify error:', error);
+        reply.status(500).send({ success: false, message: 'Failed to verify transaction' });
+    }
+}
+
+/**
+ * Admin: Send Push Notifications
+ */
+async function sendPushNotification(request, reply) {
+    try {
+        const { targetEmail, title, message, type } = request.body;
+        
+        if (targetEmail === 'ALL' || !targetEmail) {
+            // Broadcast to everyone
+            if (request.server.io) {
+                request.server.io.emit('notification', { title, message, type: type || 'info' });
+            }
+            return reply.send({ success: true, message: 'Broadcast transmitted to all active sessions' });
+        }
+
+        // Target specific user
+        const user = await User.findOne({ email: targetEmail });
+        if (!user) return reply.status(404).send({ success: false, message: 'Target user not found' });
+
+        await Notification.create({
+            user: user._id,
+            title,
+            message,
+            type: 'system',
+            priority: 'high'
+        });
+
+        // Emit to specific socket room
+        if (request.server.io) {
+            request.server.io.to(`user:${user._id}`).emit('notification', { title, message, type: type || 'info' });
+        }
+
+        reply.send({ success: true, message: 'Notification transmitted to user' });
+    } catch (error) {
+        console.error('Send push notification error:', error);
+        reply.status(500).send({ success: false, message: 'Failed to transmit notification' });
+    }
 }
 
 module.exports = {
@@ -496,5 +513,9 @@ module.exports = {
   rejectKYC,
   getSupportTickets,
   assignTicket,
-  resolveTicket
+  resolveTicket,
+  // New Additions
+  updateUserBalance,
+  verifyTransaction,
+  sendPushNotification
 };
