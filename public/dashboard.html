@@ -455,11 +455,17 @@
                     document.getElementById('adminDivider').style.display = 'block';
                 }
 
-                document.getElementById('walletBalance').innerText = '₦' + Number(data.balance || 0).toLocaleString(undefined, {minimumFractionDigits:2});
+                // SAFE DECIMAL PARSING FIX
+                const safeBalance = data.balance?.$numberDecimal || data.balance || 0;
+                document.getElementById('walletBalance').innerText = '₦' + Number(safeBalance).toLocaleString(undefined, {minimumFractionDigits:2});
+                
+                const safeSpent = data.totalSpent?.$numberDecimal || data.totalSpent || 0;
                 document.getElementById('statTrans').innerText = `${data.totalLogs || 0} Logs`;
-                document.getElementById('statSpent').innerText = '₦' + Number(data.totalSpent || 0).toLocaleString();
+                document.getElementById('statSpent').innerText = '₦' + Number(safeSpent).toLocaleString();
+                
+                const safeBonus = data.referralBonus?.$numberDecimal || data.referralBonus || 0;
                 document.getElementById('statRefs').innerText = `${data.referralCount || 0} Nodes`;
-                document.getElementById('statBonus').innerText = '₦' + Number(data.referralBonus || 0).toLocaleString();
+                document.getElementById('statBonus').innerText = '₦' + Number(safeBonus).toLocaleString();
 
                 if (data.hiddenWidgets && data.hiddenWidgets.length > 0) {
                     data.hiddenWidgets.forEach(widgetId => {
@@ -472,14 +478,16 @@
                 tbody.innerHTML = '';
                 if(data.recentTransactions && data.recentTransactions.length > 0) {
                     data.recentTransactions.forEach(tx => {
-                        const dateString = new Date(tx.date).toLocaleDateString() + ' <br><small class="opacity-50">' + new Date(tx.date).toLocaleTimeString() + '</small>';
+                        const rawDate = tx.createdAt || tx.date || new Date().toISOString();
+                        const dateString = new Date(rawDate).toLocaleDateString() + ' <br><small class="opacity-50">' + new Date(rawDate).toLocaleTimeString() + '</small>';
                         const statusClass = tx.status === 'success' ? 'bg-success' : (tx.status === 'pending' ? 'bg-warning text-dark' : 'bg-danger');
+                        const safeTxAmount = tx.amount?.$numberDecimal || tx.amount || 0;
                         
                         tbody.innerHTML += `
                             <tr>
                                 <td>${dateString}</td>
                                 <td><strong class="d-block">${tx.type.toUpperCase()}</strong><span class="small opacity-75">${tx.description || 'System Log'}</span></td>
-                                <td class="fw-bold">₦${Number(tx.amount).toLocaleString()}</td>
+                                <td class="fw-bold">₦${Number(safeTxAmount).toLocaleString()}</td>
                                 <td class="text-end"><span class="status-pill ${statusClass} text-white">${tx.status}</span></td>
                             </tr>
                         `;
@@ -532,12 +540,26 @@
                 if(payload.balance !== undefined) {
                     const balanceElement = document.getElementById('walletBalance');
                     balanceElement.style.color = '#fff';
-                    balanceElement.innerText = '₦' + Number(payload.balance).toLocaleString(undefined, {minimumFractionDigits: 2});
+                    const safePayloadBalance = payload.balance?.$numberDecimal || payload.balance;
+                    balanceElement.innerText = '₦' + Number(safePayloadBalance).toLocaleString(undefined, {minimumFractionDigits: 2});
                     setTimeout(() => balanceElement.style.color = 'var(--gold)', 500);
                 }
             });
 
             socketConnectionLink.on('dashboard:refresh', () => { syncDashboardData(); });
+
+            // ADDED: PUSH NOTIFICATION LISTENER
+            socketConnectionLink.on('notification', (payload) => {
+                Swal.fire({
+                    icon: payload.type === 'error' ? 'error' : (payload.type === 'success' ? 'success' : 'info'),
+                    title: payload.title,
+                    text: payload.message,
+                    background: '#0a0a0a',
+                    color: '#fff',
+                    confirmButtonColor: '#d4af37'
+                });
+            });
+
         } catch(err) {
             console.warn("Realtime WebSocket channel unavailable.");
         }
