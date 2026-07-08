@@ -342,6 +342,75 @@
         requestAnimationFrame(animate);
     }
 
+    // --- NEW NATER-PAY PAYMENT VERIFICATION SYSTEM ---
+    async function checkPendingFunding() {
+        const pendingRef = localStorage.getItem('pending_funding_ref');
+        
+        if (pendingRef) {
+            const authToken = localStorage.getItem("naterpay_token");
+            
+            Swal.fire({
+                title: 'Verifying Payment...',
+                text: 'Please wait while we securely confirm your transaction with the gateway.',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+
+            try {
+                const res = await fetch('/api/wallet/verify', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ reference: pendingRef })
+                });
+
+                const data = await res.json();
+                localStorage.removeItem('pending_funding_ref');
+
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Wallet Funded!',
+                        text: 'Your payment was successful and your balance has been updated.',
+                        confirmButtonColor: '#d4af37',
+                        background: '#0a0a0a',
+                        color: '#fff'
+                    }).then(() => {
+                        syncDashboardData(); 
+                    });
+                } else {
+                    if (data.message === 'Wallet already credited') {
+                         syncDashboardData();
+                         Swal.close();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Verification Failed',
+                            text: data.message || 'We could not confirm the payment.',
+                            confirmButtonColor: '#d32f2f',
+                            background: '#0a0a0a',
+                            color: '#fff'
+                        });
+                    }
+                }
+            } catch (error) {
+                localStorage.removeItem('pending_funding_ref');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Network Error',
+                    text: 'Could not connect to verification server.',
+                    confirmButtonColor: '#d32f2f',
+                    background: '#0a0a0a',
+                    color: '#fff'
+                });
+            }
+        }
+    }
+
     async function syncDashboardData() {
         const authToken = localStorage.getItem("naterpay_token");
         if(!authToken) {
@@ -452,6 +521,7 @@
         initStars(); 
         animate(); 
         syncDashboardData(); 
+        checkPendingFunding(); // TRIGGER VERIFICATION ON LOAD
         
         try {
             socketConnectionLink = io(window.location.origin, {
