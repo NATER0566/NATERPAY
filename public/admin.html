@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NATER-PAY | Enterprise Admin Terminal</title>
@@ -13,7 +12,7 @@
     
     <style>
         :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
-        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
+        body { background: var(--bg); color: #ffffff; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
@@ -29,31 +28,34 @@
 
         .container-fluid { max-width: 1500px; margin: 40px auto; padding: 0 20px; }
         
-        .admin-card { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .admin-card { background: var(--card-bg); border: 1px solid #444; border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
         
-        .stat-box { background: rgba(30,30,30,0.95); border: 1px solid #444; border-radius: 15px; padding: 25px; text-align: center; transition: 0.3s; }
-        .stat-box:hover { border-color: var(--gold); transform: translateY(-5px); }
-        .stat-number { font-family: 'Cinzel'; font-size: 2.5rem; color: var(--gold); font-weight: 900; }
+        .stat-box { background: rgba(30,30,30,0.95); border: 1px solid #555; border-radius: 15px; padding: 25px; text-align: center; transition: 0.3s; }
+        .stat-box:hover { border-color: var(--gold); transform: translateY(-5px); box-shadow: 0 5px 15px rgba(212,175,55,0.2); }
+        .stat-number { font-family: 'Cinzel'; font-size: 2.5rem; color: var(--gold); font-weight: 900; text-shadow: 0 2px 4px #000; }
         
-        .table { color: #eee; vertical-align: middle; }
-        .table th { border-bottom: 1px solid var(--gold); color: var(--gold); font-family: 'Cinzel', serif; letter-spacing: 1px; }
-        .table td { border-bottom: 1px solid #333; }
+        .table { color: #ffffff; vertical-align: middle; }
+        .table th { border-bottom: 2px solid var(--gold); color: var(--gold); font-family: 'Cinzel', serif; letter-spacing: 1px; font-weight: 900; font-size: 0.9rem; }
+        .table td { border-bottom: 1px solid #444; color: #ffffff; font-weight: 600; }
         
-        .status-pill { padding: 5px 12px; border-radius: 50px; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+        .status-pill { padding: 6px 14px; border-radius: 50px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #fff; }
         
-        .admin-tab { background: rgba(30,30,30,0.95); border: 1px solid #444; color: white; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: 0.3s; flex-grow: 1; text-align: center; }
-        .admin-tab:hover, .admin-tab.active { border-color: var(--gold); background: rgba(212,175,55,0.1); color: var(--gold); }
+        .admin-tab { background: rgba(30,30,30,0.95); border: 2px solid #555; color: #ffffff; padding: 12px 24px; border-radius: 10px; font-weight: 700; transition: 0.3s; flex-grow: 1; text-align: center; }
+        .admin-tab:hover, .admin-tab.active { border-color: var(--gold); background: rgba(212,175,55,0.15); color: var(--gold); box-shadow: 0 0 10px rgba(212,175,55,0.3); }
 
-        .btn-gold { background: var(--gold); color: black; font-weight: 800; transition: 0.3s; border: none; }
-        .btn-gold:hover { background: white; transform: translateY(-2px); }
+        .btn-gold { background: var(--gold); color: black; font-weight: 900; transition: 0.3s; border: none; letter-spacing: 1px; }
+        .btn-gold:hover { background: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,255,255,0.3); }
         
-        .input-dark { background: rgba(0,0,0,0.6); border: 1px solid #444; color: white; padding: 12px; border-radius: 10px; width: 100%; transition: 0.3s; }
-        .input-dark:focus { border-color: var(--gold); outline: none; background: rgba(0,0,0,0.8); color: white;}
-        
-        /* Custom File Input Styling */
-        input[type="file"].input-dark { padding: 9px 12px; cursor: pointer; }
-        input[type="file"].input-dark::file-selector-button { background: var(--gold); border: none; padding: 5px 15px; border-radius: 5px; font-weight: bold; margin-right: 15px; cursor: pointer; transition: 0.3s; }
+        .input-dark { background: #111; border: 2px solid #555; color: white; padding: 14px; border-radius: 10px; width: 100%; transition: 0.3s; font-weight: 600; }
+        .input-dark:focus { border-color: var(--gold); outline: none; background: #000; color: white; box-shadow: 0 0 10px rgba(212,175,55,0.3); }
+        .input-dark::placeholder { color: #aaaaaa; font-weight: 400; }
+
+        /* Custom File Input Styling for High Visibility */
+        input[type="file"].input-dark { padding: 10px 14px; cursor: pointer; }
+        input[type="file"].input-dark::file-selector-button { background: var(--gold); border: none; padding: 8px 18px; border-radius: 6px; font-weight: 900; color: black; margin-right: 15px; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; }
         input[type="file"].input-dark::file-selector-button:hover { background: white; }
+        
+        .high-vis-label { display: block; color: var(--gold); font-weight: 900; font-size: 0.85rem; letter-spacing: 1.5px; margin-bottom: 8px; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -66,36 +68,36 @@
         <span class="site-part-2">PAY</span>
     </div>
     <div class="d-flex align-items-center gap-3">
-        <span class="badge bg-danger px-3 py-2 rounded-pill" style="letter-spacing: 2px;"><i class="fas fa-shield-alt me-1"></i> ROOT ADMIN</span>
+        <span class="badge bg-danger px-3 py-2 rounded-pill" style="letter-spacing: 2px; font-weight: 900;"><i class="fas fa-shield-alt me-1"></i> ROOT ADMIN</span>
         <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold">Exit Terminal</a>
     </div>
 </header>
 
 <div class="container-fluid">
-    <h1 class="text-center mb-5" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); text-shadow: 0 0 20px rgba(212,175,55,0.3);">ENTERPRISE COMMAND CENTER</h1>
+    <h1 class="text-center mb-5" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); text-shadow: 0 0 20px rgba(212,175,55,0.4);">ENTERPRISE COMMAND CENTER</h1>
     
     <div class="d-flex gap-2 mb-4 flex-wrap">
         <button class="admin-tab active" onclick="showTab('overview')"><i class="fas fa-chart-pie me-2"></i>System Overview</button>
         <button class="admin-tab" onclick="showTab('users')"><i class="fas fa-users-cog me-2"></i>User Ledger</button>
-        <button class="admin-tab" onclick="showTab('transactions')"><i class="fas fa-server me-2"></i>Transactions</button>
+        <button class="admin-tab" onclick="showTab('transactions')"><i class="fas fa-server me-2"></i>Verification Audit</button>
         <button class="admin-tab" onclick="showTab('cms')"><i class="fas fa-photo-video me-2"></i>Frontend CMS</button>
-        <button class="admin-tab" onclick="showTab('notifications')"><i class="fas fa-bell me-2"></i>Push Notifications</button>
+        <button class="admin-tab" onclick="showTab('notifications')"><i class="fas fa-bell me-2"></i>Announcements</button>
     </div>
     
     <div id="tab-overview" class="tab-content">
         <div class="row g-3 mb-4">
-            <div class="col-md-3"><div class="stat-box"><small class="text-muted fw-bold">TOTAL USERS</small><div class="stat-number" id="statUsers"><i class="fas fa-spinner fa-spin fs-4"></i></div></div></div>
-            <div class="col-md-3"><div class="stat-box"><small class="text-muted fw-bold">TRANSACTION VOLUME</small><div class="stat-number" id="statTransactions"><i class="fas fa-spinner fa-spin fs-4"></i></div></div></div>
-            <div class="col-md-3"><div class="stat-box"><small class="text-muted fw-bold">TOTAL SYSTEM VALUE (₦)</small><div class="stat-number" id="statVault"><i class="fas fa-spinner fa-spin fs-4"></i></div></div></div>
-            <div class="col-md-3"><div class="stat-box"><small class="text-muted fw-bold">OPEN SUPPORT TICKETS</small><div class="stat-number" id="statTickets"><i class="fas fa-spinner fa-spin fs-4"></i></div></div></div>
+            <div class="col-md-3"><div class="stat-box"><div class="high-vis-label">TOTAL USERS</div><div class="stat-number" id="statUsers"><i class="fas fa-spinner fa-spin fs-4"></i></div></div></div>
+            <div class="col-md-3"><div class="stat-box"><div class="high-vis-label">TRANSACTION VOLUME</div><div class="stat-number" id="statTransactions"><i class="fas fa-spinner fa-spin fs-4"></i></div></div></div>
+            <div class="col-md-3"><div class="stat-box"><div class="high-vis-label">TOTAL SYSTEM VALUE (₦)</div><div class="stat-number" id="statVault"><i class="fas fa-spinner fa-spin fs-4"></i></div></div></div>
+            <div class="col-md-3"><div class="stat-box"><div class="high-vis-label">OPEN SUPPORT TICKETS</div><div class="stat-number" id="statTickets"><i class="fas fa-spinner fa-spin fs-4"></i></div></div></div>
         </div>
     </div>
     
     <div id="tab-users" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 style="font-family: 'Cinzel'; color: var(--gold); margin:0;">USER LEDGER CONTROL</h5>
-                <input type="text" class="input-dark" style="width: 300px;" placeholder="Search email or phone..." id="userSearch">
+                <h4 style="font-family: 'Cinzel'; color: var(--gold); margin:0; font-weight: 900;">USER LEDGER CONTROL</h4>
+                <input type="text" class="input-dark" style="width: 350px;" placeholder="Search email or phone..." id="userSearch">
             </div>
             <div class="table-responsive">
                 <table class="table table-dark table-hover">
@@ -109,7 +111,7 @@
                         </tr>
                     </thead>
                     <tbody id="usersTable">
-                        <tr><td colspan="5" class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Fetching core user ledger...</td></tr>
+                        <tr><td colspan="5" class="text-center py-5"><i class="fas fa-spinner fa-spin me-2 text-gold"></i> Fetching core user ledger...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -118,7 +120,7 @@
     
     <div id="tab-transactions" class="tab-content" style="display: none;">
         <div class="admin-card">
-            <h5 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold);">LIVE TRANSACTION AUDIT</h5>
+            <h4 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;">LIVE TRANSACTION AUDIT</h4>
             <div class="table-responsive">
                 <table class="table table-dark table-hover">
                     <thead>
@@ -133,7 +135,7 @@
                         </tr>
                     </thead>
                     <tbody id="transactionsTable">
-                        <tr><td colspan="7" class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Syncing gateway transactions...</td></tr>
+                        <tr><td colspan="7" class="text-center py-5"><i class="fas fa-spinner fa-spin me-2 text-gold"></i> Syncing gateway transactions...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -144,26 +146,26 @@
         <div class="row">
             <div class="col-md-4">
                 <div class="admin-card">
-                    <h5 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold);"><i class="fas fa-plus-circle me-2"></i>UPLOAD NEW SLIDE</h5>
-                    <div class="mb-3">
-                        <label class="small text-muted mb-1 fw-bold">SELECT IMAGE FILE</label>
+                    <h4 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;"><i class="fas fa-plus-circle me-2"></i>ADD NEW SLIDE</h4>
+                    <div class="mb-4">
+                        <label class="high-vis-label">SELECT IMAGE FILE</label>
                         <input type="file" id="slideFile" class="input-dark" accept="image/*">
                     </div>
                     <div class="mb-4">
-                        <label class="small text-muted mb-1 fw-bold">PROMO TITLE / CAPTION</label>
+                        <label class="high-vis-label">PROMO TITLE / CAPTION</label>
                         <input type="text" id="slideTitle" class="input-dark" placeholder="e.g. 50% Off Data Today!">
                     </div>
-                    <button class="btn btn-gold w-100 py-2 rounded-pill" onclick="uploadSlide()"><i class="fas fa-upload me-2"></i> PUBLISH SLIDE</button>
+                    <button class="btn btn-gold w-100 py-3 rounded-pill fs-5" onclick="uploadSlide()"><i class="fas fa-upload me-2"></i> PUBLISH SLIDE</button>
                 </div>
             </div>
             <div class="col-md-8">
                 <div class="admin-card">
-                    <h5 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold);">ACTIVE FRONTEND SLIDES</h5>
+                    <h4 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;">ACTIVE FRONTEND SLIDES</h4>
                     <div class="table-responsive">
-                        <table class="table table-dark">
-                            <thead><tr><th>PREVIEW</th><th>TITLE</th><th>ACTION</th></tr></thead>
+                        <table class="table table-dark align-middle">
+                            <thead><tr><th>PREVIEW</th><th>TITLE</th><th class="text-end">ACTIONS</th></tr></thead>
                             <tbody id="cmsTable">
-                                <tr><td colspan="3" class="text-center py-4 opacity-50">Loading active slides...</td></tr>
+                                <tr><td colspan="3" class="text-center py-4">Loading active slides...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -176,36 +178,36 @@
         <div class="row">
             <div class="col-md-4">
                 <div class="admin-card">
-                    <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: var(--gold);"><i class="fas fa-paper-plane me-2"></i>CREATE NOTIFICATION</h5>
+                    <h4 class="mb-4 text-center" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;"><i class="fas fa-paper-plane me-2"></i>CREATE ANNOUNCEMENT</h4>
                     
                     <div class="mb-3">
-                        <label class="small text-muted mb-1 fw-bold">TARGET (Leave blank to broadcast to ALL)</label>
+                        <label class="high-vis-label">TARGET USER (Leave blank for ALL)</label>
                         <input type="text" id="notifyTarget" class="input-dark" placeholder="Enter User Email or ID">
                     </div>
                     <div class="mb-3">
-                        <label class="small text-muted mb-1 fw-bold">MESSAGE TITLE</label>
+                        <label class="high-vis-label">MESSAGE TITLE</label>
                         <input type="text" id="notifyTitle" class="input-dark" placeholder="e.g. System Maintenance">
                     </div>
                     <div class="mb-3">
-                        <label class="small text-muted mb-1 fw-bold">MESSAGE BODY</label>
+                        <label class="high-vis-label">MESSAGE BODY</label>
                         <textarea id="notifyBody" class="input-dark" rows="4" placeholder="Type your message here..."></textarea>
                     </div>
                     <div class="mb-4">
-                        <label class="small text-muted mb-1 fw-bold">ATTACH FILE/IMAGE (Optional)</label>
+                        <label class="high-vis-label">ATTACH FILE/IMAGE (Optional)</label>
                         <input type="file" id="notifyFile" class="input-dark">
                     </div>
-                    <button class="btn btn-danger w-100 py-3 rounded-pill fw-bold" onclick="sendPushNotification()"><i class="fas fa-broadcast-tower me-2"></i> TRANSMIT NOTIFICATION</button>
+                    <button class="btn btn-danger w-100 py-3 rounded-pill fw-bold fs-5" onclick="sendPushNotification()"><i class="fas fa-broadcast-tower me-2"></i> TRANSMIT DATA</button>
                 </div>
             </div>
             
             <div class="col-md-8">
                 <div class="admin-card">
                     <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h5 style="font-family: 'Cinzel'; color: var(--gold); margin:0;">MANAGE ANNOUNCEMENTS</h5>
-                        <button class="btn btn-sm btn-outline-warning rounded-pill" onclick="fetchNotifications()"><i class="fas fa-sync-alt me-1"></i> Refresh</button>
+                        <h4 style="font-family: 'Cinzel'; color: var(--gold); margin:0; font-weight: 900;">ACTIVE ANNOUNCEMENTS</h4>
+                        <button class="btn btn-warning rounded-pill fw-bold" onclick="fetchNotifications()"><i class="fas fa-sync-alt me-1"></i> Refresh</button>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-dark table-hover">
+                        <table class="table table-dark table-hover align-middle">
                             <thead>
                                 <tr>
                                     <th>DATE</th>
@@ -215,7 +217,7 @@
                                 </tr>
                             </thead>
                             <tbody id="notificationsTable">
-                                <tr><td colspan="4" class="text-center py-5 opacity-50">Loading notifications...</td></tr>
+                                <tr><td colspan="4" class="text-center py-5">Loading notifications...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -279,14 +281,13 @@
                     const safeBalance = u.walletBalance?.$numberDecimal || u.walletBalance || 0;
                     uTable.innerHTML += `
                         <tr>
-                            <td><div class="fw-bold">${u.name}</div><small class="text-muted">${u._id}</small></td>
-                            <td>${u.email}</td>
+                            <td><div class="fw-bold text-white">${u.name}</div><small style="color: #aaaaaa;">${u._id}</small></td>
+                            <td class="fw-bold">${u.email}</td>
                             <td class="text-warning fw-bold fs-5">₦${Number(safeBalance).toLocaleString()}</td>
                             <td><span class="status-pill ${u.isActive ? 'bg-success' : 'bg-danger'}">${u.isActive ? 'ACTIVE' : 'SUSPENDED'}</span></td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-outline-success me-1" onclick="modifyLedger('${u._id}', '${u.name}', 'credit')" title="Credit Wallet"><i class="fas fa-plus"></i></button>
-                                <button class="btn btn-sm btn-outline-danger me-1" onclick="modifyLedger('${u._id}', '${u.name}', 'debit')" title="Debit Wallet"><i class="fas fa-minus"></i></button>
-                                <button class="btn btn-sm btn-outline-info" onclick="directNotify('${u.email}')" title="Send Notification"><i class="fas fa-bell"></i></button>
+                                <button class="btn btn-sm btn-success me-1 fw-bold" onclick="modifyLedger('${u._id}', '${u.name}', 'credit')" title="Credit Wallet"><i class="fas fa-plus"></i></button>
+                                <button class="btn btn-sm btn-danger me-1 fw-bold" onclick="modifyLedger('${u._id}', '${u.name}', 'debit')" title="Debit Wallet"><i class="fas fa-minus"></i></button>
                             </td>
                         </tr>
                     `;
@@ -306,14 +307,14 @@
                     
                     tTable.innerHTML += `
                         <tr>
-                            <td><small>${new Date(txDate).toLocaleString()}</small></td>
-                            <td><div class="fw-bold text-truncate" style="max-width:150px;">${tx.reference || tx._id}</div><small class="text-muted">${tx.userEmail || tx.user}</small></td>
+                            <td><span class="fw-bold">${new Date(txDate).toLocaleDateString()}</span><br><small style="color:#aaa;">${new Date(txDate).toLocaleTimeString()}</small></td>
+                            <td><div class="fw-bold text-white text-truncate" style="max-width:150px;">${tx.reference || tx._id}</div><small style="color:#aaa;">${tx.userEmail || tx.user}</small></td>
                             <td><span class="status-pill bg-secondary">${tx.type}</span></td>
-                            <td class="fw-bold">₦${Number(txAmt).toLocaleString()}</td>
-                            <td>${(tx.provider || 'internal').toUpperCase()}</td>
+                            <td class="fw-bold fs-5 text-gold">₦${Number(txAmt).toLocaleString()}</td>
+                            <td class="fw-bold">${(tx.provider || 'internal').toUpperCase()}</td>
                             <td><span class="status-pill ${statusClass}">${tx.status}</span></td>
                             <td class="text-end">
-                                ${tx.status !== 'success' ? `<button class="btn btn-sm btn-gold rounded-pill px-3" onclick="forceVerifyPayment('${tx._id}')"><i class="fas fa-check-double me-1"></i> Force Verify</button>` : `<span class="badge bg-dark border border-success text-success"><i class="fas fa-check"></i> CLEARED</span>`}
+                                ${tx.status !== 'success' ? `<button class="btn btn-sm btn-gold rounded-pill px-3" onclick="forceVerifyPayment('${tx._id}')"><i class="fas fa-check-double me-1"></i> Force Verify</button>` : `<span class="badge bg-dark border border-success text-success fs-6"><i class="fas fa-check"></i> CLEARED</span>`}
                             </td>
                         </tr>
                     `;
@@ -321,7 +322,6 @@
             }
 
             fetchSlides();
-            fetchNotifications();
 
         } catch (e) {
             console.error("Ecosystem load failed", e);
@@ -335,15 +335,13 @@
         const color = type === 'credit' ? '#198754' : '#dc3545';
 
         const { value: formValues } = await Swal.fire({
-            title: `<span style="color:${color}">${actionText}</span><br><small class="text-muted fs-6">${userName}</small>`,
+            title: `<span style="color:${color}">${actionText}</span><br><small class="text-white fs-6">${userName}</small>`,
             html: `
-                <input id="swal-amount" type="number" class="swal2-input bg-dark text-white border-secondary" placeholder="Amount (₦)">
-                <input id="swal-reason" type="text" class="swal2-input bg-dark text-white border-secondary" placeholder="Reason for audit log">
+                <input id="swal-amount" type="number" class="swal2-input bg-dark text-white border-light" placeholder="Amount (₦)">
+                <input id="swal-reason" type="text" class="swal2-input bg-dark text-white border-light" placeholder="Reason for audit log">
             `,
             background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonColor: color, confirmButtonText: 'Execute Ledger Update',
-            preConfirm: () => {
-                return [ document.getElementById('swal-amount').value, document.getElementById('swal-reason').value ]
-            }
+            preConfirm: () => { return [ document.getElementById('swal-amount').value, document.getElementById('swal-reason').value ] }
         });
 
         if (formValues && formValues[0] && formValues[1]) {
@@ -359,9 +357,7 @@
                 if(data.success) {
                     Swal.fire({ icon: 'success', title: 'Ledger Updated', text: `Successfully ${type}ed ₦${formValues[0]}`, background: '#0a0a0a', color: '#fff' });
                     loadAdminEcosystem();
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Operation Failed', text: data.message, background: '#0a0a0a', color: '#fff' });
-                }
+                } else Swal.fire({ icon: 'error', title: 'Operation Failed', text: data.message, background: '#0a0a0a', color: '#fff' });
             } catch(e) { Swal.fire('Error', 'Network failure', 'error'); }
         }
     }
@@ -370,8 +366,7 @@
     async function forceVerifyPayment(txId) {
         const token = localStorage.getItem("naterpay_token");
         const confirm = await Swal.fire({
-            title: 'FORCE VERIFY?',
-            text: "This will force the system to mark this transaction as SUCCESS and execute all associated logic (e.g. crediting the user).",
+            title: 'FORCE VERIFY?', text: "This will force the system to mark this transaction as SUCCESS and execute all associated logic.",
             icon: 'warning', showCancelButton: true, confirmButtonColor: '#d4af37', cancelButtonColor: '#d32f2f', confirmButtonText: 'Yes, Force Verify!', background: '#0a0a0a', color: '#fff'
         });
 
@@ -387,19 +382,12 @@
                 if(data.success) {
                     Swal.fire({ icon: 'success', title: 'Transaction Cleared', text: 'The ledger has been updated and the user credited.', background: '#0a0a0a', color: '#fff' });
                     loadAdminEcosystem();
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Override Failed', text: data.message, background: '#0a0a0a', color: '#fff' });
-                }
+                } else Swal.fire({ icon: 'error', title: 'Override Failed', text: data.message, background: '#0a0a0a', color: '#fff' });
             } catch(e) { Swal.fire('Error', 'Network failure', 'error'); }
         }
     }
 
-    // --- ADMIN POWERS: NOTIFICATIONS (FILE ENABLED) ---
-    function directNotify(email) {
-        showTab('notifications');
-        document.getElementById('notifyTarget').value = email;
-    }
-
+    // --- ADMIN POWERS: NOTIFICATIONS (FILE ENABLED + EDIT/DELETE) ---
     async function fetchNotifications() {
         const token = localStorage.getItem("naterpay_token");
         try {
@@ -412,18 +400,18 @@
                     const date = new Date(n.createdAt).toLocaleDateString();
                     table.innerHTML += `
                         <tr>
-                            <td><small>${date}</small></td>
-                            <td><div class="fw-bold text-warning">${n.title}</div><small class="opacity-75">${n.message}</small></td>
-                            <td><span class="badge ${n.isGlobal ? 'bg-info text-dark' : 'bg-secondary'}">${n.isGlobal ? 'GLOBAL' : 'DIRECT'}</span></td>
+                            <td><span class="fw-bold">${date}</span></td>
+                            <td><div class="fw-bold text-gold fs-6">${n.title}</div><div class="text-white mt-1">${n.message}</div></td>
+                            <td><span class="badge ${n.isGlobal ? 'bg-info text-dark' : 'bg-secondary'} fs-6">${n.isGlobal ? 'GLOBAL' : 'DIRECT'}</span></td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-outline-warning" onclick="editNotification('${n._id}', '${n.title}', '${n.message}')"><i class="fas fa-edit"></i></button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteNotification('${n._id}')"><i class="fas fa-trash"></i></button>
+                                <button class="btn btn-sm btn-info fw-bold me-1" onclick="editNotification('${n._id}', '${n.title.replace(/'/g, "\\'")}', '${n.message.replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> Edit</button>
+                                <button class="btn btn-sm btn-danger fw-bold" onclick="deleteNotification('${n._id}')"><i class="fas fa-trash"></i> Delete</button>
                             </td>
                         </tr>
                     `;
                 });
             } else {
-                table.innerHTML = '<tr><td colspan="4" class="text-center py-4 opacity-50">No past announcements found.</td></tr>';
+                table.innerHTML = '<tr><td colspan="4" class="text-center py-4 fs-5">No active announcements.</td></tr>';
             }
         } catch(e) { console.error("Notification fetch failed", e); }
     }
@@ -460,14 +448,12 @@
                 Swal.fire({ icon: 'success', title: 'Transmitted', text: `Notification pushed successfully.`, background: '#0a0a0a', color: '#fff' });
                 document.getElementById('notifyTitle').value = ''; document.getElementById('notifyBody').value = ''; fileInput.value = '';
                 fetchNotifications();
-            } else {
-                Swal.fire({ icon: 'error', title: 'Transmission Failed', text: data.message, background: '#0a0a0a', color: '#fff' });
-            }
+            } else Swal.fire({ icon: 'error', title: 'Transmission Failed', text: data.message, background: '#0a0a0a', color: '#fff' });
         } catch(e) { Swal.fire('Error', 'Network failure during file upload', 'error'); }
     }
 
     async function deleteNotification(id) {
-        const confirm = await Swal.fire({ title: 'Delete?', text: "Remove this announcement?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff'});
+        const confirm = await Swal.fire({ title: 'Delete Announcement?', text: "This will remove the notification for all users.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff'});
         if(confirm.isConfirmed) {
             const token = localStorage.getItem("naterpay_token");
             const res = await fetch(`/api/admin/notifications/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
@@ -480,8 +466,10 @@
         const { value: formValues } = await Swal.fire({
             title: 'Edit Announcement',
             html: `
-                <input id="edit-title" class="swal2-input bg-dark text-white border-secondary" value="${oldTitle}">
-                <textarea id="edit-msg" class="swal2-textarea bg-dark text-white border-secondary" style="height:100px;">${oldMessage}</textarea>
+                <label class="high-vis-label mt-2 text-start w-100">Title</label>
+                <input id="edit-title" class="swal2-input bg-dark text-white border-light m-0 w-100" value="${oldTitle}">
+                <label class="high-vis-label mt-3 text-start w-100">Message</label>
+                <textarea id="edit-msg" class="swal2-textarea bg-dark text-white border-light m-0 w-100" style="height:120px;">${oldMessage}</textarea>
             `,
             background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonColor: '#d4af37',
             preConfirm: () => { return [ document.getElementById('edit-title').value, document.getElementById('edit-msg').value ] }
@@ -489,17 +477,21 @@
 
         if(formValues) {
             const token = localStorage.getItem("naterpay_token");
+            Swal.fire({ title: 'Updating...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
             const res = await fetch(`/api/admin/notifications/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ title: formValues[0], message: formValues[1] })
             });
             const data = await res.json();
-            if(data.success) fetchNotifications();
+            if(data.success) {
+                Swal.fire({ icon: 'success', title: 'Updated', text: 'Announcement has been changed.', background: '#0a0a0a', color: '#fff' });
+                fetchNotifications();
+            } else Swal.fire('Error', data.message, 'error');
         }
     }
 
-    // --- ADMIN POWERS: CMS SLIDESHOW (FILE ENABLED) ---
+    // --- ADMIN POWERS: CMS SLIDESHOW (FILE ENABLED + EDIT/DELETE) ---
     async function fetchSlides() {
         try {
             const res = await fetch('/api/cms/slides');
@@ -510,14 +502,17 @@
                 data.slides.forEach(s => {
                     table.innerHTML += `
                         <tr>
-                            <td style="width: 150px;"><img src="${s.imageUrl}" class="img-fluid rounded border border-secondary" alt="slide"></td>
-                            <td class="fw-bold">${s.title}</td>
-                            <td><button class="btn btn-sm btn-outline-danger" onclick="deleteSlide('${s._id}')"><i class="fas fa-trash"></i></button></td>
+                            <td style="width: 150px;"><img src="${s.imageUrl}" class="img-fluid rounded border border-light" alt="slide"></td>
+                            <td class="fw-bold fs-5">${s.title}</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-info fw-bold me-1" onclick="editSlide('${s._id}', '${s.title.replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i> Edit</button>
+                                <button class="btn btn-sm btn-danger fw-bold" onclick="deleteSlide('${s._id}')"><i class="fas fa-trash"></i> Delete</button>
+                            </td>
                         </tr>
                     `;
                 });
             } else {
-                table.innerHTML = '<tr><td colspan="3" class="text-center py-4 opacity-50">No slides configured.</td></tr>';
+                table.innerHTML = '<tr><td colspan="3" class="text-center py-4 fs-5">No slides configured.</td></tr>';
             }
         } catch(e) { console.error("Slides fetch failed"); }
     }
@@ -532,7 +527,6 @@
         Swal.fire({ title: 'Uploading...', text: 'Processing file securely...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
         
         try {
-            // Using FormData for physical file upload
             const formData = new FormData();
             formData.append('image', fileInput.files[0]);
             formData.append('title', title);
@@ -553,11 +547,38 @@
         } catch(e) { Swal.fire('Error', 'Network failure during upload', 'error'); }
     }
 
+    async function editSlide(id, oldTitle) {
+        const { value: newTitle } = await Swal.fire({
+            title: 'Edit Slide Title',
+            input: 'text',
+            inputValue: oldTitle,
+            background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonColor: '#d4af37'
+        });
+
+        if(newTitle) {
+            const token = localStorage.getItem("naterpay_token");
+            Swal.fire({ title: 'Updating...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+            const res = await fetch(`/api/cms/slides/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ title: newTitle })
+            });
+            const data = await res.json();
+            if(data.success) {
+                Swal.fire({ icon: 'success', title: 'Updated', background: '#0a0a0a', color: '#fff' });
+                fetchSlides();
+            }
+        }
+    }
+
     async function deleteSlide(id) {
-        const token = localStorage.getItem("naterpay_token");
-        const res = await fetch(`/api/cms/slides/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-        const data = await res.json();
-        if(data.success) fetchSlides();
+        const confirm = await Swal.fire({ title: 'Delete Slide?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff'});
+        if(confirm.isConfirmed) {
+            const token = localStorage.getItem("naterpay_token");
+            const res = await fetch(`/api/cms/slides/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            if(data.success) fetchSlides();
+        }
     }
 
     // Init
