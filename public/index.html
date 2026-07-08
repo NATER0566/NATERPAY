@@ -4,165 +4,39 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="dynamicTitle">NATER-PAY SUPERPAY | Enterprise Production Ecosystem</title>
+    <title id="dynamicTitle">NATER-PAY | Enterprise Production Ecosystem</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="/socket.io/socket.io.js" defer></script>
+    <script src="/socket.io/socket.io.js"></script>
     
     <style>
         :root { --red: #d32f2f; --gold: #d4af37; --bg: #050505; --panel-bg: rgba(10, 10, 10, 0.55); }
         html { scroll-behavior: smooth; background-color: black; }
-        
-        body { background: transparent; color: white; font-family: 'Montserrat', sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; position: relative; }
-        
+        body { background: transparent; color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
-
-        header, .viewport-wrapper { position: relative; z-index: 2; }
-
-        /* STRICT HEADER SEPARATION MATCHING DASHBOARD */
-        header {
-            position: sticky; top: 0; width: 100%; padding: 15px 5%;
-            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
-            display: flex; justify-content: space-between; align-items: center; 
-            z-index: 1000; backdrop-filter: blur(15px);
-            box-shadow: 0 4px 30px rgba(0,0,0,0.8); 
-            gap: clamp(25px, 6vw, 50px);
-            flex-wrap: nowrap;
-        }
-
-        /* BRANDING WRAPPER */
-        .brand-wrapper {
-            display: flex; align-items: center; gap: 12px; cursor: pointer;
-            padding: 5px 15px 5px 5px; 
-            border-radius: 12px; transition: all 0.3s ease; flex-shrink: 0;
-        }
+        header { position: sticky; top: 0; width: 100%; padding: 15px 5%; background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold); display: flex; justify-content: space-between; align-items: center; z-index: 1000; }
         
-        .brand-text { 
-            font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
-            text-transform: uppercase; line-height: 0.85; flex-shrink: 0;
-            display: flex; flex-direction: column; align-items: flex-start;
-        }
-        .site-part-1 { color: var(--gold); font-size: clamp(1.4rem, 5vw, 1.8rem); text-shadow: 0 2px 5px rgba(212,175,55,0.3); } 
-        .site-part-2 { color: var(--red); font-size: clamp(1rem, 3.5vw, 1.4rem); letter-spacing: 3px; }
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; }
+        .site-part-1 { color: var(--gold); font-size: 1.8rem; } 
+        .site-part-2 { color: var(--red); font-size: 1.4rem; letter-spacing: 3px; }
 
-        .status-circle { 
-            width: 65px; height: 65px; border-radius: 50%; border: 2.5px solid var(--gold); 
-            display: flex; align-items: center; justify-content: center; background: rgba(212, 175, 55, 0.1); 
-            animation: pulse-glow-vivid 2s infinite ease-in-out; overflow: hidden; 
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); flex-shrink: 0;
-        }
-        .status-circle:hover { transform: scale(1.12); cursor: pointer; border-color: #ffffff; }
-        .status-circle img { width: 100%; height: 100%; object-fit: cover; }
+        .viewport-wrapper { flex: 1; display: flex; width: 100%; overflow: hidden; }
+        .system-side { flex: 1.3; padding: 50px 70px; overflow-y: auto; }
+        .auth-side { flex: 1; background: var(--panel-bg); backdrop-filter: blur(10px); padding: 45px; overflow-y: auto; }
 
-        @keyframes pulse-glow-vivid { 
-            0%, 100% { border-color: var(--gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); } 
-            50% { border-color: #fff; box-shadow: 0 0 40px rgba(255, 255, 255, 0.9); } 
-        }
-
-        .viewport-wrapper { flex: 1; display: flex; width: 100%; background: transparent; overflow: hidden; }
+        .slideshow-viewport { width: 100%; height: 260px; position: relative; border-radius: 30px; border: 1.5px solid rgba(212, 175, 55, 0.2); overflow: hidden; margin-bottom: 30px; }
+        .slide-element { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; transition: opacity 0.8s; display: flex; align-items: center; padding: 40px; }
+        .slide-element.active { opacity:1; }
+        .slide-media-layer { position: absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; opacity: 0.4; z-index:-1; }
         
-        /* CUSTOM SYSTEM-SIDE SCROLL FOR 55 FEATURES ADVERTISEMENT */
-        .system-side { flex: 1.3; border-right: 2px solid rgba(212, 175, 55, 0.1); padding: 50px 70px; display: flex; flex-direction: column; justify-content: flex-start; background: transparent; overflow-y: auto; }
-        .system-side::-webkit-scrollbar { width: 6px; }
-        .system-side::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
-        .system-side::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
-
-        .auth-side { flex: 1; background: var(--panel-bg); backdrop-filter: blur(10px); display: flex; flex-direction: column; padding: 45px 40px 30px 40px; position: relative; box-shadow: -20px 0 50px rgba(0,0,0,0.5); overflow-y: auto; }
-
-        /* REFINED COMPACT LUXURY HELPDESK ENGINE */
-        .embedded-support-card {
-            width: 100%; background: linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(12, 12, 12, 0.95) 50%, rgba(255, 255, 255, 0.12) 100%);
-            border: 2.5px solid #ffffff; border-radius: 16px; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between;
-            cursor: pointer; transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); margin-top: 15px; margin-bottom: 15px; position: relative;
-            overflow: hidden; box-shadow: 0 0 30px rgba(212, 175, 55, 0.45); animation: hyper-luxury-plumbing 2s infinite ease-in-out; flex-shrink: 0;
-        }
+        .btn-authorize { background: var(--gold); color: black; font-weight: 900; border-radius: 20px; padding: 20px; width: 100%; border: none; letter-spacing: 2px; text-transform: uppercase; }
+        .input-group-custom { background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212, 175, 55, 0.35); border-radius: 20px; padding: 15px 25px; margin-bottom: 20px; }
+        input { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; outline: none; }
         
-        .embedded-support-card:hover { background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(30, 30, 30, 0.98) 50%, rgba(212, 175, 55, 0.4) 100%); transform: translateY(-2px); border-color: #ffffff; }
-
-        .embedded-support-card::before {
-            content: ''; position: absolute; top: -120%; left: -150%; width: 350%; height: 350%;
-            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.98) 40%, rgba(212,175,55,0.7) 50%, rgba(255,255,255,0) 100%);
-            transform: rotate(28deg); animation: light-refract-sweep 1.8s infinite linear; pointer-events: none; z-index: 1;
-        }
-
-        .support-info-block { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; position: relative; z-index: 2; }
-        .support-text-details-wrapper { display: flex; flex-direction: column; justify-content: center; flex: 1; min-width: 0; }
-        
-        .support-icon-wrapper {
-            width: 38px; height: 38px; background: linear-gradient(135deg, #ffffff 0%, #d4af37 40%, #aa7c11 100%);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000000; font-size: 1.1rem;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.7); flex-shrink: 0; animation: secure-pulse 1.2s infinite ease-in-out;
-        }
-
-        @keyframes secure-pulse {
-            0%, 100% { transform: scale(1); filter: brightness(1); }
-            50% { transform: scale(1.1); filter: brightness(1.4); }
-        }
-
-        .support-text-label { font-size: 1rem; font-weight: 900; color: #ffffff !important; letter-spacing: 0.3px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
-        .support-text-sub { font-size: 0.8rem !important; color: #ffffff !important; font-weight: 700 !important; display: block; margin-top: 3px; line-height: 1.2; text-shadow: 0px 2px 4px rgba(0,0,0,1); opacity: 0.9 !important; word-break: normal; white-space: normal; }
-
-        @keyframes hyper-luxury-plumbing {
-            0%, 100% { box-shadow: 0 0 18px rgba(212, 175, 55, 0.4), inset 0 0 8px rgba(212, 175, 55, 0.2); border-color: var(--gold); filter: brightness(1); }
-            50% { box-shadow: 0 0 50px rgba(212, 175, 55, 0.95), 0 0 30px rgba(255, 255, 255, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.4); border-color: #ffffff; filter: brightness(1.5); }
-        }
-        @keyframes light-refract-sweep {
-            0% { left: -150%; } 50%, 100% { left: 150%; }
-        }
-
-        .input-group-custom { background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212, 175, 55, 0.35); border-radius: 20px; padding: 15px 25px; margin-bottom: 20px; transition: border-color 0.3s ease, box-shadow 0.3s ease; position: relative; }
-        .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
-        .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
-        .input-group-custom input { background: transparent; border: none; color: white; width: 90%; font-size: 1.1rem; font-weight: 700; outline: none; }
-        .input-group-custom input::placeholder { color: rgba(255, 255, 255, 0.3); font-weight: 400; }
-        
-        .toggle-password { position: absolute; right: 20px; top: 50%; transform: translateY(-10%); color: var(--gold); cursor: pointer; opacity: 0.7; }
-        .toggle-password:hover { opacity: 1; }
-
-        /* REAL-TIME DYNAMIC PASS KEY REQUIREMENTS VALIDATOR BLOCK */
-        .pass-hints { display: none; margin: -10px 0 20px 10px; font-size: 0.78rem; background: rgba(0, 0, 0, 0.5); border-radius: 12px; padding: 12px; border: 1px solid rgba(212, 175, 55, 0.2); }
-        .hint { display: inline-block; margin-right: 15px; color: #ff4d4d; transition: all 0.3s ease; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
-        .hint.valid { color: #00ff88 !important; text-shadow: 0 0 10px rgba(0, 255, 136, 0.3); }
-        .hint i { margin-right: 6px; font-size: 0.85rem; }
-
-        .btn-authorize { background: var(--gold); color: black; font-weight: 900; border-radius: 20px; padding: 22px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 4px; text-transform: uppercase; transition: 0.3s; }
-        .btn-authorize:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
-
-        /* PUBLIC MEDIA BANNER ENGINE */
-        .slideshow-viewport { width: 100%; height: 260px; position: relative; border-radius: 30px; border: 1.5px solid rgba(212, 175, 55, 0.2); overflow: hidden; background: #000; margin-bottom: 30px; flex-shrink: 0; }
-        .slide-element { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:1; transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; padding: 40px; }
-        .slide-element.active { opacity:1; z-index:2; }
-        .slide-media-layer { position: absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; opacity: 0.35; z-index:-1; pointer-events: none; }
-        .slide-text-overlay { width: 85%; }
-        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.7rem; margin-bottom: 8px; }
-        .slide-text-overlay p { font-size: 0.88rem; opacity: 0.85; margin-bottom: 15px; font-weight: 600; }
-
-        .price-ticker { background: rgba(212, 175, 55, 0.04); border: 1.5px solid rgba(212, 175, 55, 0.15); border-radius: 30px; padding: 30px; flex-shrink: 0; margin-bottom: 30px; }
-
-        /* SYSTEM CAPABILITIES MAPPING (ADVERTISING ENTERPRISE SCALE) */
-        .ecosystem-section { margin-bottom: 30px; flex-shrink: 0; }
-        .ecosystem-header { font-family: 'Cinzel'; font-size: 1rem; color: var(--gold); letter-spacing: 2px; font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 8px; }
-        .ecosystem-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-        .eco-pill { background: rgba(0,0,0,0.6); border: 1px solid rgba(212,175,55,0.2); border-radius: 8px; padding: 8px 12px; font-size: 0.65rem; font-weight: 700; letter-spacing: 1px; color: rgba(255,255,255,0.8); text-transform: uppercase; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; cursor: default; }
-        .eco-pill i { color: var(--gold); font-size: 0.75rem; }
-        .eco-pill:hover { border-color: var(--gold); color: #fff; background: rgba(212,175,55,0.15); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(212,175,55,0.2); }
-
-        .high-contrast-desc { font-size: 0.95rem; line-height: 1.6; color: #ffffff !important; font-weight: 600; text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.8); }
-        .high-contrast-subtitle { font-size: 0.8rem; letter-spacing: 3px; color: var(--gold) !important; font-weight: 800; margin-bottom: 5px; }
-
-        .footer-compliance-tag { color: #ffffff !important; font-weight: 700 !important; font-size: 0.82rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); margin-top: 10px; }
-
-        /* UPGRADED SOLID CONTRAST NAV SYSTEM CONTROLLER */
-        .auth-tabs-wrapper { position: relative; width: 100%; display: flex; flex-direction: column; margin-bottom: 35px; }
-        .auth-tab { flex: 1; text-align: center; padding: 14px 0; font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.05rem; letter-spacing: 2px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1.5px solid var(--gold); background: transparent; color: var(--gold); position: relative; z-index: 2; }
-        .auth-tab.active { color: #0a0a0a !important; background: var(--gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
-        .tab-indicator-container { position: relative; width: 100%; height: 4px; background: rgba(255, 255, 255, 0.05); margin-top: -1.5px; border-radius: 2px; overflow: hidden; }
-        .tab-indicator-bar { position: absolute; left: 0; top: 0; width: 50%; height: 100%; background: linear-gradient(to right, var(--gold), #ffffff); box-shadow: 0 0 10px var(--gold); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-
-        @media (max-width: 1100px) { .system-side { display: none; } .auth-side { padding: 40px 25px; background: rgba(10, 10, 10, 0.4); } .viewport-wrapper { overflow-y: auto; } }
+        @media (max-width: 1100px) { .system-side { display: none; } }
     </style>
 </head>
 <body>
@@ -170,665 +44,96 @@
 <canvas id="starCanvas"></canvas>
 
 <header>
-    <div class="brand-wrapper">
-        <div class="brand-text" id="siteBranding">
-            <span class="site-part-1">NATER</span>
-            <span class="site-part-2">PAY</span>
-        </div>
+    <div class="brand-text" id="siteBranding">
+        <span class="site-part-1">NATER</span><span class="site-part-2">PAY</span>
     </div>
-    
-    <a href="status.html" title="View Secure Infrastructure Status" style="text-decoration: none;">
-        <div class="status-circle">
-             <img id="adminLogo" src="logopay.jpg.jpg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
-        </div>
-    </a>
 </header>
 
 <div class="viewport-wrapper">
     <div class="system-side">
         <div class="slideshow-viewport" id="mediaSlideshowEngine">
-            <div class="slide-element active" id="fallbackSlideFrame">
+            <div class="slide-element active">
                 <div class="slide-text-overlay">
                     <h3>SECURE FINTECH ARCHITECTURE</h3>
-                    <p>Process enterprise wholesale automated telecoms, encrypted crypto handshakes, multi-tier collateralized credit services, and high-velocity smart wallet ledger actions.</p>
-                    <a href="#authTitle" class="btn btn-sm btn-outline-warning px-3 rounded-pill fw-bold" style="font-size:0.75rem; letter-spacing:1px;">INITIALIZE LOG CORRIDOR</a>
+                    <p>Processing wholesale telecoms, credit, and ledger actions.</p>
                 </div>
             </div>
         </div>
-
-        <div class="welcome-banner mb-4" style="border-left: 6px solid var(--gold); padding-left: 20px; flex-shrink: 0;">
-            <h1 class="fw-black" style="font-size: clamp(2.2rem, 4.5vw, 3.5rem); font-family: 'Cinzel'; line-height: 0.9;">BEYOND<br><span style="color:var(--gold)">LIMITS</span></h1>
-            <p class="small fw-bold opacity-75 mt-2" style="letter-spacing: 5px; color: var(--gold);">THE SUPER-APP ECOSYSTEM</p>
-        </div>
-
-        <div class="price-ticker">
-            <h6 class="small fw-bold mb-4" style="letter-spacing: 4px; color: var(--gold); text-align: center;">LIVE LIQUIDITY RATES (1GB)</h6>
-            <div class="d-flex justify-content-around text-center" id="liquidityTrackerContainer">
-                <div><div class="small opacity-50 fw-bold">MTN</div><div class="h5 fw-900" style="font-family:Cinzel;" id="tickerMTN">₦...</div></div>
-                <div><div class="small opacity-50 fw-bold">AIRTEL</div><div class="h5 fw-900" style="font-family:Cinzel;" id="tickerAIRTEL">₦...</div></div>
-                <div><div class="small opacity-50 fw-bold">GLO</div><div class="h5 fw-900" style="font-family:Cinzel;" id="tickerGLO">₦...</div></div>
-                <div><div class="small opacity-50 fw-bold">9MOBILE</div><div class="h5 fw-900" style="font-family:Cinzel;" id="ticker9MOBILE">₦...</div></div>
-            </div>
-        </div>
-
-        <div class="ecosystem-section">
-            <div class="ecosystem-header"><i class="fas fa-chart-line"></i> High Revenue Business Systems</div>
-            <div class="ecosystem-grid">
-                <span class="eco-pill"><i class="fas fa-store"></i> Merchant Checkouts</span>
-                <span class="eco-pill"><i class="fas fa-network-wired"></i> Data Reseller APIs</span>
-                <span class="eco-pill"><i class="fas fa-cash-register"></i> POS / Agent Banking</span>
-                <span class="eco-pill"><i class="fas fa-exchange-alt"></i> Airtime To Cash</span>
-                <span class="eco-pill"><i class="fas fa-qrcode"></i> QR Collection</span>
-                <span class="eco-pill"><i class="fas fa-file-invoice-dollar"></i> Smart Invoicing</span>
-                <span class="eco-pill"><i class="fas fa-link"></i> Payment Links</span>
-                <span class="eco-pill"><i class="fas fa-store-alt"></i> Digital Products</span>
-            </div>
-        </div>
-
-        <div class="ecosystem-section">
-            <div class="ecosystem-header"><i class="fas fa-rocket"></i> Scalable Retention Engine</div>
-            <div class="ecosystem-grid">
-                <span class="eco-pill"><i class="fas fa-undo-alt"></i> Cashback Automations</span>
-                <span class="eco-pill"><i class="fas fa-dharmachakra"></i> Daily Rewards & Spin</span>
-                <span class="eco-pill"><i class="fas fa-tasks"></i> Task & Earn System</span>
-                <span class="eco-pill"><i class="fas fa-trophy"></i> Agent Leaderboards</span>
-                <span class="eco-pill"><i class="fas fa-bullseye"></i> Engagement Scoring</span>
-                <span class="eco-pill"><i class="fas fa-bell"></i> Realtime Alerts</span>
-            </div>
-        </div>
-
-        <div class="ecosystem-section">
-            <div class="ecosystem-header"><i class="fas fa-shield-alt"></i> Military-Grade Security</div>
-            <div class="ecosystem-grid">
-                <span class="eco-pill"><i class="fas fa-fingerprint"></i> Level 3 KYC Shielding</span>
-                <span class="eco-pill"><i class="fas fa-ban"></i> Anti-Fraud AI Engine</span>
-                <span class="eco-pill"><i class="fas fa-user-lock"></i> Device Session Tracking</span>
-                <span class="eco-pill"><i class="fas fa-server"></i> Multi-Provider Failover</span>
-                <span class="eco-pill"><i class="fas fa-balance-scale"></i> Automated Reconciliation</span>
-                <span class="eco-pill"><i class="fas fa-lock"></i> Strict Idempotency</span>
+        
+        <div class="price-ticker" style="padding: 20px; border: 1px solid #333; border-radius: 20px;">
+            <h6 class="text-warning mb-3 text-center">LIVE LIQUIDITY RATES (1GB)</h6>
+            <div class="d-flex justify-content-around text-center">
+                <div><small>MTN</small><div id="tickerMTN">₦...</div></div>
+                <div><small>AIRTEL</small><div id="tickerAIRTEL">₦...</div></div>
             </div>
         </div>
     </div>
 
-    <div class="auth-side">
-        <div class="auth-header" style="margin-bottom: 40px; border-left: 6px solid var(--gold); padding-left: 25px;">
-            <h2 id="authTitle" style="font-family:Cinzel; font-weight:900; color: #ffffff; letter-spacing: 1px;">NATER<span style="color:var(--gold)">-PAY</span></h2>
-            <p class="high-contrast-subtitle" id="authSubtitle">AUTHORIZE SECURE IDENTITY</p>
-        </div>
-
-        <div class="auth-tabs-wrapper" id="authTabsHeader">
-            <div class="d-flex w-100 gap-2">
-                <span class="auth-tab active" id="tabLogin" onclick="switchTab('login')">LOGIN <i class="fas fa-sign-in-alt ms-2"></i></span>
-                <span class="auth-tab" id="tabReg" onclick="switchTab('reg')">REGISTER <i class="fas fa-user-plus ms-2"></i></span>
-            </div>
-            <div class="tab-indicator-container">
-                <div class="tab-indicator-bar" id="slidingIndicator"></div>
-            </div>
-        </div>
-
+    <div class="auth-side" id="authSide">
+        <h2 style="font-family:Cinzel;">AUTHORIZE</h2>
         <form id="loginForm" onsubmit="handleLogin(event)">
             <div class="input-group-custom">
-                <label>Account Identifier (Email)</label>
-                <input type="email" id="loginEmail" placeholder="yourname@domain.com" required autocomplete="username">
+                <label>EMAIL</label>
+                <input type="email" id="loginEmail" required>
             </div>
-            <div class="input-group-custom" id="loginPassWrapper">
-                <label>Security Access Key</label>
-                <input type="password" id="loginPass" placeholder="••••••••" oninput="liveLoginBinderCheck(this.value)" required autocomplete="current-password">
-                <i class="fas fa-eye toggle-password" onclick="togglePass('loginPass', this)"></i>
+            <div class="input-group-custom">
+                <label>SECURITY KEY</label>
+                <input type="password" id="loginPass" required>
             </div>
-            <div class="text-end mb-4">
-                <a href="#" onclick="switchTab('forgot'); return false;" style="color: var(--gold); text-decoration: none; font-size: 13px; font-weight: 700; letter-spacing:1px;">FORGOT SECURITY KEY?</a>
-            </div>
-            <button type="submit" class="btn-authorize" id="btnLoginButton">ACTIVATE SESSION</button>
+            <button type="submit" class="btn-authorize">ACTIVATE SESSION</button>
         </form>
-
-        <form id="regForm" style="display:none;" onsubmit="handleRegister(event)">
-            <div class="input-group-custom">
-                <label>Legal Identity Name</label>
-                <input type="text" id="regName" placeholder="Full Legal Name" required autocomplete="name">
-            </div>
-            <div class="input-group-custom">
-                <label>Primary Email Address</label>
-                <input type="email" id="regEmail" placeholder="name@domain.com" required autocomplete="email">
-            </div>
-            <div class="input-group-custom">
-                <label>Core Connection Line (Phone)</label>
-                <input type="tel" id="regPhone" placeholder="e.g. +2348000000000" required autocomplete="tel">
-            </div>
-            <div class="input-group-custom">
-                <label>New Security Pass Key</label>
-                <input type="password" id="regPass" placeholder="Create Secure Key" oninput="liveSecurityCheck(this.value)" required autocomplete="new-password">
-                <i class="fas fa-eye toggle-password" onclick="togglePass('regPass', this)"></i>
-            </div>
-            
-            <div class="pass-hints" id="passHints">
-                <span class="hint" id="crit_len"><i class="fas fa-times-circle"></i>8-16 Characters</span>
-                <span class="hint" id="crit_case"><i class="fas fa-times-circle"></i>Upper & Lower</span>
-                <span class="hint" id="crit_num"><i class="fas fa-times-circle"></i>Numbers (0-9)</span>
-                <span class="hint" id="crit_spec"><i class="fas fa-times-circle"></i>Symbols (#$&@)</span>
-            </div>
-
-            <div class="input-group-custom">
-                <label>Referral Node ID</label>
-                <input type="text" id="regRef" placeholder="Optional Affiliate Code">
-            </div>
-            <div class="mb-4"></div>
-            <button type="submit" class="btn-authorize" id="btnRegisterButton">PROVISION ACCOUNT</button>
-        </form>
-
-        <form id="forgotForm" style="display:none;" onsubmit="handleInlineForgotPassword(event)">
-            <!-- STEP 1: REQUEST OTP -->
-            <div id="forgotStep1">
-                <div class="mb-4">
-                    <p class="high-contrast-desc">Provide your verified identity credentials below to request a security key reset token from the NATER-PAY validation vault.</p>
-                </div>
-                <div class="input-group-custom">
-                    <label>Registered Account Email</label>
-                    <input type="email" id="forgotEmail" placeholder="yourname@domain.com" required>
-                </div>
-                <button type="submit" class="btn-authorize mb-4" id="btnForgotButton">SEND RECOVERY KEY</button>
-                
-                <div class="text-center mt-3">
-                    <button type="button" onclick="switchTab('login')" class="btn btn-outline-secondary rounded-pill text-white fw-bold px-4" style="border-color: rgba(255,255,255,0.2);">
-                        <i class="fas fa-arrow-left me-2"></i> Back to Login
-                    </button>
-                </div>
-            </div>
-
-            <!-- STEP 2: ENTER OTP & NEW PASSWORD -->
-            <div id="forgotStep2" style="display:none;">
-                <div class="mb-4">
-                    <p class="high-contrast-desc" style="color: #00ff88 !important;">Security token dispatched! Enter the 6-digit code sent to your email and create a new secure key.</p>
-                </div>
-                <div class="input-group-custom">
-                    <label>6-Digit Reset Token</label>
-                    <input type="text" id="resetOtp" placeholder="123456" maxlength="6" style="letter-spacing: 10px; font-size: 1.5rem; text-align: center;">
-                </div>
-                <div class="input-group-custom">
-                    <label>New Security Pass Key</label>
-                    <input type="password" id="resetPass" placeholder="Create Secure Key">
-                    <i class="fas fa-eye toggle-password" onclick="togglePass('resetPass', this)"></i>
-                </div>
-                <button type="button" class="btn-authorize mb-4" id="btnResetButton" onclick="handleResetPassword()">UPDATE SECURITY KEY</button>
-                
-                <div class="text-center mt-3">
-                    <button type="button" onclick="resetForgotForm(); switchTab('login')" class="btn btn-outline-secondary rounded-pill text-white fw-bold px-4" style="border-color: rgba(255,255,255,0.2);">
-                        <i class="fas fa-times me-2"></i> Cancel Reset
-                    </button>
-                </div>
-            </div>
-        </form>
-
-        <div class="embedded-support-card" onclick="openChat()">
-            <div class="support-info-block">
-                <div class="support-icon-wrapper">
-                    <i class="fas fa-headset" style="font-weight: 900; font-size: 1.2rem;"></i>
-                </div>
-                <div class="support-text-details-wrapper">
-                    <span class="support-text-label">Need Help?</span>
-                    <span class="support-text-sub">Click here to contact Customer Care</span>
-                </div>
-            </div>
-            <i class="fas fa-chevron-right" style="color: #ffffff; opacity: 1; font-size: 1.2rem; padding-left: 10px; position: relative; z-index: 2;"></i>
-        </div>
-
-        <div class="mt-auto pt-4 text-center">
-            <p class="footer-compliance-tag m-0">v3.0 SECURED BY NATER-PAY PROTOCOL</p>
-        </div>
     </div>
 </div>
 
 <script>
-    const canvas = document.getElementById("starCanvas");
-    const ctx = canvas.getContext("2d");
-    let stars = [];
-    let socketInstance = null;
     let applicationSlides = [];
     let activeSlidePointer = 0;
-    let loopSlideshowInterval = null;
 
-    function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    function initStars() {
-        resizeCanvas();
-        stars = [];
-        for (let i = 0; i < 220; i++) {
-            stars.push({
-                x: Math.random() * canvas.width, y: Math.random() * canvas.height,
-                size: Math.random() * 2.5 + 1.2, speed: Math.random() * 1.8 + 0.6,
-                opacity: Math.random() * 0.8 + 0.2
-            });
-        }
-    }
-    function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (let a = 0; a < stars.length; a++) {
-            for (let b = a + 1; b < stars.length; b++) {
-                let dx = stars[a].x - stars[b].x;
-                let dy = stars[a].y - stars[b].y;
-                let distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance < 110) {
-                    ctx.beginPath();
-                    ctx.strokeStyle = `rgba(212, 175, 55, ${0.2 - distance / 800})`;
-                    ctx.lineWidth = 0.6; ctx.moveTo(stars[a].x, stars[a].y);
-                    ctx.lineTo(stars[b].x, stars[b].y); ctx.stroke();
-                }
-            }
-        }
-        stars.forEach(s => {
-            ctx.globalAlpha = s.opacity; ctx.fillStyle = "white";
-            ctx.shadowBlur = 15; ctx.shadowColor = "white";
-            ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill();
-            ctx.shadowBlur = 0; s.y += s.speed;
-            if (s.y > canvas.height) { s.y = -10; s.x = Math.random() * canvas.width; }
-        });
-        requestAnimationFrame(animate);
-    }
-
-    const emailCheck = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-
-    // LIVE UNLIMITED SPECIAL CHARACTER VALIDATOR FOR ACCOUNT REGISTRATION
-    function liveSecurityCheck(val) {
-        document.getElementById('passHints').style.display = "block";
-        const checks = {
-            crit_len: val.length >= 8 && val.length <= 16,
-            crit_case: /[A-Z]/.test(val) && /[a-z]/.test(val),
-            crit_num: /\d/.test(val),
-            crit_spec: /[\p{P}\p{S}]/u.test(val) || /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(val)
-        };
-        for (let id in checks) {
-            const el = document.getElementById(id);
-            if (checks[id]) {
-                el.classList.add('valid');
-                el.querySelector('i').className = 'fas fa-check-circle';
-            } else {
-                el.classList.remove('valid');
-                el.querySelector('i').className = 'fas fa-times-circle';
-            }
-        }
-        return Object.values(checks).every(Boolean);
-    }
-
-    // REAL-TIME DATABASE PASS-MATCH LOGIN VERIFIER BINDER
-    async function liveLoginBinderCheck(val) {
-        const wrapper = document.getElementById('loginPassWrapper');
-        const emailInput = document.getElementById('loginEmail').value.trim();
-        
-        if (val.length === 0) {
-            wrapper.style.borderColor = 'rgba(212, 175, 55, 0.35)';
-            wrapper.style.boxShadow = 'none';
-            return;
-        }
-
-        wrapper.style.borderColor = '#ff4444';
-        wrapper.style.boxShadow = '0 0 14px rgba(255, 68, 68, 0.45)';
-
-        if (val.length >= 8 && emailCheck(emailInput)) {
-            try {
-                const response = await fetch('/api/auth/verify-login-input', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: emailInput, password: val })
-                });
-                const data = await response.json();
-                
-                if (data.isValidPasswordMatch === true) {
-                    wrapper.style.borderColor = '#00ff88';
-                    wrapper.style.boxShadow = '0 0 14px rgba(0, 255, 136, 0.45)';
-                }
-            } catch (error) {
-                console.debug('[NATER-PAY] Asynchronous background handshake verification pending loop initialization.');
-            }
-        }
-    }
-
-    function togglePass(id, icon) {
-        const input = document.getElementById(id);
-        if (input.type === "password") {
-            input.type = "text";
-            icon.classList.replace("fa-eye", "fa-eye-slash");
-        } else {
-            input.type = "password";
-            icon.classList.replace("fa-eye-slash", "fa-eye");
-        }
-    }
-
+    // Fetch CMS and Branding Data
     async function syncDynamicBrandingAndRates() {
         try {
             const res = await fetch('/api/cms/homepage-data');
-            const dataResult = await res.json();
-            if(dataResult.success && dataResult.data) {
-                const brandingTitle = dataResult.data.siteName || "NATER-PAY";
-                const textNodes = brandingTitle.split(' ');
-                const primaryText = textNodes;
-                const secondaryText = textNodes.slice(1).join(' ');
-
-                document.getElementById('siteBranding').innerHTML = `<span class="site-part-1">${primaryText}</span><span class="site-part-2"> ${secondaryText}</span>`;
-                document.getElementById('dynamicTitle').innerText = `${brandingTitle} | Enterprise Financial System`;
-                
-                if (dataResult.data.logoUrl) {
-                    document.getElementById('adminLogo').src = dataResult.data.logoUrl;
-                }
-
-                if(dataResult.data.rates) {
-                    document.getElementById('tickerMTN').innerText = `₦${dataResult.data.rates.mtn || '215'}`;
-                    document.getElementById('tickerAIRTEL').innerText = `₦${dataResult.data.rates.airtel || '190'}`;
-                    document.getElementById('tickerGLO').innerText = `₦${dataResult.data.rates.glo || '220'}`;
-                    document.getElementById('ticker9MOBILE').innerText = `₦${dataResult.data.rates.nineMobile || '180'}`;
+            const data = await res.json();
+            if(data.success && data.data) {
+                // Update Rates
+                if(data.data.rates) {
+                    document.getElementById('tickerMTN').innerText = `₦${data.data.rates.mtn || '215'}`;
+                    document.getElementById('tickerAIRTEL').innerText = `₦${data.data.rates.airtel || '190'}`;
                 }
             }
-        } catch (e) {
-            document.getElementById('tickerMTN').innerText = '₦215';
-            document.getElementById('tickerAIRTEL').innerText = '₦190';
-            document.getElementById('tickerGLO').innerText = '₦220';
-            document.getElementById('ticker9MOBILE').innerText = '₦180';
-        }
+        } catch (e) { console.error("Sync failed"); }
     }
 
+    // Fetch Slides dynamically
     async function deployMediaSlideshowEngine() {
         try {
             const res = await fetch('/api/slides');
             const dataResult = await res.json();
-            if(dataResult.success && dataResult.data && dataResult.data.length > 0) {
-                applicationSlides = dataResult.data;
-                compileSlideshowMarkup();
-            }
-        } catch (err) {
-            console.warn("Slideshow streaming channel detached. Using local fallback frame template.");
-        }
-    }
-
-    function compileSlideshowMarkup() {
-        const slideViewport = document.getElementById('mediaSlideshowEngine');
-        if(!slideViewport || applicationSlides.length === 0) return;
-        
-        clearInterval(loopSlideshowInterval);
-        let frameBuffer = '';
-        
-        applicationSlides.forEach((slide, pointer) => {
-            const viewportStateClass = pointer === 0 ? 'active' : '';
-            const actionHyperlink = slide.ctaLink || '#authTitle';
-            const actionLabel = slide.ctaText || 'EXPLORE NODE';
-            
-            frameBuffer += `
-                <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
-                    ${slide.mediaType === 'video' ? 
-                        `<video src="${slide.mediaUrl}" class="slide-media-layer" autoplay loop muted playsinline></video>` : 
-                        `<img src="${slide.mediaUrl}" class="slide-media-layer" alt="NATER-PAY Display Core">` 
-                    }
-                    <div class="slide-text-overlay">
-                        <h3>${slide.title}</h3>
-                        <p>${slide.caption}</p>
-                        <a href="${actionHyperlink}" class="btn btn-sm btn-outline-warning px-3 rounded-pill fw-bold" style="font-size:0.75rem; letter-spacing:1px;">${actionLabel}</a>
+            if(dataResult.success && dataResult.slides) {
+                applicationSlides = dataResult.slides;
+                const slideViewport = document.getElementById('mediaSlideshowEngine');
+                slideViewport.innerHTML = applicationSlides.map((s, i) => `
+                    <div class="slide-element ${i === 0 ? 'active' : ''}">
+                        <img src="${s.imageUrl}" class="slide-media-layer">
+                        <div class="slide-text-overlay"><h3>${s.title}</h3></div>
                     </div>
-                </div>
-            `;
-        });
-        
-        slideViewport.innerHTML = frameBuffer;
-        activeSlidePointer = 0;
-        
-        const transitionPeriod = applicationSlides.duration || 5000;
-        loopSlideshowInterval = setInterval(transitionSlideNext, transitionPeriod);
+                `).join('');
+            }
+        } catch (err) { console.warn("Slideshow streaming channel detached."); }
     }
 
-    function transitionSlideNext() {
-        if(applicationSlides.length <= 1) return;
-        const currentFrame = document.getElementById(`slide_node_index_${activeSlidePointer}`);
-        if(currentFrame) currentFrame.classList.remove('active');
-        
-        activeSlidePointer = (activeSlidePointer + 1) % applicationSlides.length;
-        
-        const nextFrame = document.getElementById(`slide_node_index_${activeSlidePointer}`);
-        if(nextFrame) nextFrame.classList.add('active');
-    }
-
+    // Socket listeners for live CMS updates
     function initializeSocketConnection() {
-        try {
-            socketInstance = io({ transparent: true });
-            socketInstance.on('cms_update', () => { syncDynamicBrandingAndRates(); });
-            socketInstance.on('slides_refresh', () => { deployMediaSlideshowEngine(); });
-        } catch (err) {
-            console.warn("Realtime communications pipeline unlinked.");
-        }
+        const socket = io();
+        socket.on('cms_update', () => syncDynamicBrandingAndRates());
+        socket.on('slides_refresh', () => deployMediaSlideshowEngine());
     }
 
-    async function handleLogin(e) {
-        e.preventDefault();
-        const actionButton = document.getElementById('btnLoginButton');
-        const email = document.getElementById('loginEmail').value.trim();
-        const password = document.getElementById('loginPass').value;
-        
-        try {
-            actionButton.disabled = true;
-            actionButton.innerText = "AUTHENTICATING CORE...";
-
-            const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            
-            const data = await res.json();
-            if (data.success) {
-                localStorage.setItem("naterpay_token", data.token);
-                localStorage.setItem("naterpay_profile", JSON.stringify(data.user));
-
-                Swal.fire({ 
-                    icon: 'success', 
-                    title: 'Access Granted', 
-                    text: data.message || 'Synchronizing Dashboard Hub...', 
-                    timer: 1500, 
-                    showConfirmButton: false 
-                }).then(() => {
-                    window.location.href = data.redirectUrl || '/dashboard.html';
-                });
-            } else { 
-                Swal.fire({ icon: "error", title: "Authentication Alert", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-            }
-        } catch (err) { 
-             Swal.fire({ icon: "error", title: "Gateway Failure", text: "Connection with authorization servers disrupted.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-        } finally {
-            actionButton.disabled = false;
-            actionButton.innerText = "ACTIVATE SESSION";
-        }
-    }
-
-    // STRICT OTP REGISTRATION ENFORCEMENT
-    async function handleRegister(e) {
-        e.preventDefault();
-        const actionButton = document.getElementById('btnRegisterButton');
-        const name = document.getElementById('regName').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
-        const phoneNumber = document.getElementById('regPhone').value.trim();
-        const password = document.getElementById('regPass').value;
-        const referralCode = document.getElementById('regRef').value.trim();
-
-        if (!emailCheck(email)) return;
-        if (!liveSecurityCheck(password)) return;
-
-        try {
-            actionButton.disabled = true;
-            actionButton.innerText = "PROVISIONING VECTOR...";
-
-            const res = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, phoneNumber, password, referralCode })
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                Swal.fire({
-                    title: 'ACCOUNT ACTIVATION REQUIRED',
-                    text: 'An account verification key has been sent to your registered corridors. Provide the 6-digit cryptographic activation OTP:',
-                    input: 'text',
-                    inputAttributes: { autocapitalize: 'off', maxlength: '6', style: 'text-align: center; font-size: 24px; letter-spacing: 4px;' },
-                    showCancelButton: false,
-                    confirmButtonText: 'ACTIVATE IDENTITY',
-                    confirmButtonColor: '#d4af37',
-                    background: '#0a0a0a',
-                    color: '#fff',
-                    allowOutsideClick: false,
-                    preConfirm: async (otp) => {
-                        try {
-                            const verifyRes = await fetch('/api/auth/verify-otp', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ email, otp })
-                            });
-                            return await verifyRes.json();
-                        } catch (e) {
-                            Swal.showValidationMessage(`Network transmission breakdown: ${e.message}`);
-                        }
-                    }
-                }).then((activationResult) => {
-                    if (activationResult.value && activationResult.value.success) {
-                        Swal.fire({ icon: 'success', title: 'REGISTRY ACTIVATED', text: 'Identity validated successfully. You can now access your account corridor.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d4af37' });
-                        switchTab('login');
-                    } else {
-                        Swal.fire({ icon: 'error', title: 'ACTIVATION FAILED', text: activationResult.value?.message || 'Verification token mismatch.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d32f2f' });
-                    }
-                });
-            } else {
-                Swal.fire({ icon: "error", title: "Registry Error", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-            }
-        } catch (err) { 
-             Swal.fire({ icon: "error", title: "Sync Disrupted", text: "Application layer was unable to register data packet.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-        } finally {
-            actionButton.disabled = false;
-            actionButton.innerText = "PROVISION ACCOUNT";
-        }
-    }
-
-    async function handleInlineForgotPassword(e) {
-        e.preventDefault();
-        const actionButton = document.getElementById('btnForgotButton');
-        const email = document.getElementById('forgotEmail').value.trim();
-        
-        if (!emailCheck(email)) return;
-        
-        try {
-            actionButton.disabled = true;
-            actionButton.innerText = "DISPATCHING ENCRYPTION KEYS...";
-
-            const res = await fetch('/api/auth/forgot-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-            const data = await res.json();
-            
-            if (data.success) {
-                Swal.fire({ icon: "success", title: "Handshake Sent", text: data.message || 'Check your primary mailbox infrastructure.', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
-                // Hide Step 1, Show Step 2
-                document.getElementById('forgotStep1').style.display = 'none';
-                document.getElementById('forgotStep2').style.display = 'block';
-            } else {
-                Swal.fire({ icon: "error", title: "Handshake Refused", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-            }
-        } catch(err) {
-            Swal.fire({ icon: "error", title: "Network Disrupted", text: "Unable to process pipeline request.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-        } finally {
-            actionButton.disabled = false;
-            actionButton.innerText = "SEND RECOVERY KEY";
-        }
-    }
-
-    async function handleResetPassword() {
-        const actionButton = document.getElementById('btnResetButton');
-        const email = document.getElementById('forgotEmail').value.trim();
-        const otp = document.getElementById('resetOtp').value.trim();
-        const newPassword = document.getElementById('resetPass').value;
-
-        if(!otp || !newPassword) {
-            Swal.fire({ icon: "warning", title: "Missing Data", text: "Please provide both the 6-digit reset token and your new password.", background: '#0a0a0a', color: '#fff' });
-            return;
-        }
-
-        try {
-            actionButton.disabled = true;
-            actionButton.innerText = "UPDATING VAULT...";
-
-            const res = await fetch('/api/auth/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, otp, newPassword })
-            });
-            const data = await res.json();
-            
-            if (data.success) {
-                Swal.fire({ icon: "success", title: "Password Updated", text: data.message || 'Your security key has been successfully changed.', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
-                resetForgotForm();
-                switchTab('login');
-            } else {
-                Swal.fire({ icon: "error", title: "Reset Failed", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-            }
-        } catch(err) {
-            Swal.fire({ icon: "error", title: "Network Disrupted", text: "Unable to process pipeline request.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-        } finally {
-            actionButton.disabled = false;
-            actionButton.innerText = "UPDATE SECURITY KEY";
-        }
-    }
-
-    function resetForgotForm() {
-        document.getElementById('forgotStep1').style.display = 'block';
-        document.getElementById('forgotStep2').style.display = 'none';
-        document.getElementById('forgotEmail').value = '';
-        document.getElementById('resetOtp').value = '';
-        document.getElementById('resetPass').value = '';
-    }
-
-    function openChat() {
-        Swal.fire({
-            html: `<div style="text-align:center;"><img src="logopay.jpg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" style="width:80px; height:80px; border-radius:50%; border:2px solid var(--gold);"><h4 style="color:#d4af37; margin-top:15px;">Customer Care</h4><hr style="background-color: var(--gold); height:2px;"><a href="https://wa.me/2348160979620" target="_blank" class="btn btn-warning w-100 py-3 mb-2" style="font-weight:700;">Chat on WhatsApp</a><a href="mailto:nmbashau@gmail.com" class="btn btn-outline-warning w-100 py-3 mb-3" style="font-weight:700;">Send us an Email</a><button onclick="Swal.close()" class="btn btn-danger w-100" style="font-weight:700;">Close Menu</button></div>`,
-            showConfirmButton: false, background: '#0a0a0a'
-        });
-    }
-
-    // HIGH-CONTRAST TAB NAVIGATION MATRIX SWITCHER
-    function switchTab(type) {
-        document.getElementById('loginForm').style.display = type === 'login' ? 'block' : 'none';
-        document.getElementById('regForm').style.display = type === 'reg' ? 'block' : 'none';
-        document.getElementById('forgotForm').style.display = type === 'forgot' ? 'block' : 'none';
-        
-        const headerTabs = document.getElementById('authTabsHeader');
-        const indicator = document.getElementById('slidingIndicator');
-
-        if (type === 'forgot') {
-            headerTabs.style.setProperty('display', 'none', 'important');
-            document.getElementById('authSubtitle').innerText = "VAULT CREDENTIAL RECOVERY";
-        } else {
-            headerTabs.style.setProperty('display', 'flex', 'important');
-            document.getElementById('authSubtitle').innerText = "AUTHORIZE SECURE IDENTITY";
-            
-            if (type === 'login') {
-                document.getElementById('tabLogin').classList.add('active');
-                document.getElementById('tabReg').classList.remove('active');
-                indicator.style.transform = 'translate3d(0%, 0, 0)';
-            } else {
-                document.getElementById('tabLogin').classList.remove('active');
-                document.getElementById('tabReg').classList.add('active');
-                indicator.style.transform = 'translate3d(100%, 0, 0)';
-            }
-        }
-    }
-
-    initStars(); animate();
-    window.addEventListener("resize", initStars);
-
-    window.addEventListener("DOMContentLoaded", () => {
+    window.onload = () => {
         syncDynamicBrandingAndRates();
         deployMediaSlideshowEngine();
         initializeSocketConnection();
-        
-        const urlParams = new URLSearchParams(window.location.search);
-        if(urlParams.has('ref')) { 
-            switchTab('reg'); 
-            const allocationField = document.getElementById('regRef');
-            if(allocationField) allocationField.value = urlParams.get('ref'); 
-        }
-    });
+    };
 </script>
 </body>
 </html>
