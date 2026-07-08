@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config(); // FIXED: lowercase 'require'
 const Fastify = require('fastify');
 const mongoose = require('mongoose');
 const socketIo = require('socket.io');
@@ -95,8 +95,6 @@ async function registerRoutes() {
   fastify.post('/api/vtu/electricity', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyElectricity);
   fastify.post('/api/vtu/cable', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyCable);
   fastify.get('/api/vtu/rates', vtuRoutes.getRates);
-  
-  // ---> NEW DYNAMIC PRICING ROUTE ADDED HERE <---
   fastify.get('/api/vtu/variations', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getVariations);
   
   // Transaction routes
@@ -151,6 +149,11 @@ async function registerRoutes() {
   fastify.get('/api/admin/support/tickets', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getSupportTickets);
   fastify.put('/api/admin/support/tickets/:id/assign', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.assignTicket);
   fastify.put('/api/admin/support/tickets/:id/resolve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.resolveTicket);
+  
+  // ---> NEW ENTERPRISE ADMIN ROUTES ADDED HERE <---
+  fastify.post('/api/admin/users/:id/balance', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.updateUserBalance);
+  fastify.post('/api/admin/transactions/verify', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.verifyTransaction);
+  fastify.post('/api/admin/notifications/send', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.sendPushNotification);
   
   // CMS routes
   const cmsRoutes = require('./routes/cms');
