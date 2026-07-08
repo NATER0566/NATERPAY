@@ -1,4 +1,4 @@
-require('dotenv').config(); // FIXED: lowercase 'require'
+require('dotenv').config();
 const Fastify = require('fastify');
 const mongoose = require('mongoose');
 const socketIo = require('socket.io');
@@ -39,6 +39,14 @@ async function registerPlugins() {
   await fastify.register(require('@fastify/static'), {
     root: __dirname + '/public',
     prefix: '/'
+  });
+
+  // ---> NEW: MULTIPART FOR SECURE FILE UPLOADS (CMS & Notifications) <---
+  await fastify.register(require('@fastify/multipart'), {
+    attachFieldsToBody: true,
+    limits: { 
+      fileSize: 5 * 1024 * 1024 // 5MB limit to protect server memory
+    }
   });
 }
 
@@ -150,7 +158,7 @@ async function registerRoutes() {
   fastify.put('/api/admin/support/tickets/:id/assign', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.assignTicket);
   fastify.put('/api/admin/support/tickets/:id/resolve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.resolveTicket);
   
-  // ---> NEW ENTERPRISE ADMIN ROUTES ADDED HERE <---
+  // NEW ENTERPRISE ADMIN ROUTES
   fastify.post('/api/admin/users/:id/balance', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.updateUserBalance);
   fastify.post('/api/admin/transactions/verify', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.verifyTransaction);
   fastify.post('/api/admin/notifications/send', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.sendPushNotification);
@@ -161,6 +169,7 @@ async function registerRoutes() {
   fastify.get('/api/slides', cmsRoutes.getSlides);
   fastify.put('/api/cms/homepage', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.updateHomepage);
   fastify.post('/api/cms/slides', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.addSlide);
+  fastify.post('/api/cms/slides/upload', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.addSlide); // Ensure upload route is registered
   fastify.put('/api/cms/slides/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.updateSlide);
   fastify.delete('/api/cms/slides/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.deleteSlide);
   fastify.get('/api/cms/announcements', cmsRoutes.getAnnouncements);
@@ -268,6 +277,11 @@ function setupSocketIO(server) {
     // Handle slides refresh
     socket.on('slides_refresh', () => {
       io.emit('slides_refresh');
+    });
+    
+    // Handle direct notifications
+    socket.on('notification', (data) => {
+      io.to(`user:${socket.userId}`).emit('notification', data);
     });
     
     socket.on('disconnect', () => {
