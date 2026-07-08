@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NATER-PAY | Enterprise Admin Terminal</title>
@@ -48,6 +49,11 @@
         
         .input-dark { background: rgba(0,0,0,0.6); border: 1px solid #444; color: white; padding: 12px; border-radius: 10px; width: 100%; transition: 0.3s; }
         .input-dark:focus { border-color: var(--gold); outline: none; background: rgba(0,0,0,0.8); color: white;}
+        
+        /* Custom File Input Styling */
+        input[type="file"].input-dark { padding: 9px 12px; cursor: pointer; }
+        input[type="file"].input-dark::file-selector-button { background: var(--gold); border: none; padding: 5px 15px; border-radius: 5px; font-weight: bold; margin-right: 15px; cursor: pointer; transition: 0.3s; }
+        input[type="file"].input-dark::file-selector-button:hover { background: white; }
     </style>
 </head>
 <body>
@@ -71,12 +77,11 @@
     <div class="d-flex gap-2 mb-4 flex-wrap">
         <button class="admin-tab active" onclick="showTab('overview')"><i class="fas fa-chart-pie me-2"></i>System Overview</button>
         <button class="admin-tab" onclick="showTab('users')"><i class="fas fa-users-cog me-2"></i>User Ledger</button>
-        <button class="admin-tab" onclick="showTab('transactions')"><i class="fas fa-server me-2"></i>Transactions & Verification</button>
+        <button class="admin-tab" onclick="showTab('transactions')"><i class="fas fa-server me-2"></i>Transactions</button>
         <button class="admin-tab" onclick="showTab('cms')"><i class="fas fa-photo-video me-2"></i>Frontend CMS</button>
         <button class="admin-tab" onclick="showTab('notifications')"><i class="fas fa-bell me-2"></i>Push Notifications</button>
     </div>
     
-    <!-- OVERVIEW TAB -->
     <div id="tab-overview" class="tab-content">
         <div class="row g-3 mb-4">
             <div class="col-md-3"><div class="stat-box"><small class="text-muted fw-bold">TOTAL USERS</small><div class="stat-number" id="statUsers"><i class="fas fa-spinner fa-spin fs-4"></i></div></div></div>
@@ -86,7 +91,6 @@
         </div>
     </div>
     
-    <!-- USERS TAB (CREDIT/DEBIT/MANAGE) -->
     <div id="tab-users" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -112,7 +116,6 @@
         </div>
     </div>
     
-    <!-- TRANSACTIONS TAB (FORCE VERIFY) -->
     <div id="tab-transactions" class="tab-content" style="display: none;">
         <div class="admin-card">
             <h5 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold);">LIVE TRANSACTION AUDIT</h5>
@@ -137,15 +140,14 @@
         </div>
     </div>
 
-    <!-- CMS / SLIDESHOW TAB -->
     <div id="tab-cms" class="tab-content" style="display: none;">
         <div class="row">
             <div class="col-md-4">
                 <div class="admin-card">
-                    <h5 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold);"><i class="fas fa-plus-circle me-2"></i>ADD NEW SLIDE</h5>
+                    <h5 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold);"><i class="fas fa-plus-circle me-2"></i>UPLOAD NEW SLIDE</h5>
                     <div class="mb-3">
-                        <label class="small text-muted mb-1 fw-bold">IMAGE URL (Cloudinary / Direct Link)</label>
-                        <input type="text" id="slideUrl" class="input-dark" placeholder="https://...">
+                        <label class="small text-muted mb-1 fw-bold">SELECT IMAGE FILE</label>
+                        <input type="file" id="slideFile" class="input-dark" accept="image/*">
                     </div>
                     <div class="mb-4">
                         <label class="small text-muted mb-1 fw-bold">PROMO TITLE / CAPTION</label>
@@ -170,24 +172,55 @@
         </div>
     </div>
 
-    <!-- NOTIFICATIONS TAB -->
     <div id="tab-notifications" class="tab-content" style="display: none;">
-        <div class="admin-card" style="max-width: 700px; margin: 0 auto;">
-            <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: var(--gold);"><i class="fas fa-paper-plane me-2"></i>PUSH NOTIFICATION SYSTEM</h5>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="admin-card">
+                    <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: var(--gold);"><i class="fas fa-paper-plane me-2"></i>CREATE NOTIFICATION</h5>
+                    
+                    <div class="mb-3">
+                        <label class="small text-muted mb-1 fw-bold">TARGET (Leave blank to broadcast to ALL)</label>
+                        <input type="text" id="notifyTarget" class="input-dark" placeholder="Enter User Email or ID">
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted mb-1 fw-bold">MESSAGE TITLE</label>
+                        <input type="text" id="notifyTitle" class="input-dark" placeholder="e.g. System Maintenance">
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted mb-1 fw-bold">MESSAGE BODY</label>
+                        <textarea id="notifyBody" class="input-dark" rows="4" placeholder="Type your message here..."></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="small text-muted mb-1 fw-bold">ATTACH FILE/IMAGE (Optional)</label>
+                        <input type="file" id="notifyFile" class="input-dark">
+                    </div>
+                    <button class="btn btn-danger w-100 py-3 rounded-pill fw-bold" onclick="sendPushNotification()"><i class="fas fa-broadcast-tower me-2"></i> TRANSMIT NOTIFICATION</button>
+                </div>
+            </div>
             
-            <div class="mb-3">
-                <label class="small text-muted mb-1 fw-bold">TARGET (Leave blank to broadcast to ALL users)</label>
-                <input type="text" id="notifyTarget" class="input-dark" placeholder="Enter User Email or ID">
+            <div class="col-md-8">
+                <div class="admin-card">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 style="font-family: 'Cinzel'; color: var(--gold); margin:0;">MANAGE ANNOUNCEMENTS</h5>
+                        <button class="btn btn-sm btn-outline-warning rounded-pill" onclick="fetchNotifications()"><i class="fas fa-sync-alt me-1"></i> Refresh</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>DATE</th>
+                                    <th>TITLE & MESSAGE</th>
+                                    <th>TARGET</th>
+                                    <th class="text-end">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="notificationsTable">
+                                <tr><td colspan="4" class="text-center py-5 opacity-50">Loading notifications...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label class="small text-muted mb-1 fw-bold">MESSAGE TITLE</label>
-                <input type="text" id="notifyTitle" class="input-dark" placeholder="e.g. Account Upgraded!">
-            </div>
-            <div class="mb-4">
-                <label class="small text-muted mb-1 fw-bold">MESSAGE BODY</label>
-                <textarea id="notifyBody" class="input-dark" rows="4" placeholder="Type your message here..."></textarea>
-            </div>
-            <button class="btn btn-danger w-100 py-3 rounded-pill fw-bold" onclick="sendPushNotification()"><i class="fas fa-broadcast-tower me-2"></i> TRANSMIT NOTIFICATION</button>
         </div>
     </div>
 
@@ -216,6 +249,8 @@
         event.currentTarget.classList.add('active');
         document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
         document.getElementById('tab-' + tabName).style.display = 'block';
+        
+        if(tabName === 'notifications') fetchNotifications();
     }
 
     // --- CORE DATA FETCHING ---
@@ -224,7 +259,7 @@
         if (!token) return window.location.href = '/index.html';
         
         try {
-            // Fetch Dashboard Stats
+            // Stats
             const statRes = await fetch('/api/admin/analytics', { headers: { 'Authorization': `Bearer ${token}` } });
             const stats = await statRes.json();
             if(stats.success) {
@@ -234,18 +269,19 @@
                 document.getElementById('statTickets').innerText = stats.summary?.openTickets || 0;
             }
 
-            // Fetch Users Ledger
+            // Ledger
             const userRes = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
             const usersData = await userRes.json();
             const uTable = document.getElementById('usersTable');
             uTable.innerHTML = '';
             if(usersData.success && usersData.users) {
                 usersData.users.forEach(u => {
+                    const safeBalance = u.walletBalance?.$numberDecimal || u.walletBalance || 0;
                     uTable.innerHTML += `
                         <tr>
                             <td><div class="fw-bold">${u.name}</div><small class="text-muted">${u._id}</small></td>
                             <td>${u.email}</td>
-                            <td class="text-warning fw-bold fs-5">₦${Number(u.walletBalance || 0).toLocaleString()}</td>
+                            <td class="text-warning fw-bold fs-5">₦${Number(safeBalance).toLocaleString()}</td>
                             <td><span class="status-pill ${u.isActive ? 'bg-success' : 'bg-danger'}">${u.isActive ? 'ACTIVE' : 'SUSPENDED'}</span></td>
                             <td class="text-end">
                                 <button class="btn btn-sm btn-outline-success me-1" onclick="modifyLedger('${u._id}', '${u.name}', 'credit')" title="Credit Wallet"><i class="fas fa-plus"></i></button>
@@ -257,7 +293,7 @@
                 });
             }
 
-            // Fetch Transactions for Verification System
+            // Transactions
             const txRes = await fetch('/api/admin/transactions', { headers: { 'Authorization': `Bearer ${token}` } });
             const txData = await txRes.json();
             const tTable = document.getElementById('transactionsTable');
@@ -265,13 +301,16 @@
             if(txData.success && txData.transactions) {
                 txData.transactions.forEach(tx => {
                     const statusClass = tx.status === 'success' ? 'bg-success' : (tx.status === 'failed' ? 'bg-danger' : 'bg-warning text-dark');
+                    const txDate = tx.createdAt || tx.date || new Date().toISOString();
+                    const txAmt = tx.amount?.$numberDecimal || tx.amount || 0;
+                    
                     tTable.innerHTML += `
                         <tr>
-                            <td><small>${new Date(tx.date).toLocaleString()}</small></td>
+                            <td><small>${new Date(txDate).toLocaleString()}</small></td>
                             <td><div class="fw-bold text-truncate" style="max-width:150px;">${tx.reference || tx._id}</div><small class="text-muted">${tx.userEmail || tx.user}</small></td>
                             <td><span class="status-pill bg-secondary">${tx.type}</span></td>
-                            <td class="fw-bold">₦${Number(tx.amount).toLocaleString()}</td>
-                            <td>${tx.provider.toUpperCase()}</td>
+                            <td class="fw-bold">₦${Number(txAmt).toLocaleString()}</td>
+                            <td>${(tx.provider || 'internal').toUpperCase()}</td>
                             <td><span class="status-pill ${statusClass}">${tx.status}</span></td>
                             <td class="text-end">
                                 ${tx.status !== 'success' ? `<button class="btn btn-sm btn-gold rounded-pill px-3" onclick="forceVerifyPayment('${tx._id}')"><i class="fas fa-check-double me-1"></i> Force Verify</button>` : `<span class="badge bg-dark border border-success text-success"><i class="fas fa-check"></i> CLEARED</span>`}
@@ -281,8 +320,8 @@
                 });
             }
 
-            // Fetch CMS Slides
             fetchSlides();
+            fetchNotifications();
 
         } catch (e) {
             console.error("Ecosystem load failed", e);
@@ -332,7 +371,7 @@
         const token = localStorage.getItem("naterpay_token");
         const confirm = await Swal.fire({
             title: 'FORCE VERIFY?',
-            text: "This will force the system to mark this transaction as SUCCESS and execute all associated logic (e.g. crediting the user). Use only if gateway failed to report back.",
+            text: "This will force the system to mark this transaction as SUCCESS and execute all associated logic (e.g. crediting the user).",
             icon: 'warning', showCancelButton: true, confirmButtonColor: '#d4af37', cancelButtonColor: '#d32f2f', confirmButtonText: 'Yes, Force Verify!', background: '#0a0a0a', color: '#fff'
         });
 
@@ -355,38 +394,112 @@
         }
     }
 
-    // --- ADMIN POWERS: NOTIFICATIONS ---
+    // --- ADMIN POWERS: NOTIFICATIONS (FILE ENABLED) ---
     function directNotify(email) {
         showTab('notifications');
         document.getElementById('notifyTarget').value = email;
+    }
+
+    async function fetchNotifications() {
+        const token = localStorage.getItem("naterpay_token");
+        try {
+            const res = await fetch('/api/admin/notifications', { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            const table = document.getElementById('notificationsTable');
+            table.innerHTML = '';
+            if(data.success && data.notifications && data.notifications.length > 0) {
+                data.notifications.forEach(n => {
+                    const date = new Date(n.createdAt).toLocaleDateString();
+                    table.innerHTML += `
+                        <tr>
+                            <td><small>${date}</small></td>
+                            <td><div class="fw-bold text-warning">${n.title}</div><small class="opacity-75">${n.message}</small></td>
+                            <td><span class="badge ${n.isGlobal ? 'bg-info text-dark' : 'bg-secondary'}">${n.isGlobal ? 'GLOBAL' : 'DIRECT'}</span></td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-warning" onclick="editNotification('${n._id}', '${n.title}', '${n.message}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteNotification('${n._id}')"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                table.innerHTML = '<tr><td colspan="4" class="text-center py-4 opacity-50">No past announcements found.</td></tr>';
+            }
+        } catch(e) { console.error("Notification fetch failed", e); }
     }
 
     async function sendPushNotification() {
         const target = document.getElementById('notifyTarget').value;
         const title = document.getElementById('notifyTitle').value;
         const message = document.getElementById('notifyBody').value;
+        const fileInput = document.getElementById('notifyFile');
         const token = localStorage.getItem("naterpay_token");
 
         if(!title || !message) return Swal.fire('Error', 'Title and message are required', 'error');
 
         Swal.fire({ title: 'Transmitting...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+        
         try {
+            // Using FormData to handle file uploads
+            const formData = new FormData();
+            formData.append('targetEmail', target || 'ALL');
+            formData.append('title', title);
+            formData.append('message', message);
+            formData.append('type', 'system');
+            if(fileInput.files.length > 0) {
+                formData.append('file', fileInput.files[0]);
+            }
+
             const res = await fetch('/api/admin/notifications/send', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ targetEmail: target || 'ALL', title, message, type: 'system' })
+                headers: { 'Authorization': `Bearer ${token}` }, // Do NOT set Content-Type with FormData
+                body: formData
             });
             const data = await res.json();
             if(data.success) {
-                Swal.fire({ icon: 'success', title: 'Transmitted', text: `Notification pushed to ${target ? target : 'ALL USERS'} successfully.`, background: '#0a0a0a', color: '#fff' });
-                document.getElementById('notifyTitle').value = ''; document.getElementById('notifyBody').value = '';
+                Swal.fire({ icon: 'success', title: 'Transmitted', text: `Notification pushed successfully.`, background: '#0a0a0a', color: '#fff' });
+                document.getElementById('notifyTitle').value = ''; document.getElementById('notifyBody').value = ''; fileInput.value = '';
+                fetchNotifications();
             } else {
                 Swal.fire({ icon: 'error', title: 'Transmission Failed', text: data.message, background: '#0a0a0a', color: '#fff' });
             }
-        } catch(e) { Swal.fire('Error', 'Network failure', 'error'); }
+        } catch(e) { Swal.fire('Error', 'Network failure during file upload', 'error'); }
     }
 
-    // --- ADMIN POWERS: CMS SLIDESHOW ---
+    async function deleteNotification(id) {
+        const confirm = await Swal.fire({ title: 'Delete?', text: "Remove this announcement?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff'});
+        if(confirm.isConfirmed) {
+            const token = localStorage.getItem("naterpay_token");
+            const res = await fetch(`/api/admin/notifications/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            if(data.success) fetchNotifications();
+        }
+    }
+
+    async function editNotification(id, oldTitle, oldMessage) {
+        const { value: formValues } = await Swal.fire({
+            title: 'Edit Announcement',
+            html: `
+                <input id="edit-title" class="swal2-input bg-dark text-white border-secondary" value="${oldTitle}">
+                <textarea id="edit-msg" class="swal2-textarea bg-dark text-white border-secondary" style="height:100px;">${oldMessage}</textarea>
+            `,
+            background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonColor: '#d4af37',
+            preConfirm: () => { return [ document.getElementById('edit-title').value, document.getElementById('edit-msg').value ] }
+        });
+
+        if(formValues) {
+            const token = localStorage.getItem("naterpay_token");
+            const res = await fetch(`/api/admin/notifications/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ title: formValues[0], message: formValues[1] })
+            });
+            const data = await res.json();
+            if(data.success) fetchNotifications();
+        }
+    }
+
+    // --- ADMIN POWERS: CMS SLIDESHOW (FILE ENABLED) ---
     async function fetchSlides() {
         try {
             const res = await fetch('/api/cms/slides');
@@ -410,26 +523,34 @@
     }
 
     async function uploadSlide() {
-        const url = document.getElementById('slideUrl').value;
+        const fileInput = document.getElementById('slideFile');
         const title = document.getElementById('slideTitle').value;
         const token = localStorage.getItem("naterpay_token");
 
-        if(!url || !title) return Swal.fire('Error', 'Image URL and Title are required', 'error');
+        if(fileInput.files.length === 0 || !title) return Swal.fire('Error', 'An image file and Title are required', 'error');
         
-        Swal.fire({ title: 'Publishing...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+        Swal.fire({ title: 'Uploading...', text: 'Processing file securely...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+        
         try {
-            const res = await fetch('/api/cms/slides', {
+            // Using FormData for physical file upload
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            formData.append('title', title);
+            formData.append('link', '#');
+
+            const res = await fetch('/api/cms/slides/upload', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ imageUrl: url, title, link: '#' })
+                headers: { 'Authorization': `Bearer ${token}` }, // Do NOT set Content-Type with FormData
+                body: formData
             });
             const data = await res.json();
+            
             if(data.success) {
                 Swal.fire({ icon: 'success', title: 'Published', text: 'Slide added to frontend', background: '#0a0a0a', color: '#fff' });
-                document.getElementById('slideUrl').value = ''; document.getElementById('slideTitle').value = '';
+                fileInput.value = ''; document.getElementById('slideTitle').value = '';
                 fetchSlides();
             } else Swal.fire('Error', data.message, 'error');
-        } catch(e) { Swal.fire('Error', 'Network failure', 'error'); }
+        } catch(e) { Swal.fire('Error', 'Network failure during upload', 'error'); }
     }
 
     async function deleteSlide(id) {
