@@ -79,6 +79,7 @@
             transition: 0.3s;
         }
         .btn-buy:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
+        .btn-buy:disabled { background: #555; color: #888; transform: none; box-shadow: none; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -119,7 +120,7 @@
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="network-btn" onclick="selectNetwork(this, '9mobile')">
+                <div class="network-btn" onclick="selectNetwork(this, 'etisalat')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #00bfff;"></i>
                     <div class="fw-bold">9mobile</div>
                 </div>
@@ -148,13 +149,13 @@
             <input type="password" id="withdrawalPin" placeholder="Enter your 4-digit PIN" maxlength="4">
         </div>
         
-        <button class="btn-buy" onclick="buyAirtime()">
+        <button class="btn-buy" id="btnBuy" onclick="buyAirtime()">
             <i class="fas fa-phone me-2"></i> PURCHASE AIRTIME
         </button>
     </div>
     
     <div class="text-center text-muted small">
-        <p class="mb-1">Airtime powered by VTpass</p>
+        <p class="mb-1">Airtime powered by VTpass Live API</p>
         <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
@@ -241,11 +242,15 @@
             window.location.href = '/index.html';
             return;
         }
+
+        const btnBuy = document.getElementById('btnBuy');
+        btnBuy.disabled = true;
+        btnBuy.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> PROCESSING...';
         
         try {
             Swal.fire({
                 title: 'Processing...',
-                text: 'Purchasing airtime',
+                text: 'Transmitting purchase request to VTpass',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading(),
                 background: '#0a0a0a',
@@ -283,11 +288,13 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'Purchase Failed',
-                    text: data.message,
+                    text: data.message || 'Transaction failed at provider',
                     confirmButtonColor: '#d32f2f',
                     background: '#0a0a0a',
                     color: '#fff'
                 });
+                btnBuy.disabled = false;
+                btnBuy.innerHTML = '<i class="fas fa-phone me-2"></i> PURCHASE AIRTIME';
             }
         } catch (error) {
             Swal.fire({
@@ -298,6 +305,8 @@
                 background: '#0a0a0a',
                 color: '#fff'
             });
+            btnBuy.disabled = false;
+            btnBuy.innerHTML = '<i class="fas fa-phone me-2"></i> PURCHASE AIRTIME';
         }
     }
     
