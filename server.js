@@ -95,6 +95,8 @@ async function registerRoutes() {
   fastify.post('/api/vtu/electricity', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyElectricity);
   fastify.post('/api/vtu/cable', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyCable);
   fastify.get('/api/vtu/rates', vtuRoutes.getRates);
+  
+  // ---> NEW DYNAMIC PRICING ROUTE ADDED HERE <---
   fastify.get('/api/vtu/variations', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getVariations);
   
   // Transaction routes
