@@ -225,15 +225,17 @@
         const authToken = localStorage.getItem("naterpay_token");
         
         try {
-            const response = await fetch(`/api/vtu/plans?network=${network}`, {
+            // FIXED: Pointing to /api/vtu/variations?serviceID=
+            const response = await fetch(`/api/vtu/variations?serviceID=${network}`, {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
             const data = await response.json();
             
-            if (data.success && data.plans && data.plans.length > 0) {
+            // FIXED: Checking for data.variations instead of data.plans
+            if (data.success && data.variations && data.variations.length > 0) {
                 let html = '';
                 
-                data.plans.forEach((plan, index) => {
+                data.variations.forEach((plan, index) => {
                     const isActive = index === 0 ? 'active' : '';
                     const planAmount = parseFloat(plan.variation_amount);
                     
