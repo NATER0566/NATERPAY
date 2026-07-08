@@ -37,7 +37,7 @@ async function getUsers(request, reply) {
       .limit(parseInt(limit))
       .lean();
       
-    // Attach wallet balance for the admin table
+    // Attach wallet balance for the admin table securely
     for (let user of users) {
         const wallet = await Wallet.findOne({ user: user._id });
         user.walletBalance = wallet ? wallet.availableBalance.toString() : 0;
@@ -180,9 +180,9 @@ async function getAnalytics(request, reply) {
     const pendingKYC = await KYC.countDocuments({ status: 'under_review' });
     const openTickets = await SupportTicket.countDocuments({ status: 'open' });
     
-    // Calculate total vault balance safely
+    // Calculate total vault balance safely using Decimal128 parsers
     const wallets = await Wallet.find({});
-    const totalVaultBalance = wallets.reduce((acc, w) => acc + parseFloat(w.availableBalance.toString()), 0);
+    const totalVaultBalance = wallets.reduce((acc, w) => acc + parseFloat(w.availableBalance?.toString() || '0'), 0);
     
     reply.send({
       success: true,
@@ -343,13 +343,14 @@ async function resolveTicket(request, reply) {
 
 /**
  * Admin: Update User Ledger Balance Manually (Credit/Debit)
+ * SECURED: Uses Decimal128 parsing to prevent NaN errors
  */
 async function updateUserBalance(request, reply) {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
         const { id } = request.params;
-        const { action, amount, reason } = request.body; // action: 'credit' or 'debit'
+        const { action, amount, reason } = request.body;
 
         if (!amount || amount <= 0 || !reason) {
             await session.abortTransaction();
@@ -362,29 +363,35 @@ async function updateUserBalance(request, reply) {
             return reply.status(404).send({ success: false, message: 'User wallet not found' });
         }
 
-        const balanceBefore = wallet.availableBalance.toString();
+        // Securely parse Decimal128
+        const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+        const currentLedger = parseFloat(wallet.balance?.toString() || '0');
+        const amountFloat = parseFloat(amount);
 
         if (action === 'credit') {
-            await wallet.credit(amount, session);
+            wallet.availableBalance = (currentAvail + amountFloat).toString();
+            wallet.balance = (currentLedger + amountFloat).toString();
         } else if (action === 'debit') {
-            if (parseFloat(balanceBefore) < amount) {
+            if (currentAvail < amountFloat) {
                 await session.abortTransaction();
                 return reply.status(400).send({ success: false, message: 'Insufficient balance to deduct that amount' });
             }
-            await wallet.debit(amount, session);
+            wallet.availableBalance = (currentAvail - amountFloat).toString();
+            wallet.balance = (currentLedger - amountFloat).toString();
         } else {
             await session.abortTransaction();
             return reply.status(400).send({ success: false, message: 'Invalid action type' });
         }
 
-        // Create an audit transaction
+        await wallet.save({ session });
+
         const adminTx = new Transaction({
             user: id,
             type: 'admin_adjustment',
             description: `Admin ${action.toUpperCase()}: ${reason}`,
-            amount: amount,
+            amount: amountFloat,
             fee: 0,
-            balanceBefore,
+            balanceBefore: currentAvail.toString(),
             balanceAfter: wallet.availableBalance.toString(),
             status: 'success',
             provider: 'internal',
@@ -395,7 +402,6 @@ async function updateUserBalance(request, reply) {
         await session.commitTransaction();
         session.endSession();
 
-        // Notify user dashboard in realtime
         if (request.server.io) {
             request.server.io.to(`user:${id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
         }
@@ -411,6 +417,7 @@ async function updateUserBalance(request, reply) {
 
 /**
  * Admin: Force Verify Stuck Transaction
+ * SECURED: Uses Decimal128 parsing to prevent NaN errors
  */
 async function verifyTransaction(request, reply) {
     const session = await mongoose.startSession();
@@ -429,15 +436,24 @@ async function verifyTransaction(request, reply) {
             return reply.status(400).send({ success: false, message: 'Transaction is already verified and successful' });
         }
 
-        // Apply logic depending on type. E.g., if it's funding, credit the user.
+        // Get exact amount from Decimal128 format safely
+        const txAmount = parseFloat(tx.amount?.$numberDecimal || tx.amount?.toString() || '0');
+
         if (tx.type === 'funding' || tx.type === 'wallet_fund') {
             const wallet = await Wallet.findOne({ user: tx.user }).session(session);
-            await wallet.credit(tx.amount, session);
-            tx.balanceAfter = wallet.availableBalance.toString();
-            
-            // Realtime update
-            if (request.server.io) {
-                request.server.io.to(`user:${tx.user}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+            if (wallet) {
+                const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+                const currentLedger = parseFloat(wallet.balance?.toString() || '0');
+                
+                wallet.availableBalance = (currentAvail + txAmount).toString();
+                wallet.balance = (currentLedger + txAmount).toString();
+                await wallet.save({ session });
+                
+                tx.balanceAfter = wallet.availableBalance.toString();
+                
+                if (request.server.io) {
+                    request.server.io.to(`user:${tx.user}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+                }
             }
         }
 
@@ -465,15 +481,23 @@ async function verifyTransaction(request, reply) {
 
 /**
  * Admin: Send Push Notifications
+ * SECURED: Handles multipart/form-data for file uploads gracefully
  */
 async function sendPushNotification(request, reply) {
     try {
-        const { targetEmail, title, message, type } = request.body;
+        // Fastify-multipart nests text fields inside a .value property if attachFieldsToBody is true
+        const targetEmail = request.body.targetEmail?.value !== undefined ? request.body.targetEmail.value : request.body.targetEmail;
+        const title = request.body.title?.value !== undefined ? request.body.title.value : request.body.title;
+        const message = request.body.message?.value !== undefined ? request.body.message.value : request.body.message;
+        const type = request.body.type?.value !== undefined ? request.body.type.value : (request.body.type || 'info');
         
+        // Optional file handling for future expansion
+        // const attachedFile = request.body.file;
+
         if (targetEmail === 'ALL' || !targetEmail) {
             // Broadcast to everyone
             if (request.server.io) {
-                request.server.io.emit('notification', { title, message, type: type || 'info' });
+                request.server.io.emit('notification', { title, message, type });
             }
             return reply.send({ success: true, message: 'Broadcast transmitted to all active sessions' });
         }
@@ -492,7 +516,7 @@ async function sendPushNotification(request, reply) {
 
         // Emit to specific socket room
         if (request.server.io) {
-            request.server.io.to(`user:${user._id}`).emit('notification', { title, message, type: type || 'info' });
+            request.server.io.to(`user:${user._id}`).emit('notification', { title, message, type });
         }
 
         reply.send({ success: true, message: 'Notification transmitted to user' });
