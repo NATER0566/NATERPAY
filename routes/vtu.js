@@ -49,17 +49,12 @@ async function buyAirtime(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    let transaction;
-    try {
-        transaction = new Transaction({
-          user: request.user._id, type: 'airtime', description: `${network.toUpperCase()} Airtime for ${phone}`,
-          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-        });
-        await transaction.save();
-    } catch (dbErr) {
-        return reply.status(500).send({ success: false, message: `DB Error: ${dbErr.message}` });
-    }
+    const transaction = new Transaction({
+      user: request.user._id, type: 'airtime', description: `${network.toUpperCase()} Airtime for ${phone}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
 
     try {
       const providerResponse = await processVTURequest('airtime', { phone, network, amount });
@@ -81,7 +76,7 @@ async function buyAirtime(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing airtime' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing airtime' }); }
 }
 
 async function buyData(request, reply) {
@@ -97,17 +92,12 @@ async function buyData(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    let transaction;
-    try {
-        transaction = new Transaction({
-          user: request.user._id, type: 'data', description: `Data Plan for ${phone}`,
-          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-        });
-        await transaction.save();
-    } catch (dbErr) {
-        return reply.status(500).send({ success: false, message: `DB Error: ${dbErr.message}` });
-    }
+    const transaction = new Transaction({
+      user: request.user._id, type: 'data', description: `Data Plan for ${phone}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
 
     try {
       const providerResponse = await processVTURequest('data', { phone, network, plan, amount });
@@ -129,7 +119,7 @@ async function buyData(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing data' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing data' }); }
 }
 
 // ==========================================
@@ -149,17 +139,12 @@ async function buyElectricity(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    let transaction;
-    try {
-        transaction = new Transaction({
-          user: request.user._id, type: 'electricity', description: `Electricity (${disco.toUpperCase()}) - Meter: ${meterNumber}`,
-          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-        });
-        await transaction.save();
-    } catch (dbErr) {
-        return reply.status(500).send({ success: false, message: `DB Error: ${dbErr.message}` });
-    }
+    const transaction = new Transaction({
+      user: request.user._id, type: 'electricity', description: `Electricity (${disco.toUpperCase()}) - Meter: ${meterNumber}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
 
     try {
       const providerResponse = await processVTURequest('electricity', { meterNumber, disco, amount, meterType });
@@ -181,7 +166,7 @@ async function buyElectricity(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing electricity' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing electricity' }); }
 }
 
 async function buyCable(request, reply) {
@@ -197,17 +182,12 @@ async function buyCable(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    let transaction;
-    try {
-        transaction = new Transaction({
-          user: request.user._id, type: 'cable', description: `Cable (${provider.toUpperCase()}) for ${smartcardNumber}`,
-          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-        });
-        await transaction.save();
-    } catch (dbErr) {
-        return reply.status(500).send({ success: false, message: `DB Error: ${dbErr.message}` });
-    }
+    const transaction = new Transaction({
+      user: request.user._id, type: 'cable', description: `Cable (${provider.toUpperCase()}) for ${smartcardNumber}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
 
     try {
       const providerResponse = await processVTURequest('cable', { smartcardNumber, provider, package: pkg, amount });
@@ -229,7 +209,7 @@ async function buyCable(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing cable' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing cable' }); }
 }
 
 // ==========================================
@@ -249,18 +229,12 @@ async function buyEducation(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    let transaction;
-    try {
-        // If "education" is not in your Transaction schema enum, this will throw a catchable error!
-        transaction = new Transaction({
-          user: request.user._id, type: 'education', description: `${provider.toUpperCase()} PIN (${quantity} Qty) sent to ${phone}`,
-          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-        });
-        await transaction.save();
-    } catch (dbErr) {
-        return reply.status(500).send({ success: false, message: `Database Schema Error: ${dbErr.message}. Please check your Transaction model allowed types.` });
-    }
+    const transaction = new Transaction({
+      user: request.user._id, type: 'education', description: `${provider.toUpperCase()} PIN (${quantity} Qty) sent to ${phone}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
 
     try {
       const providerResponse = await processVTURequest('education', { provider, phone, quantity, amount });
@@ -282,7 +256,7 @@ async function buyEducation(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing education token' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing education token' }); }
 }
 
 async function buyBetting(request, reply) {
@@ -298,17 +272,12 @@ async function buyBetting(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    let transaction;
-    try {
-        transaction = new Transaction({
-          user: request.user._id, type: 'betting', description: `Fund ${provider.toUpperCase()} account ID: ${customerId}`,
-          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-        });
-        await transaction.save();
-    } catch (dbErr) {
-        return reply.status(500).send({ success: false, message: `Database Schema Error: ${dbErr.message}. Please check your Transaction model allowed types.` });
-    }
+    const transaction = new Transaction({
+      user: request.user._id, type: 'betting', description: `Fund ${provider.toUpperCase()} account ID: ${customerId}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
 
     try {
       const providerResponse = await processVTURequest('betting', { provider, customerId, amount });
@@ -330,11 +299,11 @@ async function buyBetting(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing betting payment' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing betting payment' }); }
 }
 
 // ==================================================================
-// REAL VTPASS INTEGRATION CORE - SMART INTERCEPTOR ENGINE
+// REAL VTPASS INTEGRATION CORE 
 // ==================================================================
 async function processVTURequest(type, data) {
   if (!process.env.VTPASS_API_KEY || !process.env.VTPASS_SECRET_KEY) {
@@ -344,6 +313,15 @@ async function processVTURequest(type, data) {
   const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
   const isSandbox = baseUrl.includes('sandbox');
 
+  // --- YOUR ORIGINAL WORKING SANDBOX DYNAMIC INTERCEPTOR ---
+  let targetIdentifier = data.phone || data.meterNumber || data.smartcardNumber || data.customerId;
+  
+  if (isSandbox) {
+      targetIdentifier = '08011111111';
+      console.log(`[VTPASS] Sandbox Mode: Redirecting transaction to test identifier -> ${targetIdentifier}`);
+  }
+  // -----------------------------------
+
   const headers = { 
       'api-key': process.env.VTPASS_API_KEY, 
       'secret-key': process.env.VTPASS_SECRET_KEY, 
@@ -352,32 +330,27 @@ async function processVTURequest(type, data) {
 
   let payload = { 
       request_id: generateVTpassRequestId(), 
-      amount: data.amount
+      amount: data.amount,
+      phone: isSandbox ? '08011111111' : (data.phone || '08000000000') 
   };
 
+  // YOUR EXACT ORIGINAL LOGIC FOR AIRTIME, DATA, ELECTRICITY
   if (type === 'airtime') {
-      payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.serviceID = data.network; 
   } 
   else if (type === 'data') { 
-      payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.serviceID = data.network; 
-      payload.billersCode = isSandbox ? '08011111111' : data.phone; 
+      payload.billersCode = targetIdentifier; 
       payload.variation_code = data.plan; 
   } 
   else if (type === 'electricity') {
-      payload.phone = '08000000000'; 
       payload.serviceID = data.disco;
-      payload.variation_code = data.meterType; 
-      
-      if (isSandbox) {
-          payload.billersCode = data.meterType === 'prepaid' ? '1111111111111' : '1010101010101';
-      } else {
-          payload.billersCode = data.meterNumber;
-      }
+      payload.billersCode = targetIdentifier;
+      payload.variation_code = data.meterType;
   } 
+  
+  // NEW LOGIC TO FIX CABLE AND EDUCATION ERRORS
   else if (type === 'cable') {
-      payload.phone = '08000000000';
       payload.serviceID = data.provider.toLowerCase();
       
       const pkgInput = data.package.toString().toLowerCase().trim();
@@ -397,12 +370,11 @@ async function processVTURequest(type, data) {
       else if (pkgInput.includes('basic')) mappedCode = 'basic';
       else if (pkgInput.includes('smart')) mappedCode = 'smart';
       
-      // AGGRESSIVE SANDBOX OVERRIDE: Prevents 010 mismatch error entirely during testing
       if (isSandbox) {
           if (payload.serviceID === 'dstv') mappedCode = 'dstv79';
           else if (payload.serviceID === 'gotv') mappedCode = 'gotv-lite';
           else if (payload.serviceID === 'startimes') mappedCode = 'nova';
-          else if (payload.serviceID === 'showmax') { mappedCode = 'full_3'; payload.billersCode = '08011111111'; }
+          else if (payload.serviceID === 'showmax') mappedCode = 'full_3';
       }
 
       payload.variation_code = mappedCode;
@@ -415,30 +387,24 @@ async function processVTURequest(type, data) {
       }
   } 
   else if (type === 'education') {
-      payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.serviceID = data.provider.toLowerCase();
       payload.quantity = parseInt(data.quantity) || 1;
 
-      // Map strict education codes and aggressive Sandbox overrides
       if (payload.serviceID === 'waec') {
           payload.variation_code = 'waecdirect'; 
+          payload.billersCode = isSandbox ? '08011111111' : data.phone;
       } else if (payload.serviceID === 'jamb') {
           payload.variation_code = 'utme-no-mock'; 
           payload.billersCode = isSandbox ? '0123456789' : data.phone; 
       } else if (payload.serviceID === 'neco') {
           payload.variation_code = 'neco-biller'; 
+          payload.billersCode = isSandbox ? '08011111111' : data.phone;
       } else {
           payload.variation_code = 'default';
-      }
-      
-      if(isSandbox && payload.serviceID !== 'jamb') {
-          payload.billersCode = '08011111111';
-      } else if (!isSandbox && payload.serviceID !== 'jamb') {
-          payload.billersCode = data.phone;
+          payload.billersCode = isSandbox ? '08011111111' : data.phone;
       }
   } 
   else if (type === 'betting') {
-      payload.phone = '08000000000';
       payload.serviceID = data.provider.toLowerCase();
       payload.billersCode = isSandbox ? '08011111111' : data.customerId;
   }
