@@ -1,25 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NATER-PAY | Buy Electricity</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@500;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
-        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
-        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; }
+        :root { 
+            --gold: #FFD700; /* Brightened the gold for better visibility */
+            --bg: #000000; 
+            --card-bg: #111111; 
+        }
+        body { 
+            background: var(--bg); 
+            color: #FFFFFF; /* Pure white text everywhere */
+            font-family: 'Montserrat', sans-serif; 
+            margin: 0; 
+            min-height: 100vh; 
+        }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
         header {
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
-            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            background: rgba(0, 0, 0, 0.98); border-bottom: 3px solid var(--gold);
             display: flex; justify-content: space-between; align-items: center; z-index: 1000;
         }
 
@@ -27,42 +36,97 @@
             font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
             text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start;
         }
-        .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
-        .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
+        .site-part-1 { color: var(--gold); font-size: 1.6rem; } 
+        .site-part-2 { color: #FF3333; font-size: 1.2rem; letter-spacing: 3px; }
 
-        .container { max-width: 900px; margin: 50px auto; padding: 0 20px; }
+        .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
         
         .power-card {
-            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
-            padding: 40px; margin-bottom: 30px;
+            background: var(--card-bg); 
+            border: 2px solid #444; 
+            border-radius: 20px;
+            padding: 40px; 
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
         
         .input-group-custom {
-            background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212,175,55,0.35);
-            border-radius: 15px; padding: 20px; margin-bottom: 20px;
+            background: #1A1A1A; /* Solid dark grey, no transparency for better reading */
+            border: 2px solid var(--gold);
+            border-radius: 15px; 
+            padding: 20px; 
+            margin-bottom: 25px;
         }
-        .input-group-custom label {
-            display: block; font-size: 0.75rem; color: var(--gold); font-weight: 800;
-            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;
+        
+        /* HUGE, BOLD LABELS FOR ACCESSIBILITY */
+        .input-group-custom label, .amount-label {
+            display: block; 
+            font-size: 1.1rem; 
+            color: var(--gold); 
+            font-weight: 900;
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            margin-bottom: 12px;
         }
+        
+        /* LARGE INPUT TEXT */
         .input-group-custom input, .input-group-custom select {
-            background: transparent; border: none; color: white; width: 100%;
-            font-size: 1.1rem; font-weight: 700; outline: none;
+            background: transparent; 
+            border: none; 
+            color: #FFFFFF; 
+            width: 100%;
+            font-size: 1.3rem; 
+            font-weight: 700; 
+            outline: none;
+        }
+        
+        .input-group-custom select option {
+            background: #111;
+            color: #FFF;
+            font-size: 1.1rem;
         }
         
         .amount-input {
-            background: rgba(0,0,0,0.6); border: 2px solid rgba(212,175,55,0.3); border-radius: 15px;
-            padding: 25px; font-size: 2.5rem; color: white; font-weight: 700; text-align: center;
-            width: 100%; outline: none; transition: 0.3s;
+            background: #1A1A1A; 
+            border: 3px solid var(--gold); 
+            border-radius: 15px;
+            padding: 25px; 
+            font-size: 3rem; /* Massive numbers */
+            color: #FFFFFF; 
+            font-weight: 900; 
+            text-align: center;
+            width: 100%; 
+            outline: none; 
+            margin-bottom: 30px;
         }
-        .amount-input:focus { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,175,55,0.3); }
+        .amount-input:focus { box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); }
         
         .btn-buy {
-            background: var(--gold); color: black; font-weight: 900; border-radius: 15px;
-            padding: 18px; width: 100%; border: none; font-size: 1.1rem; letter-spacing: 2px;
+            background: var(--gold); 
+            color: #000000; 
+            font-weight: 900; 
+            border-radius: 15px;
+            padding: 22px; 
+            width: 100%; 
+            border: none; 
+            font-size: 1.5rem; 
+            letter-spacing: 2px;
+            text-transform: uppercase;
             transition: 0.3s;
         }
-        .btn-buy:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
+        .btn-buy:hover { 
+            background: #FFFFFF; 
+            transform: translateY(-3px); 
+            box-shadow: 0 10px 20px rgba(255,255,255,0.3); 
+        }
+        
+        /* Clear footer text */
+        .footer-text {
+            color: #FFFFFF;
+            font-size: 1rem;
+            font-weight: 600;
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body>
@@ -74,58 +138,61 @@
         <span class="site-part-1">NATER</span>
         <span class="site-part-2">PAY</span>
     </div>
-    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4">Back to Dashboard</a>
+    <a href="dashboard.html" class="btn btn-warning rounded-pill px-4" style="font-weight: 800;">Back to Dashboard</a>
 </header>
 
 <div class="container">
-    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">BUY ELECTRICITY</h1>
+    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); font-size: 2.8rem;">BUY ELECTRICITY</h1>
     
     <div class="power-card">
         <div class="input-group-custom">
-            <label>DISCO / ELECTRICITY COMPANY</label>
+            <label>ELECTRICITY COMPANY (DISCO)</label>
             <select id="disco">
-                <option value="">Select Disco</option>
-                <option value="ikedc">Ikeja Electric (IKEDC)</option>
-                <option value="ekedc">Eko Electric (EKEDC)</option>
-                <option value="aedc">Abuja Electric (AEDC)</option>
-                <option value="phedc">Port Harcourt Electric (PHEDC)</option>
-                <option value="kedco">Kano Electric (KEDCO)</option>
-                <option value="jedc">Jos Electric (JEDC)</option>
-                <option value="bedc">Benin Electric (BEDC)</option>
-                <option value="eedc">Enugu Electric (EEDC)</option>
-                <option value="ibedc">Ibadan Electric (IBEDC)</option>
-                <option value="aedco">AEDC South</option>
+                <option value="">-- SELECT COMPANY --</option>
+                <!-- These values MUST match VTpass documentation exactly -->
+                <option value="ikeja-electric">Ikeja Electric (IKEDC)</option>
+                <option value="eko-electric">Eko Electric (EKEDC)</option>
+                <option value="abuja-electric">Abuja Electric (AEDC)</option>
+                <option value="kano-electric">Kano Electric (KEDCO)</option>
+                <option value="port-harcourt-electric">Port Harcourt Electric (PHEDC)</option>
+                <option value="jos-electric">Jos Electric (JEDC)</option>
+                <option value="ibadan-electric">Ibadan Electric (IBEDC)</option>
+                <option value="kaduna-electric">Kaduna Electric (KAEDCO)</option>
+                <option value="enugu-electric">Enugu Electric (EEDC)</option>
+                <option value="benin-electric">Benin Electric (BEDC)</option>
+                <option value="aba-electric">Aba Electric (ABEDC)</option>
+                <option value="yola-electric">Yola Electric (YEDC)</option>
             </select>
         </div>
         
         <div class="input-group-custom">
             <label>METER NUMBER</label>
-            <input type="text" id="meterNumber" placeholder="Enter your meter number">
+            <input type="text" id="meterNumber" placeholder="Enter meter number here...">
         </div>
         
         <div class="input-group-custom">
             <label>METER TYPE</label>
             <select id="meterType">
-                <option value="prepaid">Prepaid</option>
-                <option value="postpaid">Postpaid</option>
+                <option value="prepaid">Prepaid Meter</option>
+                <option value="postpaid">Postpaid Meter</option>
             </select>
         </div>
         
-        <label class="small text-muted mb-2 d-block">ENTER AMOUNT (₦)</label>
-        <input type="number" id="powerAmount" class="amount-input mb-4" placeholder="0.00" min="500">
+        <label class="amount-label text-center">ENTER AMOUNT (₦)</label>
+        <input type="number" id="powerAmount" class="amount-input" placeholder="0" min="500">
         
         <div class="input-group-custom">
             <label>WITHDRAWAL PIN</label>
-            <input type="password" id="withdrawalPin" placeholder="Enter your 4-digit PIN" maxlength="4">
+            <input type="password" id="withdrawalPin" placeholder="Enter 4-digit PIN" maxlength="4">
         </div>
         
         <button class="btn-buy" onclick="buyElectricity()">
-            <i class="fas fa-bolt me-2"></i> PURCHASE ELECTRICITY
+            <i class="fas fa-bolt me-2"></i> PAY ELECTRICITY BILL
         </button>
     </div>
     
-    <div class="text-center text-muted small">
-        <p class="mb-1">Electricity powered by VTpass</p>
+    <div class="text-center footer-text mb-5">
+        <p class="mb-1">Electricity powered by VTpass Live API</p>
         <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
@@ -165,10 +232,10 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Missing Information',
-                text: 'Please select disco and enter meter number',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
+                text: 'Please select an electricity company and enter the meter number.',
+                confirmButtonColor: '#FF3333',
+                background: '#111111',
+                color: '#FFFFFF'
             });
             return;
         }
@@ -177,10 +244,10 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Invalid Amount',
-                text: 'Minimum electricity amount is ₦500',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
+                text: 'Minimum electricity purchase is ₦500.',
+                confirmButtonColor: '#FF3333',
+                background: '#111111',
+                color: '#FFFFFF'
             });
             return;
         }
@@ -189,10 +256,10 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Invalid PIN',
-                text: 'Please enter your 4-digit withdrawal PIN',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
+                text: 'Please enter your 4-digit security PIN.',
+                confirmButtonColor: '#FF3333',
+                background: '#111111',
+                color: '#FFFFFF'
             });
             return;
         }
@@ -205,12 +272,12 @@
         
         try {
             Swal.fire({
-                title: 'Processing...',
-                text: 'Purchasing electricity',
+                title: 'Processing Payment...',
+                html: '<span style="color: #FFF; font-size: 1.2rem;">Generating Electricity Token...</span>',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading(),
-                background: '#0a0a0a',
-                color: '#fff'
+                background: '#111111',
+                color: '#FFD700'
             });
             
             const res = await fetch('/api/vtu/electricity', {
@@ -233,32 +300,32 @@
             if (data.success) {
                 Swal.fire({
                     icon: 'success',
-                    title: 'Electricity Purchase Successful',
-                    text: `₦${amount.toLocaleString()} electricity purchased. Token: ${data.token || 'Processing...'}`,
-                    confirmButtonColor: '#d4af37',
-                    background: '#0a0a0a',
-                    color: '#fff'
+                    title: 'Payment Successful!',
+                    html: `<div style="font-size: 1.2rem; color: #FFF;">₦${amount.toLocaleString()} paid successfully.<br><br><strong style="color: #FFD700; font-size: 1.5rem;">Token: ${data.token || 'Check SMS/Dashboard'}</strong></div>`,
+                    confirmButtonColor: '#FFD700',
+                    background: '#111111',
+                    color: '#FFFFFF'
                 }).then(() => {
                     window.location.href = '/dashboard.html';
                 });
             } else {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Purchase Failed',
+                    title: 'Transaction Failed',
                     text: data.message,
-                    confirmButtonColor: '#d32f2f',
-                    background: '#0a0a0a',
-                    color: '#fff'
+                    confirmButtonColor: '#FF3333',
+                    background: '#111111',
+                    color: '#FFFFFF'
                 });
             }
         } catch (error) {
             Swal.fire({
                 icon: 'error',
-                title: 'Processing Error',
-                text: 'Unable to process electricity purchase. Please try again.',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
+                title: 'Network Error',
+                text: 'Unable to connect to server. Please check your internet and try again.',
+                confirmButtonColor: '#FF3333',
+                background: '#111111',
+                color: '#FFFFFF'
             });
         }
     }
