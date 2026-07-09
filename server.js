@@ -40,8 +40,6 @@ async function registerPlugins() {
     root: __dirname + '/public',
     prefix: '/'
   });
-
-  // Note: @fastify/multipart has been safely removed because we use Base64 JSON uploads now.
 }
 
 // Connect to MongoDB
@@ -91,6 +89,12 @@ async function registerRoutes() {
   fastify.post('/api/vtu/data', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyData);
   fastify.post('/api/vtu/electricity', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyElectricity);
   fastify.post('/api/vtu/cable', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyCable);
+  
+  // --- NEW VTU ROUTES ADDED HERE ---
+  fastify.post('/api/vtu/education', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyEducation);
+  fastify.post('/api/vtu/betting', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyBetting);
+  // ---------------------------------
+  
   fastify.get('/api/vtu/rates', vtuRoutes.getRates);
   fastify.get('/api/vtu/variations', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getVariations);
   
