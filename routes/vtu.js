@@ -7,18 +7,17 @@ const mongoose = require('mongoose');
 
 // --- HELPER: VTPASS STRICT REQUEST ID FORMATTER ---
 function generateVTpassRequestId() {
-  // VTpass demands: YYYYMMDDHHII (First 12 must be numeric date/time in Africa/Lagos)
   const d = new Date();
   const lagosTime = new Date(d.getTime() + (1 * 60 * 60 * 1000)); // GMT+1
   
-  const year = lagosTime.getUTCFullYear();
+  const year = lagosTime.getUTFullYear();
   const month = String(lagosTime.getUTCMonth() + 1).padStart(2, '0');
   const day = String(lagosTime.getUTCDate()).padStart(2, '0');
   const hour = String(lagosTime.getUTCHours()).padStart(2, '0');
   const minute = String(lagosTime.getUTCMinutes()).padStart(2, '0');
   
   const prefix = `${year}${month}${day}${hour}${minute}`;
-  const suffix = Math.random().toString(36).substring(2, 8); // Random string attached at the end
+  const suffix = Math.random().toString(36).substring(2, 8); 
   return prefix + suffix;
 }
 
@@ -52,12 +51,10 @@ async function buyAirtime(request, reply) {
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
     if (currentAvail < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
 
-    // Deduct Wallet First
     wallet.availableBalance = (currentAvail - amount).toString();
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    // Log Transaction safely
     const transaction = new Transaction({
       user: request.user._id, type: 'airtime', description: `${network.toUpperCase()} Airtime for ${phone}`,
       amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
@@ -65,7 +62,6 @@ async function buyAirtime(request, reply) {
     });
     await transaction.save();
 
-    // Process VTU
     try {
       const providerResponse = await processVTURequest('airtime', { phone, network, amount });
       transaction.status = 'success';
@@ -76,7 +72,6 @@ async function buyAirtime(request, reply) {
       reply.send({ success: true, message: 'Airtime purchase successful', transaction });
 
     } catch (vtuError) {
-      // Refund Wallet on VTU Failure
       wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
       wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
       await wallet.save();
@@ -139,59 +134,50 @@ async function buyData(request, reply) {
   }
 }
 
-// Electricity and Cable
 async function buyElectricity(request, reply) { reply.status(500).send({success:false, message: 'Temporarily offline for safety config.'}); }
 async function buyCable(request, reply) { reply.status(500).send({success:false, message: 'Temporarily offline for safety config.'}); }
 
-// ==================================================================
-// REAL VTPASS INTEGRATION CORE (STRICT DOCUMENTATION ADHERENCE)
-// ==================================================================
 async function processVTURequest(type, data) {
-  // If no API keys, block the transaction instead of pretending it worked.
   if (!process.env.VTPASS_API_KEY || !process.env.VTPASS_SECRET_KEY) {
-      throw new Error("VTpass API Keys are not configured in the server environment (.env).");
+      throw new Error("VTpass API Keys are missing from Render settings.");
   }
 
   const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
-  
-  // VTpass Documentation requires api-key and secret-key for POST requests.
   const headers = { 
       'api-key': process.env.VTPASS_API_KEY, 
       'secret-key': process.env.VTPASS_SECRET_KEY, 
       'Content-Type': 'application/json' 
   };
 
-  // Base Payload
   let payload = { 
       request_id: generateVTpassRequestId(), 
       amount: data.amount, 
-      phone: data.phone || data.meterNumber || data.smartcardNumber 
+      phone: data.phone || data.meterNumber 
   };
 
-  // strict mapping per VTpass docs
   if (type === 'airtime') {
       payload.serviceID = data.network; 
   } else if (type === 'data') { 
       payload.serviceID = data.network; 
-      payload.billersCode = data.phone; // VTpass requires billersCode for data
+      payload.billersCode = data.phone; 
       payload.variation_code = data.plan; 
   }
 
   try {
     console.log(`[VTPASS] Sending request:`, JSON.stringify(payload));
-    
     const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
-    
-    console.log(`[VTPASS] Response Code:`, response.data.code);
+    console.log(`[VTPASS] Response Data:`, JSON.stringify(response.data));
     
     if (response.data.code === '000') {
       return { reference: response.data.content.transactions.transactionId, status: 'success', raw: response.data };
     } else {
-      throw new Error(response.data.response_description || 'Transaction failed at provider');
+      // Clearer messaging directly on screen
+      throw new Error(`VTpass Error (${response.data.code}): ${response.data.response_description || response.data.message}`);
     }
   } catch (error) {
-    console.error(`[VTPASS] Crash details:`, error.response?.data || error.message);
-    throw new Error(error.response?.data?.response_description || 'VTpass connection failed');
+    console.error(`[VTPASS] Connection Crash details:`, error.response?.data || error.message);
+    const apiErrorMessage = error.response?.data?.response_description || error.response?.data?.message || error.message;
+    throw new Error(apiErrorMessage);
   }
 }
 
