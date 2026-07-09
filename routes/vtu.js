@@ -303,7 +303,7 @@ async function buyBetting(request, reply) {
 }
 
 // ==================================================================
-// REAL VTPASS INTEGRATION CORE
+// REAL VTPASS INTEGRATION CORE 
 // ==================================================================
 async function processVTURequest(type, data) {
   if (!process.env.VTPASS_API_KEY || !process.env.VTPASS_SECRET_KEY) {
@@ -319,7 +319,7 @@ async function processVTURequest(type, data) {
       'Content-Type': 'application/json' 
   };
 
-  // Build payload parameters dynamically to meet strict service specs
+  // Build payload parameters dynamically
   let payload = { 
       request_id: generateVTpassRequestId(), 
       amount: data.amount
@@ -336,10 +336,9 @@ async function processVTURequest(type, data) {
       payload.variation_code = data.plan; 
   } 
   else if (type === 'electricity') {
-      // Documentation fix: Use dynamic sandbox structure based on meter input type
-      payload.phone = '08000000000'; // Default notification number format
+      payload.phone = '08000000000'; 
       payload.serviceID = data.disco;
-      payload.variation_code = data.meterType; // 'prepaid' or 'postpaid'
+      payload.variation_code = data.meterType; 
       
       if (isSandbox) {
           payload.billersCode = data.meterType === 'prepaid' ? '1111111111111' : '1010101010101';
@@ -354,11 +353,21 @@ async function processVTURequest(type, data) {
       payload.variation_code = data.package;
   } 
   else if (type === 'education') {
+      // VTPASS EDUCATION DOCS FIX
       payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.serviceID = data.provider;
-      payload.billersCode = isSandbox ? '08011111111' : data.phone;
-      payload.variation_code = data.provider === 'waec' ? 'waec-direct' : 'neco-biller';
-      payload.quantity = data.quantity;
+      payload.quantity = parseInt(data.quantity) || 1;
+
+      if (data.provider === 'waec') {
+          payload.variation_code = 'waecdirect'; // WAEC Result Checker ID
+      } else if (data.provider === 'jamb') {
+          payload.variation_code = 'utme-no-mock'; // Default JAMB Variation
+          payload.billersCode = isSandbox ? '0123456789' : data.phone; // Profile ID
+      } else if (data.provider === 'neco') {
+          payload.variation_code = 'neco-biller'; 
+      } else {
+          payload.variation_code = 'default';
+      }
   } 
   else if (type === 'betting') {
       payload.phone = '08000000000';
@@ -370,9 +379,21 @@ async function processVTURequest(type, data) {
     const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
     
     if (response.data.code === '000') {
+      // DYNAMIC TOKEN EXTRACTION FOR ALL PROVIDERS
+      let extractedToken = response.data.purchased_code || response.data.token || response.data.Pin || null;
+
+      // SPECIFIC FIX: WAEC returns a "cards" array with Pin and Serial
+      if (response.data.cards && Array.isArray(response.data.cards) && response.data.cards.length > 0) {
+          extractedToken = `PIN: ${response.data.cards[0].Pin} | Serial: ${response.data.cards[0].Serial}`;
+      } 
+      // Fallback for arrays
+      else if (response.data.tokens && Array.isArray(response.data.tokens) && response.data.tokens.length > 0) {
+          extractedToken = `Token: ${response.data.tokens[0]}`;
+      }
+
       return { 
           reference: response.data.content?.transactions?.transactionId || response.data.content?.transactions?.transaction_id || `REF-${Date.now()}`, 
-          token: response.data.token || response.data.purchased_code || response.data.cards?.[0]?.pin || null,
+          token: extractedToken,
           status: 'success', 
           raw: response.data 
       };
