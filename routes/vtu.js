@@ -6,9 +6,7 @@ const axios = require('axios');
 function generateVTpassRequestId() {
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
-  // Format: YYYYMMDDHHII (12 numeric digits required)
   const dateStr = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}`;
-  // Add random characters to ensure uniqueness and avoid the 016 duplicate error
   const randomSuffix = Math.random().toString(36).substring(2, 10);
   return dateStr + randomSuffix;
 }
@@ -31,6 +29,10 @@ async function getVariations(request, reply) {
     reply.send({ success: true, variations: response.data.content?.varations || response.data.content?.variations || [] });
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch service plans' }); }
 }
+
+// ==========================================
+// STANDARD BILL PAYMENTS (AIRTIME & DATA)
+// ==========================================
 
 async function buyAirtime(request, reply) {
   try {
@@ -74,9 +76,7 @@ async function buyAirtime(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) {
-    reply.status(500).send({ success: false, message: 'System error processing airtime' });
-  }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing airtime' }); }
 }
 
 async function buyData(request, reply) {
@@ -119,10 +119,12 @@ async function buyData(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) {
-    reply.status(500).send({ success: false, message: 'System error processing data' });
-  }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing data' }); }
 }
+
+// ==========================================
+// UTILITIES & MULTIMEDIA (POWER & CABLE)
+// ==========================================
 
 async function buyElectricity(request, reply) {
   try {
@@ -164,9 +166,7 @@ async function buyElectricity(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) {
-    reply.status(500).send({ success: false, message: 'System error processing electricity' });
-  }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing electricity' }); }
 }
 
 async function buyCable(request, reply) {
@@ -209,25 +209,112 @@ async function buyCable(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) {
-    reply.status(500).send({ success: false, message: 'System error processing cable' });
-  }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing cable' }); }
+}
+
+// ==========================================
+// NEW FEATURES: EDUCATION & BETTING ROUTES
+// ==========================================
+
+async function buyEducation(request, reply) {
+  try {
+    const { provider, phone, quantity, amount, pin } = request.body;
+    if (!provider || !phone || !quantity || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+    if (currentAvail < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (currentAvail - amount).toString();
+    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
+    await wallet.save();
+
+    const transaction = new Transaction({
+      user: request.user._id, type: 'education', description: `${provider.toUpperCase()} PIN (${quantity} Qty) sent to ${phone}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
+
+    try {
+      const providerResponse = await processVTURequest('education', { provider, phone, quantity, amount });
+      transaction.status = 'success';
+      transaction.providerReference = providerResponse.reference;
+      await transaction.save();
+
+      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+      reply.send({ success: true, message: 'Exam PIN processed successfully', transaction, token: providerResponse.token });
+
+    } catch (vtuError) {
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
+      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+      await wallet.save();
+
+      transaction.status = 'failed';
+      transaction.balanceAfter = wallet.availableBalance.toString();
+      await transaction.save();
+      
+      return reply.status(500).send({ success: false, message: vtuError.message });
+    }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing education token' }); }
+}
+
+async function buyBetting(request, reply) {
+  try {
+    const { provider, customerId, amount, pin } = request.body;
+    if (!provider || !customerId || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+    if (currentAvail < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (currentAvail - amount).toString();
+    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
+    await wallet.save();
+
+    const transaction = new Transaction({
+      user: request.user._id, type: 'betting', description: `Fund ${provider.toUpperCase()} account ID: ${customerId}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
+
+    try {
+      const providerResponse = await processVTURequest('betting', { provider, customerId, amount });
+      transaction.status = 'success';
+      transaction.providerReference = providerResponse.reference;
+      await transaction.save();
+
+      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+      reply.send({ success: true, message: 'Betting wallet funded successfully', transaction });
+
+    } catch (vtuError) {
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
+      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+      await wallet.save();
+
+      transaction.status = 'failed';
+      transaction.balanceAfter = wallet.availableBalance.toString();
+      await transaction.save();
+      
+      return reply.status(500).send({ success: false, message: vtuError.message });
+    }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing betting payment' }); }
 }
 
 // ==================================================================
-// REAL VTPASS INTEGRATION CORE
+// REAL VTPASS INTEGRATION CORE (EXTENDED FOR NEW DISCOS & BODIES)
 // ==================================================================
 async function processVTURequest(type, data) {
   if (!process.env.VTPASS_API_KEY || !process.env.VTPASS_SECRET_KEY) {
-      throw new Error("VTpass API Keys are missing from Render settings.");
+      throw new Error("VTpass API Keys are missing from server configurations.");
   }
 
   const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
   
   // --- SANDBOX DYNAMIC INTERCEPTOR ---
-  let targetIdentifier = data.phone || data.meterNumber || data.smartcardNumber;
+  let targetIdentifier = data.phone || data.meterNumber || data.smartcardNumber || data.customerId;
   
-  // If the server is pointing to the sandbox, override the input with the VTpass success number
   if (baseUrl.includes('sandbox')) {
       targetIdentifier = '08011111111';
       console.log(`[VTPASS] Sandbox Mode: Redirecting transaction to test identifier -> ${targetIdentifier}`);
@@ -243,7 +330,7 @@ async function processVTURequest(type, data) {
   let payload = { 
       request_id: generateVTpassRequestId(), 
       amount: data.amount, 
-      phone: targetIdentifier 
+      phone: baseUrl.includes('sandbox') ? '08011111111' : (data.phone || '08000000000') 
   };
 
   if (type === 'airtime') {
@@ -260,6 +347,14 @@ async function processVTURequest(type, data) {
       payload.serviceID = data.provider;
       payload.billersCode = targetIdentifier;
       payload.variation_code = data.package;
+  } else if (type === 'education') {
+      payload.serviceID = data.provider; // 'waec' or 'neco'
+      payload.billersCode = targetIdentifier; // Delivery target phone number
+      payload.variation_code = data.provider === 'waec' ? 'waec-direct' : 'neco-biller'; // Adjust based on dynamic VTpass variations if needed
+      payload.quantity = data.quantity;
+  } else if (type === 'betting') {
+      payload.serviceID = data.provider; // 'bet9ja', 'sportybet'
+      payload.billersCode = targetIdentifier; // Customer Account ID code
   }
 
   try {
@@ -267,8 +362,8 @@ async function processVTURequest(type, data) {
     
     if (response.data.code === '000') {
       return { 
-          reference: response.data.content.transactions.transactionId, 
-          token: response.data.token || response.data.purchased_code || null,
+          reference: response.data.content?.transactions?.transactionId || `REF-${Date.now()}`, 
+          token: response.data.token || response.data.purchased_code || response.data.cards?.[0]?.pin || null,
           status: 'success', 
           raw: response.data 
       };
@@ -281,4 +376,4 @@ async function processVTURequest(type, data) {
   }
 }
 
-module.exports = { getRates, getVariations, buyAirtime, buyData, buyElectricity, buyCable };
+module.exports = { getRates, getVariations, buyAirtime, buyData, buyElectricity, buyCable, buyEducation, buyBetting };
