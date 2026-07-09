@@ -76,7 +76,7 @@ async function buyAirtime(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing airtime' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing airtime' }); }
 }
 
 async function buyData(request, reply) {
@@ -119,7 +119,7 @@ async function buyData(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing data' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing data' }); }
 }
 
 // ==========================================
@@ -166,7 +166,7 @@ async function buyElectricity(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing electricity' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing electricity' }); }
 }
 
 async function buyCable(request, reply) {
@@ -209,7 +209,7 @@ async function buyCable(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing cable' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing cable' }); }
 }
 
 // ==========================================
@@ -256,7 +256,7 @@ async function buyEducation(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing education token' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing education token' }); }
 }
 
 async function buyBetting(request, reply) {
@@ -299,11 +299,11 @@ async function buyBetting(request, reply) {
       
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing betting payment' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing betting payment' }); }
 }
 
 // ==================================================================
-// REAL VTPASS INTEGRATION CORE 
+// REAL VTPASS INTEGRATION CORE - SMART INTERCEPTOR ENGINE
 // ==================================================================
 async function processVTURequest(type, data) {
   if (!process.env.VTPASS_API_KEY || !process.env.VTPASS_SECRET_KEY) {
@@ -319,7 +319,6 @@ async function processVTURequest(type, data) {
       'Content-Type': 'application/json' 
   };
 
-  // Build payload parameters dynamically
   let payload = { 
       request_id: generateVTpassRequestId(), 
       amount: data.amount
@@ -347,30 +346,56 @@ async function processVTURequest(type, data) {
       }
   } 
   else if (type === 'cable') {
-      // VTPASS CABLE TV DOCS FIX
       payload.phone = '08000000000';
-      payload.serviceID = data.provider;
-      payload.variation_code = data.package;
+      payload.serviceID = data.provider.toLowerCase();
       
-      if (data.provider === 'showmax') {
-          payload.billersCode = isSandbox ? '08011111111' : data.smartcardNumber; // Showmax uses phone number
+      // Smart String Matching: Maps whatever the UI sends to the exact VTpass codes
+      const pkgInput = data.package.toString().toLowerCase().trim();
+      let mappedCode = data.package; 
+
+      // DSTV Variations
+      if (pkgInput.includes('padi')) mappedCode = 'dstv-padi';
+      else if (pkgInput.includes('yanga')) mappedCode = 'dstv-yanga';
+      else if (pkgInput.includes('confam')) mappedCode = 'dstv-confam';
+      else if (pkgInput.includes('compact plus')) mappedCode = 'dstv7';
+      else if (pkgInput.includes('compact')) mappedCode = 'dstv79';
+      else if (pkgInput.includes('premium')) mappedCode = 'dstv3';
+      
+      // GOTV Variations
+      else if (pkgInput.includes('lite')) mappedCode = 'gotv-lite';
+      else if (pkgInput.includes('max')) mappedCode = 'gotv-max';
+      else if (pkgInput.includes('jolli')) mappedCode = 'gotv-jolli';
+      else if (pkgInput.includes('jinja')) mappedCode = 'gotv-jinja';
+      else if (pkgInput.includes('supa')) mappedCode = 'gotv-supa-plus';
+      
+      // Startimes Variations
+      else if (pkgInput.includes('nova')) mappedCode = 'nova';
+      else if (pkgInput.includes('basic')) mappedCode = 'basic';
+      else if (pkgInput.includes('smart')) mappedCode = 'smart';
+      else if (pkgInput.includes('classic')) mappedCode = 'classic';
+      else if (pkgInput.includes('super')) mappedCode = 'super';
+
+      payload.variation_code = mappedCode;
+
+      if (payload.serviceID === 'showmax') {
+          payload.billersCode = isSandbox ? '08011111111' : data.smartcardNumber;
       } else {
-          // DSTV, GOTV, and Startimes use 1212121212 for Sandbox
           payload.billersCode = isSandbox ? '1212121212' : data.smartcardNumber; 
-          payload.subscription_type = 'change'; // Required parameter for changing/applying bouquets
+          payload.subscription_type = 'change'; 
       }
   } 
   else if (type === 'education') {
       payload.phone = isSandbox ? '08011111111' : data.phone;
-      payload.serviceID = data.provider;
+      payload.serviceID = data.provider.toLowerCase();
       payload.quantity = parseInt(data.quantity) || 1;
 
-      if (data.provider === 'waec') {
+      // Map strict education codes
+      if (payload.serviceID === 'waec') {
           payload.variation_code = 'waecdirect'; 
-      } else if (data.provider === 'jamb') {
+      } else if (payload.serviceID === 'jamb') {
           payload.variation_code = 'utme-no-mock'; 
           payload.billersCode = isSandbox ? '0123456789' : data.phone; 
-      } else if (data.provider === 'neco') {
+      } else if (payload.serviceID === 'neco') {
           payload.variation_code = 'neco-biller'; 
       } else {
           payload.variation_code = 'default';
@@ -378,7 +403,7 @@ async function processVTURequest(type, data) {
   } 
   else if (type === 'betting') {
       payload.phone = '08000000000';
-      payload.serviceID = data.provider;
+      payload.serviceID = data.provider.toLowerCase();
       payload.billersCode = isSandbox ? '08011111111' : data.customerId;
   }
 
@@ -386,18 +411,14 @@ async function processVTURequest(type, data) {
     const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
     
     if (response.data.code === '000') {
-      // DYNAMIC TOKEN EXTRACTION FOR ALL PROVIDERS
       let extractedToken = response.data.purchased_code || response.data.token || response.data.Pin || null;
 
-      // SPECIFIC FIX: WAEC returns a "cards" array with Pin and Serial
       if (response.data.cards && Array.isArray(response.data.cards) && response.data.cards.length > 0) {
           extractedToken = `PIN: ${response.data.cards[0].Pin} | Serial: ${response.data.cards[0].Serial}`;
       } 
-      // Fallback for generic token arrays
       else if (response.data.tokens && Array.isArray(response.data.tokens) && response.data.tokens.length > 0) {
           extractedToken = `Token: ${response.data.tokens[0]}`;
       }
-      // SPECIFIC FIX: Showmax returns a "Voucher" array
       else if (response.data.Voucher && Array.isArray(response.data.Voucher) && response.data.Voucher.length > 0) {
           extractedToken = `Voucher: ${response.data.Voucher[0]}`;
       }
