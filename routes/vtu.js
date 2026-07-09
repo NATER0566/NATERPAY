@@ -10,7 +10,8 @@ function generateVTpassRequestId() {
   const d = new Date();
   const lagosTime = new Date(d.getTime() + (1 * 60 * 60 * 1000)); // GMT+1
   
-  const year = lagosTime.getUTFullYear();
+  // FIXED: getUTCFullYear() is now correctly spelled
+  const year = lagosTime.getUTCFullYear();
   const month = String(lagosTime.getUTCMonth() + 1).padStart(2, '0');
   const day = String(lagosTime.getUTCDate()).padStart(2, '0');
   const hour = String(lagosTime.getUTCHours()).padStart(2, '0');
@@ -51,10 +52,12 @@ async function buyAirtime(request, reply) {
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
     if (currentAvail < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
 
+    // Deduct Wallet First
     wallet.availableBalance = (currentAvail - amount).toString();
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
+    // Log Transaction safely
     const transaction = new Transaction({
       user: request.user._id, type: 'airtime', description: `${network.toUpperCase()} Airtime for ${phone}`,
       amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
@@ -62,6 +65,7 @@ async function buyAirtime(request, reply) {
     });
     await transaction.save();
 
+    // Process VTU
     try {
       const providerResponse = await processVTURequest('airtime', { phone, network, amount });
       transaction.status = 'success';
@@ -72,6 +76,7 @@ async function buyAirtime(request, reply) {
       reply.send({ success: true, message: 'Airtime purchase successful', transaction });
 
     } catch (vtuError) {
+      // Refund Wallet on VTU Failure
       wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
       wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
       await wallet.save();
@@ -134,9 +139,101 @@ async function buyData(request, reply) {
   }
 }
 
-async function buyElectricity(request, reply) { reply.status(500).send({success:false, message: 'Temporarily offline for safety config.'}); }
-async function buyCable(request, reply) { reply.status(500).send({success:false, message: 'Temporarily offline for safety config.'}); }
+async function buyElectricity(request, reply) {
+  try {
+    const { meterNumber, disco, amount, meterType, pin } = request.body;
+    if (!meterNumber || !disco || !amount || !meterType) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+    if (currentAvail < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
 
+    wallet.availableBalance = (currentAvail - amount).toString();
+    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
+    await wallet.save();
+
+    const transaction = new Transaction({
+      user: request.user._id, type: 'electricity', description: `Electricity (${disco}) for ${meterNumber}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
+
+    try {
+      const providerResponse = await processVTURequest('electricity', { meterNumber, disco, amount, meterType });
+      transaction.status = 'success';
+      transaction.providerReference = providerResponse.reference;
+      await transaction.save();
+
+      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+      reply.send({ success: true, message: 'Electricity payment successful', transaction, token: providerResponse.token });
+
+    } catch (vtuError) {
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
+      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+      await wallet.save();
+
+      transaction.status = 'failed';
+      transaction.balanceAfter = wallet.availableBalance.toString();
+      await transaction.save();
+      
+      return reply.status(500).send({ success: false, message: vtuError.message });
+    }
+  } catch (error) {
+    console.error('Electricity error:', error);
+    reply.status(500).send({ success: false, message: 'System error processing electricity' });
+  }
+}
+
+async function buyCable(request, reply) {
+  try {
+    const { smartcardNumber, provider, package: pkg, amount, pin } = request.body;
+    if (!smartcardNumber || !provider || !amount || !pkg) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+    if (currentAvail < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (currentAvail - amount).toString();
+    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
+    await wallet.save();
+
+    const transaction = new Transaction({
+      user: request.user._id, type: 'cable', description: `Cable (${provider}) for ${smartcardNumber}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
+
+    try {
+      const providerResponse = await processVTURequest('cable', { smartcardNumber, provider, package: pkg, amount });
+      transaction.status = 'success';
+      transaction.providerReference = providerResponse.reference;
+      await transaction.save();
+
+      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+      reply.send({ success: true, message: 'Cable subscription successful', transaction });
+
+    } catch (vtuError) {
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
+      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+      await wallet.save();
+
+      transaction.status = 'failed';
+      transaction.balanceAfter = wallet.availableBalance.toString();
+      await transaction.save();
+      
+      return reply.status(500).send({ success: false, message: vtuError.message });
+    }
+  } catch (error) {
+    console.error('Cable error:', error);
+    reply.status(500).send({ success: false, message: 'System error processing cable' });
+  }
+}
+
+// ==================================================================
+// REAL VTPASS INTEGRATION CORE (STRICT DOCUMENTATION ADHERENCE)
+// ==================================================================
 async function processVTURequest(type, data) {
   if (!process.env.VTPASS_API_KEY || !process.env.VTPASS_SECRET_KEY) {
       throw new Error("VTpass API Keys are missing from Render settings.");
@@ -152,7 +249,7 @@ async function processVTURequest(type, data) {
   let payload = { 
       request_id: generateVTpassRequestId(), 
       amount: data.amount, 
-      phone: data.phone || data.meterNumber 
+      phone: data.phone || data.meterNumber || data.smartcardNumber
   };
 
   if (type === 'airtime') {
@@ -161,6 +258,14 @@ async function processVTURequest(type, data) {
       payload.serviceID = data.network; 
       payload.billersCode = data.phone; 
       payload.variation_code = data.plan; 
+  } else if (type === 'electricity') {
+      payload.serviceID = data.disco;
+      payload.billersCode = data.meterNumber;
+      payload.variation_code = data.meterType;
+  } else if (type === 'cable') {
+      payload.serviceID = data.provider;
+      payload.billersCode = data.smartcardNumber;
+      payload.variation_code = data.package;
   }
 
   try {
@@ -169,9 +274,13 @@ async function processVTURequest(type, data) {
     console.log(`[VTPASS] Response Data:`, JSON.stringify(response.data));
     
     if (response.data.code === '000') {
-      return { reference: response.data.content.transactions.transactionId, status: 'success', raw: response.data };
+      return { 
+          reference: response.data.content.transactions.transactionId, 
+          token: response.data.token || response.data.purchased_code || null,
+          status: 'success', 
+          raw: response.data 
+      };
     } else {
-      // Clearer messaging directly on screen
       throw new Error(`VTpass Error (${response.data.code}): ${response.data.response_description || response.data.message}`);
     }
   } catch (error) {
