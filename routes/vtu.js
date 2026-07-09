@@ -183,7 +183,7 @@ async function buyCable(request, reply) {
     await wallet.save();
 
     const transaction = new Transaction({
-      user: request.user._id, type: 'cable', description: `Cable (${provider}) for ${smartcardNumber}`,
+      user: request.user._id, type: 'cable', description: `Cable (${provider.toUpperCase()}) for ${smartcardNumber}`,
       amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
       status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
     });
@@ -196,7 +196,7 @@ async function buyCable(request, reply) {
       await transaction.save();
 
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
-      reply.send({ success: true, message: 'Cable subscription successful', transaction });
+      reply.send({ success: true, message: 'Cable subscription successful', transaction, token: providerResponse.token });
 
     } catch (vtuError) {
       wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
@@ -347,22 +347,29 @@ async function processVTURequest(type, data) {
       }
   } 
   else if (type === 'cable') {
+      // VTPASS CABLE TV DOCS FIX
       payload.phone = '08000000000';
       payload.serviceID = data.provider;
-      payload.billersCode = isSandbox ? '08011111111' : data.smartcardNumber;
       payload.variation_code = data.package;
+      
+      if (data.provider === 'showmax') {
+          payload.billersCode = isSandbox ? '08011111111' : data.smartcardNumber; // Showmax uses phone number
+      } else {
+          // DSTV, GOTV, and Startimes use 1212121212 for Sandbox
+          payload.billersCode = isSandbox ? '1212121212' : data.smartcardNumber; 
+          payload.subscription_type = 'change'; // Required parameter for changing/applying bouquets
+      }
   } 
   else if (type === 'education') {
-      // VTPASS EDUCATION DOCS FIX
       payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.serviceID = data.provider;
       payload.quantity = parseInt(data.quantity) || 1;
 
       if (data.provider === 'waec') {
-          payload.variation_code = 'waecdirect'; // WAEC Result Checker ID
+          payload.variation_code = 'waecdirect'; 
       } else if (data.provider === 'jamb') {
-          payload.variation_code = 'utme-no-mock'; // Default JAMB Variation
-          payload.billersCode = isSandbox ? '0123456789' : data.phone; // Profile ID
+          payload.variation_code = 'utme-no-mock'; 
+          payload.billersCode = isSandbox ? '0123456789' : data.phone; 
       } else if (data.provider === 'neco') {
           payload.variation_code = 'neco-biller'; 
       } else {
@@ -386,9 +393,13 @@ async function processVTURequest(type, data) {
       if (response.data.cards && Array.isArray(response.data.cards) && response.data.cards.length > 0) {
           extractedToken = `PIN: ${response.data.cards[0].Pin} | Serial: ${response.data.cards[0].Serial}`;
       } 
-      // Fallback for arrays
+      // Fallback for generic token arrays
       else if (response.data.tokens && Array.isArray(response.data.tokens) && response.data.tokens.length > 0) {
           extractedToken = `Token: ${response.data.tokens[0]}`;
+      }
+      // SPECIFIC FIX: Showmax returns a "Voucher" array
+      else if (response.data.Voucher && Array.isArray(response.data.Voucher) && response.data.Voucher.length > 0) {
+          extractedToken = `Voucher: ${response.data.Voucher[0]}`;
       }
 
       return { 
