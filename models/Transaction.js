@@ -15,7 +15,7 @@ const transactionSchema = new mongoose.Schema({
     required: true,
     enum: [
       'funding', 'withdrawal', 'transfer', 'airtime', 'data', 'electricity',
-      'cable', 'exam', 'betting', 'bulk_sms', 'payment_link', 'qr_payment',
+      'cable', 'exam', 'education', 'betting', 'bulk_sms', 'payment_link', 'qr_payment', // <-- ADDED 'education' HERE
       'invoice', 'cashback', 'referral_bonus', 'refund', 'charge', 'fee',
       'loan_disbursement', 'loan_repayment', 'savings_deposit', 'savings_withdrawal',
       'escrow_deposit', 'escrow_release', 'virtual_card_fund', 'virtual_card_charge',
