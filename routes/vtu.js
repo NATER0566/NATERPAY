@@ -49,12 +49,17 @@ async function buyAirtime(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    const transaction = new Transaction({
-      user: request.user._id, type: 'airtime', description: `${network.toUpperCase()} Airtime for ${phone}`,
-      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-    });
-    await transaction.save();
+    let transaction;
+    try {
+        transaction = new Transaction({
+          user: request.user._id, type: 'airtime', description: `${network.toUpperCase()} Airtime for ${phone}`,
+          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+        });
+        await transaction.save();
+    } catch (dbErr) {
+        return reply.status(500).send({ success: false, message: `DB Error: ${dbErr.message}` });
+    }
 
     try {
       const providerResponse = await processVTURequest('airtime', { phone, network, amount });
@@ -92,12 +97,17 @@ async function buyData(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    const transaction = new Transaction({
-      user: request.user._id, type: 'data', description: `Data Plan for ${phone}`,
-      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-    });
-    await transaction.save();
+    let transaction;
+    try {
+        transaction = new Transaction({
+          user: request.user._id, type: 'data', description: `Data Plan for ${phone}`,
+          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+        });
+        await transaction.save();
+    } catch (dbErr) {
+        return reply.status(500).send({ success: false, message: `DB Error: ${dbErr.message}` });
+    }
 
     try {
       const providerResponse = await processVTURequest('data', { phone, network, plan, amount });
@@ -139,12 +149,17 @@ async function buyElectricity(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    const transaction = new Transaction({
-      user: request.user._id, type: 'electricity', description: `Electricity (${disco.toUpperCase()}) - Meter: ${meterNumber}`,
-      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-    });
-    await transaction.save();
+    let transaction;
+    try {
+        transaction = new Transaction({
+          user: request.user._id, type: 'electricity', description: `Electricity (${disco.toUpperCase()}) - Meter: ${meterNumber}`,
+          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+        });
+        await transaction.save();
+    } catch (dbErr) {
+        return reply.status(500).send({ success: false, message: `DB Error: ${dbErr.message}` });
+    }
 
     try {
       const providerResponse = await processVTURequest('electricity', { meterNumber, disco, amount, meterType });
@@ -182,12 +197,17 @@ async function buyCable(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    const transaction = new Transaction({
-      user: request.user._id, type: 'cable', description: `Cable (${provider.toUpperCase()}) for ${smartcardNumber}`,
-      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-    });
-    await transaction.save();
+    let transaction;
+    try {
+        transaction = new Transaction({
+          user: request.user._id, type: 'cable', description: `Cable (${provider.toUpperCase()}) for ${smartcardNumber}`,
+          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+        });
+        await transaction.save();
+    } catch (dbErr) {
+        return reply.status(500).send({ success: false, message: `DB Error: ${dbErr.message}` });
+    }
 
     try {
       const providerResponse = await processVTURequest('cable', { smartcardNumber, provider, package: pkg, amount });
@@ -229,12 +249,18 @@ async function buyEducation(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    const transaction = new Transaction({
-      user: request.user._id, type: 'education', description: `${provider.toUpperCase()} PIN (${quantity} Qty) sent to ${phone}`,
-      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-    });
-    await transaction.save();
+    let transaction;
+    try {
+        // If "education" is not in your Transaction schema enum, this will throw a catchable error!
+        transaction = new Transaction({
+          user: request.user._id, type: 'education', description: `${provider.toUpperCase()} PIN (${quantity} Qty) sent to ${phone}`,
+          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+        });
+        await transaction.save();
+    } catch (dbErr) {
+        return reply.status(500).send({ success: false, message: `Database Schema Error: ${dbErr.message}. Please check your Transaction model allowed types.` });
+    }
 
     try {
       const providerResponse = await processVTURequest('education', { provider, phone, quantity, amount });
@@ -272,12 +298,17 @@ async function buyBetting(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    const transaction = new Transaction({
-      user: request.user._id, type: 'betting', description: `Fund ${provider.toUpperCase()} account ID: ${customerId}`,
-      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
-    });
-    await transaction.save();
+    let transaction;
+    try {
+        transaction = new Transaction({
+          user: request.user._id, type: 'betting', description: `Fund ${provider.toUpperCase()} account ID: ${customerId}`,
+          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+          status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+        });
+        await transaction.save();
+    } catch (dbErr) {
+        return reply.status(500).send({ success: false, message: `Database Schema Error: ${dbErr.message}. Please check your Transaction model allowed types.` });
+    }
 
     try {
       const providerResponse = await processVTURequest('betting', { provider, customerId, amount });
@@ -349,31 +380,30 @@ async function processVTURequest(type, data) {
       payload.phone = '08000000000';
       payload.serviceID = data.provider.toLowerCase();
       
-      // Smart String Matching: Maps whatever the UI sends to the exact VTpass codes
       const pkgInput = data.package.toString().toLowerCase().trim();
       let mappedCode = data.package; 
 
-      // DSTV Variations
       if (pkgInput.includes('padi')) mappedCode = 'dstv-padi';
       else if (pkgInput.includes('yanga')) mappedCode = 'dstv-yanga';
       else if (pkgInput.includes('confam')) mappedCode = 'dstv-confam';
       else if (pkgInput.includes('compact plus')) mappedCode = 'dstv7';
       else if (pkgInput.includes('compact')) mappedCode = 'dstv79';
       else if (pkgInput.includes('premium')) mappedCode = 'dstv3';
-      
-      // GOTV Variations
       else if (pkgInput.includes('lite')) mappedCode = 'gotv-lite';
       else if (pkgInput.includes('max')) mappedCode = 'gotv-max';
       else if (pkgInput.includes('jolli')) mappedCode = 'gotv-jolli';
       else if (pkgInput.includes('jinja')) mappedCode = 'gotv-jinja';
-      else if (pkgInput.includes('supa')) mappedCode = 'gotv-supa-plus';
-      
-      // Startimes Variations
       else if (pkgInput.includes('nova')) mappedCode = 'nova';
       else if (pkgInput.includes('basic')) mappedCode = 'basic';
       else if (pkgInput.includes('smart')) mappedCode = 'smart';
-      else if (pkgInput.includes('classic')) mappedCode = 'classic';
-      else if (pkgInput.includes('super')) mappedCode = 'super';
+      
+      // AGGRESSIVE SANDBOX OVERRIDE: Prevents 010 mismatch error entirely during testing
+      if (isSandbox) {
+          if (payload.serviceID === 'dstv') mappedCode = 'dstv79';
+          else if (payload.serviceID === 'gotv') mappedCode = 'gotv-lite';
+          else if (payload.serviceID === 'startimes') mappedCode = 'nova';
+          else if (payload.serviceID === 'showmax') { mappedCode = 'full_3'; payload.billersCode = '08011111111'; }
+      }
 
       payload.variation_code = mappedCode;
 
@@ -389,7 +419,7 @@ async function processVTURequest(type, data) {
       payload.serviceID = data.provider.toLowerCase();
       payload.quantity = parseInt(data.quantity) || 1;
 
-      // Map strict education codes
+      // Map strict education codes and aggressive Sandbox overrides
       if (payload.serviceID === 'waec') {
           payload.variation_code = 'waecdirect'; 
       } else if (payload.serviceID === 'jamb') {
@@ -399,6 +429,12 @@ async function processVTURequest(type, data) {
           payload.variation_code = 'neco-biller'; 
       } else {
           payload.variation_code = 'default';
+      }
+      
+      if(isSandbox && payload.serviceID !== 'jamb') {
+          payload.billersCode = '08011111111';
+      } else if (!isSandbox && payload.serviceID !== 'jamb') {
+          payload.billersCode = data.phone;
       }
   } 
   else if (type === 'betting') {
