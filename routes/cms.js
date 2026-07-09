@@ -23,32 +23,25 @@ async function getHomepageData(request, reply) {
     });
   } catch (error) {
     console.error('Get homepage data error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch homepage data'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch homepage data' });
   }
 }
 
 /**
- * Get slides (public)
+ * Get slides (public and admin)
  */
 async function getSlides(request, reply) {
   try {
-    const { page } = request.query;
-    
     const slides = await CMS.getActiveSlides();
     
     reply.send({
       success: true,
-      data: slides
+      data: slides,
+      slides: slides // Sent as both so older and newer frontends can read it
     });
   } catch (error) {
     console.error('Get slides error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch slides'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch slides' });
   }
 }
 
@@ -59,70 +52,56 @@ async function updateHomepage(request, reply) {
   try {
     const { siteName, logoUrl, tagline, rates } = request.body;
     
-    await CMS.updateHomepage({
-      siteName,
-      logoUrl,
-      tagline,
-      rates
-    });
+    await CMS.updateHomepage({ siteName, logoUrl, tagline, rates });
     
     // Emit socket event for real-time update
     if (request.server.io) {
       request.server.io.emit('cms_update');
     }
     
-    reply.send({
-      success: true,
-      message: 'Homepage updated successfully'
-    });
+    reply.send({ success: true, message: 'Homepage updated successfully' });
   } catch (error) {
     console.error('Update homepage error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to update homepage'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to update homepage' });
   }
 }
 
 /**
- * Add slide (admin)
+ * Add slide (admin) - NOW ACCEPTS BASE64 IMAGES
  */
 async function addSlide(request, reply) {
   try {
-    const { title, caption, mediaType, mediaUrl, ctaText, ctaLink, order } = request.body;
+    // Map incoming Base64 JSON payload to the database's expected fields
+    const title = request.body.title;
+    const mediaUrl = request.body.imageUrl || request.body.mediaUrl;
+    const ctaLink = request.body.link || request.body.ctaLink || '#';
+    const caption = request.body.caption || 'Welcome to the NATER-PAY Ecosystem.';
+    const mediaType = request.body.mediaType || 'image';
+    const ctaText = request.body.ctaText || 'EXPLORE NOW';
     
-    if (!title || !caption || !mediaUrl) {
-      return reply.status(400).send({
-        success: false,
-        message: 'Title, caption, and media URL are required'
-      });
+    if (!title || !mediaUrl) {
+      return reply.status(400).send({ success: false, message: 'Title and image are required' });
     }
     
     await CMS.addSlide({
       title,
       caption,
-      mediaType: mediaType || 'image',
+      mediaType,
       mediaUrl,
       ctaText,
       ctaLink,
-      order: order || 0
+      order: request.body.order || 0
     });
     
-    // Emit socket event for real-time update
+    // Emit socket event to instantly refresh the public homepage
     if (request.server.io) {
       request.server.io.emit('slides_refresh');
     }
     
-    reply.send({
-      success: true,
-      message: 'Slide added successfully'
-    });
+    reply.send({ success: true, message: 'Slide published successfully' });
   } catch (error) {
     console.error('Add slide error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to add slide'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to add slide' });
   }
 }
 
@@ -132,34 +111,29 @@ async function addSlide(request, reply) {
 async function updateSlide(request, reply) {
   try {
     const { id } = request.params;
-    const { title, caption, mediaType, mediaUrl, ctaText, ctaLink, order, isActive } = request.body;
     
-    await CMS.updateSlide(id, {
-      title,
-      caption,
-      mediaType,
-      mediaUrl,
-      ctaText,
-      ctaLink,
-      order,
-      isActive
-    });
+    // Allow partial updates (e.g., just updating the title from the admin panel)
+    const updateData = {};
+    if (request.body.title !== undefined) updateData.title = request.body.title;
+    if (request.body.caption !== undefined) updateData.caption = request.body.caption;
+    if (request.body.mediaType !== undefined) updateData.mediaType = request.body.mediaType;
+    if (request.body.mediaUrl !== undefined) updateData.mediaUrl = request.body.mediaUrl;
+    if (request.body.ctaText !== undefined) updateData.ctaText = request.body.ctaText;
+    if (request.body.ctaLink !== undefined) updateData.ctaLink = request.body.ctaLink;
+    if (request.body.order !== undefined) updateData.order = request.body.order;
+    if (request.body.isActive !== undefined) updateData.isActive = request.body.isActive;
+    
+    await CMS.updateSlide(id, updateData);
     
     // Emit socket event for real-time update
     if (request.server.io) {
       request.server.io.emit('slides_refresh');
     }
     
-    reply.send({
-      success: true,
-      message: 'Slide updated successfully'
-    });
+    reply.send({ success: true, message: 'Slide updated successfully' });
   } catch (error) {
     console.error('Update slide error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to update slide'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to update slide' });
   }
 }
 
@@ -169,24 +143,17 @@ async function updateSlide(request, reply) {
 async function deleteSlide(request, reply) {
   try {
     const { id } = request.params;
-    
     await CMS.deleteSlide(id);
     
-    // Emit socket event for real-time update
+    // Emit socket event to remove it from the homepage instantly
     if (request.server.io) {
       request.server.io.emit('slides_refresh');
     }
     
-    reply.send({
-      success: true,
-      message: 'Slide deleted successfully'
-    });
+    reply.send({ success: true, message: 'Slide deleted successfully' });
   } catch (error) {
     console.error('Delete slide error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to delete slide'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to delete slide' });
   }
 }
 
@@ -196,19 +163,11 @@ async function deleteSlide(request, reply) {
 async function getAnnouncements(request, reply) {
   try {
     const { targetAudience } = request.query;
-    
     const announcements = await CMS.getActiveAnnouncements(targetAudience || 'all');
-    
-    reply.send({
-      success: true,
-      data: announcements
-    });
+    reply.send({ success: true, data: announcements });
   } catch (error) {
     console.error('Get announcements error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch announcements'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch announcements' });
   }
 }
 
@@ -220,10 +179,7 @@ async function addAnnouncement(request, reply) {
     const { title, message, type, isActive, startDate, endDate, targetAudience } = request.body;
     
     if (!title || !message) {
-      return reply.status(400).send({
-        success: false,
-        message: 'Title and message are required'
-      });
+      return reply.status(400).send({ success: false, message: 'Title and message are required' });
     }
     
     await CMS.addAnnouncement({
@@ -236,16 +192,10 @@ async function addAnnouncement(request, reply) {
       targetAudience: targetAudience || 'all'
     });
     
-    reply.send({
-      success: true,
-      message: 'Announcement added successfully'
-    });
+    reply.send({ success: true, message: 'Announcement added successfully' });
   } catch (error) {
     console.error('Add announcement error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to add announcement'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to add announcement' });
   }
 }
 
@@ -258,25 +208,16 @@ async function updateAnnouncement(request, reply) {
     const { title, message, type, isActive, startDate, endDate, targetAudience } = request.body;
     
     await CMS.updateAnnouncement(id, {
-      title,
-      message,
-      type,
-      isActive,
+      title, message, type, isActive,
       startDate: startDate ? new Date(startDate) : null,
       endDate: endDate ? new Date(endDate) : null,
       targetAudience
     });
     
-    reply.send({
-      success: true,
-      message: 'Announcement updated successfully'
-    });
+    reply.send({ success: true, message: 'Announcement updated successfully' });
   } catch (error) {
     console.error('Update announcement error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to update announcement'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to update announcement' });
   }
 }
 
@@ -286,19 +227,11 @@ async function updateAnnouncement(request, reply) {
 async function deleteAnnouncement(request, reply) {
   try {
     const { id } = request.params;
-    
     await CMS.deleteAnnouncement(id);
-    
-    reply.send({
-      success: true,
-      message: 'Announcement deleted successfully'
-    });
+    reply.send({ success: true, message: 'Announcement deleted successfully' });
   } catch (error) {
     console.error('Delete announcement error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to delete announcement'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to delete announcement' });
   }
 }
 
@@ -308,37 +241,15 @@ async function deleteAnnouncement(request, reply) {
 async function setMaintenanceMode(request, reply) {
   try {
     const { enabled, message, scheduledStart, scheduledEnd } = request.body;
-    
-    await CMS.setMaintenanceMode(
-      enabled,
-      message,
-      scheduledStart ? new Date(scheduledStart) : null,
-      scheduledEnd ? new Date(scheduledEnd) : null
-    );
-    
-    reply.send({
-      success: true,
-      message: 'Maintenance mode updated successfully'
-    });
+    await CMS.setMaintenanceMode( enabled, message, scheduledStart ? new Date(scheduledStart) : null, scheduledEnd ? new Date(scheduledEnd) : null );
+    reply.send({ success: true, message: 'Maintenance mode updated successfully' });
   } catch (error) {
     console.error('Set maintenance mode error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to update maintenance mode'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to update maintenance mode' });
   }
 }
 
 module.exports = {
-  getHomepageData,
-  getSlides,
-  updateHomepage,
-  addSlide,
-  updateSlide,
-  deleteSlide,
-  getAnnouncements,
-  addAnnouncement,
-  updateAnnouncement,
-  deleteAnnouncement,
-  setMaintenanceMode
+  getHomepageData, getSlides, updateHomepage, addSlide, updateSlide, deleteSlide,
+  getAnnouncements, addAnnouncement, updateAnnouncement, deleteAnnouncement, setMaintenanceMode
 };
