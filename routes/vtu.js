@@ -1,25 +1,16 @@
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
-const AuditLog = require('../models/AuditLog');
-const Notification = require('../models/Notification');
 const axios = require('axios');
-const mongoose = require('mongoose');
 
 // --- HELPER: VTPASS STRICT REQUEST ID FORMATTER ---
 function generateVTpassRequestId() {
-  const d = new Date();
-  const lagosTime = new Date(d.getTime() + (1 * 60 * 60 * 1000)); // GMT+1
-  
-  // FIXED: getUTCFullYear() is now correctly spelled
-  const year = lagosTime.getUTCFullYear();
-  const month = String(lagosTime.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(lagosTime.getUTCDate()).padStart(2, '0');
-  const hour = String(lagosTime.getUTCHours()).padStart(2, '0');
-  const minute = String(lagosTime.getUTCMinutes()).padStart(2, '0');
-  
-  const prefix = `${year}${month}${day}${hour}${minute}`;
-  const suffix = Math.random().toString(36).substring(2, 8); 
-  return prefix + suffix;
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  // Format: YYYYMMDDHHII (12 numeric digits required)
+  const dateStr = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}`;
+  // Add random characters to ensure uniqueness and avoid the 016 duplicate error
+  const randomSuffix = Math.random().toString(36).substring(2, 10);
+  return dateStr + randomSuffix;
 }
 
 async function getRates(request, reply) {
@@ -52,12 +43,10 @@ async function buyAirtime(request, reply) {
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
     if (currentAvail < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
 
-    // Deduct Wallet First
     wallet.availableBalance = (currentAvail - amount).toString();
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    // Log Transaction safely
     const transaction = new Transaction({
       user: request.user._id, type: 'airtime', description: `${network.toUpperCase()} Airtime for ${phone}`,
       amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
@@ -65,7 +54,6 @@ async function buyAirtime(request, reply) {
     });
     await transaction.save();
 
-    // Process VTU
     try {
       const providerResponse = await processVTURequest('airtime', { phone, network, amount });
       transaction.status = 'success';
@@ -76,7 +64,6 @@ async function buyAirtime(request, reply) {
       reply.send({ success: true, message: 'Airtime purchase successful', transaction });
 
     } catch (vtuError) {
-      // Refund Wallet on VTU Failure
       wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
       wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
       await wallet.save();
@@ -88,7 +75,6 @@ async function buyAirtime(request, reply) {
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
   } catch (error) {
-    console.error('Airtime error:', error);
     reply.status(500).send({ success: false, message: 'System error processing airtime' });
   }
 }
@@ -134,7 +120,6 @@ async function buyData(request, reply) {
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
   } catch (error) {
-    console.error('Data error:', error);
     reply.status(500).send({ success: false, message: 'System error processing data' });
   }
 }
@@ -180,7 +165,6 @@ async function buyElectricity(request, reply) {
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
   } catch (error) {
-    console.error('Electricity error:', error);
     reply.status(500).send({ success: false, message: 'System error processing electricity' });
   }
 }
@@ -226,13 +210,12 @@ async function buyCable(request, reply) {
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
   } catch (error) {
-    console.error('Cable error:', error);
     reply.status(500).send({ success: false, message: 'System error processing cable' });
   }
 }
 
 // ==================================================================
-// REAL VTPASS INTEGRATION CORE (STRICT DOCUMENTATION ADHERENCE)
+// REAL VTPASS INTEGRATION CORE
 // ==================================================================
 async function processVTURequest(type, data) {
   if (!process.env.VTPASS_API_KEY || !process.env.VTPASS_SECRET_KEY) {
@@ -240,6 +223,17 @@ async function processVTURequest(type, data) {
   }
 
   const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
+  
+  // --- SANDBOX DYNAMIC INTERCEPTOR ---
+  let targetIdentifier = data.phone || data.meterNumber || data.smartcardNumber;
+  
+  // If the server is pointing to the sandbox, override the input with the VTpass success number
+  if (baseUrl.includes('sandbox')) {
+      targetIdentifier = '08011111111';
+      console.log(`[VTPASS] Sandbox Mode: Redirecting transaction to test identifier -> ${targetIdentifier}`);
+  }
+  // -----------------------------------
+
   const headers = { 
       'api-key': process.env.VTPASS_API_KEY, 
       'secret-key': process.env.VTPASS_SECRET_KEY, 
@@ -249,29 +243,27 @@ async function processVTURequest(type, data) {
   let payload = { 
       request_id: generateVTpassRequestId(), 
       amount: data.amount, 
-      phone: data.phone || data.meterNumber || data.smartcardNumber
+      phone: targetIdentifier 
   };
 
   if (type === 'airtime') {
       payload.serviceID = data.network; 
   } else if (type === 'data') { 
       payload.serviceID = data.network; 
-      payload.billersCode = data.phone; 
+      payload.billersCode = targetIdentifier; 
       payload.variation_code = data.plan; 
   } else if (type === 'electricity') {
       payload.serviceID = data.disco;
-      payload.billersCode = data.meterNumber;
+      payload.billersCode = targetIdentifier;
       payload.variation_code = data.meterType;
   } else if (type === 'cable') {
       payload.serviceID = data.provider;
-      payload.billersCode = data.smartcardNumber;
+      payload.billersCode = targetIdentifier;
       payload.variation_code = data.package;
   }
 
   try {
-    console.log(`[VTPASS] Sending request:`, JSON.stringify(payload));
     const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
-    console.log(`[VTPASS] Response Data:`, JSON.stringify(response.data));
     
     if (response.data.code === '000') {
       return { 
@@ -284,7 +276,6 @@ async function processVTURequest(type, data) {
       throw new Error(`VTpass Error (${response.data.code}): ${response.data.response_description || response.data.message}`);
     }
   } catch (error) {
-    console.error(`[VTPASS] Connection Crash details:`, error.response?.data || error.message);
     const apiErrorMessage = error.response?.data?.response_description || error.response?.data?.message || error.message;
     throw new Error(apiErrorMessage);
   }
