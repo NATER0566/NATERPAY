@@ -272,10 +272,20 @@ async function buyBetting(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
+    // Set provider tracking accurately for metrics/reconciliation
+    const isPaystackProvider = ['bet9ja', 'sportybet', 'nairabet'].includes(provider.toLowerCase());
+
     const transaction = new Transaction({
-      user: request.user._id, type: 'betting', description: `Fund ${provider.toUpperCase()} account ID: ${customerId}`,
-      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+      user: request.user._id, 
+      type: 'betting', 
+      description: `Fund ${provider.toUpperCase()} account ID: ${customerId}`,
+      amount, 
+      fee: 0, 
+      balanceBefore: currentAvail.toString(), 
+      balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', 
+      provider: isPaystackProvider ? 'paystack' : 'vtpass', 
+      reference: `VTU-${Date.now()}`
     });
     await transaction.save();
 
@@ -313,14 +323,20 @@ async function processVTURequest(type, data) {
   const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
   const isSandbox = baseUrl.includes('sandbox');
 
-  // --- YOUR ORIGINAL WORKING SANDBOX DYNAMIC INTERCEPTOR ---
+  // --- DYNAMIC SANDBOX TEST ID SEGREGATION ---
   let targetIdentifier = data.phone || data.meterNumber || data.smartcardNumber || data.customerId;
   
   if (isSandbox) {
-      targetIdentifier = '08011111111';
-      console.log(`[VTPASS] Sandbox Mode: Redirecting transaction to test identifier -> ${targetIdentifier}`);
+      if (type === 'electricity') {
+          targetIdentifier = '1111111111111'; // Sandbox safe test meter
+      } else if (type === 'cable') {
+          targetIdentifier = '1212121212';     // Sandbox safe test decoder card
+      } else {
+          targetIdentifier = '08011111111';   // Sandbox default communication line
+      }
+      console.log(`[VTPASS] Sandbox Mode: Redirecting ${type} transaction to test identifier -> ${targetIdentifier}`);
   }
-  // -----------------------------------
+  // -------------------------------------------
 
   const headers = { 
       'api-key': process.env.VTPASS_API_KEY, 
@@ -334,7 +350,6 @@ async function processVTURequest(type, data) {
       phone: isSandbox ? '08011111111' : (data.phone || '08000000000') 
   };
 
-  // YOUR EXACT ORIGINAL LOGIC FOR AIRTIME, DATA, ELECTRICITY
   if (type === 'airtime') {
       payload.serviceID = data.network; 
   } 
@@ -348,8 +363,6 @@ async function processVTURequest(type, data) {
       payload.billersCode = targetIdentifier;
       payload.variation_code = data.meterType;
   } 
-  
-  // NEW LOGIC TO FIX CABLE AND EDUCATION ERRORS
   else if (type === 'cable') {
       payload.serviceID = data.provider.toLowerCase();
       
@@ -382,7 +395,7 @@ async function processVTURequest(type, data) {
       if (payload.serviceID === 'showmax') {
           payload.billersCode = isSandbox ? '08011111111' : data.smartcardNumber;
       } else {
-          payload.billersCode = isSandbox ? '1212121212' : data.smartcardNumber; 
+          payload.billersCode = targetIdentifier; 
           payload.subscription_type = 'change'; 
       }
   } 
@@ -405,8 +418,13 @@ async function processVTURequest(type, data) {
       }
   } 
   else if (type === 'betting') {
-      payload.serviceID = data.provider.toLowerCase();
-      payload.billersCode = isSandbox ? '08011111111' : data.customerId;
+      // Normalizing the provider id string structure to avoid service mismatch on vtpass standard requests
+      let mappedBetServiceID = data.provider.toLowerCase();
+      if (mappedBetServiceID === 'bet9ja') mappedBetServiceID = 'bet9ja';
+      if (mappedBetServiceID === 'sportybet') mappedBetServiceID = 'sportybet';
+      
+      payload.serviceID = mappedBetServiceID;
+      payload.billersCode = targetIdentifier;
   }
 
   try {
