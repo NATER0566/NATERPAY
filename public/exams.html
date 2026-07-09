@@ -1,1 +1,371 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Buy Exam PINs</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root { 
+            --gold: #FFD700; 
+            --bg: #000000; 
+            --card-bg: #111111; 
+        }
+        body { 
+            background: var(--bg); 
+            color: #FFFFFF; 
+            font-family: 'Montserrat', sans-serif; 
+            margin: 0; 
+            min-height: 100vh; 
+        }
+        
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 3px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+        }
+
+        .brand-text { 
+            font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
+            text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start;
+        }
+        .site-part-1 { color: var(--gold); font-size: 1.6rem; } 
+        .site-part-2 { color: #FF3333; font-size: 1.2rem; letter-spacing: 3px; }
+
+        .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        
+        .exam-card {
+            background: var(--card-bg); 
+            border: 2px solid #444; 
+            border-radius: 20px;
+            padding: 40px; 
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        
+        .provider-btn {
+            background: #1A1A1A; 
+            border: 2.5px solid #444; 
+            border-radius: 15px;
+            padding: 22px; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            text-align: center;
+        }
+        .provider-btn div {
+            font-size: 1.2rem;
+            color: #FFFFFF;
+            margin-top: 8px;
+        }
+        .provider-btn:hover, .provider-btn.active {
+            border-color: var(--gold); 
+            background: rgba(255, 215, 0, 0.15);
+            transform: translateY(-3px);
+        }
+        .provider-btn.active div {
+            color: var(--gold);
+            font-weight: 900;
+        }
+        
+        .input-group-custom {
+            background: #1A1A1A; 
+            border: 2px solid var(--gold);
+            border-radius: 15px; 
+            padding: 20px; 
+            margin-bottom: 25px;
+        }
+        
+        .input-group-custom label, .section-heading, .amount-label {
+            display: block; 
+            font-size: 1.1rem; 
+            color: var(--gold); 
+            font-weight: 900;
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            margin-bottom: 12px;
+        }
+        
+        .input-group-custom input, .input-group-custom select {
+            background: transparent; 
+            border: none; 
+            color: #FFFFFF; 
+            width: 100%;
+            font-size: 1.3rem; 
+            font-weight: 700; 
+            outline: none;
+        }
+        
+        .input-group-custom select option {
+            background: #111;
+            color: #FFF;
+        }
+        
+        .btn-buy {
+            background: var(--gold); 
+            color: #000000; 
+            font-weight: 900; 
+            border-radius: 15px;
+            padding: 22px; 
+            width: 100%; 
+            border: none; 
+            font-size: 1.5rem; 
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+        .btn-buy:hover { 
+            background: #FFFFFF; 
+            transform: translateY(-3px); 
+            box-shadow: 0 10px 20px rgba(255,255,255,0.3); 
+        }
+
+        .total-box {
+            background: #1A1A1A;
+            border-left: 5px solid var(--gold);
+            padding: 15px 25px;
+            border-radius: 0 15px 15px 0;
+        }
+        
+        .footer-text {
+            color: #FFFFFF;
+            font-size: 1rem;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="dashboard.html" class="btn btn-warning rounded-pill px-4" style="font-weight: 800;">Back to Dashboard</a>
+</header>
+
+<div class="container">
+    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); font-size: 2.8rem;">EXAM PINS</h1>
+    
+    <div class="exam-card">
+        <span class="section-heading">1. Select Examination Body</span>
+        
+        <div class="row g-3 mb-4">
+            <div class="col-6">
+                <div class="provider-btn active" onclick="selectProvider(this, 'waec', 3500)">
+                    <i class="fas fa-graduation-cap fa-2x" style="color: #4da6ff;"></i>
+                    <div>WAEC</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="provider-btn" onclick="selectProvider(this, 'neco', 1200)">
+                    <i class="fas fa-certificate fa-2x" style="color: #2eb82e;"></i>
+                    <div>NECO</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="provider-btn" onclick="selectProvider(this, 'nabteb', 1000)">
+                    <i class="fas fa-award fa-2x" style="color: #ff9900;"></i>
+                    <div>NABTEB</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="provider-btn" onclick="selectProvider(this, 'jamb', 4700)">
+                    <i class="fas fa-book-reader fa-2x" style="color: #ff3333;"></i>
+                    <div>JAMB</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="input-group-custom">
+            <label>PHONE NUMBER (TO RECEIVE PIN)</label>
+            <input type="tel" id="phoneNumber" placeholder="e.g. 08012345678" maxlength="11">
+        </div>
+        
+        <div class="input-group-custom">
+            <label>QUANTITY</label>
+            <select id="quantity" onchange="updateTotal()">
+                <option value="1">1 PIN</option>
+                <option value="2">2 PINS</option>
+                <option value="3">3 PINS</option>
+                <option value="4">4 PINS</option>
+                <option value="5">5 PINS</option>
+            </select>
+        </div>
+        
+        <div class="input-group-custom">
+            <label>WITHDRAWAL PIN</label>
+            <input type="password" id="withdrawalPin" placeholder="Enter 4-digit security PIN" maxlength="4">
+        </div>
+        
+        <div class="total-box mb-4">
+            <span class="amount-label" style="margin-bottom: 4px;">TOTAL AMOUNT DUE</span>
+            <div class="h2 fw-bold" style="color: #FFFFFF;" id="totalAmount">₦3,500</div>
+        </div>
+        
+        <button class="btn-buy" onclick="buyExamPin()">
+            <i class="fas fa-key me-2"></i> GENERATE PIN NOW
+        </button>
+    </div>
+    
+    <div class="text-center footer-text mb-5">
+        <p class="mb-1">Education PINs powered by VTpass Live API</p>
+        <p>Secured by NATER-PAY Protocol v3.0</p>
+    </div>
+</div>
+
+<script>
+    // Default prices (You can adjust these to match your actual selling price)
+    let selectedProvider = 'waec';
+    let unitPrice = 3500; 
+    
+    function initStars() {
+        const canvas = document.getElementById('starCanvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        const stars = [];
+        
+        for(let i = 0; i < 150; i++) {
+            stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(s => {
+                ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white";
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0; s.y += s.v; if(s.y > canvas.height) s.y = -5;
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+    
+    function selectProvider(element, provider, price) {
+        document.querySelectorAll('.provider-btn').forEach(btn => btn.classList.remove('active'));
+        element.classList.add('active');
+        selectedProvider = provider;
+        unitPrice = price;
+        updateTotal();
+    }
+    
+    function updateTotal() {
+        const qty = parseInt(document.getElementById('quantity').value) || 1;
+        const total = unitPrice * qty;
+        document.getElementById('totalAmount').innerText = '₦' + total.toLocaleString();
+    }
+    
+    async function buyExamPin() {
+        const phone = document.getElementById('phoneNumber').value;
+        const quantity = document.getElementById('quantity').value;
+        const pin = document.getElementById('withdrawalPin').value;
+        const totalAmount = unitPrice * parseInt(quantity);
+        
+        if (!phone || phone.length < 10) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Phone Number',
+                text: 'Please enter a valid phone number to receive the PIN.',
+                confirmButtonColor: '#FF3333',
+                background: '#111111',
+                color: '#FFFFFF'
+            });
+            return;
+        }
+        
+        if (!pin || pin.length !== 4) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Security PIN',
+                text: 'Please enter your 4-digit security PIN.',
+                confirmButtonColor: '#FF3333',
+                background: '#111111',
+                color: '#FFFFFF'
+            });
+            return;
+        }
+        
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) {
+            window.location.href = '/index.html';
+            return;
+        }
+        
+        try {
+            Swal.fire({
+                title: 'Generating PIN...',
+                html: '<span style="color: #FFF; font-size: 1.2rem;">Connecting to Exam Portal...</span>',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+                background: '#111111',
+                color: '#FFD700'
+            });
+            
+            // This expects an /api/vtu/education route in your backend
+            const res = await fetch('/api/vtu/education', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ 
+                    provider: selectedProvider,
+                    phone: phone,
+                    quantity: quantity,
+                    amount: totalAmount,
+                    pin: pin
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'PIN Generated Successfully!',
+                    html: `<div style="font-size: 1.2rem; color: #FFF;">Your ${selectedProvider.toUpperCase()} PIN has been sent to ${phone}.<br><br><strong style="color: #FFD700; font-size: 1.3rem;">Token/PIN: ${data.token || 'Check SMS'}</strong></div>`,
+                    confirmButtonColor: '#FFD700',
+                    background: '#111111',
+                    color: '#FFFFFF'
+                }).then(() => {
+                    window.location.href = '/dashboard.html';
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Transaction Failed',
+                    text: data.message,
+                    confirmButtonColor: '#FF3333',
+                    background: '#111111',
+                    color: '#FFFFFF'
+                });
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Network Error',
+                text: 'Unable to connect to server. Please check your internet connection.',
+                confirmButtonColor: '#FF3333',
+                background: '#111111',
+                color: '#FFFFFF'
+            });
+        }
+    }
+    
+    window.onload = initStars;
+</script>
+
+</body>
+</html>
