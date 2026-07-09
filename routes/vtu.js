@@ -26,7 +26,7 @@ async function getVariations(request, reply) {
     const response = await axios.get(`${baseUrl}/service-variations?serviceID=${serviceID}`, {
       headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }
     });
-    reply.send({ success: true, variations: response.data.content?.varations || response.data.content?.variations || [] });
+    reply.send({ success: true, variations: response.data.content?.varations || response.data.content?.varations || [] });
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch service plans' }); }
 }
 
@@ -348,6 +348,22 @@ async function processVTURequest(type, data) {
   const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
   const isSandbox = baseUrl.includes('sandbox');
 
+  // --- DYNAMIC SANDBOX TEST ID SEGREGATION ---
+  let targetIdentifier = data.phone || data.meterNumber || data.smartcardNumber || data.customerId;
+  
+  if (isSandbox) {
+      if (type === 'electricity') {
+          // Check meter type for postpaid vs prepaid sandbox testing
+          targetIdentifier = data.meterType === 'postpaid' ? '1010101010101' : '1111111111111';
+      } else if (type === 'cable') {
+          targetIdentifier = '1212121212';     // Sandbox safe test decoder card
+      } else {
+          targetIdentifier = '08011111111';   // Sandbox default communication line
+      }
+      console.log(`[VTPASS] Sandbox Mode: Redirecting ${type} transaction to test identifier -> ${targetIdentifier}`);
+  }
+  // -------------------------------------------
+
   const headers = { 
       'api-key': process.env.VTPASS_API_KEY, 
       'secret-key': process.env.VTPASS_SECRET_KEY, 
@@ -360,7 +376,6 @@ async function processVTURequest(type, data) {
       phone: isSandbox ? '08011111111' : (data.phone || '08000000000') 
   };
 
-  // YOUR EXACT ORIGINAL LOGIC FOR AIRTIME, DATA, ELECTRICITY
   if (type === 'airtime') {
       payload.serviceID = data.network; 
   } 
@@ -371,8 +386,8 @@ async function processVTURequest(type, data) {
   } 
   else if (type === 'electricity') {
       payload.serviceID = data.disco;
-      // Fixed: Electricity uses 1111111111111 exactly as requested
-      payload.billersCode = isSandbox ? '1111111111111' : data.meterNumber; 
+      // Fixed: Electricity uses 1111111111111 for prepaid or 1010101010101 for postpaid exactly as requested
+      payload.billersCode = isSandbox ? (data.meterType === 'postpaid' ? '1010101010101' : '1111111111111') : data.meterNumber; 
       payload.variation_code = data.meterType;
   } 
   
