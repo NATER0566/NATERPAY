@@ -13,7 +13,7 @@
     <script src="/socket.io/socket.io.js"></script>
     
     <style>
-        :root { --red: #d32f2f; --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); --glass: rgba(255, 255, 255, 0.03); }
+        :root { --red: #d32f2f; --gold: #d4af37; --green: #22c55e; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); --glass: rgba(255, 255, 255, 0.03); }
         
         body { 
             background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; 
@@ -88,7 +88,7 @@
         .ecosystem-section-title { font-family: 'Cinzel', serif; font-size: 1.2rem; font-weight: 900; color: var(--gold); border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 10px; margin-bottom: 20px; margin-top: 40px; display: flex; align-items: center; gap: 10px; }
 
         .service-wrapper-node { transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; }
-        .service-link { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; padding: 15px 8px; text-align: center; transition: 0.4s; text-decoration: none; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 110px; position: relative; overflow: hidden; }
+        .service-link { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; padding: 15px 8px; text-align: center; transition: 0.4s; text-decoration: none; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 110px; position: relative; overflow: hidden; cursor: pointer; }
         .service-link:hover { border-color: #ffffff; transform: translateY(-5px); box-shadow: 0 8px 25px rgba(214,175,55,0.25); background: rgba(30, 30, 30, 0.95); }
         .service-link i { font-size: 1.6rem; margin-bottom: 10px; color: var(--gold); text-shadow: 0 0 10px rgba(214,175,55,0.4); position: relative; z-index: 2; }
         .service-link span { font-size: clamp(0.6rem, 2vw, 0.72rem); color: #ffffff !important; font-weight: 800; text-transform: uppercase; width: 100%; word-wrap: break-word; line-height: 1.3; letter-spacing: 0.5px; text-shadow: 0 1px 2px #000; position: relative; z-index: 2; }
@@ -105,6 +105,18 @@
             z-index: 1; pointer-events: none;
         }
 
+        .widget-open-indicator {
+            position: absolute; top: 8px; right: 8px; width: 24px; height: 24px;
+            background: var(--green); border: 2px solid var(--green);
+            color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; z-index: 10; opacity: 0; transform: scale(0);
+            transition: all 0.25s ease;
+            box-shadow: 0 0 15px rgba(34,197,94,0.6);
+        }
+        .widget-open-indicator.active {
+            opacity: 1; transform: scale(1);
+        }
+
         @keyframes intense-module-liquid-pumping {
             0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(212,175,55,0.3); border-color: var(--gold); }
             50% { transform: scale(1.06); box-shadow: 0 0 45px rgba(212,175,55,0.8), 0 0 20px #ffffff; border-color: #ffffff; }
@@ -114,9 +126,6 @@
             15% { left: 200%; }
             100% { left: 200%; }
         }
-
-        .widget-self-hide-cross-trigger { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; background: rgba(213,47,47,0.15); border: 1px solid var(--red); color: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; cursor: pointer; z-index: 10; opacity: 0; transition: all 0.2s ease; }
-        .service-wrapper-node:hover .widget-self-hide-cross-trigger { opacity: 1; }
 
         @keyframes continuous-plumbing-pulse {
             0%, 100% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.15), inset 0 0 5px rgba(212, 175, 55, 0.1); border-color: rgba(212, 175, 55, 0.3); }
@@ -155,7 +164,9 @@
             <a href="dashboard.html" class="sidebar-menu-link"><i class="fas fa-th-large"></i> Hub Central</a>
             <a href="profile.html" class="sidebar-menu-link"><i class="fas fa-id-card"></i> Profile Terminal</a>
             <a href="merchant-dashboard.html" class="sidebar-menu-link"><i class="fas fa-store"></i> Merchant Hub</a>
-            <a href="agent-pos.html" class="sidebar-menu-link"><i class="fas fa-cash-register"></i> Agent POS Node</a>
+            <a href="pos.html" class="sidebar-menu-link"><i class="fas fa-cash-register"></i> POS Terminal</a>
+            <a href="bulksms.html" class="sidebar-menu-link"><i class="fas fa-envelope"></i> Bulk SMS</a>
+            <a href="insurance.html" class="sidebar-menu-link"><i class="fas fa-shield-virus"></i> Insurance</a>
             <a href="security.html" class="sidebar-menu-link"><i class="fas fa-lock"></i> Vault Security</a>
             <a href="support.html" class="sidebar-menu-link"><i class="fas fa-headset"></i> Support Tickets</a>
             <a href="api.html" class="sidebar-menu-link"><i class="fas fa-code"></i> Developer APIs</a>
@@ -243,46 +254,50 @@
         <button class="btn btn-light btn-sm rounded-pill fw-bold px-4 py-2" onclick="location.href='reseller.html'">UPGRADE NOW</button>
     </div>
 
+    <!-- SECTION 1: UTILITIES -->
     <h5 class="ecosystem-section-title"><i class="fas fa-plug"></i> Utilities & Fast Payments</h5>
     <div class="row g-2" id="gridUtilities">
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="data" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('data')"><i class="fas fa-times"></i></div><a href="data.html" class="service-link"><i class="fas fa-wifi"></i><span>Buy Data</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="airtime" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('airtime')"><i class="fas fa-times"></i></div><a href="airtime.html" class="service-link"><i class="fas fa-phone"></i><span>Airtime</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="power"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('power')"><i class="fas fa-times"></i></div><a href="power.html" class="service-link"><i class="fas fa-bolt"></i><span>Electricity</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="cable"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('cable')"><i class="fas fa-times"></i></div><a href="cable.html" class="service-link"><i class="fas fa-satellite-dish"></i><span>Cable TV</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="exams"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('exams')"><i class="fas fa-times"></i></div><a href="exams.html" class="service-link"><i class="fas fa-key"></i><span>Exam Pins</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="betting"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('betting')"><i class="fas fa-times"></i></div><a href="betting.html" class="service-link"><i class="fas fa-dice"></i><span>Bet Funding</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="data" data-priority="high"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('data','data.html')"><i class="fas fa-wifi"></i><span>Buy Data</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="airtime" data-priority="high"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('airtime','airtime.html')"><i class="fas fa-phone"></i><span>Airtime</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="power"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('power','power.html')"><i class="fas fa-bolt"></i><span>Electricity</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="cable"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('cable','cable.html')"><i class="fas fa-satellite-dish"></i><span>Cable TV</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="exams"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('exams','exams.html')"><i class="fas fa-key"></i><span>Exam Pins</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="betting"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('betting','betting.html')"><i class="fas fa-dice"></i><span>Bet Funding</span></div></div>
     </div>
 
+    <!-- SECTION 2: BUSINESS -->
     <h5 class="ecosystem-section-title"><i class="fas fa-store"></i> Business & Merchant Nodes</h5>
     <div class="row g-2" id="gridBusiness">
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="merchant_dash"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('merchant_dash')"><i class="fas fa-times"></i></div><a href="merchant-dashboard.html" class="service-link"><i class="fas fa-chart-line"></i><span>Biz Analytics</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="pos_agent" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('pos_agent')"><i class="fas fa-times"></i></div><a href="agent-pos.html" class="service-link"><i class="fas fa-cash-register"></i><span>POS Agent</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="reseller"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('reseller')"><i class="fas fa-times"></i></div><a href="reseller.html" class="service-link"><i class="fas fa-network-wired"></i><span>Reseller Hub</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="pay_links"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('pay_links')"><i class="fas fa-times"></i></div><a href="payment-links.html" class="service-link"><i class="fas fa-link"></i><span>Pay Links</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="qr_pay"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('qr_pay')"><i class="fas fa-times"></i></div><a href="qr-pay.html" class="service-link"><i class="fas fa-qrcode"></i><span>QR Collect</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="invoices"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('invoices')"><i class="fas fa-times"></i></div><a href="invoices.html" class="service-link"><i class="fas fa-file-invoice-dollar"></i><span>Invoicing</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="ads_promo"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('ads_promo')"><i class="fas fa-times"></i></div><a href="ads.html" class="service-link"><i class="fas fa-bullhorn"></i><span>Adverts</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="marketplace"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('marketplace')"><i class="fas fa-times"></i></div><a href="marketplace.html" class="service-link"><i class="fas fa-store-alt"></i><span>Marketplace</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="merchant_dash"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('merchant_dash','merchant-dashboard.html')"><i class="fas fa-chart-line"></i><span>Biz Analytics</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="pos" data-priority="high"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('pos','pos.html')"><i class="fas fa-cash-register"></i><span>POS Terminal</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="agent_pos"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('agent_pos','agent-pos.html')"><i class="fas fa-user-tie"></i><span>Agent POS</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="insurance"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('insurance','insurance.html')"><i class="fas fa-shield-virus"></i><span>Insurance</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="reseller"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('reseller','reseller.html')"><i class="fas fa-network-wired"></i><span>Reseller Hub</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="pay_links"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('pay_links','payment-links.html')"><i class="fas fa-link"></i><span>Pay Links</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="qr_pay"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('qr_pay','qr-pay.html')"><i class="fas fa-qrcode"></i><span>QR Collect</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="invoices"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('invoices','invoices.html')"><i class="fas fa-file-invoice-dollar"></i><span>Invoicing</span></div></div>
     </div>
 
+    <!-- SECTION 3: BANKING -->
     <h5 class="ecosystem-section-title"><i class="fas fa-university"></i> Banking & Digital Assets</h5>
     <div class="row g-2" id="gridWealth">
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="loan"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('loan')"><i class="fas fa-times"></i></div><a href="loan.html" class="service-link"><i class="fas fa-hand-holding-usd"></i><span>Credit Loans</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="savings"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('savings')"><i class="fas fa-times"></i></div><a href="savings.html" class="service-link"><i class="fas fa-piggy-bank"></i><span>Savings Vault</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="escrow"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('escrow')"><i class="fas fa-times"></i></div><a href="escrow.html" class="service-link"><i class="fas fa-shield-alt"></i><span>Escrow Guard</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="cards" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('cards')"><i class="fas fa-times"></i></div><a href="virtual-card.html" class="service-link"><i class="fas fa-credit-card"></i><span>Virtual USD</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="crypto"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('crypto')"><i class="fas fa-times"></i></div><a href="crypto.html" class="service-link"><i class="fas fa-coins"></i><span>Sell Crypto</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="giftcards"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('giftcards')"><i class="fas fa-times"></i></div><a href="giftcards.html" class="service-link"><i class="fas fa-gift"></i><span>Trade Cards</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="loan"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('loan','loan.html')"><i class="fas fa-hand-holding-usd"></i><span>Credit Loans</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="savings"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('savings','savings.html')"><i class="fas fa-piggy-bank"></i><span>Savings Vault</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="escrow"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('escrow','escrow.html')"><i class="fas fa-shield-alt"></i><span>Escrow Guard</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="cards" data-priority="high"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('cards','virtual-card.html')"><i class="fas fa-credit-card"></i><span>Virtual USD</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="crypto"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('crypto','crypto.html')"><i class="fas fa-coins"></i><span>Sell Crypto</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="giftcards"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('giftcards','giftcards.html')"><i class="fas fa-gift"></i><span>Trade Cards</span></div></div>
     </div>
 
+    <!-- SECTION 4: GROWTH -->
     <h5 class="ecosystem-section-title"><i class="fas fa-rocket"></i> Rewards & Value-Add</h5>
     <div class="row g-2" id="gridGrowth">
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="cashback" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('cashback')"><i class="fas fa-times"></i></div><a href="cashback.html" class="service-link"><i class="fas fa-undo-alt"></i><span>Cashback</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="spin"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('spin')"><i class="fas fa-times"></i></div><a href="spin.html" class="service-link"><i class="fas fa-dharmachakra"></i><span>Spin & Win</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="tasks"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('tasks')"><i class="fas fa-times"></i></div><a href="tasks.html" class="service-link"><i class="fas fa-tasks"></i><span>Task & Earn</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="airtime_cash" data-priority="high"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('airtime_cash')"><i class="fas fa-times"></i></div><a href="airtime-cash.html" class="service-link"><i class="fas fa-exchange-alt"></i><span>Airtime2Cash</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="bulk_sms"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('bulk_sms')"><i class="fas fa-times"></i></div><a href="bulk-sms.html" class="service-link"><i class="fas fa-envelope"></i><span>Bulk SMS</span></a></div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-widget="leaderboard"><div class="widget-self-hide-cross-trigger" onclick="dismissDashboardWidget('leaderboard')"><i class="fas fa-times"></i></div><a href="leaderboard.html" class="service-link"><i class="fas fa-trophy"></i><span>Leaderboard</span></a></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="cashback" data-priority="high"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('cashback','cashback.html')"><i class="fas fa-undo-alt"></i><span>Cashback</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="spin"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('spin','spin.html')"><i class="fas fa-dharmachakra"></i><span>Spin & Win</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="tasks"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('tasks','tasks.html')"><i class="fas fa-tasks"></i><span>Task & Earn</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="airtime_cash" data-priority="high"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('airtime_cash','airtime-cash.html')"><i class="fas fa-exchange-alt"></i><span>Airtime2Cash</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="bulk_sms"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('bulk_sms','bulksms.html')"><i class="fas fa-envelope"></i><span>Bulk SMS</span></div></div>
+        <div class="col-4 col-md-2 service-wrapper-node" data-widget="leaderboard"><div class="widget-open-indicator"><i class="fas fa-check"></i></div><div class="service-link" onclick="openService('leaderboard','leaderboard.html')"><i class="fas fa-trophy"></i><span>Leaderboard</span></div></div>
     </div>
 
     <div class="transaction-box">
@@ -290,17 +305,7 @@
             <h5 class="text-white fw-bold m-0"><i class="fas fa-history me-2 text-warning"></i> Audit Ledger Logs</h5>
             <a href="transactions.html" class="btn btn-sm btn-outline-secondary rounded-pill">View All</a>
         </div>
-        <div class="table-scroll-container">
-            <table class="table table-dark table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th class="text-secondary small fw-bold">DATE/TIME</th>
-                        <th class="text-secondary small fw-bold">TYPE & DESC</th>
-                        <th class="text-secondary small fw-bold">AMOUNT</th>
-                        <th class="text-secondary small fw-bold text-end">STATUS</th>
-                    </tr>
-                </thead>
-                <tbody id="txBody">
+        <                <tbody id="txBody">
                     <tr><td colspan="4" class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Fetching live transactions...</td></tr>
                 </tbody>
             </table>
@@ -310,7 +315,7 @@
 
 <footer>
     <div class="text-center">
-        <p class="footer-compliance-tag m-0">v3.0 SECURED BY NATER-PAY INFRASTRUCTURES PROTOCOL</p>
+        <p class="footer-compliance-tag m-0">v3.1 SECURED BY NATER-PAY INFRASTRUCTURES PROTOCOL</p>
     </div>
 </footer>
 
@@ -342,7 +347,20 @@
         requestAnimationFrame(animate);
     }
 
-    // --- NEW NATER-PAY PAYMENT VERIFICATION SYSTEM ---
+    // NEW: Green check "opening" animation then redirect
+    function openService(widgetId, href) {
+        const node = document.querySelector(`[data-widget="${widgetId}"]`);
+        const indicator = node?.querySelector('.widget-open-indicator');
+        if(indicator) {
+            indicator.classList.add('active');
+        }
+        // small delay so user sees the green check
+        setTimeout(() => {
+            window.location.href = href;
+        }, 400);
+    }
+
+    // --- NATER-PAY PAYMENT VERIFICATION SYSTEM ---
     async function checkPendingFunding() {
         const pendingRef = localStorage.getItem('pending_funding_ref');
         
@@ -467,6 +485,7 @@
                 document.getElementById('statRefs').innerText = `${data.referralCount || 0} Nodes`;
                 document.getElementById('statBonus').innerText = '₦' + Number(safeBonus).toLocaleString();
 
+                // Load hidden widgets preference if any
                 if (data.hiddenWidgets && data.hiddenWidgets.length > 0) {
                     data.hiddenWidgets.forEach(widgetId => {
                         const targetNode = document.querySelector(`[data-widget="${widgetId}"]`);
@@ -501,29 +520,6 @@
         }
     }
 
-    async function dismissDashboardWidget(widgetId) {
-        const authToken = localStorage.getItem("naterpay_token");
-        const targetNode = document.querySelector(`[data-widget="${widgetId}"]`);
-        
-        if (targetNode) {
-            targetNode.style.opacity = '0';
-            targetNode.style.transform = 'scale(0.8)';
-            setTimeout(() => targetNode.style.display = 'none', 300);
-        }
-
-        try {
-            if(authToken) {
-                await fetch('/api/user/dashboard-preferences', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                    body: JSON.stringify({ action: 'hide', target: widgetId })
-                });
-            }
-        } catch (err) {
-            console.warn("Visibility cache queued for async sync.");
-        }
-    }
-
     window.onresize = initStars;
     window.onload = () => { 
         initStars(); 
@@ -548,7 +544,7 @@
 
             socketConnectionLink.on('dashboard:refresh', () => { syncDashboardData(); });
 
-            // ADDED: PUSH NOTIFICATION LISTENER
+            // PUSH NOTIFICATION LISTENER
             socketConnectionLink.on('notification', (payload) => {
                 Swal.fire({
                     icon: payload.type === 'error' ? 'error' : (payload.type === 'success' ? 'success' : 'info'),
