@@ -233,7 +233,7 @@ async function buyCable(request, reply) {
 }
 
 // ==========================================
-// NEW FEATURES: EDUCATION, BETTING & INSURANCE
+// NEW FEATURES: EDUCATION, BETTING, INSURANCE, POS & SMS
 // ==========================================
 
 async function buyEducation(request, reply) {
@@ -378,8 +378,33 @@ async function buyInsurance(request, reply) {
 
 async function sendBulkSMS(request, reply) {
     try {
-        const { sender, recipient, message } = request.body;
-        if (!sender || !recipient || !message) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+        const { sender, recipient, message, pin } = request.body;
+        if (!sender || !recipient || !message || !pin) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+
+        const wallet = await Wallet.findOne({ user: request.user._id });
+        // Simplified deduction logic for SMS cost (e.g. ₦4 per page)
+        const smsCost = 4.00 * recipient.split(',').length; 
+        
+        if (parseFloat(wallet.availableBalance) < smsCost) {
+            return reply.status(400).send({ success: false, message: 'Insufficient balance for SMS dispatch.' });
+        }
+
+        wallet.availableBalance = (parseFloat(wallet.availableBalance) - smsCost).toString();
+        wallet.balance = (parseFloat(wallet.balance) - smsCost).toString();
+        await wallet.save();
+
+        const transaction = new Transaction({
+          user: request.user._id, type: 'bulk_sms', description: `Bulk SMS Dispatch from ${sender}`,
+          amount: smsCost, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + smsCost).toString(), 
+          balanceAfter: wallet.availableBalance.toString(),
+          status: 'pending', provider: 'vtpass', reference: `SMS-${Date.now()}`
+        });
+        await transaction.save();
+
+        // Check if VTpass keys exist
+        if (!process.env.VTPASS_MESSAGING_PUBLIC_KEY || !process.env.VTPASS_MESSAGING_SECRET_KEY) {
+            throw new Error("Missing VTpass Messaging API Keys.");
+        }
 
         const url = 'https://messaging.vtpass.com/v2/api/sms/sendsms';
         const headers = { 
@@ -389,49 +414,76 @@ async function sendBulkSMS(request, reply) {
         };
 
         const payload = new URLSearchParams({ sender, recipient, message, responsetype: 'json' });
-
         const response = await axios.post(url, payload.toString(), { headers });
-        reply.send({ success: true, message: 'SMS Dispatched', data: response.data });
+        
+        if (response.data.responseCode === "TG00") {
+            transaction.status = 'success';
+            await transaction.save();
+            reply.send({ success: true, message: 'SMS Dispatched', data: response.data });
+        } else {
+            throw new Error(response.data.response || "Failed to dispatch SMS.");
+        }
+
     } catch (error) {
-        reply.status(500).send({ success: false, message: 'Failed to send bulk SMS via VTpass Messaging API' });
+        reply.status(500).send({ success: false, message: 'Failed to dispatch SMS messages.' });
     }
 }
 
-// ==================================================================
-// VTPASS WEBHOOK CALLBACK HANDLER
-// ==================================================================
-async function handleVTpassWebhook(request, reply) {
+async function buyPOS(request, reply) {
     try {
-        const { type, data, summary, actionRequired } = request.body;
+        const { terminalId, amount, pin } = request.body;
+        if (!terminalId || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
 
-        if (type === 'transaction-update') {
-            const { transactionId, status } = data.content.transactions;
-            const transaction = await Transaction.findOne({ providerReference: transactionId });
+        const wallet = await Wallet.findOne({ user: request.user._id });
+        const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+        if (currentAvail < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
 
-            if (transaction && transaction.status === 'pending') {
-                if (status === 'delivered') {
-                    transaction.status = 'success';
-                } else if (status === 'reversed') {
-                    transaction.status = 'failed';
-                    // Refund Logic Here
-                    const wallet = await Wallet.findOne({ user: transaction.user });
-                    wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(transaction.amount)).toString();
-                    wallet.balance = (parseFloat(wallet.balance) + parseFloat(transaction.amount)).toString();
-                    await wallet.save();
-                }
+        wallet.availableBalance = (currentAvail - amount).toString();
+        wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
+        await wallet.save();
+
+        const transaction = new Transaction({
+          user: request.user._id, type: 'pos', description: `POS Terminal Funding for ${terminalId}`,
+          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+          status: 'pending', provider: 'vtpass', reference: `POS-${Date.now()}`
+        });
+        await transaction.save();
+
+        try {
+            // Dedicated processor block for POS Terminal to avoid electricity mismatch
+            const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
+            const headers = { 'api-key': process.env.VTPASS_API_KEY, 'secret-key': process.env.VTPASS_SECRET_KEY, 'Content-Type': 'application/json' };
+            const payload = { 
+                request_id: generateVTpassRequestId(), 
+                serviceID: 'vtpass-pos', 
+                amount: amount, 
+                billersCode: terminalId,
+                phone: '08000000000'
+            };
+
+            const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
+            
+            if (response.data.code === '000') {
+                transaction.status = 'success';
+                transaction.providerReference = response.data.content?.transactions?.transactionId;
                 await transaction.save();
+
+                if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+                reply.send({ success: true, message: 'Terminal Funded', transaction });
+            } else {
+                throw new Error(response.data.response_description || response.data.message);
             }
-        } else if (type === 'variations-update') {
-            const { serviceID } = request.body;
-            // Clear the specific cache for this service to force a fresh fetch next time
-            if (variationsCache[serviceID]) {
-                delete variationsCache[serviceID];
-            }
+        } catch (vtuError) {
+            wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
+            wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+            await wallet.save();
+
+            transaction.status = 'failed';
+            await transaction.save();
+            return reply.status(500).send({ success: false, message: 'Terminal funding failed.' });
         }
-        
-        reply.send({ response: "success" });
     } catch (error) {
-        reply.status(500).send({ response: "error" });
+        reply.status(500).send({ success: false, message: 'System error processing POS funding.' });
     }
 }
 
@@ -603,4 +655,4 @@ async function processVTURequest(type, data) {
   }
 }
 
-module.exports = { getRates, getVariations, buyAirtime, buyData, buyElectricity, buyCable, buyEducation, buyBetting, buyInsurance, sendBulkSMS, handleVTpassWebhook };
+module.exports = { getRates, getVariations, buyAirtime, buyData, buyElectricity, buyCable, buyEducation, buyBetting, buyInsurance, sendBulkSMS, buyPOS };
