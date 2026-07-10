@@ -13,13 +13,13 @@
     
     <style>
         :root { 
-            --gold: #FFD700; /* High visibility pure gold */
+            --gold: #FFD700; 
             --bg: #000000; 
             --card-bg: #111111; 
         }
         body { 
             background: var(--bg); 
-            color: #FFFFFF; /* Crisp white text for reading ease */
+            color: #FFFFFF; 
             font-family: 'Montserrat', sans-serif; 
             margin: 0; 
             min-height: 100vh; 
@@ -46,123 +46,96 @@
             background: var(--card-bg); 
             border: 2px solid #444; 
             border-radius: 20px;
-            padding: 40px; 
+            padding: 40px 20px; 
             margin-bottom: 30px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
         
-        /* PROVIDER BUTTONS UPGRADED FOR BOLDER CONTRAST */
+        /* RESPONSIVE PROVIDER BUTTONS: Stops text from breaking out of boxes */
         .provider-btn {
             background: #1A1A1A; 
             border: 2.5px solid #444; 
             border-radius: 15px;
-            padding: 22px; 
+            padding: 15px 5px; 
             cursor: pointer; 
             transition: 0.3s; 
             text-align: center;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
         .provider-btn div {
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: #FFFFFF;
+            margin-top: 8px;
+            font-weight: 700;
+            word-wrap: break-word; /* Forces long words to wrap */
         }
         .provider-btn:hover, .provider-btn.active {
             border-color: var(--gold); 
             background: rgba(255, 215, 0, 0.15);
             transform: translateY(-3px);
         }
-        .provider-btn.active div {
-            color: var(--gold);
-            font-weight: 900;
-        }
+        .provider-btn.active div { color: var(--gold); font-weight: 900; }
         
         .input-group-custom {
             background: #1A1A1A; 
             border: 2px solid var(--gold);
             border-radius: 15px; 
-            padding: 20px; 
+            padding: 15px 20px; 
             margin-bottom: 25px;
         }
         
         .input-group-custom label, .section-heading, .amount-label {
             display: block; 
-            font-size: 1.1rem; 
+            font-size: 1rem; 
             color: var(--gold); 
             font-weight: 900;
             text-transform: uppercase; 
             letter-spacing: 1px; 
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
         
-        .input-group-custom input, .input-group-custom select {
-            background: transparent; 
-            border: none; 
-            color: #FFFFFF; 
-            width: 100%;
-            font-size: 1.3rem; 
-            font-weight: 700; 
-            outline: none;
+        .input-group-custom input {
+            background: transparent; border: none; color: #FFFFFF; width: 100%;
+            font-size: 1.2rem; font-weight: 700; outline: none;
         }
         
-        /* PLAN CARDS REDESIGNED FOR MAX VISIBILITY */
+        /* RESPONSIVE PLAN CARDS */
         .plan-card {
             background: #1A1A1A; 
             border: 2px solid #444; 
             border-radius: 15px;
-            padding: 20px; 
+            padding: 15px 5px; 
             cursor: pointer; 
             transition: 0.3s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
         }
-        .plan-card .plan-title {
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: #FFFFFF;
-        }
-        .plan-card .plan-price {
-            font-size: 1.2rem;
-            font-weight: 900;
-            color: #FFCC00;
-            margin-top: 5px;
-        }
-        .plan-card:hover, .plan-card.active {
-            border-color: var(--gold); 
-            background: rgba(255, 215, 0, 0.15);
-        }
-        .plan-card.active .plan-title {
-            color: var(--gold);
-        }
+        .plan-card .plan-title { font-size: 0.95rem; font-weight: 800; color: #FFFFFF; word-wrap: break-word; }
+        .plan-card .plan-price { font-size: 1.1rem; font-weight: 900; color: #FFCC00; margin-top: 5px; }
+        .plan-card:hover, .plan-card.active { border-color: var(--gold); background: rgba(255, 215, 0, 0.15); }
+        .plan-card.active .plan-title { color: var(--gold); }
         
         .btn-buy {
-            background: var(--gold); 
-            color: #000000; 
-            font-weight: 900; 
-            border-radius: 15px;
-            padding: 22px; 
-            width: 100%; 
-            border: none; 
-            font-size: 1.5rem; 
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            transition: 0.3s;
+            background: var(--gold); color: #000000; font-weight: 900; border-radius: 15px;
+            padding: 20px; width: 100%; border: none; font-size: 1.3rem; letter-spacing: 1px;
+            text-transform: uppercase; transition: 0.3s;
         }
-        .btn-buy:hover { 
-            background: #FFFFFF; 
-            transform: translateY(-3px); 
-            box-shadow: 0 10px 20px rgba(255,255,255,0.3); 
-        }
+        .btn-buy:hover { background: #FFFFFF; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.3); }
 
         .total-box {
-            background: #1A1A1A;
-            border-left: 5px solid var(--gold);
-            padding: 15px 25px;
-            border-radius: 0 15px 15px 0;
+            background: #1A1A1A; border-left: 5px solid var(--gold); padding: 15px 25px;
+            border-radius: 0 15px 15px 0; margin-bottom: 25px;
         }
         
-        .footer-text {
-            color: #FFFFFF;
-            font-size: 1rem;
-            font-weight: 600;
-            opacity: 0.9;
-        }
+        .footer-text { color: #FFFFFF; font-size: 0.9rem; font-weight: 600; opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -174,35 +147,35 @@
         <span class="site-part-1">NATER</span>
         <span class="site-part-2">PAY</span>
     </div>
-    <a href="dashboard.html" class="btn btn-warning rounded-pill px-4" style="font-weight: 800;">Back to Dashboard</a>
+    <a href="dashboard.html" class="btn btn-warning rounded-pill px-4" style="font-weight: 800;">Dashboard</a>
 </header>
 
 <div class="container">
-    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); font-size: 2.8rem;">CABLE TV</h1>
+    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); font-size: 2.5rem;">CABLE TV</h1>
     
     <div class="cable-card">
-        <span class="section-heading">1. Select Provider</span>
+        <label class="amount-label text-center mb-3">1. Select Provider</label>
         
-        <div class="row g-3 mb-4">
-            <div class="col-6">
+        <div class="row g-2 mb-4">
+            <div class="col-6 col-md-3">
                 <div class="provider-btn active" onclick="selectProvider(this, 'dstv')">
                     <i class="fas fa-tv fa-2x mb-2" style="color: #00bfff;"></i>
                     <div>DSTV</div>
                 </div>
             </div>
-            <div class="col-6">
+            <div class="col-6 col-md-3">
                 <div class="provider-btn" onclick="selectProvider(this, 'gotv')">
                     <i class="fas fa-tv fa-2x mb-2" style="color: #00ff00;"></i>
                     <div>GOtv</div>
                 </div>
             </div>
-            <div class="col-6">
+            <div class="col-6 col-md-3">
                 <div class="provider-btn" onclick="selectProvider(this, 'startimes')">
                     <i class="fas fa-tv fa-2x mb-2" style="color: #ff6600;"></i>
                     <div>StarTimes</div>
                 </div>
             </div>
-            <div class="col-6">
+            <div class="col-6 col-md-3">
                 <div class="provider-btn" onclick="selectProvider(this, 'showmax')">
                     <i class="fas fa-play-circle fa-2x mb-2" style="color: #ff0066;"></i>
                     <div>Showmax</div>
@@ -212,25 +185,25 @@
         
         <div class="input-group-custom">
             <label>SMARTCARD / IUC NUMBER</label>
-            <input type="text" id="smartcardNumber" placeholder="Enter smartcard or IUC number here...">
+            <input type="text" id="smartcardNumber" placeholder="Enter smartcard or IUC number">
         </div>
         
-        <span class="section-heading">2. Select Package</span>
+        <label class="amount-label text-center mb-3">2. Select Package</label>
         
-        <div class="row g-3 mb-4" id="planContainer">
-            <div class="col-6 col-md-4">
+        <div class="row g-2 mb-4" id="planContainer">
+            <div class="col-4">
                 <div class="plan-card active" onclick="selectPlan(this, 'Compact', 10500)">
                     <div class="plan-title">Compact</div>
                     <div class="plan-price">₦10,500</div>
                 </div>
             </div>
-            <div class="col-6 col-md-4">
+            <div class="col-4">
                 <div class="plan-card" onclick="selectPlan(this, 'Compact Plus', 16500)">
                     <div class="plan-title">Compact Plus</div>
                     <div class="plan-price">₦16,500</div>
                 </div>
             </div>
-            <div class="col-6 col-md-4">
+            <div class="col-4">
                 <div class="plan-card" onclick="selectPlan(this, 'Premium', 24500)">
                     <div class="plan-title">Premium</div>
                     <div class="plan-price">₦24,500</div>
@@ -243,7 +216,7 @@
             <input type="password" id="withdrawalPin" placeholder="Enter 4-digit security PIN" maxlength="4">
         </div>
         
-        <div class="total-box mb-4">
+        <div class="total-box">
             <span class="amount-label" style="margin-bottom: 4px;">TOTAL AMOUNT DUE</span>
             <div class="h2 fw-bold" style="color: #FFFFFF;" id="totalAmount">₦10,500</div>
         </div>
@@ -254,7 +227,7 @@
     </div>
     
     <div class="text-center footer-text mb-5">
-        <p class="mb-1">Cable TV powered by VTpass Live API</p>
+        <p class="mb-1">Cable TV Services</p>
         <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
@@ -270,11 +243,9 @@
         canvas.height = window.innerHeight;
         const ctx = canvas.getContext('2d');
         const stars = [];
-        
-        for(let i = 0; i < 150; i++) {
+        for(let i = 0; i < 100; i++) {
             stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
         }
-        
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             stars.forEach(s => {
@@ -306,92 +277,49 @@
         const pin = document.getElementById('withdrawalPin').value;
         
         if (!smartcardNumber) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Missing Smartcard Number',
-                text: 'Please enter your smartcard or IUC number.',
-                confirmButtonColor: '#FF3333',
-                background: '#111111',
-                color: '#FFFFFF'
-            });
+            Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please enter your smartcard or IUC number.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             return;
         }
-        
         if (!pin || pin.length !== 4) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid PIN',
-                text: 'Please enter your 4-digit security PIN.',
-                confirmButtonColor: '#FF3333',
-                background: '#111111',
-                color: '#FFFFFF'
-            });
+            Swal.fire({ icon: 'error', title: 'Invalid PIN', text: 'Please enter your 4-digit security PIN.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             return;
         }
         
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
+        if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
             Swal.fire({
-                title: 'Processing Subscription...',
-                html: '<span style="color: #FFF; font-size: 1.2rem;">Activating your TV package...</span>',
+                title: 'Processing...',
+                html: '<span style="color: #FFF; font-size: 1.1rem;">NATER-PAY is securely processing your subscription...</span>',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading(),
-                background: '#111111',
-                color: '#FFD700'
+                background: '#111111', color: '#FFD700'
             });
             
             const res = await fetch('/api/vtu/cable', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({ 
-                    smartcardNumber,
-                    provider: selectedProvider,
-                    package: selectedPlan,
-                    amount: selectedAmount,
-                    pin
-                })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ smartcardNumber, provider: selectedProvider, package: selectedPlan, amount: selectedAmount, pin })
             });
             
             const data = await res.json();
             
             if (data.success) {
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Subscription Successful!',
-                    html: `<div style="font-size: 1.2rem; color: #FFF;">${selectedPlan} has been successfully activated for smartcard ${smartcardNumber}.</div>`,
-                    confirmButtonColor: '#FFD700',
-                    background: '#111111',
-                    color: '#FFFFFF'
-                }).then(() => {
-                    window.location.href = '/dashboard.html';
-                });
+                    icon: 'success', title: 'Subscription Successful!',
+                    html: `<div style="font-size: 1.1rem; color: #FFF;">${selectedPlan} has been securely activated for ${smartcardNumber}.</div>`,
+                    confirmButtonColor: '#FFD700', background: '#111111', color: '#FFFFFF'
+                }).then(() => { window.location.href = '/dashboard.html'; });
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Subscription Failed',
-                    text: data.message,
-                    confirmButtonColor: '#FF3333',
-                    background: '#111111',
-                    color: '#FFFFFF'
-                });
+                let msg = data.message || "An error occurred.";
+                if (msg.toLowerCase().includes("vtpass") || msg.toLowerCase().includes("system error") || msg.toLowerCase().includes("db error")) {
+                    msg = "We encountered a temporary issue processing your subscription. Please verify your details or try again later.";
+                }
+                Swal.fire({ icon: 'error', title: 'Transaction Failed', text: msg, confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             }
         } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Network Error',
-                text: 'Unable to connect to server. Please check your internet connection.',
-                confirmButtonColor: '#FF3333',
-                background: '#111111',
-                color: '#FFFFFF'
-            });
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Please check your internet connection and try again.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
         }
     }
     
