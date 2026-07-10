@@ -7,20 +7,34 @@
     <title>NATER-PAY | Buy Data</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@500;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/socket.io/socket.io.js"></script>
     
     <style>
-        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
-        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; }
+        :root { 
+            --gold: #FFD700; 
+            --bg: #000000; 
+            --card-bg: #111111; 
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body { 
+            background: var(--bg); 
+            color: #FFFFFF; 
+            font-family: 'Montserrat', sans-serif; 
+            margin: 0; 
+            min-height: 100vh; 
+            overflow-x: hidden;
+        }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
         header {
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
-            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            background: rgba(0, 0, 0, 0.98); border-bottom: 3px solid var(--gold);
             display: flex; justify-content: space-between; align-items: center; z-index: 1000;
         }
 
@@ -28,54 +42,155 @@
             font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
             text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start;
         }
-        .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
-        .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
+        .site-part-1 { color: var(--gold); font-size: 1.6rem; } 
+        .site-part-2 { color: #FF3333; font-size: 1.2rem; letter-spacing: 3px; }
 
-        .container { max-width: 900px; margin: 50px auto; padding: 0 20px; }
+        .container { max-width: 800px; margin: 40px auto; padding: 0 15px; }
         
         .data-card {
-            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
-            padding: 40px; margin-bottom: 30px;
+            background: var(--card-bg); 
+            border: 2px solid #444; 
+            border-radius: 20px;
+            padding: 30px 20px; 
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            width: 100%;
         }
         
+        /* RESPONSIVE NETWORK BUTTONS */
         .network-btn {
-            background: rgba(30,30,30,0.95); border: 2px solid #444; border-radius: 15px;
-            padding: 20px; cursor: pointer; transition: 0.3s; text-align: center;
+            background: #1A1A1A; 
+            border: 2.5px solid #444; 
+            border-radius: 15px;
+            padding: 15px 5px; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            text-align: center;
+            height: 100%;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .network-btn div {
+            font-size: 1rem;
+            color: #FFFFFF;
+            margin-top: 8px;
+            font-weight: 800;
+            word-wrap: break-word;
+            word-break: break-word;
+            width: 100%;
         }
         .network-btn:hover, .network-btn.active {
-            border-color: var(--gold); background: rgba(212,175,55,0.1);
+            border-color: var(--gold); 
+            background: rgba(255, 215, 0, 0.15);
             transform: translateY(-3px);
         }
+        .network-btn.active div { color: var(--gold); font-weight: 900; }
         
         .input-group-custom {
-            background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212,175,55,0.35);
-            border-radius: 15px; padding: 20px; margin-bottom: 20px;
-        }
-        .input-group-custom label {
-            display: block; font-size: 0.75rem; color: var(--gold); font-weight: 800;
-            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;
-        }
-        .input-group-custom input, .input-group-custom select {
-            background: transparent; border: none; color: white; width: 100%;
-            font-size: 1.1rem; font-weight: 700; outline: none;
+            background: #1A1A1A; 
+            border: 2px solid var(--gold);
+            border-radius: 15px; 
+            padding: 15px 20px; 
+            margin-bottom: 25px;
+            width: 100%;
         }
         
+        .input-group-custom label, .amount-label {
+            display: block; 
+            font-size: 1rem; 
+            color: var(--gold); 
+            font-weight: 900;
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            margin-bottom: 10px;
+        }
+        
+        .input-group-custom input {
+            background: transparent; 
+            border: none; 
+            color: #FFFFFF; 
+            width: 100%;
+            font-size: 1.2rem; 
+            font-weight: 700; 
+            outline: none;
+        }
+        
+        /* RESPONSIVE PLAN CARDS: Prevents text spill */
         .plan-card {
-            background: rgba(30,30,30,0.95); border: 1px solid #444; border-radius: 15px;
-            padding: 15px; cursor: pointer; transition: 0.3s; height: 100%;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+            background: #1A1A1A; 
+            border: 2px solid #444; 
+            border-radius: 15px;
+            padding: 15px 10px; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            height: 100%;
+            min-height: 100px;
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            text-align: center;
+            overflow: hidden;
+        }
+        .plan-card .plan-name {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            line-height: 1.2;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .plan-card .plan-price {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: var(--gold);
         }
         .plan-card:hover, .plan-card.active {
-            border-color: var(--gold); background: rgba(212,175,55,0.1);
+            border-color: var(--gold); 
+            background: rgba(255, 215, 0, 0.15);
+        }
+        
+        .total-box {
+            background: #1A1A1A; 
+            border-left: 5px solid var(--gold); 
+            padding: 15px 25px;
+            border-radius: 0 15px 15px 0; 
+            margin-bottom: 25px;
         }
         
         .btn-buy {
-            background: var(--gold); color: black; font-weight: 900; border-radius: 15px;
-            padding: 18px; width: 100%; border: none; font-size: 1.1rem; letter-spacing: 2px;
+            background: var(--gold); 
+            color: #000000; 
+            font-weight: 900; 
+            border-radius: 15px;
+            padding: 20px; 
+            width: 100%; 
+            border: none; 
+            font-size: 1.3rem; 
+            letter-spacing: 1px;
+            text-transform: uppercase;
             transition: 0.3s;
         }
-        .btn-buy:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
+        .btn-buy:hover { 
+            background: #FFFFFF; 
+            transform: translateY(-3px); 
+            box-shadow: 0 10px 20px rgba(255,255,255,0.3); 
+        }
         .btn-buy:disabled { background: #555; color: #888; transform: none; box-shadow: none; cursor: not-allowed; }
+        
+        .footer-text {
+            color: #FFFFFF;
+            font-size: 0.9rem;
+            font-weight: 600;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -87,53 +202,53 @@
         <span class="site-part-1">NATER</span>
         <span class="site-part-2">PAY</span>
     </div>
-    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4">Back to Dashboard</a>
+    <a href="dashboard.html" class="btn btn-warning rounded-pill px-4" style="font-weight: 800;">Dashboard</a>
 </header>
 
 <div class="container">
-    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">BUY DATA</h1>
+    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); font-size: 2.5rem;">BUY DATA</h1>
     
     <div class="data-card">
-        <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">SELECT NETWORK</h5>
+        <label class="amount-label text-center mb-3">1. Select Network</label>
         
-        <div class="row g-3 mb-4">
+        <div class="row g-2 mb-4">
             <div class="col-6 col-md-3">
                 <div class="network-btn active" onclick="selectNetwork(this, 'mtn-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #ffcc00;"></i>
-                    <div class="fw-bold">MTN</div>
+                    <div>MTN</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="network-btn" onclick="selectNetwork(this, 'airtel-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #ff0000;"></i>
-                    <div class="fw-bold">Airtel</div>
+                    <div>Airtel</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="network-btn" onclick="selectNetwork(this, 'glo-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #00ff00;"></i>
-                    <div class="fw-bold">Glo</div>
+                    <div>Glo</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="network-btn" onclick="selectNetwork(this, 'etisalat-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #00bfff;"></i>
-                    <div class="fw-bold">9mobile</div>
+                    <div>9Mobile</div>
                 </div>
             </div>
         </div>
         
         <div class="input-group-custom">
             <label>PHONE NUMBER</label>
-            <input type="tel" id="phoneNumber" placeholder="e.g. 08012345678">
+            <input type="tel" id="phoneNumber" placeholder="e.g. 08012345678" maxlength="11">
         </div>
         
-        <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">SELECT LIVE DATA PLAN</h5>
+        <label class="amount-label text-center mb-3">2. Select Data Plan</label>
         
-        <div class="row g-3 mb-4" id="planContainer">
+        <div class="row g-2 mb-4" id="planContainer">
             <div class="col-12 text-center py-4">
                 <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--gold);"></i>
-                <p class="mt-2 text-muted">Connecting to VTpass Gateway...</p>
+                <p class="mt-2 text-muted" style="font-weight: 600;">NATER-PAY is syncing data plans...</p>
             </div>
         </div>
         
@@ -142,20 +257,18 @@
             <input type="password" id="withdrawalPin" placeholder="Enter your 4-digit PIN" maxlength="4">
         </div>
         
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <small class="text-muted">TOTAL AMOUNT</small>
-                <div class="h3 fw-bold" style="color: var(--gold);" id="totalAmount">₦0.00</div>
-            </div>
+        <div class="total-box mb-4">
+            <span class="amount-label" style="margin-bottom: 4px;">TOTAL AMOUNT DUE</span>
+            <div class="h2 fw-bold" style="color: #FFFFFF;" id="totalAmount">₦0.00</div>
         </div>
         
         <button class="btn-buy" id="btnBuy" onclick="buyData()" disabled>
-            <i class="fas fa-wifi me-2"></i> WAITING FOR VT-PASS...
+            <i class="fas fa-spinner fa-spin me-2"></i> SYNCING PLANS...
         </button>
     </div>
     
-    <div class="text-center text-muted small">
-        <p class="mb-1">Data bundles powered by VTpass Live API</p>
+    <div class="text-center footer-text mb-5">
+        <p class="mb-1">Data Subscription Services</p>
         <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
@@ -172,7 +285,7 @@
         const ctx = canvas.getContext('2d');
         const stars = [];
         
-        for(let i = 0; i < 150; i++) {
+        for(let i = 0; i < 100; i++) {
             stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
         }
         
@@ -192,8 +305,6 @@
         document.querySelectorAll('.network-btn').forEach(btn => btn.classList.remove('active'));
         element.classList.add('active');
         selectedNetwork = network;
-        
-        // Fetch new plans for the selected network
         fetchLivePlans(network);
     }
     
@@ -205,7 +316,6 @@
         document.getElementById('totalAmount').innerText = '₦' + amount.toLocaleString();
     }
 
-    // NEW FUNCTION: Fetch real plans from backend (which fetches from VTpass)
     async function fetchLivePlans(network) {
         const container = document.getElementById('planContainer');
         const btnBuy = document.getElementById('btnBuy');
@@ -213,11 +323,11 @@
         container.innerHTML = `
             <div class="col-12 text-center py-4">
                 <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--gold);"></i>
-                <p class="mt-2 text-muted">Syncing with VTpass Servers...</p>
+                <p class="mt-2 text-muted" style="font-weight: 600;">NATER-PAY is syncing data plans...</p>
             </div>
         `;
         btnBuy.disabled = true;
-        btnBuy.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> WAITING FOR VT-PASS...';
+        btnBuy.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> SYNCING PLANS...';
         document.getElementById('totalAmount').innerText = '₦0.00';
         selectedPlan = null;
         selectedAmount = 0;
@@ -225,13 +335,11 @@
         const authToken = localStorage.getItem("naterpay_token");
         
         try {
-            // FIXED: Pointing to /api/vtu/variations?serviceID=
             const response = await fetch(`/api/vtu/variations?serviceID=${network}`, {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
             const data = await response.json();
             
-            // FIXED: Checking for data.variations instead of data.plans
             if (data.success && data.variations && data.variations.length > 0) {
                 let html = '';
                 
@@ -239,7 +347,6 @@
                     const isActive = index === 0 ? 'active' : '';
                     const planAmount = parseFloat(plan.variation_amount);
                     
-                    // Auto-select the very first plan in the list
                     if (index === 0) {
                         selectedPlan = plan.variation_code;
                         selectedAmount = planAmount;
@@ -249,8 +356,8 @@
                     html += `
                         <div class="col-6 col-md-4">
                             <div class="plan-card ${isActive}" onclick="selectPlan(this, '${plan.variation_code}', ${planAmount})">
-                                <div class="fw-bold mb-1" style="font-size: 0.85rem; line-height: 1.2;">${plan.name}</div>
-                                <div class="text-warning fw-bold">₦${planAmount.toLocaleString()}</div>
+                                <div class="plan-name">${plan.name}</div>
+                                <div class="plan-price">₦${planAmount.toLocaleString()}</div>
                             </div>
                         </div>
                     `;
@@ -260,7 +367,7 @@
                 btnBuy.disabled = false;
                 btnBuy.innerHTML = '<i class="fas fa-wifi me-2"></i> PURCHASE DATA';
             } else {
-                container.innerHTML = `<div class="col-12 text-center py-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p>VTpass API Error: Could not load data plans.</p></div>`;
+                container.innerHTML = `<div class="col-12 text-center py-4 text-danger"><i class="fas fa-exclamation-triangle fa-2x mb-2"></i><p>Unable to load data plans at this moment.</p></div>`;
             }
         } catch (error) {
             container.innerHTML = `<div class="col-12 text-center py-4 text-danger"><i class="fas fa-wifi fa-2x mb-2"></i><p>Network Error connecting to server.</p></div>`;
@@ -271,109 +378,67 @@
         const phoneNumber = document.getElementById('phoneNumber').value;
         const pin = document.getElementById('withdrawalPin').value;
         
-        if (!phoneNumber || phoneNumber.length < 11) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Phone Number',
-                text: 'Please enter a valid phone number',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+        if (!phoneNumber || phoneNumber.length < 10) {
+            Swal.fire({ icon: 'error', title: 'Invalid Phone Number', text: 'Please enter a valid phone number.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             return;
         }
-        
         if (!pin || pin.length !== 4) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid PIN',
-                text: 'Please enter your 4-digit withdrawal PIN',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'Invalid PIN', text: 'Please enter your 4-digit security PIN.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             return;
         }
-        
         if (!selectedPlan) {
-             Swal.fire({
-                icon: 'warning',
-                title: 'No Plan Selected',
-                text: 'Please wait for VTpass to load the plans and select one.',
-                confirmButtonColor: '#d4af37',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+             Swal.fire({ icon: 'warning', title: 'No Plan Selected', text: 'Please wait for plans to load and select one.', confirmButtonColor: '#FFD700', background: '#111111', color: '#FFFFFF' });
             return;
         }
 
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
+        if (!authToken) { window.location.href = '/index.html'; return; }
         
+        const btnBuy = document.getElementById('btnBuy');
+        btnBuy.disabled = true;
+        btnBuy.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> PROCESSING...';
+
         try {
             Swal.fire({
-                title: 'Processing...',
-                text: 'Transmitting purchase request to VTpass',
+                title: 'Processing Request...',
+                html: '<span style="color: #FFF; font-size: 1.1rem;">NATER-PAY is securely processing your data purchase...</span>',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading(),
-                background: '#0a0a0a',
-                color: '#fff'
+                background: '#111111', color: '#FFD700'
             });
             
             const res = await fetch('/api/vtu/data', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({ 
-                    phone: phoneNumber,
-                    network: selectedNetwork,
-                    plan: selectedPlan,
-                    amount: selectedAmount,
-                    pin
-                })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ phone: phoneNumber, network: selectedNetwork, plan: selectedPlan, amount: selectedAmount, pin })
             });
             
             const data = await res.json();
             
             if (data.success) {
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Data Purchase Successful',
-                    text: `Data has been sent to ${phoneNumber}`,
-                    confirmButtonColor: '#d4af37',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                }).then(() => {
-                    window.location.href = '/dashboard.html';
-                });
+                    icon: 'success', title: 'Purchase Successful!',
+                    html: `<div style="font-size: 1.1rem; color: #FFF;">Data bundle has been successfully sent to ${phoneNumber}.</div>`,
+                    confirmButtonColor: '#FFD700', background: '#111111', color: '#FFFFFF'
+                }).then(() => { window.location.href = '/dashboard.html'; });
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Purchase Failed',
-                    text: data.message,
-                    confirmButtonColor: '#d32f2f',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
+                let msg = data.message || "An error occurred.";
+                if (msg.toLowerCase().includes("vtpass") || msg.toLowerCase().includes("system error") || msg.toLowerCase().includes("db error")) {
+                    msg = "We encountered a temporary issue processing your purchase. Please verify your details or try again later.";
+                }
+                Swal.fire({ icon: 'error', title: 'Transaction Failed', text: msg, confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+                
+                btnBuy.disabled = false;
+                btnBuy.innerHTML = '<i class="fas fa-wifi me-2"></i> PURCHASE DATA';
             }
         } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Processing Error',
-                text: 'Unable to process data purchase. Please try again.',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'Network Connection', text: 'Please check your internet connection and try again.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+            
+            btnBuy.disabled = false;
+            btnBuy.innerHTML = '<i class="fas fa-wifi me-2"></i> PURCHASE DATA';
         }
     }
     
-    // Start by fetching MTN plans automatically on load
     window.onload = () => {
         initStars();
         fetchLivePlans('mtn-data');
