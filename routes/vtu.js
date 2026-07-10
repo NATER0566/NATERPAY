@@ -28,7 +28,6 @@ async function getVariations(request, reply) {
   try {
     const { serviceID } = request.query;
     
-    // Check if plans are already saved in memory and still valid
     if (variationsCache[serviceID] && (Date.now() - variationsCache[serviceID].timestamp < CACHE_TIME)) {
         return reply.send({ success: true, variations: variationsCache[serviceID].data });
     }
@@ -40,7 +39,6 @@ async function getVariations(request, reply) {
     
     const fetchedVariations = response.data.content?.varations || response.data.content?.variations || [];
     
-    // Save to cache memory if we received valid plans
     if (fetchedVariations.length > 0) {
         variationsCache[serviceID] = {
             timestamp: Date.now(),
@@ -235,7 +233,7 @@ async function buyCable(request, reply) {
 }
 
 // ==========================================
-// NEW FEATURES: EDUCATION & BETTING ROUTES
+// NEW FEATURES: EDUCATION, BETTING & INSURANCE
 // ==========================================
 
 async function buyEducation(request, reply) {
@@ -328,6 +326,116 @@ async function buyBetting(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'System error processing betting payment' }); }
 }
 
+async function buyInsurance(request, reply) {
+  try {
+    const { provider, fullName, phone, plan, amount, address, dob, occupation, vehicleDetails, pin } = request.body;
+    if (!provider || !fullName || !phone || !amount || !plan) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+    if (currentAvail < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (currentAvail - amount).toString();
+    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
+    await wallet.save();
+
+    let transaction;
+    try {
+        transaction = new Transaction({
+          user: request.user._id, type: 'insurance', description: `${provider.toUpperCase()} Policy for ${fullName}`,
+          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+          status: 'pending', provider: 'vtpass', reference: `INS-${Date.now()}`
+        });
+        await transaction.save();
+    } catch (dbErr) {
+        return reply.status(500).send({ success: false, message: `DB Error: Please ensure 'insurance' is allowed in the Transaction model enum.` });
+    }
+
+    try {
+      const providerResponse = await processVTURequest('insurance', { 
+          provider, fullName, phone, plan, amount, address, dob, occupation, vehicleDetails 
+      });
+      transaction.status = 'success';
+      transaction.providerReference = providerResponse.reference;
+      await transaction.save();
+
+      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+      reply.send({ success: true, message: 'Insurance policy secured successfully', transaction, token: providerResponse.token });
+
+    } catch (vtuError) {
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
+      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+      await wallet.save();
+
+      transaction.status = 'failed';
+      transaction.balanceAfter = wallet.availableBalance.toString();
+      await transaction.save();
+      
+      return reply.status(500).send({ success: false, message: vtuError.message });
+    }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing insurance' }); }
+}
+
+async function sendBulkSMS(request, reply) {
+    try {
+        const { sender, recipient, message } = request.body;
+        if (!sender || !recipient || !message) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+
+        const url = 'https://messaging.vtpass.com/v2/api/sms/sendsms';
+        const headers = { 
+            'X-Token': process.env.VTPASS_MESSAGING_PUBLIC_KEY, 
+            'X-Secret': process.env.VTPASS_MESSAGING_SECRET_KEY,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        };
+
+        const payload = new URLSearchParams({ sender, recipient, message, responsetype: 'json' });
+
+        const response = await axios.post(url, payload.toString(), { headers });
+        reply.send({ success: true, message: 'SMS Dispatched', data: response.data });
+    } catch (error) {
+        reply.status(500).send({ success: false, message: 'Failed to send bulk SMS via VTpass Messaging API' });
+    }
+}
+
+// ==================================================================
+// VTPASS WEBHOOK CALLBACK HANDLER
+// ==================================================================
+async function handleVTpassWebhook(request, reply) {
+    try {
+        const { type, data, summary, actionRequired } = request.body;
+
+        if (type === 'transaction-update') {
+            const { transactionId, status } = data.content.transactions;
+            const transaction = await Transaction.findOne({ providerReference: transactionId });
+
+            if (transaction && transaction.status === 'pending') {
+                if (status === 'delivered') {
+                    transaction.status = 'success';
+                } else if (status === 'reversed') {
+                    transaction.status = 'failed';
+                    // Refund Logic Here
+                    const wallet = await Wallet.findOne({ user: transaction.user });
+                    wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(transaction.amount)).toString();
+                    wallet.balance = (parseFloat(wallet.balance) + parseFloat(transaction.amount)).toString();
+                    await wallet.save();
+                }
+                await transaction.save();
+            }
+        } else if (type === 'variations-update') {
+            const { serviceID } = request.body;
+            // Clear the specific cache for this service to force a fresh fetch next time
+            if (variationsCache[serviceID]) {
+                delete variationsCache[serviceID];
+            }
+        }
+        
+        reply.send({ response: "success" });
+    } catch (error) {
+        reply.status(500).send({ response: "error" });
+    }
+}
+
+
 // ==================================================================
 // REAL VTPASS INTEGRATION CORE
 // ==================================================================
@@ -346,6 +454,8 @@ async function processVTURequest(type, data) {
           targetIdentifier = data.meterType === 'postpaid' ? '1010101010101' : '1111111111111';
       } else if (type === 'cable') {
           targetIdentifier = '1212121212';     
+      } else if (type === 'insurance') {
+          targetIdentifier = 'Testimetri Adams'; // Dummy name for sandbox
       } else {
           targetIdentifier = '08011111111';   
       }
@@ -368,7 +478,7 @@ async function processVTURequest(type, data) {
       payload.serviceID = data.network; 
   } 
   else if (type === 'data') { 
-      payload.serviceID = data.network; 
+      payload.serviceID = data.network; // inherently supports 'smile-direct' and 'spectranet' networks
       payload.billersCode = isSandbox ? '08011111111' : data.phone; 
       payload.variation_code = data.plan; 
   } 
@@ -434,12 +544,39 @@ async function processVTURequest(type, data) {
           payload.billersCode = isSandbox ? '08011111111' : data.phone;
       }
   }
+  else if (type === 'insurance') {
+      payload.serviceID = data.provider.toLowerCase(); 
+      payload.billersCode = targetIdentifier; // Uses the vehicle plate number in production
+      payload.variation_code = data.plan;
+      payload.full_name = data.fullName;
+      payload.address = data.address || 'Standard Address';
+      payload.dob = data.dob || '1990-01-01';
+      payload.next_kin_name = data.nextOfKinName || 'N/A';
+      payload.next_kin_phone = data.nextOfKinPhone || payload.phone;
+      payload.business_occupation = data.occupation || 'Professional';
+
+      // Attach specific vehicle details required for Third-Party Auto Insurance
+      if (payload.serviceID === 'ui-insure' && data.vehicleDetails) {
+          payload.plate_number = data.vehicleDetails.plateNumber || targetIdentifier;
+          payload.engine_number = data.vehicleDetails.engineNumber || 'ENG123456';
+          payload.chasis_number = data.vehicleDetails.chassisNumber || 'CH123456';
+          payload.vehicle_make = data.vehicleDetails.vehicleMake || '335'; // Ac Cobra
+          payload.vehicle_color = data.vehicleDetails.vehicleColor || '20'; // Ash
+          payload.vehicle_model = data.vehicleDetails.vehicleModel || '745'; // 3.2TL
+          payload.YearofMake = data.vehicleDetails.yearOfMake || '2015';
+          payload.state = data.vehicleDetails.stateCode || '1'; // Abia
+          payload.lga = data.vehicleDetails.lgaCode || '770'; // Aba
+          payload.Insured_Name = data.fullName;
+          payload.engine_capacity = '1';
+          payload.email = 'user@example.com';
+      }
+  }
 
   try {
     const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
     
     if (response.data.code === '000') {
-      let extractedToken = response.data.purchased_code || response.data.token || response.data.Pin || null;
+      let extractedToken = response.data.purchased_code || response.data.token || response.data.Pin || response.data.certUrl || null;
 
       if (response.data.cards && Array.isArray(response.data.cards) && response.data.cards.length > 0) {
           extractedToken = `PIN: ${response.data.cards[0].Pin} | Serial: ${response.data.cards[0].Serial}`;
@@ -466,4 +603,4 @@ async function processVTURequest(type, data) {
   }
 }
 
-module.exports = { getRates, getVariations, buyAirtime, buyData, buyElectricity, buyCable, buyEducation, buyBetting };
+module.exports = { getRates, getVariations, buyAirtime, buyData, buyElectricity, buyCable, buyEducation, buyBetting, buyInsurance, sendBulkSMS, handleVTpassWebhook };
