@@ -1,4 +1,4 @@
-require('dotenv').config();
+Require('dotenv').config();
 const Fastify = require('fastify');
 const mongoose = require('mongoose');
 const socketIo = require('socket.io');
@@ -17,25 +17,13 @@ const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
 // Register plugins
 async function registerPlugins() {
-  // CORS - Fully opened to ensure Socket.io notifications reach the dashboard
-  await fastify.register(require('@fastify/cors'), {
-    origin: '*',
-    credentials: true
-  });
-  
-  // Helmet
-  await fastify.register(require('@fastify/helmet'), {
-    contentSecurityPolicy: false
-  });
-  
-  // Rate limiting
+  await fastify.register(require('@fastify/cors'), { origin: '*', credentials: true });
+  await fastify.register(require('@fastify/helmet'), { contentSecurityPolicy: false });
   await fastify.register(require('@fastify/rate-limit'), {
     max: config.rateLimit.max,
     timeWindow: config.rateLimit.windowMs,
     skipOnError: true
   });
-  
-  // Static files
   await fastify.register(require('@fastify/static'), {
     root: __dirname + '/public',
     prefix: '/'
@@ -45,15 +33,9 @@ async function registerPlugins() {
 // Connect to MongoDB
 async function connectDatabase() {
   try {
-    await mongoose.connect(config.database.uri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    await mongoose.connect(config.database.uri, { useNewUrlParser: true, useUnifiedTopology: true });
     console.log('MongoDB connected successfully');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
-  }
+  } catch (error) { console.error('MongoDB connection error:', error); process.exit(1); }
 }
 
 // Register routes
@@ -90,10 +72,14 @@ async function registerRoutes() {
   fastify.post('/api/vtu/electricity', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyElectricity);
   fastify.post('/api/vtu/cable', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyCable);
   
-  // --- NEW VTU ROUTES ADDED HERE ---
+  // --- COMPLETE VTU ROUTE SUITE ---
   fastify.post('/api/vtu/education', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyEducation);
   fastify.post('/api/vtu/betting', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyBetting);
-  // ---------------------------------
+  fastify.post('/api/vtu/insurance', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyInsurance);
+  fastify.post('/api/vtu/sms', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.sendBulkSMS);
+  fastify.post('/api/vtu/pos', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyPOS);
+  // Webhook is public (no auth) so VTpass can ping your server directly
+  fastify.post('/api/vtu/webhook', vtuRoutes.handleVTpassWebhook); 
   
   fastify.get('/api/vtu/rates', vtuRoutes.getRates);
   fastify.get('/api/vtu/variations', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getVariations);
@@ -194,10 +180,7 @@ async function registerRoutes() {
 // Setup Socket.io
 function setupSocketIO(server) {
   const io = socketIo(server, {
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST']
-    }
+    cors: { origin: '*', methods: ['GET', 'POST'] }
   });
   
   io.use(async (socket, next) => {
@@ -216,9 +199,7 @@ function setupSocketIO(server) {
       socket.user = user;
       socket.userId = user._id;
       next();
-    } catch (error) {
-      next(new Error('Authentication error'));
-    }
+    } catch (error) { next(new Error('Authentication error')); }
   });
   
   io.on('connection', (socket) => {
