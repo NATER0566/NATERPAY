@@ -2,6 +2,10 @@ const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
 const axios = require('axios');
 
+// --- SPEED BOOST: MEMORY BANK CACHE FOR PLANS ---
+const variationsCache = {};
+const CACHE_TIME = 1000 * 60 * 60 * 24; // Cache plans for 24 hours to eliminate live server delay
+
 // --- HELPER: VTPASS STRICT REQUEST ID FORMATTER ---
 function generateVTpassRequestId() {
   const now = new Date();
@@ -19,14 +23,32 @@ async function getRates(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch rates' }); }
 }
 
+// ULTRA-FAST CACHED VARIATIONS ROUTE
 async function getVariations(request, reply) {
   try {
     const { serviceID } = request.query;
+    
+    // Check if plans are already saved in memory and still valid
+    if (variationsCache[serviceID] && (Date.now() - variationsCache[serviceID].timestamp < CACHE_TIME)) {
+        return reply.send({ success: true, variations: variationsCache[serviceID].data });
+    }
+
     const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
     const response = await axios.get(`${baseUrl}/service-variations?serviceID=${serviceID}`, {
       headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }
     });
-    reply.send({ success: true, variations: response.data.content?.varations || response.data.content?.variations || [] });
+    
+    const fetchedVariations = response.data.content?.varations || response.data.content?.variations || [];
+    
+    // Save to cache memory if we received valid plans
+    if (fetchedVariations.length > 0) {
+        variationsCache[serviceID] = {
+            timestamp: Date.now(),
+            data: fetchedVariations
+        };
+    }
+
+    reply.send({ success: true, variations: fetchedVariations });
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch service plans' }); }
 }
 
@@ -272,10 +294,6 @@ async function buyBetting(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    // ==========================================
-    // BETTING BYPASS: Routes entirely through Paystack 
-    // to keep user experience active during staging.
-    // ==========================================
     let transaction;
     try {
         transaction = new Transaction({
@@ -321,7 +339,6 @@ async function processVTURequest(type, data) {
   const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
   const isSandbox = baseUrl.includes('sandbox');
 
-  // --- DYNAMIC SANDBOX TEST ID SEGREGATION ---
   let targetIdentifier = data.phone || data.meterNumber || data.smartcardNumber || data.customerId;
   
   if (isSandbox) {
@@ -334,7 +351,6 @@ async function processVTURequest(type, data) {
       }
       console.log(`[VTPASS] Sandbox Mode: Redirecting ${type} transaction to test identifier -> ${targetIdentifier}`);
   }
-  // -------------------------------------------
 
   const headers = { 
       'api-key': process.env.VTPASS_API_KEY, 
@@ -400,10 +416,9 @@ async function processVTURequest(type, data) {
   else if (type === 'education') {
       const providerInput = data.provider.toLowerCase().trim();
 
-      // STRICT SPEC MAPPER FOR DOCUMENTATION DISCOVERY Rules
       if (providerInput === 'waec-registration') {
           payload.serviceID = 'waec-registration';
-          payload.variation_code = 'waec-registraion'; // Explicitly matched to VTpass typo in docs
+          payload.variation_code = 'waec-registraion';
           payload.billersCode = isSandbox ? '08011111111' : data.phone;
       } else if (providerInput === 'waec-result' || providerInput === 'waec') {
           payload.serviceID = 'waec';
@@ -411,7 +426,7 @@ async function processVTURequest(type, data) {
           payload.billersCode = isSandbox ? '08011111111' : data.phone;
       } else if (providerInput === 'jamb') {
           payload.serviceID = 'jamb';
-          payload.variation_code = 'utme-no-mock'; // Enforces standard price limit rules cleanly
+          payload.variation_code = 'utme-no-mock';
           payload.billersCode = isSandbox ? '0123456789' : data.phone; 
       } else {
           payload.serviceID = providerInput;
