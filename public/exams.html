@@ -51,34 +51,41 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
         
-        /* RESPONSIVE BUTTONS: Forces text to stay inside the box */
+        /* RESPONSIVE BUTTONS: Fully contained text, flexible height */
         .provider-btn {
             background: #1A1A1A; 
             border: 2.5px solid #444; 
             border-radius: 15px;
-            padding: 20px 10px; 
+            padding: 20px 15px; 
             cursor: pointer; 
             transition: 0.3s; 
             text-align: center;
-            height: 100%;
+            min-height: 130px; /* Allows box to grow if needed */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+        }
+        .provider-btn i {
+            margin-bottom: 8px;
         }
         .provider-btn div {
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #FFFFFF;
-            margin-top: 12px;
+            margin-top: 5px;
             font-weight: 800;
             word-wrap: break-word;
+            word-break: break-word; /* Forces strict containment */
+            white-space: normal;
+            width: 100%;
         }
         .provider-btn span.price-tag {
             display: block;
             color: #888;
-            font-size: 0.9rem;
-            margin-top: 4px;
-            font-weight: 600;
+            font-size: 0.95rem;
+            margin-top: 6px;
+            font-weight: 700;
         }
         .provider-btn:hover, .provider-btn.active {
             border-color: var(--gold); 
@@ -172,21 +179,21 @@
         <label class="amount-label text-center mb-3">1. Select Examination Body</label>
         
         <div class="row g-3 mb-4">
-            <div class="col-4">
+            <div class="col-12 col-md-4">
                 <div class="provider-btn active" onclick="selectProvider(this, 'waec-result', 900)">
                     <i class="fas fa-search fa-2x" style="color: #4da6ff;"></i>
                     <div>WAEC Result</div>
                     <span class="price-tag">₦900</span>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-12 col-md-4">
                 <div class="provider-btn" onclick="selectProvider(this, 'waec-registration', 14450)">
                     <i class="fas fa-clipboard-check fa-2x" style="color: #2eb82e;"></i>
                     <div>WAEC Registration</div>
                     <span class="price-tag">₦14,450</span>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-12 col-md-4">
                 <div class="provider-btn" onclick="selectProvider(this, 'jamb', 6200)">
                     <i class="fas fa-book-reader fa-2x" style="color: #ff3333;"></i>
                     <div>JAMB PIN</div>
