@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Send Bulk SMS</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root { --gold: #FFD700; --bg: #000000; --card-bg: #111111; }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); color: #FFFFFF; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 3px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+        }
+
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; }
+        .site-part-1 { color: var(--gold); font-size: 1.6rem; } 
+        .site-part-2 { color: #FF3333; font-size: 1.2rem; letter-spacing: 3px; }
+
+        .container { max-width: 800px; margin: 40px auto; padding: 0 15px; }
+        
+        .main-card {
+            background: var(--card-bg); border: 2px solid #444; border-radius: 20px;
+            padding: 40px 20px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); width: 100%;
+        }
+
+        .input-group-custom {
+            background: #1A1A1A; border: 2px solid var(--gold); border-radius: 15px; 
+            padding: 15px 20px; margin-bottom: 25px; width: 100%;
+        }
+        .input-group-custom label {
+            display: flex; justify-content: space-between; font-size: 0.95rem; color: var(--gold); 
+            font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+        }
+        .input-group-custom input, .input-group-custom textarea {
+            background: transparent; border: none; color: #FFFFFF; width: 100%;
+            font-size: 1.1rem; font-weight: 600; outline: none; resize: none;
+        }
+        .input-group-custom textarea { min-height: 120px; }
+        
+        .btn-buy {
+            background: var(--gold); color: #000000; font-weight: 900; border-radius: 15px;
+            padding: 20px; width: 100%; border: none; font-size: 1.3rem; letter-spacing: 1px;
+            text-transform: uppercase; transition: 0.3s;
+        }
+        .btn-buy:hover { background: #FFFFFF; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.3); }
+
+        .footer-text { color: #FFFFFF; font-size: 0.9rem; font-weight: 600; opacity: 0.7; }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="dashboard.html" class="btn btn-warning rounded-pill px-4" style="font-weight: 800;">Dashboard</a>
+</header>
+
+<div class="container">
+    <div class="text-center mb-4">
+        <i class="fas fa-comment-dots fa-3x mb-2" style="color: var(--gold);"></i>
+        <h1 style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); font-size: 2.5rem;">BULK SMS</h1>
+    </div>
+    
+    <div class="main-card">
+        <div class="input-group-custom">
+            <label>SENDER ID <span id="senderCount" style="color: #888;">0/11</span></label>
+            <input type="text" id="senderId" placeholder="e.g. NATERPAY (Max 11 letters)" maxlength="11" oninput="updateCounts()">
+        </div>
+
+        <div class="input-group-custom">
+            <label>RECIPIENT(S) NUMBERS <span style="color: #888; font-size: 0.8rem; font-weight: 500;">Separate with commas</span></label>
+            <textarea id="recipients" placeholder="e.g. 08012345678, 09087654321"></textarea>
+        </div>
+
+        <div class="input-group-custom">
+            <label>MESSAGE CONTENT <span id="charCount" style="color: #888;">0 chars</span></label>
+            <textarea id="messageBody" placeholder="Type your SMS message here..." oninput="updateCounts()"></textarea>
+        </div>
+        
+        <div class="input-group-custom mt-3">
+            <label>WITHDRAWAL PIN</label>
+            <input type="password" id="withdrawalPin" placeholder="Enter 4-digit PIN" maxlength="4">
+        </div>
+        
+        <button class="btn-buy" onclick="dispatchSMS()">
+            <i class="fas fa-paper-plane me-2"></i> DISPATCH MESSAGE
+        </button>
+    </div>
+    
+    <div class="text-center footer-text mb-5">
+        <p class="mb-1">Ultra-Fast SMS Delivery System</p>
+        <p>Secured by NATER-PAY Protocol v3.0</p>
+    </div>
+</div>
+
+<script>
+    function initStars() {
+        const canvas = document.getElementById('starCanvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        const stars = [];
+        for(let i = 0; i < 100; i++) {
+            stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        }
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(s => {
+                ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white";
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0; s.y += s.v; if(s.y > canvas.height) s.y = -5;
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+    
+    function updateCounts() {
+        document.getElementById('senderCount').innerText = `${document.getElementById('senderId').value.length}/11`;
+        document.getElementById('charCount').innerText = `${document.getElementById('messageBody').value.length} chars`;
+    }
+    
+    async function dispatchSMS() {
+        const pin = document.getElementById('withdrawalPin').value;
+        const senderId = document.getElementById('senderId').value.trim();
+        const recipients = document.getElementById('recipients').value.trim();
+        const messageBody = document.getElementById('messageBody').value.trim();
+        const authToken = localStorage.getItem("naterpay_token");
+        
+        if (!senderId || !recipients || !messageBody) {
+            Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please fill out all SMS fields.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+            return;
+        }
+        if (!pin || pin.length !== 4) {
+            Swal.fire({ icon: 'error', title: 'Invalid PIN', text: 'Please enter your 4-digit security PIN.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+            return;
+        }
+        if (!authToken) { window.location.href = '/index.html'; return; }
+
+        Swal.fire({
+            title: 'Dispatching Messages...',
+            html: '<span style="color: #FFF; font-size: 1.1rem;">NATER-PAY is securely routing your SMS via high-speed channels...</span>',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading(),
+            background: '#111111', color: '#FFD700'
+        });
+
+        try {
+            const res = await fetch('/api/vtu/sms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ sender: senderId, recipient: recipients, message: messageBody, pin })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success', title: 'Dispatched Successfully!',
+                    html: `<div style="font-size: 1.1rem; color: #FFF;">Your messages have been routed for delivery.</div>`,
+                    confirmButtonColor: '#FFD700', background: '#111111', color: '#FFFFFF'
+                }).then(() => {
+                    document.getElementById('recipients').value = '';
+                    document.getElementById('messageBody').value = '';
+                    updateCounts();
+                });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Dispatch Failed', text: "We encountered a temporary issue sending your messages. Please check the recipient numbers and try again.", confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+            }
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'Network Connection', text: 'Please check your internet connection.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+        }
+    }
+    
+    window.onload = initStars;
+</script>
+
+</body>
+</html>
