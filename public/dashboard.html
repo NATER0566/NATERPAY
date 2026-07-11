@@ -13,7 +13,7 @@
     <script src="/socket.io/socket.io.js"></script>
     
     <style>
-        :root { --red: #d32f2f; --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); --glass: rgba(255, 255, 255, 0.03); }
+        :root { --red: #d32f2f; --gold: #FFD700; --bg: #030303; --card-bg: rgba(20, 20, 20, 0.95); --glass: rgba(255, 255, 255, 0.03); }
         
         body { 
             background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; 
@@ -34,14 +34,13 @@
 
         .brand-wrapper {
             display: flex; align-items: center; gap: 12px; cursor: pointer;
-            padding: 5px 15px 5px 5px;
-            border-radius: 12px; transition: all 0.3s ease; flex-shrink: 0;
+            padding: 5px 15px 5px 5px; border-radius: 12px; transition: all 0.3s ease; flex-shrink: 0;
         }
         .menu-trigger-icon {
-            background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.4);
+            background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.4);
             color: var(--gold); width: 42px; height: 42px; border-radius: 10px;
             display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
-            box-shadow: 0 0 10px rgba(212,175,55,0.2); flex-shrink: 0;
+            box-shadow: 0 0 10px rgba(255,215,0,0.2); flex-shrink: 0;
         }
         
         .brand-text { 
@@ -49,7 +48,7 @@
             text-transform: uppercase; line-height: 0.85; flex-shrink: 0;
             display: flex; flex-direction: column; align-items: flex-start;
         }
-        .site-part-1 { color: var(--gold); font-size: clamp(1.4rem, 5vw, 1.8rem); text-shadow: 0 2px 5px rgba(212,175,55,0.3); } 
+        .site-part-1 { color: var(--gold); font-size: clamp(1.4rem, 5vw, 1.8rem); text-shadow: 0 2px 5px rgba(255,215,0,0.3); } 
         .site-part-2 { color: var(--red); font-size: clamp(1rem, 3.5vw, 1.4rem); letter-spacing: 3px; }
 
         .gateway-btn-wrapper { margin-left: auto; flex-shrink: 1; display: flex; justify-content: flex-end; min-width: 80px; }
@@ -63,77 +62,73 @@
         .stat-card { 
             background: var(--glass); border: 1px solid #222; border-radius: 20px; padding: 15px; 
             text-align: left; transition: 0.3s; min-height: 85px; display: flex; flex-direction: column; 
-            justify-content: center; animation: continuous-plumbing-pulse 4s infinite ease-in-out; 
+            justify-content: center; animation: pulse-border 4s infinite ease-in-out; 
+            word-wrap: break-word; overflow-wrap: break-word; 
         }
         .stat-label { color: #ffffff !important; font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; text-shadow: 0 1px 2px #000; }
-        .stat-value { font-family: 'Cinzel', serif; font-size: clamp(1rem, 4vw, 1.2rem); color: #fff; margin-top: 5px; font-weight: 900; }
+        .stat-value { font-family: 'Cinzel', serif; font-size: clamp(1rem, 4vw, 1.2rem); color: #fff; margin-top: 5px; font-weight: 900; word-break: break-all; }
 
         .biographic-identity-card {
             background: linear-gradient(135deg, rgba(15,15,15,0.95) 0%, rgba(5,5,5,0.98) 100%);
-            border: 1.5px solid rgba(212, 175, 55, 0.3); border-radius: 24px; padding: 20px 25px;
+            border: 1.5px solid rgba(255, 215, 0, 0.3); border-radius: 24px; padding: 20px 25px;
             margin-bottom: 25px; box-shadow: 0 12px 35px rgba(0,0,0,0.6);
-            animation: continuous-plumbing-pulse 4.5s infinite ease-in-out;
+            animation: pulse-border 4.5s infinite ease-in-out;
         }
-        .identity-badge-title { font-size: 1.25rem; font-weight: 800; color: #ffffff; text-shadow: 0 2px 4px #000; margin: 0; }
+        .identity-badge-title { font-size: 1.25rem; font-weight: 800; color: #ffffff; text-shadow: 0 2px 4px #000; margin: 0; word-wrap: break-word; }
         
         .security-guard-warning-pill {
             padding: 4px 12px; border-radius: 50px; border: 1px solid transparent;
             font-size: 0.68rem; font-weight: 800; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 6px;
-            transition: all 0.3s ease;
+            transition: all 0.3s ease; white-space: nowrap;
         }
 
-        .balance-card { background: linear-gradient(145deg, #111 0%, #222 100%); border: 2px solid var(--gold); border-radius: 30px; padding: clamp(25px, 5vw, 45px); margin: 25px 0 40px 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; animation: continuous-plumbing-pulse 5s infinite ease-in-out; }
-        .amount-text { font-family: 'Cinzel', serif; font-size: clamp(2rem, 8vw, 3.5rem); color: var(--gold); font-weight: 900; margin: 10px 0; }
+        .balance-card { background: linear-gradient(145deg, #111 0%, #222 100%); border: 2px solid var(--gold); border-radius: 30px; padding: clamp(25px, 5vw, 45px); margin: 25px 0 40px 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; animation: pulse-border 5s infinite ease-in-out; }
+        .amount-text { font-family: 'Cinzel', serif; font-size: clamp(2rem, 8vw, 3.5rem); color: var(--gold); font-weight: 900; margin: 10px 0; word-break: break-word; }
 
-        .ecosystem-section-title { font-family: 'Cinzel', serif; font-size: 1.2rem; font-weight: 900; color: var(--gold); border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 10px; margin-bottom: 20px; margin-top: 40px; display: flex; align-items: center; gap: 10px; }
+        .ecosystem-section-title { font-family: 'Cinzel', serif; font-size: 1.2rem; font-weight: 900; color: var(--gold); border-bottom: 1px solid rgba(255,215,0,0.2); padding-bottom: 10px; margin-bottom: 20px; margin-top: 40px; display: flex; align-items: center; gap: 10px; }
 
-        .service-wrapper-node { transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; }
+        .service-wrapper-node { transition: all 0.35s ease; position: relative; }
         .service-link { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; padding: 15px 8px; text-align: center; transition: 0.4s; text-decoration: none; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 110px; position: relative; overflow: hidden; }
-        .service-link:hover { border-color: #ffffff; transform: translateY(-5px); box-shadow: 0 8px 25px rgba(214,175,55,0.25); background: rgba(30, 30, 30, 0.95); }
-        .service-link i { font-size: 1.6rem; margin-bottom: 10px; color: var(--gold); text-shadow: 0 0 10px rgba(214,175,55,0.4); position: relative; z-index: 2; transition: 0.3s; }
+        .service-link:hover { border-color: #ffffff; transform: translateY(-5px); box-shadow: 0 8px 25px rgba(255,215,0,0.25); background: rgba(30, 30, 30, 0.95); }
+        .service-link i { font-size: 1.6rem; margin-bottom: 10px; color: var(--gold); text-shadow: 0 0 10px rgba(255,215,0,0.4); position: relative; z-index: 2; transition: 0.3s; }
         .service-link span { font-size: clamp(0.6rem, 2vw, 0.72rem); color: #ffffff !important; font-weight: 800; text-transform: uppercase; width: 100%; word-wrap: break-word; line-height: 1.3; letter-spacing: 0.5px; text-shadow: 0 1px 2px #000; position: relative; z-index: 2; }
 
-        /* LOADING & SUCCESS STATES ON CLICK */
         .service-link.loading { border-color: #2eb82e; background: rgba(46, 184, 46, 0.1); transform: scale(0.95); box-shadow: inset 0 0 15px rgba(46, 184, 46, 0.2); }
         .service-link.loading i { color: #2eb82e; text-shadow: 0 0 15px rgba(46, 184, 46, 0.6); }
 
-        .service-wrapper-node[data-priority="high"] .service-link { 
-            border: 2px solid var(--gold); 
-            animation: intense-module-liquid-pumping 2.5s infinite ease-in-out; 
-            box-shadow: 0 0 15px rgba(212,175,55,0.4);
-        }
-        .service-wrapper-node[data-priority="high"] .service-link::after {
-            content: ''; position: absolute; top: 0; left: -150%; width: 60%; height: 100%;
-            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
-            transform: skewX(-25deg); animation: metallic-reflect-sweep 2.5s infinite linear;
-            z-index: 1; pointer-events: none;
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.15), inset 0 0 5px rgba(255, 215, 0, 0.1); border-color: rgba(255, 215, 0, 0.3); }
+            50% { box-shadow: 0 0 35px rgba(255, 215, 0, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.15); border-color: #ffffff; }
         }
 
-        @keyframes intense-module-liquid-pumping {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(212,175,55,0.3); border-color: var(--gold); }
-            50% { transform: scale(1.06); box-shadow: 0 0 45px rgba(212,175,55,0.8), 0 0 20px #ffffff; border-color: #ffffff; }
-        }
-        @keyframes metallic-reflect-sweep {
-            0% { left: -150%; }
-            15% { left: 200%; }
-            100% { left: 200%; }
-        }
-
-        @keyframes continuous-plumbing-pulse {
-            0%, 100% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.15), inset 0 0 5px rgba(212, 175, 55, 0.1); border-color: rgba(212, 175, 55, 0.3); }
-            50% { box-shadow: 0 0 35px rgba(212, 175, 55, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.15); border-color: #ffffff; }
-        }
-
-        .transaction-box { background: var(--card-bg); border-radius: 25px; padding: 25px; border: 1px solid #333; margin-top: 50px; margin-bottom: 50px; }
-        .table-scroll-container { width: 100%; overflow-x: auto; }
-        .table { color: #eee; margin-bottom: 0; min-width: 600px; }
-        .status-pill { padding: 5px 12px; border-radius: 50px; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+        .transaction-box { background: var(--card-bg); border-radius: 25px; padding: 25px; border: 1px solid #333; margin-top: 50px; margin-bottom: 50px; overflow: hidden;}
         
-        .promo-banner { background: linear-gradient(90deg, #d32f2f, #8b0000); border-radius: 20px; padding: 20px; margin-bottom: 35px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap; gap: 10px; }
+        .transaction-row {
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 15px 0; border-bottom: 1px solid #222;
+        }
+        .transaction-row:last-child { border-bottom: none; }
+        .tx-left { display: flex; flex-direction: column; max-width: 60%; }
+        .tx-type { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; color: #fff; word-wrap: break-word; }
+        .tx-desc { font-size: 0.75rem; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tx-date { font-size: 0.7rem; color: #555; margin-top: 3px; }
+        
+        .tx-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+        .tx-amount { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.1rem; }
+        .status-pill { padding: 3px 10px; border-radius: 50px; font-size: 0.6rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;}
+        
+        /* Premium Upgrade Banner Styling */
+        .promo-banner { 
+            background: linear-gradient(90deg, #d32f2f, #8b0000); 
+            border-radius: 20px; padding: 20px; margin-bottom: 35px; 
+            display: flex; align-items: center; justify-content: space-between; 
+            border: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap; gap: 10px; 
+            transition: all 0.4s ease;
+        }
 
         .custom-terminal-sidebar { background: rgba(10, 10, 10, 0.95) !important; border-right: 2px solid var(--gold); backdrop-filter: blur(25px); box-shadow: 15px 0 40px rgba(0,0,0,0.8); width: 280px !important; }
         .sidebar-menu-link { display: flex; align-items: center; gap: 15px; padding: 16px 24px; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: all 0.3s ease; }
-        .sidebar-menu-link:hover { background: rgba(212,175,55,0.05); color: var(--gold); padding-left: 32px; }
+        .sidebar-menu-link:hover { background: rgba(255,215,0,0.05); color: var(--gold); padding-left: 32px; }
         .sidebar-menu-link i { color: var(--gold); font-size: 1.1rem; width: 24px; text-align: center; }
         
         footer { background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%; margin-top: 60px; position: relative; z-index: 5; }
@@ -165,7 +160,7 @@
 </div>
 
 <header>
-    <div class="brand-wrapper" data-bs-toggle="offcanvas" data-bs-target="#terminalHubSidebar" aria-controls="terminalHubSidebar" title="Launch Navigation Hub Console">
+    <div class="brand-wrapper" data-bs-toggle="offcanvas" data-bs-target="#terminalHubSidebar" aria-controls="terminalHubSidebar">
         <div class="menu-trigger-icon"><i class="fas fa-bars"></i></div>
         <div class="brand-text" id="siteBranding">
             <span class="site-part-1">NATER</span>
@@ -174,15 +169,16 @@
     </div>
     
     <div class="gateway-btn-wrapper dropdown">
-        <button class="btn btn-warning text-dark rounded-pill fw-bold dropdown-toggle" type="button" id="gatewayMenuDropdownLinkBtn" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid var(--gold); box-shadow: 0 4px 15px rgba(212,175,55,0.4);">
+        <button class="btn btn-warning text-dark rounded-pill fw-bold dropdown-toggle" type="button" id="gatewayMenuDropdownLinkBtn" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid var(--gold); box-shadow: 0 4px 15px rgba(255,215,0,0.4);">
             <i class="fas fa-terminal me-sm-1" style="font-size: 1.1rem;"></i>
             <span class="d-none d-sm-inline">GATEWAY TERMINAL</span>
             <span class="d-inline d-sm-none" style="font-size: 0.72rem; font-weight: 900;">GATEWAY<br>NODE</span>
         </button>
         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-warning shadow-lg" aria-labelledby="gatewayMenuDropdownLinkBtn">
+            
             <li id="adminMenuWrapper" style="display: none;">
                 <a class="dropdown-item text-warning fw-bold" href="admin.html">
-                    <i class="fas fa-user-shield me-2"></i> ADMIN TERMINAL
+                    <i class="fas fa-user-shield me-2"></i> ADMIN CONTROL PANEL
                 </a>
             </li>
             <li id="adminDivider" style="display: none;"><hr class="dropdown-divider"></li>
@@ -202,11 +198,15 @@
             <div class="col-auto">
                 <div class="user-avatar-shell"><i class="fas fa-user-shield text-warning h4 m-0"></i></div>
             </div>
-            <div class="col-auto">
+            <div class="col-auto" style="max-width: 60%;">
                 <h5 class="identity-badge-title" id="profileBadgeName">Terminal Node Core</h5>
             </div>
             <div class="col-auto ms-auto d-flex flex-wrap gap-2 justify-content-end">
                 <span class="badge bg-secondary text-light fw-bolder px-3 py-2 rounded-pill" id="profileBadgeLevel" style="font-size:0.65rem;">SYNCING...</span>
+                
+                <!-- DYNAMIC TIER BADGE -->
+                <span class="badge d-none" id="tierBadge" style="font-size:0.65rem;"></span>
+
                 <div class="security-guard-warning-pill bg-dark border-secondary text-secondary" id="securityStatusPill"><i class="fas fa-sync fa-spin"></i> Checking Vault...</div>
             </div>
         </div>
@@ -226,7 +226,7 @@
                 <div id="walletBalance" class="amount-text">₦0.00</div>
             </div>
             <div class="col-md-6 d-flex flex-wrap gap-2">
-                <button class="btn btn-warning fw-bold py-3 rounded-pill flex-grow-1" onclick="location.href='fund.html'" style="box-shadow: 0 0 20px rgba(214,175,55,0.4);">
+                <button class="btn btn-warning fw-bold py-3 rounded-pill flex-grow-1" onclick="location.href='fund.html'" style="box-shadow: 0 0 20px rgba(255,215,0,0.4);">
                     <i class="fas fa-wallet me-1"></i> ADD FUND
                 </button>
                 <button class="btn btn-outline-warning fw-bold py-3 rounded-pill flex-grow-1" onclick="location.href='withdraw.html'">
@@ -236,20 +236,21 @@
         </div>
     </div>
 
-    <div class="promo-banner" id="dashboardPromoEngine">
+    <!-- DYNAMIC UPGRADE BANNER -->
+    <div class="promo-banner" id="dashboardPromoEngine" style="display: none;">
         <div>
-            <h6 class="mb-0 fw-bold small text-white"><i class="fas fa-bolt me-1"></i> RESELLER OPPORTUNITY</h6>
-            <p class="mb-0 text-white opacity-100 fw-bold" style="font-size: 0.75rem;">Upgrade to Sub-Agent to unlock wholesale data pricing.</p>
+            <h6 class="mb-0 fw-bold small text-white" id="promoTitle"><i class="fas fa-bolt me-1"></i> RESELLER OPPORTUNITY</h6>
+            <p class="mb-0 text-white opacity-100 fw-bold" id="promoDesc" style="font-size: 0.75rem;">Upgrade to Sub-Agent to unlock wholesale data pricing.</p>
         </div>
-        <button class="btn btn-light btn-sm rounded-pill fw-bold px-4 py-2" onclick="location.href='reseller.html'">UPGRADE NOW</button>
+        <button class="btn btn-light btn-sm rounded-pill fw-bold px-4 py-2" id="promoBtn" onclick="location.href='reseller.html'">UPGRADE NOW</button>
     </div>
 
     <h5 class="ecosystem-section-title"><i class="fas fa-plug"></i> Bills & Utilities</h5>
     <div class="row g-2" id="gridUtilities">
-        <div class="col-4 col-md-2 service-wrapper-node" data-priority="high">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="data.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-wifi"></i><span>Buy Data</span></a>
         </div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-priority="high">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="airtime.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-phone"></i><span>Airtime</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
@@ -261,17 +262,14 @@
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="exams.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-graduation-cap"></i><span>Exam Pins</span></a>
         </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="betting.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-dice"></i><span>Bet Funding</span></a>
-        </div>
     </div>
 
     <h5 class="ecosystem-section-title"><i class="fas fa-store"></i> Merchant & Business</h5>
     <div class="row g-2" id="gridBusiness">
-        <div class="col-4 col-md-2 service-wrapper-node" data-priority="high">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="pos.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-cash-register"></i><span>POS Terminal</span></a>
         </div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-priority="high">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="bulksms.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-paper-plane"></i><span>Bulk SMS</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
@@ -294,34 +292,12 @@
         </div>
     </div>
 
-    <h5 class="ecosystem-section-title"><i class="fas fa-university"></i> Banking & Wealth</h5>
-    <div class="row g-2" id="gridWealth">
-        <div class="col-4 col-md-2 service-wrapper-node" data-priority="high">
-            <a href="virtual-card.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-credit-card"></i><span>Virtual USD</span></a>
-        </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="loan.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-hand-holding-usd"></i><span>Credit Loans</span></a>
-        </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="savings.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-piggy-bank"></i><span>Savings Vault</span></a>
-        </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="escrow.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-lock"></i><span>Escrow Guard</span></a>
-        </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="crypto.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-coins"></i><span>Sell Crypto</span></a>
-        </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="giftcards.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-gift"></i><span>Trade Cards</span></a>
-        </div>
-    </div>
-
     <h5 class="ecosystem-section-title"><i class="fas fa-rocket"></i> Rewards & Growth</h5>
     <div class="row g-2" id="gridGrowth">
-        <div class="col-4 col-md-2 service-wrapper-node" data-priority="high">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="cashback.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-undo-alt"></i><span>Cashback</span></a>
         </div>
-        <div class="col-4 col-md-2 service-wrapper-node" data-priority="high">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="airtime-cash.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-exchange-alt"></i><span>Airtime2Cash</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
@@ -346,20 +322,8 @@
             <h5 class="text-white fw-bold m-0"><i class="fas fa-history me-2 text-warning"></i> Audit Ledger Logs</h5>
             <a href="transactions.html" class="btn btn-sm btn-outline-secondary rounded-pill">View All</a>
         </div>
-        <div class="table-scroll-container">
-            <table class="table table-dark table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th class="text-secondary small fw-bold">DATE/TIME</th>
-                        <th class="text-secondary small fw-bold">TYPE & DESC</th>
-                        <th class="text-secondary small fw-bold">AMOUNT</th>
-                        <th class="text-secondary small fw-bold text-end">STATUS</th>
-                    </tr>
-                </thead>
-                <tbody id="txBody">
-                    <tr><td colspan="4" class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Fetching live transactions...</td></tr>
-                </tbody>
-            </table>
+        <div id="txBody">
+            <div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Fetching live transactions...</div>
         </div>
     </div>
 </div>
@@ -375,11 +339,9 @@
     let stars = [];
     let socketConnectionLink = null;
 
-    // Trigger visual loading feedback on service click
     function triggerLoad(element) {
         element.classList.add('loading');
         const icon = element.querySelector('i');
-        // Temporarily swap the icon to a green checkmark
         icon.className = 'fas fa-check-circle';
     }
     
@@ -408,26 +370,14 @@
 
     async function checkPendingFunding() {
         const pendingRef = localStorage.getItem('pending_funding_ref');
-        
         if (pendingRef) {
             const authToken = localStorage.getItem("naterpay_token");
-            
-            Swal.fire({
-                title: 'Verifying Payment...',
-                text: 'Please wait while we securely confirm your transaction with the gateway.',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ title: 'Verifying Payment...', text: 'Please wait...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
 
             try {
                 const res = await fetch('/api/wallet/verify', {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                     body: JSON.stringify({ reference: pendingRef })
                 });
 
@@ -435,56 +385,25 @@
                 localStorage.removeItem('pending_funding_ref');
 
                 if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Wallet Funded!',
-                        text: 'Your payment was successful and your balance has been updated.',
-                        confirmButtonColor: '#d4af37',
-                        background: '#0a0a0a',
-                        color: '#fff'
-                    }).then(() => {
-                        syncDashboardData(); 
-                    });
+                    Swal.fire({ icon: 'success', title: 'Wallet Funded!', text: 'Your balance has been updated.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }).then(() => syncDashboardData());
+                } else if (data.message === 'Wallet already credited') {
+                     syncDashboardData(); Swal.close();
                 } else {
-                    if (data.message === 'Wallet already credited') {
-                         syncDashboardData();
-                         Swal.close();
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Verification Failed',
-                            text: data.message || 'We could not confirm the payment.',
-                            confirmButtonColor: '#d32f2f',
-                            background: '#0a0a0a',
-                            color: '#fff'
-                        });
-                    }
+                    Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
                 }
             } catch (error) {
                 localStorage.removeItem('pending_funding_ref');
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Network Error',
-                    text: 'Could not connect to verification server.',
-                    confirmButtonColor: '#d32f2f',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
+                Swal.fire({ icon: 'error', title: 'Network Error', text: 'Could not connect.', confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
             }
         }
     }
 
     async function syncDashboardData() {
         const authToken = localStorage.getItem("naterpay_token");
-        if(!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
+        if(!authToken) { window.location.href = '/index.html'; return; }
 
         try {
-            const res = await fetch('/api/user/dashboard-data', {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
+            const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
 
             if(data.success) {
@@ -495,17 +414,60 @@
                 if(kycLevel === 0) {
                     badgeEl.className = "badge bg-danger text-white fw-bolder px-3 py-2 rounded-pill";
                     badgeEl.innerText = "UNVERIFIED";
-                } else if(kycLevel === 1) {
-                    badgeEl.className = "badge bg-warning text-dark fw-bolder px-3 py-2 rounded-pill";
-                    badgeEl.innerText = "LEVEL 1 KYC";
                 } else {
                     badgeEl.className = "badge bg-success text-white fw-bolder px-3 py-2 rounded-pill";
                     badgeEl.innerText = `LEVEL ${kycLevel} KYC`;
                 }
 
+                // --- THE SUPER PREMIUM TIER ENGINE ---
+                const role = (data.userRole || 'user').toLowerCase();
+                const tierBadge = document.getElementById('tierBadge');
+                const promoBanner = document.getElementById('dashboardPromoEngine');
+                const promoTitle = document.getElementById('promoTitle');
+                const promoDesc = document.getElementById('promoDesc');
+                const promoBtn = document.getElementById('promoBtn');
+
+                if (role === 'admin' || role === 'vip') {
+                    // Top Tier: Show Elite Badge, Hide Upgrades
+                    tierBadge.classList.remove('d-none');
+                    tierBadge.className = "badge bg-warning text-dark fw-bolder px-3 py-2 rounded-pill";
+                    tierBadge.innerHTML = `<i class="fas fa-crown me-1"></i> ${role === 'admin' ? 'SYSTEM ADMIN' : 'VIP PARTNER'}`;
+                    
+                    if(promoBanner) promoBanner.style.display = 'none';
+                    
+                } else if (role === 'reseller' || role === 'agent') {
+                    // Mid Tier: Show Reseller Badge, Pitch VIP Upgrade
+                    tierBadge.classList.remove('d-none');
+                    tierBadge.className = "badge bg-primary text-white fw-bolder px-3 py-2 rounded-pill";
+                    tierBadge.style.border = "1px solid #4da6ff";
+                    tierBadge.style.boxShadow = "0 0 10px rgba(77, 166, 255, 0.3)";
+                    tierBadge.innerHTML = '<i class="fas fa-medal me-1"></i> VERIFIED RESELLER';
+                    
+                    if(promoBanner) {
+                        promoBanner.style.display = 'flex';
+                        promoBanner.style.background = 'linear-gradient(90deg, #4b0082, #1a0033)'; // Premium Purple
+                        promoTitle.innerHTML = '<i class="fas fa-crown me-1 text-warning"></i> VIP UPGRADE';
+                        promoDesc.innerText = 'Upgrade to VIP Partner for maximum wholesale discounts and API access.';
+                        promoBtn.innerText = 'BECOME VIP';
+                        promoBtn.className = "btn btn-warning btn-sm rounded-pill fw-bold px-4 py-2 text-dark";
+                    }
+                } else {
+                    // Base Tier: No Tier Badge, Pitch Reseller Upgrade
+                    tierBadge.classList.add('d-none');
+                    
+                    if(promoBanner) {
+                        promoBanner.style.display = 'flex';
+                        promoBanner.style.background = 'linear-gradient(90deg, #d32f2f, #8b0000)'; // Action Red
+                        promoTitle.innerHTML = '<i class="fas fa-bolt me-1"></i> RESELLER OPPORTUNITY';
+                        promoDesc.innerText = 'Upgrade to Sub-Agent to unlock wholesale data pricing.';
+                        promoBtn.innerText = 'UPGRADE NOW';
+                        promoBtn.className = "btn btn-light btn-sm rounded-pill fw-bold px-4 py-2";
+                    }
+                }
+                // --- END TIER ENGINE ---
+
                 const secPill = document.getElementById('securityStatusPill');
-                const isSecured = data.isSecured !== undefined ? data.isSecured : true; 
-                if(isSecured) { 
+                if(data.isSecured !== false) { 
                     secPill.className = "security-guard-warning-pill bg-success bg-opacity-10 border-success text-success";
                     secPill.innerHTML = '<i class="fas fa-shield-check"></i> Vault Secured';
                 } else {
@@ -513,7 +475,7 @@
                     secPill.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Security Alert';
                 }
 
-                if (data.userRole === 'admin') {
+                if (role === 'admin') {
                     document.getElementById('adminMenuWrapper').style.display = 'block';
                     document.getElementById('adminDivider').style.display = 'block';
                 }
@@ -534,25 +496,43 @@
                 if(data.recentTransactions && data.recentTransactions.length > 0) {
                     data.recentTransactions.forEach(tx => {
                         const rawDate = tx.createdAt || tx.date || new Date().toISOString();
-                        const dateString = new Date(rawDate).toLocaleDateString() + ' <br><small class="opacity-50">' + new Date(rawDate).toLocaleTimeString() + '</small>';
+                        const dateString = new Date(rawDate).toLocaleDateString() + ' <span class="ms-2 opacity-50">' + new Date(rawDate).toLocaleTimeString() + '</span>';
+                        
+                        let isCredit = false; 
+                        const txType = (tx.type || '').toLowerCase();
+                        const desc = (tx.description || '').toLowerCase();
+
+                        if (['funding', 'invoice', 'payment_link', 'salary', 'bonus', 'refund', 'cashback'].includes(txType)) {
+                            isCredit = true;
+                        } else if (txType === 'transfer' && (desc.includes('received') || desc.includes('from'))) {
+                            isCredit = true;
+                        }
+
+                        const flowColor = isCredit ? 'text-success' : 'text-danger';
+                        const flowSymbol = isCredit ? '+' : '-';
                         const statusClass = tx.status === 'success' ? 'bg-success' : (tx.status === 'pending' ? 'bg-warning text-dark' : 'bg-danger');
-                        const safeTxAmount = tx.amount?.$numberDecimal || tx.amount || 0;
+                        const amount = Number(tx.amount?.$numberDecimal || tx.amount || 0);
                         
                         tbody.innerHTML += `
-                            <tr>
-                                <td>${dateString}</td>
-                                <td><strong class="d-block">${tx.type.toUpperCase()}</strong><span class="small opacity-75">${tx.description || 'System Log'}</span></td>
-                                <td class="fw-bold">₦${Number(safeTxAmount).toLocaleString()}</td>
-                                <td class="text-end"><span class="status-pill ${statusClass} text-white">${tx.status}</span></td>
-                            </tr>
+                            <div class="transaction-row">
+                                <div class="tx-left">
+                                    <div class="tx-type">${tx.type}</div>
+                                    <div class="tx-desc">${tx.description || 'System Log'}</div>
+                                    <div class="tx-date">${dateString}</div>
+                                </div>
+                                <div class="tx-right">
+                                    <div class="tx-amount ${flowColor}">${flowSymbol}₦${amount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                                    <div class="status-pill text-white ${statusClass}">${tx.status}</div>
+                                </div>
+                            </div>
                         `;
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-5 opacity-50">No reconciliation logs found in current cycle.</td></tr>';
+                    tbody.innerHTML = '<div class="text-center py-5 opacity-50">No transaction logs found.</div>';
                 }
             }
         } catch (e) { 
-            console.warn("Network degradation. Dashboard relying on cached client state.");
+            console.warn("Dashboard sync failed.");
         }
     }
 
@@ -583,17 +563,11 @@
             socketConnectionLink.on('notification', (payload) => {
                 Swal.fire({
                     icon: payload.type === 'error' ? 'error' : (payload.type === 'success' ? 'success' : 'info'),
-                    title: payload.title,
-                    text: payload.message,
-                    background: '#0a0a0a',
-                    color: '#fff',
-                    confirmButtonColor: '#d4af37'
+                    title: payload.title, text: payload.message, background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d4af37'
                 });
             });
 
-        } catch(err) {
-            console.warn("Realtime WebSocket channel unavailable.");
-        }
+        } catch(err) { console.warn("Realtime WebSocket channel unavailable."); }
     };
 </script>
 </body>
