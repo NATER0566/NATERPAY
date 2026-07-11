@@ -17,33 +17,62 @@
         
         .checkout-card { 
             background: var(--card-bg); border: 2px solid var(--gold); border-radius: 20px; 
-            padding: 40px 30px; width: 100%; max-width: 500px; box-shadow: 0 15px 50px rgba(0,0,0,0.8); 
+            width: 100%; max-width: 500px; box-shadow: 0 15px 50px rgba(0,0,0,0.8); 
             text-align: center; word-wrap: break-word; overflow-wrap: break-word;
+            overflow: hidden; /* Ensures the image respects the rounded corners */
         }
 
-        .store-icon { background: rgba(255,215,0,0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--gold); margin: 0 auto 20px auto; border: 2px solid var(--gold); }
+        /* Product Image Header */
+        .product-image-header {
+            width: 100%;
+            height: 250px;
+            background-color: #111;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-bottom: 2px solid #333;
+            display: none; /* Hidden by default until we load the image */
+            position: relative;
+        }
         
-        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.8rem; margin-bottom: 5px; }
-        .product-desc { color: #888; font-size: 0.9rem; font-weight: 600; margin-bottom: 30px; }
+        /* Fallback icon if no image exists */
+        .store-icon-fallback { 
+            background: rgba(255,215,0,0.1); width: 80px; height: 80px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; font-size: 2rem; 
+            color: var(--gold); margin: 40px auto 20px auto; border: 2px solid var(--gold); 
+        }
+
+        .checkout-body { padding: 30px; }
+        
+        .merchant-badge {
+            background: rgba(255,215,0,0.1); color: var(--gold); padding: 5px 15px; 
+            border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; 
+            display: inline-block; margin-bottom: 15px; border: 1px solid rgba(255,215,0,0.3);
+        }
+
+        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.8rem; margin-bottom: 10px; line-height: 1.2; }
+        .product-desc { color: #aaa; font-size: 0.95rem; font-weight: 500; margin-bottom: 30px; line-height: 1.5; padding: 0 10px;}
 
         .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; text-align: left; transition: 0.3s; }
+        .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px rgba(255,215,0,0.2); }
         .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 900; text-transform: uppercase; margin-bottom: 8px; }
         .input-group-custom input { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 600; outline: none; }
         
-        .amount-display { font-family: 'Cinzel', serif; font-size: 2.5rem; color: var(--gold); font-weight: 900; margin: 20px 0; }
+        .amount-display { font-family: 'Cinzel', serif; font-size: 2.8rem; color: var(--gold); font-weight: 900; margin: 10px 0 25px 0; text-shadow: 0 0 20px rgba(255,215,0,0.3); }
 
-        .btn-pay { background: var(--gold); color: black; font-weight: 900; border-radius: 15px; padding: 18px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s; margin-top: 10px; }
-        .btn-pay:hover { background: white; transform: translateY(-3px); }
+        .btn-pay { background: var(--gold); color: black; font-weight: 900; border-radius: 15px; padding: 20px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s; margin-top: 10px; }
+        .btn-pay:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255,255,255,0.2); }
 
-        .secure-badge { color: #555; font-size: 0.8rem; font-weight: 800; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .secure-badge { color: #555; font-size: 0.8rem; font-weight: 800; margin-top: 25px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .secure-badge img { height: 18px; opacity: 0.5; }
     </style>
 </head>
 <body>
 
 <div class="checkout-card" id="checkoutCard">
     <div class="py-5" id="loadingState">
-        <i class="fas fa-spinner fa-spin fa-3x text-warning mb-3"></i>
-        <p class="fw-bold">Securing Payment Route...</p>
+        <i class="fas fa-spinner fa-spin fa-3x text-warning mb-3 mt-4"></i>
+        <p class="fw-bold">Securing Storefront Route...</p>
     </div>
 </div>
 
@@ -56,24 +85,27 @@
         const linkId = urlParams.get('id');
 
         if (!linkId) {
-            document.getElementById('checkoutCard').innerHTML = '<h4 class="text-danger fw-bold py-5">Invalid Checkout Link</h4>';
+            document.getElementById('checkoutCard').innerHTML = '<div class="py-5"><h4 class="text-danger fw-bold"><i class="fas fa-times-circle d-block mb-3 fa-2x"></i>Invalid Checkout Link</h4></div>';
             return;
         }
 
         try {
-            // NOTE: We need the backend to serve the link details publicly, just like the invoice
             const res = await fetch(`/api/payment-links/${linkId}`);
             const data = await res.json();
 
             if (data.success) {
                 globalLinkData = data.link;
                 dynamicPaystackKey = data.paystackPublicKey;
-                renderCheckout(data.link);
+                
+                // Add merchant name to link data
+                globalLinkData.merchantName = data.link.merchantName || 'Verified Merchant';
+                
+                renderCheckout(globalLinkData);
             } else {
-                document.getElementById('checkoutCard').innerHTML = '<h4 class="text-danger fw-bold py-5">Link Expired or Not Found</h4>';
+                document.getElementById('checkoutCard').innerHTML = '<div class="py-5"><h4 class="text-danger fw-bold"><i class="fas fa-store-slash d-block mb-3 fa-2x"></i>Product Unavailable</h4><p class="text-secondary">This link may be expired or disabled by the merchant.</p></div>';
             }
         } catch (e) {
-            document.getElementById('checkoutCard').innerHTML = '<h4 class="text-danger fw-bold py-5">Connection Error.</h4>';
+            document.getElementById('checkoutCard').innerHTML = '<div class="py-5"><h4 class="text-danger fw-bold">Connection Error</h4><p class="text-secondary">Could not reach the NATERPAY ledger.</p></div>';
         }
     }
 
@@ -91,24 +123,45 @@
             amountHTML = `<div class="amount-display">₦${Number(link.amount).toLocaleString(undefined, {minimumFractionDigits:2})}</div>`;
         }
 
+        // Logic to display the beautiful image header or the fallback icon
+        let imageHeaderHTML = '';
+        let fallbackIconHTML = '';
+        
+        if (link.productImageBase64) {
+            imageHeaderHTML = `<div class="product-image-header" style="display: block; background-image: url('${link.productImageBase64}');"></div>`;
+        } else {
+            fallbackIconHTML = `<div class="store-icon-fallback"><i class="fas fa-shopping-bag"></i></div>`;
+        }
+
         document.getElementById('checkoutCard').innerHTML = `
-            <div class="store-icon"><i class="fas fa-shopping-bag"></i></div>
-            <h2 class="product-title">${link.title}</h2>
-            <div class="product-desc">${link.description || 'Secure NATERPAY Checkout'}</div>
+            ${imageHeaderHTML}
+            
+            <div class="checkout-body">
+                ${fallbackIconHTML}
+                
+                <div class="merchant-badge"><i class="fas fa-check-circle me-1"></i> ${link.merchantName}</div>
+                <h2 class="product-title">${link.title}</h2>
+                <div class="product-desc">${link.description || 'Secure NATERPAY Checkout'}</div>
 
-            ${amountHTML}
+                ${amountHTML}
 
-            <div class="input-group-custom">
-                <label>Your Full Name</label>
-                <input type="text" id="customerName" placeholder="e.g. John Doe">
+                <div class="input-group-custom">
+                    <label>Your Full Name</label>
+                    <input type="text" id="customerName" placeholder="e.g. John Doe">
+                </div>
+                <div class="input-group-custom">
+                    <label>Your Email Address</label>
+                    <input type="email" id="customerEmail" placeholder="e.g. email@domain.com">
+                </div>
+
+                <button class="btn-pay" onclick="payWithPaystack()">
+                    <i class="fas fa-lock me-2"></i> PAY SECURELY
+                </button>
+                
+                <div class="secure-badge">
+                    <i class="fas fa-shield-alt"></i> Secured by Paystack
+                </div>
             </div>
-            <div class="input-group-custom">
-                <label>Your Email Address</label>
-                <input type="email" id="customerEmail" placeholder="e.g. email@domain.com">
-            </div>
-
-            <button class="btn-pay" onclick="payWithPaystack()"><i class="fas fa-lock me-2"></i> PAY SECURELY NOW</button>
-            <div class="secure-badge"><i class="fas fa-shield-alt me-1"></i> Secured by Paystack</div>
         `;
     }
 
@@ -127,7 +180,7 @@
         }
 
         if (!name || !email) {
-            Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please provide your name and email.', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please provide your name and email so the merchant can contact you.', background: '#111', color: '#fff' });
             return;
         }
 
@@ -159,7 +212,6 @@
         Swal.fire({ title: 'Verifying...', text: 'Securing transaction...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
         
         try {
-            // Note: Your backend needs this route to actually credit the merchant!
             const res = await fetch(`/api/payment-links/${globalLinkData.linkId}/pay`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -169,13 +221,29 @@
             const data = await res.json();
             
             if (data.success) {
+                // If the merchant provided a fulfillment link, tell the user they are being redirected
+                let redirectMessage = '';
+                if (data.redirectUrl) {
+                    redirectMessage = `<p class="mt-3 text-warning fw-bold"><i class="fas fa-spinner fa-spin me-2"></i> Redirecting you to your product...</p>`;
+                }
+
                 document.getElementById('checkoutCard').innerHTML = `
-                    <div class="store-icon" style="color: #00ff88; border-color: #00ff88;"><i class="fas fa-check"></i></div>
-                    <h2 class="product-title" style="color: #00ff88;">Payment Successful</h2>
-                    <div class="product-desc">Thank you, ${customerName}. The merchant has been credited.</div>
-                    <button class="btn btn-outline-light mt-4 rounded-pill px-4" onclick="window.location.reload()">Make Another Payment</button>
+                    <div class="checkout-body py-5">
+                        <div class="store-icon-fallback" style="color: #00ff88; border-color: #00ff88; margin-top: 0;"><i class="fas fa-check"></i></div>
+                        <h2 class="product-title" style="color: #00ff88;">Payment Successful</h2>
+                        <div class="product-desc mb-0">Thank you, ${customerName}.</div>
+                        ${redirectMessage}
+                    </div>
                 `;
                 Swal.close();
+
+                // FULFILLMENT REDIRECT LOGIC
+                if (data.redirectUrl) {
+                    setTimeout(() => {
+                        window.location.href = data.redirectUrl;
+                    }, 3000); // 3 second delay so they can read the success message
+                }
+
             } else {
                 Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             }
