@@ -1,4 +1,4 @@
-Require('dotenv').config();
+require('dotenv').config();
 const Fastify = require('fastify');
 const mongoose = require('mongoose');
 const socketIo = require('socket.io');
@@ -124,7 +124,7 @@ async function registerRoutes() {
   fastify.get('/api/invoices/:invoiceId', invoiceRoutes.getInvoice);
   fastify.post('/api/invoices/:invoiceId/pay', invoiceRoutes.payInvoice);
   
-  const notificationRoutes = require('./routes/notification');
+  const notificationRoutes = require('./notification');
   fastify.get('/api/notifications', { preHandler: require('./middleware/auth').authenticate }, notificationRoutes.getNotifications);
   fastify.put('/api/notifications/:id/read', { preHandler: require('./middleware/auth').authenticate }, notificationRoutes.markAsRead);
   fastify.put('/api/notifications/read-all', { preHandler: require('./middleware/auth').authenticate }, notificationRoutes.markAllAsRead);
