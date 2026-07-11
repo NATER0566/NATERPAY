@@ -147,7 +147,6 @@
     let myUserId = ""; 
     let html5QrcodeScanner = null;
 
-    // Background Animation
     function initStars() {
         const c = document.getElementById('starCanvas');
         c.width = window.innerWidth; c.height = window.innerHeight;
@@ -168,7 +167,6 @@
         animate();
     }
 
-    // Fetch User Profile to construct QR
     async function fetchUserData() {
         const authToken = localStorage.getItem("naterpay_token");
         if(!authToken) { window.location.href = '/index.html'; return; }
@@ -184,28 +182,19 @@
                 document.getElementById('myIdDisplay').innerText = "Error Loading ID";
             }
         } catch(e) { 
-            console.warn('Could not fetch user ID'); 
             document.getElementById('myIdDisplay').innerText = "Network Error";
         }
     }
 
-    // THE FIX: Secure Universal URL Generation for QR
     function generateQR() {
         if(!myUserId) return;
-        
-        // This generates a full URL (e.g. https://naterpay.com/qr-pay.html?pay=09046974410)
-        // This ensures normal phone cameras open the app, instead of googling it.
         const baseUrl = window.location.origin + window.location.pathname;
         const qrPayload = `${baseUrl}?pay=${myUserId}`;
         
         document.getElementById('qrcode').innerHTML = ""; 
         new QRCode(document.getElementById("qrcode"), {
-            text: qrPayload,
-            width: 220,
-            height: 220,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
+            text: qrPayload, width: 220, height: 220,
+            colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H
         });
     }
 
@@ -218,18 +207,15 @@
         link.click();
     }
 
-    // Check URL on Load (If scanned by a normal phone camera)
     function checkUrlForPayment() {
         const params = new URLSearchParams(window.location.search);
         const payId = params.get('pay');
         if(payId) {
-            // Remove the ?pay= param so it doesn't loop
             window.history.replaceState({}, document.title, window.location.pathname);
             processTransferUI(payId);
         }
     }
 
-    // --- SCANNER LOGIC (Simplified & Robust) ---
     function openScanner() {
         document.getElementById('scannerModal').style.display = 'flex';
         html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
@@ -238,24 +224,28 @@
 
     function closeScanner() {
         if(html5QrcodeScanner) {
-            html5QrcodeScanner.clear().catch(e => console.log("Scanner clear error", e));
+            html5QrcodeScanner.clear().catch(e => console.log(e));
         }
         document.getElementById('scannerModal').style.display = 'none';
     }
 
-    function onScanFailure(error) { /* Ignore background frame errors */ }
+    function onScanFailure(error) { /* Ignore */ }
 
+    // THE FIX: SMART SCANNER LOGIC
     function onScanSuccess(decodedText) {
-        closeScanner(); // Instantly close camera
+        closeScanner();
 
+        // 1. If they scanned an external Payment Link or Invoice URL, redirect them directly!
+        if (decodedText.includes('pay.html?id=') || decodedText.includes('invoice-view.html?id=')) {
+            window.location.href = decodedText;
+            return; // Stop the P2P transfer popup
+        }
+
+        // 2. Otherwise, treat it as a P2P Transfer request
         let targetId = decodedText;
-        
-        // Handle if they scanned the Universal URL format
         if(decodedText.includes("?pay=")) {
             targetId = decodedText.split("?pay=")[1];
-        } 
-        // Handle old text format fallback
-        else if(decodedText.startsWith("NATERPAY:")) {
+        } else if(decodedText.startsWith("NATERPAY:")) {
             targetId = decodedText.replace("NATERPAY:", "").trim();
         }
 
@@ -277,7 +267,6 @@
         });
     }
 
-    // --- TRANSFER UI & API CALL ---
     async function processTransferUI(recipientId) {
         if(!recipientId) return;
 
@@ -299,10 +288,7 @@
             background: '#111', color: '#fff', confirmButtonColor: '#d4af37', confirmButtonText: 'CONFIRM TRANSFER <i class="fas fa-check ms-2"></i>',
             showCancelButton: true, cancelButtonColor: '#333',
             preConfirm: () => {
-                return [
-                    document.getElementById('swal-amount').value,
-                    document.getElementById('swal-pin').value
-                ]
+                return [ document.getElementById('swal-amount').value, document.getElementById('swal-pin').value ]
             }
         });
 
@@ -323,13 +309,7 @@
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) { window.location.href = '/index.html'; return; }
 
-        Swal.fire({
-            title: 'Processing...',
-            html: '<span style="color: #aaa;">Authorizing ledger transfer...</span>',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading(),
-            background: '#111', color: '#FFD700'
-        });
+        Swal.fire({ title: 'Processing...', html: '<span style="color: #aaa;">Authorizing ledger transfer...</span>', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
 
         try {
             const res = await fetch('/api/wallet/transfer', {
@@ -340,9 +320,7 @@
             const data = await res.json();
             
             if (data.success) {
-                // THE FIX: We now look for recipientName in the API response
                 const receiverName = data.recipientName || recipientId;
-
                 Swal.fire({
                     icon: 'success', 
                     title: 'Transfer Complete!',
@@ -357,11 +335,7 @@
         }
     }
 
-    window.onload = () => { 
-        initStars(); 
-        fetchUserData(); 
-        checkUrlForPayment(); // Trigger if someone scanned the URL from phone camera
-    };
+    window.onload = () => { initStars(); fetchUserData(); checkUrlForPayment(); };
     window.onresize = initStars;
 </script>
 </body>
