@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Reseller Hub</title>
+    <title>NATER-PAY | Premium Upgrades</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -11,71 +11,66 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
-        :root { --red: #d32f2f; --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
+        :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #050505; --card-bg: rgba(15, 15, 15, 0.95); }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
         
-        body { 
-            background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; 
-            margin: 0; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; 
-        }
-
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
         header {
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
-            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
-            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(15px);
         }
 
-        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; line-height: 0.85; display: flex; flex-direction: column; align-items: flex-start; }
-        .site-part-1 { color: var(--gold); font-size: 1.6rem; text-shadow: 0 2px 5px rgba(212,175,55,0.3); } 
-        .site-part-2 { color: var(--red); font-size: 1.1rem; letter-spacing: 3px; }
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85; }
+        .site-part-1 { color: var(--gold); font-size: 1.6rem; text-shadow: 0 2px 5px var(--gold-glow); } 
+        .site-part-2 { color: #d32f2f; font-size: 1.1rem; letter-spacing: 3px; }
 
-        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; flex: 1; }
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
         
-        .header-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; text-align: center; margin-bottom: 10px; font-size: 2.5rem; }
-        .header-sub { text-align: center; color: #aaa; font-weight: 600; margin-bottom: 40px; font-size: 0.9rem; letter-spacing: 1px; }
+        .header-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; text-align: center; margin-bottom: 10px; font-size: 2.2rem; text-shadow: 0 0 15px var(--gold-glow); }
+        .header-subtitle { text-align: center; color: #aaa; font-weight: 600; margin-bottom: 40px; font-size: 1rem; }
 
-        .pricing-card {
-            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
-            padding: 30px 25px; text-align: center; transition: 0.4s; height: 100%;
-            display: flex; flex-direction: column; position: relative; overflow: hidden;
+        /* Current Status Box */
+        .status-box { background: #111; border: 1px dashed #444; border-radius: 15px; padding: 20px; text-align: center; margin-bottom: 40px; }
+        .status-box span { color: #888; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 5px; }
+        .status-box h4 { margin: 0; font-weight: 900; color: #fff; font-family: 'Cinzel', serif; letter-spacing: 2px; }
+
+        /* Tier Cards */
+        .tier-card {
+            background: var(--card-bg); border: 2px solid #333; border-radius: 25px; padding: 40px 30px;
+            transition: 0.4s; position: relative; overflow: hidden; height: 100%; display: flex; flex-direction: column;
         }
-        .pricing-card:hover { transform: translateY(-10px); box-shadow: 0 15px 35px rgba(0,0,0,0.8); border-color: #555; }
         
-        /* The VIP Card gets special styling */
-        .pricing-card.vip {
-            border: 2px solid var(--gold); background: linear-gradient(145deg, #111 0%, #1a1a1a 100%);
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
-        }
-        .pricing-card.vip:hover { box-shadow: 0 15px 40px rgba(212, 175, 55, 0.4); border-color: #FFF; }
-        
-        .badge-popular {
-            position: absolute; top: 15px; right: -30px; background: var(--gold); color: #000;
-            font-weight: 900; font-size: 0.7rem; padding: 5px 30px; transform: rotate(45deg);
-            letter-spacing: 1px;
-        }
+        .tier-reseller { border-color: #4da6ff; box-shadow: 0 10px 30px rgba(77, 166, 255, 0.15); }
+        .tier-vip { border-color: var(--gold); box-shadow: 0 10px 30px rgba(255, 215, 0, 0.15); }
 
-        .tier-name { font-size: 1.4rem; font-weight: 800; color: #FFF; text-transform: uppercase; margin-bottom: 15px; }
-        .tier-price { font-family: 'Cinzel', serif; font-size: 2.8rem; font-weight: 900; color: var(--gold); margin-bottom: 25px; line-height: 1; }
-        .tier-price span { font-size: 1rem; color: #888; font-family: 'Montserrat', sans-serif; font-weight: 600; }
+        .tier-header { text-align: center; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 20px; }
+        .tier-header i { font-size: 2.5rem; margin-bottom: 15px; }
+        .tier-reseller .tier-header i { color: #4da6ff; }
+        .tier-vip .tier-header i { color: var(--gold); }
+        .tier-title { font-family: 'Cinzel', serif; font-size: 1.8rem; font-weight: 900; margin: 0; }
+        .tier-price { font-size: 2.5rem; font-weight: 900; margin-top: 10px; }
+        .tier-reseller .tier-price { color: #4da6ff; }
+        .tier-vip .tier-price { color: var(--gold); }
 
-        .feature-list { list-style: none; padding: 0; margin: 0 0 30px 0; text-align: left; flex-grow: 1; }
-        .feature-list li { margin-bottom: 15px; font-size: 0.9rem; font-weight: 600; color: #ddd; display: flex; align-items: flex-start; gap: 10px; }
-        .feature-list li i { color: #2eb82e; margin-top: 3px; font-size: 1.1rem; }
-        .feature-list li.disabled { color: #555; }
-        .feature-list li.disabled i { color: #555; }
+        .feature-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
+        .feature-list li { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 15px; font-weight: 600; font-size: 0.95rem; color: #ccc; }
+        .feature-list li i { margin-top: 4px; }
+        .tier-reseller .feature-list li i { color: #4da6ff; }
+        .tier-vip .feature-list li i { color: var(--gold); }
 
         .btn-upgrade {
-            background: #222; color: #FFF; font-weight: 800; border: 1px solid #555;
-            padding: 15px; border-radius: 12px; width: 100%; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;
+            font-weight: 900; border-radius: 15px; padding: 18px; width: 100%; border: none;
+            font-size: 1.1rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s; margin-top: 30px;
         }
-        .btn-upgrade:hover { background: #333; color: #FFF; }
-        
-        .pricing-card.vip .btn-upgrade {
-            background: var(--gold); color: #000; border: none;
-        }
-        .pricing-card.vip .btn-upgrade:hover { background: #FFF; box-shadow: 0 0 15px rgba(255,255,255,0.4); }
+        .btn-reseller { background: #4da6ff; color: #000; }
+        .btn-reseller:hover { background: #fff; box-shadow: 0 5px 20px rgba(77,166,255,0.4); }
+        .btn-vip { background: var(--gold); color: #000; }
+        .btn-vip:hover { background: #fff; box-shadow: 0 5px 20px rgba(255,215,0,0.4); }
+        .btn-disabled { background: #333; color: #666; cursor: not-allowed; }
 
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -87,61 +82,58 @@
         <span class="site-part-1">NATER</span>
         <span class="site-part-2">PAY</span>
     </div>
-    <a href="dashboard.html" class="btn btn-warning rounded-pill px-4 fw-bold">Dashboard</a>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
 </header>
 
 <div class="container">
-    <h1 class="header-title">CHOOSE YOUR TIER</h1>
-    <p class="header-sub">Upgrade your account to unlock wholesale rates, earn massive commissions, and build your own VTU empire.</p>
+    <h1 class="header-title"><i class="fas fa-crown me-2"></i> PREMIUM TIERS</h1>
+    <p class="header-subtitle">Unlock wholesale pricing, maximum margins, and powerful business tools.</p>
 
-    <div class="row g-4 justify-content-center">
+    <div class="status-box">
+        <span>Your Current Rank</span>
+        <h4 id="currentRankDisplay"><i class="fas fa-spinner fa-spin text-warning"></i></h4>
+    </div>
+
+    <div class="row g-4 justify-content-center" id="tierContainer">
         
-        <!-- Standard User -->
-        <div class="col-12 col-md-4">
-            <div class="pricing-card">
-                <div class="tier-name">Standard</div>
-                <div class="tier-price">Free</div>
+        <div class="col-md-6" id="cardReseller">
+            <div class="tier-card tier-reseller">
+                <div class="tier-header">
+                    <i class="fas fa-medal"></i>
+                    <h3 class="tier-title text-white">SUB-AGENT</h3>
+                    <div class="tier-price">₦5,000</div>
+                    <small class="text-secondary fw-bold">One-Time Upgrade Fee</small>
+                </div>
                 <ul class="feature-list">
-                    <li><i class="fas fa-check-circle"></i> Standard Data & Airtime Rates</li>
-                    <li><i class="fas fa-check-circle"></i> Pay Electricity & Cable Bills</li>
-                    <li><i class="fas fa-check-circle"></i> Standard Wallet Funding</li>
-                    <li class="disabled"><i class="fas fa-times-circle"></i> No Reseller Discounts</li>
-                    <li class="disabled"><i class="fas fa-times-circle"></i> No Developer API Access</li>
-                </ul>
-                <button class="btn-upgrade" disabled style="opacity: 0.5;">Current Plan</button>
-            </div>
-        </div>
-
-        <!-- Pro Agent -->
-        <div class="col-12 col-md-4">
-            <div class="pricing-card">
-                <div class="tier-name">Pro Agent</div>
-                <div class="tier-price">₦2,000<br><span>/One-time</span></div>
-                <ul class="feature-list">
-                    <li><i class="fas fa-check-circle"></i> Up to 5% Discount on Airtime</li>
-                    <li><i class="fas fa-check-circle"></i> Access to Wholesale SME Data</li>
-                    <li><i class="fas fa-check-circle"></i> Earn Commissions on Bills</li>
+                    <li><i class="fas fa-check-circle"></i> Unlock Reseller Wholesale Data Pricing</li>
+                    <li><i class="fas fa-check-circle"></i> Higher Margins on Cable & Electricity</li>
+                    <li><i class="fas fa-check-circle"></i> Exclusive "Verified Reseller" Profile Badge</li>
                     <li><i class="fas fa-check-circle"></i> Priority Customer Support</li>
-                    <li class="disabled"><i class="fas fa-times-circle"></i> No Developer API Access</li>
                 </ul>
-                <button class="btn-upgrade" onclick="initiateUpgrade('Pro Agent', 2000, 'agent')">Upgrade to Pro</button>
+                <button class="btn-upgrade btn-reseller" id="btnUpgradeReseller" onclick="processUpgrade('reseller', 5000)">
+                    <i class="fas fa-unlock me-2"></i> UPGRADE TO AGENT
+                </button>
             </div>
         </div>
 
-        <!-- VIP Reseller -->
-        <div class="col-12 col-md-4">
-            <div class="pricing-card vip">
-                <div class="badge-popular">TOP CHOICE</div>
-                <div class="tier-name" style="color: var(--gold);">VIP Reseller</div>
-                <div class="tier-price">₦5,000<br><span>/One-time</span></div>
+        <div class="col-md-6" id="cardVip">
+            <div class="tier-card tier-vip">
+                <div class="tier-header">
+                    <i class="fas fa-crown"></i>
+                    <h3 class="tier-title text-white">VIP PARTNER</h3>
+                    <div class="tier-price">₦15,000</div>
+                    <small class="text-secondary fw-bold">One-Time Upgrade Fee</small>
+                </div>
                 <ul class="feature-list">
-                    <li><i class="fas fa-check-circle"></i> Maximum Discounts on ALL Services</li>
-                    <li><i class="fas fa-check-circle"></i> Lowest Wholesale Data Rates</li>
-                    <li><i class="fas fa-check-circle"></i> Full Developer API Access</li>
-                    <li><i class="fas fa-check-circle"></i> Highest Referral Bonuses</li>
-                    <li><i class="fas fa-check-circle"></i> 24/7 Dedicated Account Manager</li>
+                    <li><i class="fas fa-check-circle"></i> Maximum Bottom-Floor Wholesale Pricing</li>
+                    <li><i class="fas fa-check-circle"></i> Developer API Access (Build your own app)</li>
+                    <li><i class="fas fa-check-circle"></i> Generate Custom Payment Links & Invoices</li>
+                    <li><i class="fas fa-check-circle"></i> Gold "VIP Partner" Profile Badge</li>
+                    <li><i class="fas fa-check-circle"></i> Direct WhatsApp Line to Tech Support</li>
                 </ul>
-                <button class="btn-upgrade" onclick="initiateUpgrade('VIP Reseller', 5000, 'reseller')">Become a VIP</button>
+                <button class="btn-upgrade btn-vip" id="btnUpgradeVip" onclick="processUpgrade('vip', 15000)">
+                    <i class="fas fa-rocket me-2"></i> BECOME A VIP
+                </button>
             </div>
         </div>
 
@@ -154,80 +146,96 @@
         c.width = window.innerWidth; c.height = window.innerHeight;
         const ctx = c.getContext('2d');
         const stars = [];
-        for(let i = 0; i < 150; i++) {
-            stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
-        }
+        for(let i = 0; i < 100; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
         function animate() {
             ctx.clearRect(0, 0, c.width, c.height);
-            stars.forEach(s => {
-                ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white";
-                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
-                ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5;
-            });
+            stars.forEach(s => { ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 5; ctx.shadowColor = "white"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5; });
             requestAnimationFrame(animate);
         }
         animate();
     }
-    window.onload = initStars;
-    window.onresize = initStars;
 
-    async function initiateUpgrade(planName, amount, roleCode) {
+    async function loadUserTier() {
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) { window.location.href = '/index.html'; return; }
+        if(!authToken) { window.location.href = '/index.html'; return; }
 
-        const { value: pin } = await Swal.fire({
-            title: `Upgrade to ${planName}`,
-            html: `<p style="color: #ccc; font-size: 0.95rem;">You are about to pay <strong>₦${amount.toLocaleString()}</strong> from your wallet to upgrade your account permanently.</p>`,
-            input: 'password',
-            inputPlaceholder: 'Enter your 4-digit PIN',
-            inputAttributes: { maxlength: 4, inputmode: 'numeric' },
-            showCancelButton: true,
-            confirmButtonText: 'Confirm Upgrade',
-            confirmButtonColor: '#d4af37',
-            cancelButtonColor: '#d32f2f',
-            background: '#111',
-            color: '#fff',
-            inputValidator: (value) => {
-                if (!value || value.length !== 4) return 'Please enter a valid 4-digit PIN!';
-            }
-        });
+        try {
+            const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const data = await res.json();
 
-        if (pin) {
-            Swal.fire({
-                title: 'Processing Upgrade...',
-                text: 'Deducting fee and upgrading your node...',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
-                background: '#111', color: '#d4af37'
-            });
+            if(data.success) {
+                const role = (data.userRole || 'user').toLowerCase();
+                const rankDisplay = document.getElementById('currentRankDisplay');
+                
+                const btnReseller = document.getElementById('btnUpgradeReseller');
+                const btnVip = document.getElementById('btnUpgradeVip');
+                const cardReseller = document.getElementById('cardReseller');
 
-            try {
-                // Pointing to your internal user upgrade route (no VTpass involved)
-                const res = await fetch('/api/user/upgrade', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                    body: JSON.stringify({ role: roleCode, amount: amount, pin: pin })
-                });
-
-                const data = await res.json();
-
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Upgrade Successful!',
-                        text: `Welcome to the ${planName} tier! Your discounts are now active.`,
-                        confirmButtonColor: '#d4af37', background: '#111', color: '#fff'
-                    }).then(() => {
-                        window.location.href = 'dashboard.html';
-                    });
+                if (role === 'admin' || role === 'vip') {
+                    rankDisplay.innerHTML = '<span class="text-warning"><i class="fas fa-crown me-2"></i>VIP PARTNER</span>';
+                    // Hide Reseller, Disable VIP
+                    cardReseller.classList.add('hidden');
+                    btnVip.className = 'btn-upgrade btn-disabled';
+                    btnVip.innerHTML = '<i class="fas fa-check me-2"></i> MAX TIER UNLOCKED';
+                    btnVip.onclick = null;
+                } else if (role === 'reseller' || role === 'agent') {
+                    rankDisplay.innerHTML = '<span style="color: #4da6ff;"><i class="fas fa-medal me-2"></i>VERIFIED RESELLER</span>';
+                    // Disable Reseller, Keep VIP Active
+                    btnReseller.className = 'btn-upgrade btn-disabled';
+                    btnReseller.innerHTML = '<i class="fas fa-check me-2"></i> CURRENT TIER';
+                    btnReseller.onclick = null;
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Upgrade Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+                    rankDisplay.innerHTML = '<span class="text-white"><i class="fas fa-user me-2"></i>STANDARD USER</span>';
+                    // Leave both active
                 }
-            } catch (error) {
-                Swal.fire({ icon: 'error', title: 'Network Error', text: 'Please check your connection and try again.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             }
+        } catch (e) {
+            document.getElementById('currentRankDisplay').innerText = "CONNECTION ERROR";
         }
     }
+
+    async function processUpgrade(targetTier, feeAmount) {
+        const tierName = targetTier === 'vip' ? 'VIP Partner' : 'Sub-Agent';
+        
+        Swal.fire({
+            title: `Upgrade to ${tierName}?`,
+            html: `This will securely deduct <strong>₦${feeAmount.toLocaleString()}</strong> from your NATERPAY wallet.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#d4af37',
+            cancelButtonColor: '#333',
+            confirmButtonText: 'Yes, Upgrade My Account',
+            background: '#111', color: '#fff'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const authToken = localStorage.getItem("naterpay_token");
+                Swal.fire({ title: 'Processing...', text: 'Authenticating upgrade...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+
+                try {
+                    const res = await fetch('/api/user/upgrade', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                        body: JSON.stringify({ targetTier: targetTier })
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        Swal.fire({ icon: 'success', title: 'Upgrade Complete!', text: `Welcome to the ${tierName} tier. Your new pricing is now active.`, confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+                        .then(() => { window.location.href = 'dashboard.html'; });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Upgrade Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+                    }
+                } catch (err) {
+                    Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to communicate with server.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+                }
+            }
+        });
+    }
+
+    window.onload = () => { initStars(); loadUserTier(); };
+    window.onresize = initStars;
 </script>
+
 </body>
 </html>
