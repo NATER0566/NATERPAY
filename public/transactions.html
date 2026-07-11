@@ -47,10 +47,15 @@
         }
         
         .table { color: #eee; }
+        .table td { border-bottom-color: #333; }
+        
         .status-pill { padding: 5px 12px; border-radius: 50px; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
         .status-success { background: #00ff88; color: black; }
         .status-pending { background: #ffaa00; color: black; }
         .status-failed { background: #ff4444; color: white; }
+
+        .amount-credit { color: #00ff88; font-weight: 800; }
+        .amount-debit { color: #fff; font-weight: 800; }
     </style>
 </head>
 <body>
@@ -62,20 +67,24 @@
         <span class="site-part-1">NATER</span>
         <span class="site-part-2">PAY</span>
     </div>
-    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4">Back to Dashboard</a>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
 </header>
 
 <div class="container">
-    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">TRANSACTION HISTORY</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);"><i class="fas fa-history me-2"></i> TRANSACTION HISTORY</h1>
+        <button class="btn btn-outline-light rounded-pill" onclick="loadTransactions(true)"><i class="fas fa-sync-alt"></i></button>
+    </div>
     
     <div class="transaction-card">
         <div class="d-flex flex-wrap gap-2 mb-4">
-            <button class="filter-btn active" onclick="filterTransactions('all')">All</button>
-            <button class="filter-btn" onclick="filterTransactions('airtime')">Airtime</button>
-            <button class="filter-btn" onclick="filterTransactions('data')">Data</button>
-            <button class="filter-btn" onclick="filterTransactions('funding')">Funding</button>
-            <button class="filter-btn" onclick="filterTransactions('withdrawal')">Withdrawal</button>
-            <button class="filter-btn" onclick="filterTransactions('transfer')">Transfer</button>
+            <button class="filter-btn active" onclick="filterTransactions('all', event)">All</button>
+            <button class="filter-btn" onclick="filterTransactions('funding', event)">Deposits</button>
+            <button class="filter-btn" onclick="filterTransactions('airtime', event)">Airtime</button>
+            <button class="filter-btn" onclick="filterTransactions('data', event)">Data</button>
+            <button class="filter-btn" onclick="filterTransactions('withdrawal', event)">Withdrawal</button>
+            <button class="filter-btn" onclick="filterTransactions('transfer', event)">Transfer</button>
+            <button class="filter-btn" onclick="filterTransactions('invoice', event)">Invoices</button>
         </div>
         
         <div class="table-responsive">
@@ -91,25 +100,20 @@
                     </tr>
                 </thead>
                 <tbody id="txBody">
-                    <tr><td colspan="6" class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Loading transactions...</td></tr>
+                    <tr><td colspan="6" class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Fetching live ledger...</td></tr>
                 </tbody>
             </table>
         </div>
-        
-        <div class="d-flex justify-content-between align-items-center mt-4">
-            <small class="text-muted">Showing recent transactions</small>
-            <button class="btn btn-sm btn-outline-warning rounded-pill" onclick="loadMoreTransactions()">Load More</button>
-        </div>
     </div>
     
-    <div class="text-center text-muted small">
-        <p class="mb-1">Secured by NATER-PAY Protocol v3.0</p>
+    <div class="text-center text-muted small fw-bold">
+        <p class="mb-1"><i class="fas fa-lock text-warning me-1"></i> Data pulled securely from NATERPAY encrypted ledger</p>
+        <p>Protocol v3.0</p>
     </div>
 </div>
 
 <script>
     let currentFilter = 'all';
-    let currentPage = 1;
     
     function initStars() {
         const canvas = document.getElementById('starCanvas');
@@ -118,7 +122,7 @@
         const ctx = canvas.getContext('2d');
         const stars = [];
         
-        for(let i = 0; i < 150; i++) {
+        for(let i = 0; i < 100; i++) {
             stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
         }
         
@@ -134,17 +138,26 @@
         animate();
     }
     
-    async function loadTransactions() {
+    // THE FIX: Properly parsing the Decimal128 objects coming from MongoDB
+    function parseDecimal(value) {
+        if (!value) return 0;
+        if (value.$numberDecimal) return Number(value.$numberDecimal);
+        return Number(value);
+    }
+
+    async function loadTransactions(isRefresh = false) {
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
+        if (!authToken) { window.location.href = '/index.html'; return; }
         
+        const tbody = document.getElementById('txBody');
+        if(isRefresh) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-warning"><i class="fas fa-sync-alt fa-spin me-2"></i> Syncing...</td></tr>';
+        }
+
         try {
             const queryParams = new URLSearchParams();
             if (currentFilter !== 'all') queryParams.append('type', currentFilter);
-            queryParams.append('limit', '50');
+            queryParams.append('limit', '50'); // Pull top 50 recent transactions
             
             const res = await fetch(`/api/transactions?${queryParams}`, {
                 headers: { 'Authorization': `Bearer ${authToken}` }
@@ -152,52 +165,55 @@
             const data = await res.json();
             
             if (data.success) {
-                const tbody = document.getElementById('txBody');
                 tbody.innerHTML = '';
                 
                 if (data.transactions && data.transactions.length > 0) {
                     data.transactions.forEach(tx => {
-                        const dateString = new Date(tx.date).toLocaleDateString() + ' <br><small class="opacity-50">' + new Date(tx.date).toLocaleTimeString() + '</small>';
+                        const dateObj = new Date(tx.createdAt || tx.date); // Fallback to createdAt if date is missing
+                        const dateString = dateObj.toLocaleDateString() + ' <br><small class="opacity-50">' + dateObj.toLocaleTimeString() + '</small>';
+                        
                         const statusClass = tx.status === 'success' ? 'status-success' : (tx.status === 'pending' ? 'status-pending' : 'status-failed');
                         
+                        // Parse amounts securely
+                        const rawAmount = parseDecimal(tx.amount);
+                        const rawBalance = parseDecimal(tx.balanceAfter);
+                        
+                        // UI Logic: Credits show as Green, Debits show as White
+                        const isCredit = ['funding', 'credit', 'invoice', 'referral_bonus'].includes(tx.type.toLowerCase());
+                        const amountHTML = isCredit ? `<span class="amount-credit">+ ₦${rawAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>` : `<span class="amount-debit">- ₦${rawAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>`;
+
                         tbody.innerHTML += `
                             <tr>
                                 <td>${dateString}</td>
-                                <td><strong>${tx.type.toUpperCase()}</strong></td>
+                                <td><strong>${tx.type.replace('_', ' ').toUpperCase()}</strong></td>
                                 <td>${tx.description || 'System Transaction'}</td>
-                                <td class="fw-bold">₦${Number(tx.amount).toLocaleString()}</td>
-                                <td class="text-muted">₦${Number(tx.balanceAfter).toLocaleString()}</td>
+                                <td>${amountHTML}</td>
+                                <td class="text-muted">₦${rawBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                                 <td class="text-end"><span class="status-pill ${statusClass}">${tx.status}</span></td>
                             </tr>
                         `;
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 opacity-50">No transactions found.</td></tr>';
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5 opacity-50"><i class="fas fa-folder-open fa-2x mb-2 d-block"></i>No ${currentFilter === 'all' ? '' : currentFilter} transactions found.</td></tr>`;
                 }
             }
         } catch (e) {
-            console.error('Failed to load transactions');
-            document.getElementById('txBody').innerHTML = '<tr><td colspan="6" class="text-center py-5 opacity-50">Failed to load transactions. Please try again.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to connect to secure ledger.</td></tr>';
         }
     }
     
-    function filterTransactions(filter) {
+    function filterTransactions(filter, event) {
         currentFilter = filter;
         document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
-        currentPage = 1;
-        loadTransactions();
-    }
-    
-    function loadMoreTransactions() {
-        currentPage++;
-        loadTransactions();
+        if(event) { event.target.classList.add('active'); }
+        loadTransactions(true);
     }
     
     window.onload = () => {
         initStars();
         loadTransactions();
     };
+    window.onresize = initStars;
 </script>
 
 </body>
