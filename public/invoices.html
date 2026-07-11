@@ -141,25 +141,19 @@
     </div>
 
     <div class="creator-card">
-        <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; letter-spacing: 1px;">DRAFT NEW INVOICE</h5>
+        <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; letter-spacing: 1px;">CREATE NEW INVOICE</h5>
         
         <div class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="input-group-custom">
                     <label>CUSTOMER NAME</label>
-                    <input type="text" id="customerName" placeholder="Business or Client Name">
+                    <input type="text" id="customerName" placeholder="Client Name">
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="input-group-custom">
                     <label>CUSTOMER EMAIL</label>
-                    <input type="email" id="customerEmail" placeholder="client@domain.com">
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="input-group-custom">
-                    <label>DUE DATE</label>
-                    <input type="date" id="dueDate" style="color: #var(--gold);">
+                    <input type="email" id="customerEmail" placeholder="client@email.com">
                 </div>
             </div>
         </div>
@@ -168,28 +162,34 @@
         <div class="item-list-container">
             <div id="itemsContainer">
                 <div class="item-row">
-                    <input type="text" class="item-input" style="flex: 3;" placeholder="Item Description" oninput="calculateLiveTotal()">
+                    <input type="text" class="item-input" style="flex: 3;" placeholder="Item Name" oninput="calculateLiveTotal()">
                     <input type="number" class="item-input text-center" style="flex: 1;" placeholder="Qty" value="1" min="1" oninput="calculateLiveTotal()">
-                    <input type="number" class="item-input text-end" style="flex: 1.5;" placeholder="Unit Price (₦)" oninput="calculateLiveTotal()">
+                    <input type="number" class="item-input text-end" style="flex: 1.5;" placeholder="Price (₦)" oninput="calculateLiveTotal()">
                     <div class="btn-remove" onclick="removeItem(this)"><i class="fas fa-times"></i></div>
                 </div>
             </div>
             <button type="button" class="btn btn-outline-warning btn-sm rounded-pill mt-3 fw-bold px-3" onclick="addItem()">
-                <i class="fas fa-plus me-1"></i> Add Another Row
+                <i class="fas fa-plus me-1"></i> Add Item Row
             </button>
         </div>
         
         <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="input-group-custom">
                     <label>TAX RATE (%)</label>
                     <input type="number" id="taxRate" placeholder="0" value="0" min="0" oninput="calculateLiveTotal()">
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="input-group-custom">
-                    <label>DISCOUNT RATE (%)</label>
+                    <label>DISCOUNT (%)</label>
                     <input type="number" id="discountRate" placeholder="0" value="0" min="0" oninput="calculateLiveTotal()">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group-custom">
+                    <label>DUE DATE</label>
+                    <input type="date" id="dueDate" style="color: var(--gold);">
                 </div>
             </div>
         </div>
@@ -201,21 +201,16 @@
             <div class="calc-line total"><span>FINAL TOTAL:</span> <span id="liveTotal">₦0.00</span></div>
         </div>
         
-        <div class="input-group-custom mb-4">
-            <label>PAYMENT NOTES (OPTIONAL)</label>
-            <textarea id="invoiceNotes" rows="2" placeholder="e.g. Thank you for your business. Please pay within 7 days."></textarea>
-        </div>
-        
         <button class="btn-create" onclick="createInvoice()">
-            <i class="fas fa-paper-plane me-2"></i> ISSUE INVOICE
+            <i class="fas fa-paper-plane me-2"></i> GENERATE INVOICE
         </button>
     </div>
     
-    <h5 class="mb-4" style="font-family: 'Cinzel'; color: #fff; font-weight: 800; border-left: 4px solid var(--gold); padding-left: 10px;">INVOICE LEDGER</h5>
+    <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: #fff; font-weight: 800;">ACTIVE INVOICES</h5>
     
     <div id="invoicesContainer" class="links-grid">
         <div class="text-center py-5 opacity-50 w-100" style="grid-column: 1 / -1;">
-            <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Decrypting Ledger Records...
+            <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing from Database...
         </div>
     </div>
     
@@ -238,8 +233,10 @@
         }
         animate();
         
-        // Pre-fill date to today
-        document.getElementById('dueDate').valueAsDate = new Date();
+        // Auto-set Due Date to 7 days from now as a default convenience
+        let defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 7);
+        document.getElementById('dueDate').valueAsDate = defaultDate;
     }
     
     function addItem() {
@@ -247,9 +244,9 @@
         const newRow = document.createElement('div');
         newRow.className = 'item-row';
         newRow.innerHTML = `
-            <input type="text" class="item-input" style="flex: 3;" placeholder="Item Description" oninput="calculateLiveTotal()">
+            <input type="text" class="item-input" style="flex: 3;" placeholder="Item Name" oninput="calculateLiveTotal()">
             <input type="number" class="item-input text-center" style="flex: 1;" placeholder="Qty" value="1" min="1" oninput="calculateLiveTotal()">
-            <input type="number" class="item-input text-end" style="flex: 1.5;" placeholder="Unit Price (₦)" oninput="calculateLiveTotal()">
+            <input type="number" class="item-input text-end" style="flex: 1.5;" placeholder="Price (₦)" oninput="calculateLiveTotal()">
             <div class="btn-remove" onclick="removeItem(this)"><i class="fas fa-times"></i></div>
         `;
         container.appendChild(newRow);
@@ -261,14 +258,12 @@
             row.remove();
             calculateLiveTotal();
         } else {
-            // If it's the last row, just clear it
             const inputs = row.querySelectorAll('input');
             inputs[0].value = ''; inputs[1].value = '1'; inputs[2].value = '';
             calculateLiveTotal();
         }
     }
 
-    // Dynamic Math Engine
     function calculateLiveTotal() {
         let subtotal = 0;
         document.querySelectorAll('.item-row').forEach(row => {
@@ -285,10 +280,10 @@
         const discountAmount = subtotal * (discountRate / 100);
         const finalTotal = subtotal + taxAmount - discountAmount;
 
-        document.getElementById('liveSubtotal').innerText = '₦' + subtotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-        document.getElementById('liveTax').innerText = '+ ₦' + taxAmount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-        document.getElementById('liveDiscount').innerText = '- ₦' + discountAmount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-        document.getElementById('liveTotal').innerText = '₦' + Math.max(0, finalTotal).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+        document.getElementById('liveSubtotal').innerText = '₦' + subtotal.toLocaleString(undefined, {minimumFractionDigits:2});
+        document.getElementById('liveTax').innerText = '+ ₦' + taxAmount.toLocaleString(undefined, {minimumFractionDigits:2});
+        document.getElementById('liveDiscount').innerText = '- ₦' + discountAmount.toLocaleString(undefined, {minimumFractionDigits:2});
+        document.getElementById('liveTotal').innerText = '₦' + Math.max(0, finalTotal).toLocaleString(undefined, {minimumFractionDigits:2});
     }
     
     async function createInvoice() {
@@ -297,7 +292,6 @@
         const dueDate = document.getElementById('dueDate').value;
         const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
         const discountRate = parseFloat(document.getElementById('discountRate').value) || 0;
-        const notes = document.getElementById('invoiceNotes').value.trim();
         
         const items = [];
         document.querySelectorAll('.item-row').forEach(row => {
@@ -317,27 +311,25 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            Swal.fire({ title: 'Minting Invoice...', html: '<span style="color:#aaa;">Encrypting billing data into the ledger...</span>', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+            Swal.fire({ title: 'Minting Invoice...', text: 'Encrypting data...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
             
             const res = await fetch('/api/invoices', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ customerName, customerEmail, items, taxRate, discountRate, dueDate, notes })
+                body: JSON.stringify({ customerName, customerEmail, items, taxRate, discountRate, dueDate, notes: "NATERPAY Secure Invoice" })
             });
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Invoice Issued!', text: `The billing route is open and ready.`, confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'success', title: 'Invoice Sent!', text: `Successfully generated for ${customerName}.`, confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
                 
-                // Clear Form
                 document.getElementById('customerName').value = '';
                 document.getElementById('customerEmail').value = '';
-                document.getElementById('invoiceNotes').value = '';
                 document.getElementById('itemsContainer').innerHTML = `
                     <div class="item-row">
-                        <input type="text" class="item-input" style="flex: 3;" placeholder="Item Description" oninput="calculateLiveTotal()">
+                        <input type="text" class="item-input" style="flex: 3;" placeholder="Item Name" oninput="calculateLiveTotal()">
                         <input type="number" class="item-input text-center" style="flex: 1;" placeholder="Qty" value="1" min="1" oninput="calculateLiveTotal()">
-                        <input type="number" class="item-input text-end" style="flex: 1.5;" placeholder="Unit Price (₦)" oninput="calculateLiveTotal()">
+                        <input type="number" class="item-input text-end" style="flex: 1.5;" placeholder="Price (₦)" oninput="calculateLiveTotal()">
                         <div class="btn-remove" onclick="removeItem(this)"><i class="fas fa-times"></i></div>
                     </div>
                 `;
@@ -347,7 +339,7 @@
                 Swal.fire({ icon: 'error', title: 'Generation Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({ icon: 'error', title: 'Network Connection', text: 'Server unreachable.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Connection Error', text: 'Server unreachable.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
         }
     }
     
@@ -365,12 +357,6 @@
                 if (data.invoices && data.invoices.length > 0) {
                     
                     let billed = 0, paid = 0, outstanding = 0;
-                    const statusClassMap = {
-                        'draft': { cls: 'status-draft', icon: 'fa-pen' },
-                        'sent': { cls: 'status-sent', icon: 'fa-paper-plane' },
-                        'paid': { cls: 'status-paid', icon: 'fa-check-circle' },
-                        'overdue': { cls: 'status-overdue', icon: 'fa-exclamation-circle' }
-                    };
                     
                     container.innerHTML = data.invoices.map(inv => {
                         const amount = Number(inv.total || 0);
@@ -378,7 +364,13 @@
                         if(inv.status === 'paid') paid += amount;
                         else outstanding += amount;
 
-                        const sMap = statusClassMap[inv.status] || statusClassMap['draft'];
+                        const sMap = {
+                            'draft': { cls: 'status-draft', icon: 'fa-pen' },
+                            'sent': { cls: 'status-sent', icon: 'fa-paper-plane' },
+                            'paid': { cls: 'status-paid', icon: 'fa-check-circle' },
+                            'overdue': { cls: 'status-overdue', icon: 'fa-exclamation-circle' }
+                        }[inv.status] || { cls: 'status-draft', icon: 'fa-pen' };
+
                         const linkUrl = `${window.location.origin}/invoice/${inv.invoiceId}`;
                         const dateStr = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : 'N/A';
 
@@ -396,7 +388,7 @@
                             <div class="inv-date"><i class="fas fa-calendar-alt text-secondary me-1"></i> Due: ${dateStr}</div>
                             
                             <div class="act-btn" onclick="copyInvoiceLink('${linkUrl}')">
-                                <i class="fas fa-link text-warning"></i> COPY INVOICE LINK
+                                <i class="fas fa-link text-warning"></i> COPY LINK
                             </div>
                         </div>
                         `;
@@ -407,11 +399,11 @@
                     document.getElementById('dashOutstanding').innerText = '₦' + outstanding.toLocaleString(undefined, {minimumFractionDigits:2});
 
                 } else {
-                    container.innerHTML = '<div class="text-center py-5 opacity-50 w-100" style="grid-column: 1 / -1;"><i class="fas fa-file-invoice fa-3x mb-3 text-secondary"></i><br>No invoices generated yet.</div>';
+                    container.innerHTML = '<div class="text-center py-5 opacity-50 w-100" style="grid-column: 1 / -1;"><i class="fas fa-file-invoice fa-3x mb-3 text-secondary"></i><br>No invoices found.</div>';
                 }
             }
         } catch (e) {
-            container.innerHTML = '<div class="text-center py-5 text-danger w-100" style="grid-column: 1 / -1;">Failed to sync invoice ledger.</div>';
+            container.innerHTML = '<div class="text-center py-5 text-danger w-100" style="grid-column: 1 / -1;">Failed to sync data.</div>';
         }
     }
     
