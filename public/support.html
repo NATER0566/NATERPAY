@@ -4,7 +4,7 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Support</title>
+    <title>NATER-PAY | Support Center</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -68,6 +68,13 @@
         .status-in_progress { background: #ffaa00; color: black; }
         .status-resolved { background: #00ff88; color: black; }
         .status-closed { background: #666; color: white; }
+
+        /* REAL CHAT STYLES */
+        .chat-container { max-height: 500px; overflow-y: auto; padding-right: 10px; margin-bottom: 20px; }
+        .msg-bubble { padding: 15px; border-radius: 15px; margin-bottom: 15px; max-width: 85%; font-size: 0.95rem; }
+        .msg-user { background: rgba(212,175,55,0.15); border: 1px solid var(--gold); margin-left: auto; border-bottom-right-radius: 0; }
+        .msg-admin { background: rgba(255,255,255,0.05); border: 1px solid #444; margin-right: auto; border-bottom-left-radius: 0; }
+        .msg-meta { font-size: 0.7rem; color: #888; margin-top: 5px; display: block; }
     </style>
 </head>
 <body>
@@ -79,13 +86,14 @@
         <span class="site-part-1">NATER</span>
         <span class="site-part-2">PAY</span>
     </div>
-    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4">Back to Dashboard</a>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
 </header>
 
 <div class="container">
     <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">SUPPORT CENTER</h1>
     
     <div class="row g-4">
+        <!-- Ticket Creation Form -->
         <div class="col-lg-4">
             <div class="support-card">
                 <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">CREATE TICKET</h5>
@@ -131,35 +139,65 @@
             
             <div class="support-card">
                 <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">CONTACT US</h5>
-                
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <i class="fab fa-whatsapp fa-2x text-success"></i>
                     <div>
                         <div class="fw-bold">WhatsApp</div>
-                        <a href="https://wa.me/2348160979620" class="text-warning">Chat with us</a>
+                        <a href="https://wa.me/2348160979620" class="text-warning text-decoration-none">Chat with us</a>
                     </div>
                 </div>
-                
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <i class="fas fa-envelope fa-2x text-warning"></i>
                     <div>
                         <div class="fw-bold">Email</div>
-                        <a href="mailto:nmbashau@gmail.com" class="text-warning">nmbashau@gmail.com</a>
+                        <a href="mailto:nmbashau@gmail.com" class="text-warning text-decoration-none">nmbashau@gmail.com</a>
                     </div>
                 </div>
             </div>
         </div>
         
+        <!-- Ticket Viewing Area -->
         <div class="col-lg-8">
-            <div class="support-card">
-                <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">YOUR TICKETS</h5>
+            
+            <!-- List View (Default) -->
+            <div class="support-card" id="ticketsListView">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="mb-0" style="font-family: 'Cinzel'; color: var(--gold);">YOUR TICKETS</h5>
+                    <button class="btn btn-sm btn-outline-light" onclick="loadTickets()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
                 
                 <div id="ticketsContainer">
                     <div class="text-center py-5 opacity-50">
-                        <i class="fas fa-spinner fa-spin me-2"></i> Loading tickets...
+                        <i class="fas fa-spinner fa-spin me-2"></i> Loading secure ledger...
                     </div>
                 </div>
             </div>
+
+            <!-- Single Ticket Chat View (Hidden by Default) -->
+            <div class="support-card" id="singleTicketView" style="display: none;">
+                <button class="btn btn-sm btn-outline-warning mb-4 rounded-pill px-3" onclick="closeTicketView()">
+                    <i class="fas fa-arrow-left me-2"></i> Back to List
+                </button>
+                
+                <div id="ticketHeader" class="mb-4 pb-3" style="border-bottom: 1px solid #333;">
+                    <!-- Filled by JavaScript -->
+                </div>
+
+                <div class="chat-container" id="ticketChatThread">
+                    <!-- Messages filled by JavaScript -->
+                </div>
+
+                <div id="replySection">
+                    <div class="input-group-custom mb-3">
+                        <label>SEND REPLY</label>
+                        <textarea id="replyMessage" rows="3" placeholder="Type your message to support here..."></textarea>
+                    </div>
+                    <button class="btn-submit" onclick="sendReply()">
+                        <i class="fas fa-paper-plane me-2"></i> SEND MESSAGE
+                    </button>
+                </div>
+            </div>
+
         </div>
     </div>
     
@@ -170,17 +208,14 @@
 </div>
 
 <script>
+    let currentOpenTicketId = null;
+
     function initStars() {
         const canvas = document.getElementById('starCanvas');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
         const ctx = canvas.getContext('2d');
         const stars = [];
-        
-        for(let i = 0; i < 150; i++) {
-            stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
-        }
-        
+        for(let i = 0; i < 150; i++) { stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() }); }
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             stars.forEach(s => {
@@ -200,116 +235,64 @@
         const description = document.getElementById('ticketDescription').value;
         
         if (!subject || !description) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Missing Information',
-                text: 'Please provide a subject and description',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please provide a subject and description', background: '#111', color: '#fff' });
             return;
         }
         
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
+        if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            Swal.fire({
-                title: 'Creating Ticket...',
-                text: 'Submitting your support request',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ title: 'Creating Ticket...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
             
             const res = await fetch('/api/support/tickets', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                 body: JSON.stringify({ subject, category, priority, description })
             });
             
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Ticket Created',
-                    text: `Your support ticket ${data.ticket.ticketId} has been created`,
-                    confirmButtonColor: '#d4af37',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
-                loadTickets();
-                
-                // Clear form
+                Swal.fire({ icon: 'success', title: 'Ticket Created', text: `Your ticket has been submitted.`, confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
                 document.getElementById('ticketSubject').value = '';
                 document.getElementById('ticketDescription').value = '';
+                loadTickets();
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Creation Failed',
-                    text: data.message,
-                    confirmButtonColor: '#d32f2f',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
+                Swal.fire({ icon: 'error', title: 'Creation Failed', text: data.message, background: '#111', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Creation Error',
-                text: 'Unable to create ticket. Please try again.',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Network connection failed.', background: '#111', color: '#fff' });
         }
     }
     
     async function loadTickets() {
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
+        if (!authToken) return;
         
+        const container = document.getElementById('ticketsContainer');
+        container.innerHTML = '<div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Loading secure ledger...</div>';
+
         try {
-            const res = await fetch('/api/support/tickets', {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
+            const res = await fetch('/api/support/tickets', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
             
             if (data.success) {
-                const container = document.getElementById('ticketsContainer');
-                
                 if (data.tickets && data.tickets.length > 0) {
-                    const statusClassMap = {
-                        'open': 'status-open',
-                        'in_progress': 'status-in_progress',
-                        'resolved': 'status-resolved',
-                        'closed': 'status-closed'
-                    };
+                    const statusClassMap = { 'open': 'status-open', 'in_progress': 'status-in_progress', 'resolved': 'status-resolved', 'closed': 'status-closed' };
                     
                     container.innerHTML = data.tickets.map(ticket => `
-                        <div class="ticket-item" onclick="viewTicket('${ticket.ticketId}')">
+                        <div class="ticket-item" onclick="openRealTicketView('${ticket.ticketId}')">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
                                     <h6 class="fw-bold mb-1">${ticket.subject}</h6>
-                                    <small class="text-muted">${ticket.category} • ${ticket.priority}</small>
+                                    <small class="text-muted text-uppercase">${ticket.category} • ${ticket.priority}</small>
                                 </div>
                                 <span class="status-pill ${statusClassMap[ticket.status] || 'status-open'}">${ticket.status.replace('_', ' ')}</span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">Created: ${new Date(ticket.createdAt).toLocaleDateString()}</small>
-                                ${ticket.resolvedAt ? `<small class="text-success">Resolved: ${new Date(ticket.resolvedAt).toLocaleDateString()}</small>` : ''}
+                                <small class="text-muted">ID: #${ticket.ticketId}</small>
+                                <small class="text-muted"><i class="fas fa-clock me-1"></i> ${new Date(ticket.createdAt).toLocaleDateString()}</small>
                             </div>
                         </div>
                     `).join('');
@@ -318,27 +301,123 @@
                 }
             }
         } catch (e) {
-            console.error('Failed to load tickets');
-            document.getElementById('ticketsContainer').innerHTML = '<div class="text-center py-5 opacity-50">Failed to load tickets</div>';
+            container.innerHTML = '<div class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to connect to server</div>';
         }
     }
     
-    function viewTicket(ticketId) {
-        // For now, just show a message that ticket viewing would open a modal
-        Swal.fire({
-            title: 'Ticket Details',
-            text: `Viewing ticket ${ticketId} - Full ticket view would open in a modal`,
-            icon: 'info',
-            confirmButtonColor: '#d4af37',
-            background: '#0a0a0a',
-            color: '#fff'
-        });
+    // THE FIX: The Real Ticket Fetch & Render System
+    async function openRealTicketView(ticketId) {
+        const authToken = localStorage.getItem("naterpay_token");
+        
+        try {
+            Swal.fire({ title: 'Loading Thread...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+            
+            const res = await fetch(`/api/support/tickets/${ticketId}`, { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.close();
+                currentOpenTicketId = ticketId;
+                
+                // Switch DOM Views
+                document.getElementById('ticketsListView').style.display = 'none';
+                document.getElementById('singleTicketView').style.display = 'block';
+                
+                // Build Header
+                const t = data.ticket;
+                document.getElementById('ticketHeader').innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h4 class="mb-1" style="color: var(--gold);">${t.subject}</h4>
+                            <span class="text-muted me-3">ID: #${t.ticketId}</span>
+                            <span class="badge bg-secondary text-uppercase">${t.status}</span>
+                        </div>
+                    </div>
+                `;
+
+                // Build Chat Thread
+                const threadContainer = document.getElementById('ticketChatThread');
+                let threadHTML = `
+                    <div class="msg-bubble msg-user">
+                        <strong>Original Request:</strong><br>
+                        ${t.description}
+                        <span class="msg-meta">${new Date(t.createdAt).toLocaleString()}</span>
+                    </div>
+                `;
+
+                if(t.messages && t.messages.length > 0) {
+                    t.messages.forEach(msg => {
+                        const isUser = msg.sender === 'user';
+                        threadHTML += `
+                            <div class="msg-bubble ${isUser ? 'msg-user' : 'msg-admin'}">
+                                ${msg.message}
+                                <span class="msg-meta">${isUser ? 'You' : 'NaterPay Support'} • ${new Date(msg.createdAt).toLocaleString()}</span>
+                            </div>
+                        `;
+                    });
+                }
+                threadContainer.innerHTML = threadHTML;
+                threadContainer.scrollTop = threadContainer.scrollHeight; // Auto-scroll to bottom
+
+                // Hide reply box if ticket is closed
+                if(t.status === 'closed' || t.status === 'resolved') {
+                    document.getElementById('replySection').style.display = 'none';
+                } else {
+                    document.getElementById('replySection').style.display = 'block';
+                }
+
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.message, background: '#111', color: '#fff' });
+            }
+        } catch(e) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Could not fetch ticket details.', background: '#111', color: '#fff' });
+        }
+    }
+
+    // THE FIX: The Real Message Reply System
+    async function sendReply() {
+        const message = document.getElementById('replyMessage').value;
+        if(!message) { return; }
+
+        const authToken = localStorage.getItem("naterpay_token");
+        const btn = event.target;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`/api/support/tickets/${currentOpenTicketId}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ message })
+            });
+
+            const data = await res.json();
+            if(data.success) {
+                document.getElementById('replyMessage').value = '';
+                openRealTicketView(currentOpenTicketId); // Reload to show the new message in thread
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.message, background: '#111', color: '#fff' });
+            }
+        } catch(e) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Message failed to send.', background: '#111', color: '#fff' });
+        } finally {
+            btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i> SEND MESSAGE';
+            btn.disabled = false;
+        }
+    }
+
+    function closeTicketView() {
+        document.getElementById('singleTicketView').style.display = 'none';
+        document.getElementById('ticketsListView').style.display = 'block';
+        currentOpenTicketId = null;
+        loadTickets(); // Refresh list to catch any status updates
     }
     
     window.onload = () => {
         initStars();
         loadTickets();
     };
+    window.onresize = initStars;
 </script>
 
 </body>
