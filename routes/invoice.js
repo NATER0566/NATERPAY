@@ -40,7 +40,7 @@ async function getInvoices(request, reply) {
 }
 
 /**
- * 2. Create invoice & Send Real Email
+ * 2. Create invoice & Send Email
  */
 async function createInvoice(request, reply) {
   try {
@@ -80,10 +80,6 @@ async function createInvoice(request, reply) {
     const host = request.headers.host;
     const invoiceLink = `${protocol}://${host}/invoice-view.html?id=${invoice.invoiceId}`;
 
-    // ==========================================
-    // TRUE EMAIL DISPATCH ENGINE
-    // ==========================================
-    // This MUST match the exact verified email address you use in auth.js!
     const senderEmail = process.env.EMAIL_FROM || 'support@naterpay.com'; 
 
     try {
@@ -118,7 +114,6 @@ async function createInvoice(request, reply) {
     } catch (emailError) {
         console.error('Email failed. Please verify process.env.EMAIL_FROM matches your verified domain:', emailError.message);
     }
-    // ==========================================
 
     reply.status(201).send({
       success: true,
@@ -137,7 +132,7 @@ async function createInvoice(request, reply) {
 }
 
 /**
- * 3. Get invoice by ID
+ * 3. Get invoice by ID (Now serves the Public Key dynamically)
  */
 async function getInvoice(request, reply) {
   try {
@@ -148,6 +143,7 @@ async function getInvoice(request, reply) {
     
     reply.send({
       success: true,
+      paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY, // <--- PULLS DYNAMICALLY FROM RENDER
       invoice: {
         invoiceId: invoice.invoiceId, customerName: invoice.customerName, customerEmail: invoice.customerEmail,
         items: invoice.items, subtotal: invoice.subtotal ? invoice.subtotal.toString() : '0',
