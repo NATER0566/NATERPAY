@@ -90,16 +90,12 @@ async function registerRoutes() {
   fastify.post('/api/vtu/data', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyData);
   fastify.post('/api/vtu/electricity', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyElectricity);
   fastify.post('/api/vtu/cable', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyCable);
-  
-  // --- COMPLETE VTU ROUTE SUITE ---
   fastify.post('/api/vtu/education', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyEducation);
   fastify.post('/api/vtu/betting', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyBetting);
   fastify.post('/api/vtu/insurance', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyInsurance);
   fastify.post('/api/vtu/sms', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.sendBulkSMS);
   fastify.post('/api/vtu/pos', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyPOS);
   fastify.post('/api/vtu/webhook', vtuRoutes.handleVTpassWebhook);
-  // ---------------------------------
-  
   fastify.get('/api/vtu/rates', vtuRoutes.getRates);
   fastify.get('/api/vtu/variations', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getVariations);
   
@@ -125,7 +121,6 @@ async function registerRoutes() {
   fastify.get('/api/invoices/:invoiceId', invoiceRoutes.getInvoice);
   fastify.post('/api/invoices/:invoiceId/pay', invoiceRoutes.payInvoice);
   
-  // FIXED: ADDED './routes/' TO NOTIFICATION
   const notificationRoutes = require('./routes/notification');
   fastify.get('/api/notifications', { preHandler: require('./middleware/auth').authenticate }, notificationRoutes.getNotifications);
   fastify.put('/api/notifications/:id/read', { preHandler: require('./middleware/auth').authenticate }, notificationRoutes.markAsRead);
@@ -149,7 +144,6 @@ async function registerRoutes() {
   fastify.get('/api/admin/support/tickets', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getSupportTickets);
   fastify.put('/api/admin/support/tickets/:id/assign', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.assignTicket);
   fastify.put('/api/admin/support/tickets/:id/resolve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.resolveTicket);
-  
   fastify.post('/api/admin/users/:id/balance', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.updateUserBalance);
   fastify.post('/api/admin/transactions/verify', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.verifyTransaction);
   fastify.post('/api/admin/notifications/send', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.sendPushNotification);
