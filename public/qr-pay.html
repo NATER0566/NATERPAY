@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | QR Collect & Pay</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #050505; --card-bg: #111111; --red: #d32f2f; }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); color: #FFFFFF; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+        }
+
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85; }
+        .site-part-1 { color: var(--gold); font-size: 1.6rem; text-shadow: 0 2px 5px var(--gold-glow); } 
+        .site-part-2 { color: var(--red); font-size: 1.1rem; letter-spacing: 3px; }
+
+        .container { max-width: 700px; margin: 40px auto; padding: 0 15px; }
+
+        .header-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; text-align: center; margin-bottom: 20px; font-size: 2.2rem; text-shadow: 0 0 15px var(--gold-glow); }
+
+        /* Custom Toggle Switch */
+        .toggle-container {
+            display: flex; background: #1a1a1a; border: 2px solid #333; border-radius: 50px;
+            margin: 0 auto 30px auto; width: 100%; max-width: 400px; position: relative; overflow: hidden;
+        }
+        .toggle-btn {
+            flex: 1; text-align: center; padding: 15px; font-weight: 800; text-transform: uppercase;
+            color: #888; cursor: pointer; z-index: 2; transition: 0.3s; letter-spacing: 1px;
+        }
+        .toggle-btn.active { color: #000; }
+        .toggle-slider {
+            position: absolute; top: 0; left: 0; height: 100%; width: 50%;
+            background: var(--gold); border-radius: 50px; z-index: 1; transition: 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 0 15px var(--gold-glow);
+        }
+
+        .main-card {
+            background: var(--card-bg); border: 2px solid #333; border-radius: 20px;
+            padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            position: relative; overflow: hidden; transition: 0.4s;
+        }
+
+        /* QR Receive Styling */
+        .qr-frame {
+            background: #fff; padding: 15px; border-radius: 15px; display: inline-block;
+            margin: 20px auto; position: relative;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+            border: 4px solid var(--gold);
+        }
+        #qrcode { display: flex; justify-content: center; align-items: center; }
+        #qrcode img { display: block; border-radius: 5px; }
+
+        /* Scanner Styling */
+        #reader { width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid var(--gold) !important; box-shadow: 0 0 20px var(--gold-glow); }
+        #reader__dashboard_section_csr span { color: #fff !important; }
+        #reader__dashboard_section_swaplink { color: var(--gold) !important; }
+        #reader button { background: var(--gold) !important; color: #000 !important; font-weight: bold !important; border: none !important; padding: 8px 15px !important; border-radius: 8px !important; text-transform: uppercase; }
+
+        .input-group-custom {
+            background: #1A1A1A; border: 2px solid #444; border-radius: 15px; 
+            padding: 15px 20px; margin-bottom: 20px; width: 100%; transition: 0.3s;
+        }
+        .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow); }
+        .input-group-custom label {
+            display: block; font-size: 0.85rem; color: var(--gold); font-weight: 900;
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
+        }
+        .input-group-custom input {
+            background: transparent; border: none; color: #FFFFFF; width: 100%;
+            font-size: 1.2rem; font-weight: 700; outline: none; text-align: center;
+        }
+
+        .action-btn {
+            background: var(--gold); color: #000; font-weight: 900; border-radius: 15px;
+            padding: 18px; width: 100%; border: none; font-size: 1.1rem; letter-spacing: 1px;
+            text-transform: uppercase; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .action-btn:hover { background: #FFF; box-shadow: 0 10px 20px rgba(255,255,255,0.3); transform: translateY(-3px); }
+        
+        .action-btn.secondary { background: #222; color: #FFF; border: 1px solid #555; }
+        .action-btn.secondary:hover { background: #333; border-color: var(--gold); }
+
+        .view-section { display: none; animation: fadeIn 0.4s ease-in-out forwards; }
+        .view-section.active { display: block; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .footer-text { color: #FFFFFF; font-size: 0.85rem; font-weight: 600; opacity: 0.6; text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="dashboard.html" class="btn btn-warning rounded-pill px-4 fw-bold">Dashboard</a>
+</header>
+
+<div class="container">
+    <h1 class="header-title"><i class="fas fa-qrcode me-2"></i> QR COLLECT</h1>
+
+    <div class="toggle-container">
+        <div class="toggle-slider" id="toggleSlider"></div>
+        <div class="toggle-btn active" id="btnReceive" onclick="switchMode('receive')">Receive</div>
+        <div class="toggle-btn" id="btnScan" onclick="switchMode('scan')">Scan & Pay</div>
+    </div>
+
+    <div id="viewReceive" class="view-section active text-center">
+        <div class="main-card">
+            <h5 class="fw-bold mb-1" style="color: var(--gold);">MY NATERPAY QR</h5>
+            <p class="small text-secondary mb-4">Let others scan this to pay you instantly</p>
+
+            <div class="qr-frame">
+                <div id="qrcode"></div>
+            </div>
+
+            <div class="input-group-custom mx-auto mt-4" style="max-width: 300px;">
+                <label>Specific Amount (Optional) ₦</label>
+                <input type="number" id="qrAmount" placeholder="Leave blank for any" onkeyup="generateQR()">
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <button class="action-btn" onclick="downloadQR()">
+                    <i class="fas fa-download"></i> Save Image
+                </button>
+                <button class="action-btn secondary" onclick="shareQR()">
+                    <i class="fas fa-share-alt"></i> Share
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="viewScan" class="view-section">
+        <div class="main-card text-center">
+            <h5 class="fw-bold mb-1" style="color: var(--gold);">SCAN TO PAY</h5>
+            <p class="small text-secondary mb-4">Point your camera at a NATERPAY QR code</p>
+
+            <div id="reader"></div>
+
+            <div class="mt-4">
+                <p class="text-secondary small fw-bold">OR ENTER ID MANUALLY</p>
+                <div class="input-group-custom">
+                    <input type="text" id="manualId" placeholder="Enter NATERPAY User ID">
+                </div>
+                <button class="action-btn secondary py-2" onclick="manualPayInit()">Proceed</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-text">
+        <p class="mb-1">Encrypted Peer-to-Peer Transfer</p>
+        <p>Secured by NATER-PAY Protocol v3.0</p>
+    </div>
+</div>
+
+<script>
+    let myUserId = "NATER-USER-12345"; // Fallback, will be replaced by actual user ID
+    let qrCodeObj = null;
+    let html5QrcodeScanner = null;
+
+    // Background Animation
+    function initStars() {
+        const c = document.getElementById('starCanvas');
+        c.width = window.innerWidth; c.height = window.innerHeight;
+        const ctx = c.getContext('2d');
+        const stars = [];
+        for(let i = 0; i < 120; i++) {
+            stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        }
+        function animate() {
+            ctx.clearRect(0, 0, c.width, c.height);
+            stars.forEach(s => {
+                ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 5; ctx.shadowColor = "white";
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5;
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+
+    // Toggle Modes
+    function switchMode(mode) {
+        document.getElementById('btnReceive').classList.remove('active');
+        document.getElementById('btnScan').classList.remove('active');
+        document.getElementById('viewReceive').classList.remove('active');
+        document.getElementById('viewScan').classList.remove('active');
+
+        if(mode === 'receive') {
+            document.getElementById('btnReceive').classList.add('active');
+            document.getElementById('toggleSlider').style.left = '0';
+            document.getElementById('viewReceive').classList.add('active');
+            if(html5QrcodeScanner) html5QrcodeScanner.clear(); // Stop camera
+            generateQR();
+        } else {
+            document.getElementById('btnScan').classList.add('active');
+            document.getElementById('toggleSlider').style.left = '50%';
+            document.getElementById('viewScan').classList.add('active');
+            startScanner();
+        }
+    }
+
+    // Fetch User Profile on Load to get their actual ID
+    async function fetchUserData() {
+        const authToken = localStorage.getItem("naterpay_token");
+        if(authToken) {
+            try {
+                const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
+                const data = await res.json();
+                if(data.success && data.userPhone) {
+                    // We'll use their phone number or email as their unique pay ID
+                    myUserId = data.userPhone; 
+                }
+            } catch(e) { console.warn('Could not fetch user ID'); }
+        }
+        generateQR(); // Generate initially
+    }
+
+    // 1. Generate QR Code Logic
+    function generateQR() {
+        const amount = document.getElementById('qrAmount').value;
+        let qrPayload = `NATERPAY:${myUserId}`;
+        if (amount && amount > 0) qrPayload += `?amount=${amount}`;
+
+        document.getElementById('qrcode').innerHTML = ""; // clear old
+        qrCodeObj = new QRCode(document.getElementById("qrcode"), {
+            text: qrPayload,
+            width: 220,
+            height: 220,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    }
+
+    function downloadQR() {
+        const img = document.querySelector('#qrcode img');
+        if(!img) return;
+        const link = document.createElement('a');
+        link.href = img.src;
+        link.download = 'NATERPAY_MyQR.png';
+        link.click();
+    }
+
+    function shareQR() {
+        if (navigator.share) {
+            navigator.share({ title: 'My NATERPAY QR', text: 'Scan to pay me on NATER-PAY!', url: window.location.href })
+            .catch(console.error);
+        } else {
+            Swal.fire({ icon: 'info', title: 'Share Link', text: 'Sharing is not supported on this browser. Please use the Save Image button.', background: '#111', color: '#fff', confirmButtonColor: '#d4af37' });
+        }
+    }
+
+    // 2. Scanner Logic
+    function startScanner() {
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 });
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    }
+
+    function onScanFailure(error) { /* Background scanning, ignore errors */ }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        html5QrcodeScanner.clear(); // Stop scanning once found
+        
+        // Parse NATERPAY:ID?amount=XXXX
+        let targetId = decodedText;
+        let targetAmount = "";
+        
+        if(decodedText.startsWith("NATERPAY:")) {
+            const parts = decodedText.replace("NATERPAY:", "").split("?amount=");
+            targetId = parts[0];
+            if(parts.length > 1) targetAmount = parts[1];
+        }
+
+        document.getElementById('manualId').value = targetId;
+        processTransferUI(targetId, targetAmount);
+    }
+
+    function manualPayInit() {
+        const manualId = document.getElementById('manualId').value.trim();
+        if(!manualId) {
+            Swal.fire({ icon: 'error', title: 'Missing ID', text: 'Please enter a valid NATERPAY ID or Phone Number.', background: '#111', color: '#fff', confirmButtonColor: '#d32f2f' });
+            return;
+        }
+        processTransferUI(manualId, "");
+    }
+
+    // 3. Payment Execution UI
+    async function processTransferUI(recipientId, prefillAmount) {
+        const { value: formValues } = await Swal.fire({
+            title: 'SECURE TRANSFER',
+            html: `
+                <div style="text-align:left;">
+                    <p style="color:#aaa; font-size:0.9rem; margin-bottom:5px;">Paying to User ID:</p>
+                    <div style="background:#222; padding:10px; border-radius:8px; color:var(--gold); font-weight:bold; margin-bottom:15px; font-family:monospace;">${recipientId}</div>
+                    
+                    <p style="color:#aaa; font-size:0.9rem; margin-bottom:5px;">Amount (₦):</p>
+                    <input id="swal-amount" class="swal2-input" type="number" placeholder="Enter Amount" value="${prefillAmount}" style="margin:0 0 15px 0; width:100%;">
+                    
+                    <p style="color:#aaa; font-size:0.9rem; margin-bottom:5px;">Withdrawal PIN:</p>
+                    <input id="swal-pin" class="swal2-input" type="password" placeholder="4-Digit PIN" maxlength="4" style="margin:0; width:100%;">
+                </div>
+            `,
+            focusConfirm: false,
+            background: '#111', color: '#fff', confirmButtonColor: '#d4af37', confirmButtonText: 'SEND MONEY <i class="fas fa-paper-plane ms-2"></i>',
+            showCancelButton: true, cancelButtonColor: '#333',
+            preConfirm: () => {
+                return [
+                    document.getElementById('swal-amount').value,
+                    document.getElementById('swal-pin').value
+                ]
+            }
+        });
+
+        if (formValues) {
+            const amount = formValues[0];
+            const pin = formValues[1];
+
+            if(!amount || amount <= 0 || !pin || pin.length !== 4) {
+                Swal.fire({ icon: 'error', title: 'Invalid Input', text: 'Please enter a valid amount and your 4-digit PIN.', background: '#111', color: '#fff', confirmButtonColor: '#d32f2f' });
+                return;
+            }
+
+            executeTransfer(recipientId, amount, pin);
+        }
+    }
+
+    // Connect to Backend Internal Transfer Route
+    async function executeTransfer(recipientId, amount, pin) {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) { window.location.href = '/index.html'; return; }
+
+        Swal.fire({
+            title: 'Processing Transfer...',
+            html: '<span style="color: #FFF; font-size: 1.1rem;">Verifying cryptography protocol...</span>',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading(),
+            background: '#111', color: '#FFD700'
+        });
+
+        try {
+            // Pointing to your wallet transfer route
+            const res = await fetch('/api/wallet/transfer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ recipient: recipientId, amount: amount, pin: pin })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success', title: 'Transfer Complete!',
+                    html: `You successfully sent <strong style="color: #FFD700;">₦${parseFloat(amount).toLocaleString()}</strong> to ${recipientId}.`,
+                    confirmButtonColor: '#FFD700', background: '#111', color: '#FFFFFF'
+                }).then(() => { window.location.href = 'dashboard.html'; });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Transfer Failed', text: data.message || "An error occurred.", confirmButtonColor: '#FF3333', background: '#111', color: '#FFFFFF' });
+            }
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'Network Connection', text: 'Please check your internet connection.', confirmButtonColor: '#FF3333', background: '#111', color: '#FFFFFF' });
+        }
+    }
+
+    window.onload = () => { initStars(); fetchUserData(); };
+    window.onresize = initStars;
+</script>
+</body>
+</html>
