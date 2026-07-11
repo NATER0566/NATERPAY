@@ -1,31 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Logging Out...</title>
+    <title>NATER-PAY | Securing Session...</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
         :root { --gold: #d4af37; --bg: #050505; }
         body { 
             background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; 
             margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
         }
+        
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
         
         .logout-container {
             text-align: center;
-            max-width: 400px;
-            padding: 40px;
+            max-width: 500px;
+            padding: 50px;
+            background: rgba(15, 15, 15, 0.95);
+            border: 1px solid #333;
+            border-radius: 20px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.8);
+            position: relative;
+            z-index: 10;
         }
         
         .spinner {
-            width: 60px; height: 60px;
-            border: 4px solid rgba(212, 175, 55, 0.3);
+            width: 70px; height: 70px;
+            border: 4px solid rgba(212, 175, 55, 0.1);
             border-top: 4px solid var(--gold);
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -37,26 +46,86 @@
             100% { transform: rotate(360deg); }
         }
         
-        h2 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; }
+        h2 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; letter-spacing: 2px; }
+        
+        .status-text {
+            font-size: 0.9rem;
+            color: #aaa;
+            font-weight: 600;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
 
+<canvas id="starCanvas"></canvas>
+
 <div class="logout-container">
     <div class="spinner"></div>
-    <h2>SECURING SESSION...</h2>
-    <p class="text-muted">Terminating secure connection and clearing credentials.</p>
+    <h2>TERMINATING SESSION</h2>
+    <p class="status-text" id="logoutStatus">Disconnecting from secure servers...</p>
 </div>
 
 <script>
-    // Clear local storage
-    localStorage.removeItem("naterpay_token");
-    localStorage.removeItem("naterpay_profile");
-    
-    // Redirect after short delay
-    setTimeout(() => {
-        window.location.href = '/index.html';
-    }, 1500);
+    function initStars() {
+        const canvas = document.getElementById('starCanvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        const stars = [];
+        
+        for(let i = 0; i < 150; i++) {
+            stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(s => {
+                ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white";
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0; s.y += s.v; if(s.y > canvas.height) s.y = -5;
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+
+    async function executeSecureLogout() {
+        const authToken = localStorage.getItem("naterpay_token");
+        const statusText = document.getElementById('logoutStatus');
+        
+        if (authToken) {
+            try {
+                // 1. Tell the backend to officially close the session and log it in the AuditLog
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                statusText.innerText = "Clearing local credentials...";
+            } catch (error) {
+                // If the network fails, we still proceed to clear local data
+                console.warn("Backend disconnect failed, forcing local wipe.");
+            }
+        }
+
+        // 2. Wipe the browser completely clean
+        localStorage.removeItem("naterpay_token");
+        localStorage.removeItem("naterpay_profile");
+        sessionStorage.clear();
+        
+        statusText.innerText = "Session secured. Redirecting...";
+
+        // 3. Send them back to the login screen
+        setTimeout(() => {
+            window.location.href = '/index.html';
+        }, 1200);
+    }
+
+    window.onload = () => {
+        initStars();
+        executeSecureLogout();
+    };
+    window.onresize = initStars;
 </script>
 
 </body>
