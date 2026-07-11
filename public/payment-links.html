@@ -44,21 +44,31 @@
         .stat-details h6 { color: #888; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
         .stat-details h3 { color: #FFF; font-size: 1.8rem; font-weight: 900; margin: 5px 0 0 0; font-family: 'Cinzel', serif; }
 
-        /* Simplified Creator Card */
+        /* Creator Card */
         .creator-card {
             background: var(--card-bg); border: 1px solid #333; border-radius: 25px;
             padding: 40px 30px; margin-bottom: 40px; backdrop-filter: blur(15px);
             box-shadow: 0 15px 40px rgba(0,0,0,0.6); position: relative; overflow: hidden;
-            max-width: 600px; margin-left: auto; margin-right: auto;
+            max-width: 650px; margin-left: auto; margin-right: auto;
         }
         .creator-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
 
         .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; transition: 0.3s; }
         .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow); }
-        .input-group-custom label { display: block; font-size: 0.8rem; color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px; }
-        .input-group-custom input {
-            background: transparent; border: none; color: white; width: 100%; font-size: 1.2rem; font-weight: 600; outline: none;
+        .input-group-custom label { display: block; font-size: 0.8rem; color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+        .input-group-custom input, .input-group-custom textarea {
+            background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 600; outline: none; font-family: 'Montserrat', sans-serif;
+            word-wrap: break-word; overflow-wrap: break-word;
         }
+        .input-group-custom textarea { resize: vertical; min-height: 80px; }
+
+        /* Image Upload Styling */
+        .image-upload-wrapper { border: 2px dashed #444; border-radius: 15px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; background: #0a0a0a; margin-bottom: 20px; }
+        .image-upload-wrapper:hover { border-color: var(--gold); background: #111; }
+        .image-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
+        .upload-placeholder { color: #888; font-weight: 600; font-size: 0.9rem; pointer-events: none; }
+        .upload-placeholder i { font-size: 2rem; color: var(--gold); margin-bottom: 10px; display: block; }
+        .image-preview { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; display: none; z-index: 1; position: relative; }
 
         .btn-create {
             background: var(--gold); color: black; font-weight: 900; border-radius: 15px;
@@ -71,25 +81,30 @@
         .link-item {
             background: rgba(20,20,20,0.9); border: 1px solid #333; border-radius: 20px;
             padding: 25px; transition: 0.3s; position: relative; display: flex; flex-direction: column;
+            word-wrap: break-word; overflow-wrap: break-word;
         }
         .link-item:hover { border-color: var(--gold); box-shadow: 0 10px 25px rgba(0,0,0,0.8); transform: translateY(-5px); }
-        .link-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
-        .link-title { font-weight: 900; font-size: 1.2rem; margin: 0; color: #fff; text-transform: uppercase; }
-        .status-badge { background: rgba(46, 184, 46, 0.2); color: #2eb82e; padding: 5px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 900; border: 1px solid #2eb82e; }
+        
+        .link-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; gap: 10px;}
+        .link-title-group { display: flex; align-items: center; gap: 15px; max-width: 80%; }
+        .link-thumb { width: 50px; height: 50px; border-radius: 10px; object-fit: cover; border: 1px solid #444; background: #000; flex-shrink: 0; }
+        .link-title { font-weight: 900; font-size: 1.1rem; margin: 0; color: #fff; text-transform: uppercase; line-height: 1.2; }
+        
+        .status-badge { background: rgba(46, 184, 46, 0.2); color: #2eb82e; padding: 5px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 900; border: 1px solid #2eb82e; flex-shrink: 0; height: fit-content; }
         
         .link-stats { background: #0a0a0a; border-radius: 12px; padding: 15px; margin-bottom: 20px; flex-grow: 1; border: 1px solid #222; }
         .stat-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; font-weight: 600; }
         .stat-line:last-child { margin-bottom: 0; }
-        .stat-line .val { color: var(--gold); font-family: monospace; font-size: 1.1rem; }
+        .stat-line .val { color: var(--gold); font-family: monospace; font-size: 1.1rem; word-break: break-all; text-align: right; max-width: 60%; }
 
         .link-actions { display: flex; gap: 10px; }
-        .act-btn { flex: 1; background: #1a1a1a; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 10px; font-size: 0.9rem; font-weight: 700; transition: 0.3s; text-align: center; cursor: pointer; }
+        .act-btn { flex: 1; background: #1a1a1a; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 10px; font-size: 0.9rem; font-weight: 700; transition: 0.3s; text-align: center; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;}
         .act-btn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
         .act-btn.qr-btn:hover { background: #fff; color: #000; border-color: #fff; }
 
         /* QR Modal */
         #qrModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
-        .qr-content { background: var(--card-bg); padding: 30px; border-radius: 20px; border: 2px solid var(--gold); text-align: center; box-shadow: 0 0 40px var(--gold-glow); max-width: 90%; }
+        .qr-content { background: var(--card-bg); padding: 30px; border-radius: 20px; border: 2px solid var(--gold); text-align: center; box-shadow: 0 0 40px var(--gold-glow); max-width: 90%; word-wrap: break-word;}
         #qrDisplay { background: #fff; padding: 15px; border-radius: 10px; display: inline-block; margin-bottom: 20px; border: 4px solid #000; }
     </style>
 </head>
@@ -117,7 +132,7 @@
 </header>
 
 <div class="container">
-    <h1 class="header-title"><i class="fas fa-link me-2"></i> PAYMENT LINKS</h1>
+    <h1 class="header-title"><i class="fas fa-store me-2"></i> STOREFRONT LINKS</h1>
     
     <div class="stats-row">
         <div class="stat-box">
@@ -136,29 +151,52 @@
         </div>
     </div>
 
+    <!-- E-COMMERCE CREATOR CARD -->
     <div class="creator-card">
-        <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;">GENERATE A PAYMENT LINK</h5>
+        <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;">CREATE A PRODUCT LINK</h5>
         
+        <!-- Image Upload Section -->
+        <div class="image-upload-wrapper" id="uploadWrapper">
+            <input type="file" id="productImageInput" accept="image/jpeg, image/png, image/webp" onchange="previewImage(event)">
+            <div class="upload-placeholder" id="uploadPlaceholder">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>Tap to upload Product Image / Cover</span><br>
+                <small class="text-muted fw-normal mt-1 d-block">(JPG, PNG, WEBP - Max 2MB)</small>
+            </div>
+            <img id="imagePreview" class="image-preview" src="" alt="Product Preview">
+        </div>
+
         <div class="input-group-custom">
-            <label>What are you selling? (Title)</label>
-            <input type="text" id="linkTitle" placeholder="e.g. Masterclass Ticket or eBook">
+            <label>Product Title / Name</label>
+            <input type="text" id="linkTitle" placeholder="e.g. Complete Web Dev Masterclass">
+        </div>
+
+        <div class="input-group-custom">
+            <label>Product Description</label>
+            <textarea id="linkDescription" placeholder="Explain what the customer will receive and why they should buy it..."></textarea>
         </div>
         
         <div class="input-group-custom">
             <label>Amount in Naira (Optional)</label>
             <input type="number" id="linkAmount" placeholder="Leave blank to allow any amount">
         </div>
+
+        <div class="input-group-custom">
+            <label>Fulfillment URL (Redirect After Payment)</label>
+            <input type="url" id="linkRedirect" placeholder="e.g. https://drive.google.com/your-product">
+            <small class="text-muted" style="font-size: 0.7rem; display: block; margin-top: 5px;">Where the customer will be sent automatically after they pay successfully to claim their product.</small>
+        </div>
         
         <button class="btn-create" onclick="createPaymentLink()">
-            <i class="fas fa-magic me-2"></i> CREATE LINK
+            <i class="fas fa-magic me-2"></i> PUBLISH PRODUCT
         </button>
     </div>
     
-    <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: #fff; font-weight: 800;">YOUR ACTIVE PAYMENT LINKS</h5>
+    <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: #fff; font-weight: 800;">YOUR ACTIVE STOREFRONT LINKS</h5>
     
     <div id="linksContainer" class="links-grid">
         <div class="text-center py-5 opacity-50 w-100" style="grid-column: 1 / -1;">
-            <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing your links from the database...
+            <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing your storefront from the database...
         </div>
     </div>
     
@@ -168,6 +206,8 @@
 </div>
 
 <script>
+    let base64ProductImage = null;
+
     // Background Animation
     function initStars() {
         const c = document.getElementById('starCanvas');
@@ -182,18 +222,44 @@
         }
         animate();
     }
+
+    // Handle Image Selection and Convert to Base64 String
+    function previewImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Strict size check (2MB Max)
+        if (file.size > 2 * 1024 * 1024) {
+            Swal.fire({ icon: 'error', title: 'File Too Large', text: 'Please upload an image smaller than 2MB.', background: '#111', color: '#fff' });
+            event.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            base64ProductImage = e.target.result; // Store the Base64 string for the backend payload
+            const preview = document.getElementById('imagePreview');
+            const placeholder = document.getElementById('uploadPlaceholder');
+            
+            preview.src = base64ProductImage;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+        }
+        reader.readAsDataURL(file);
+    }
     
-    // Create the Link Safely
+    // Create the Link with E-Commerce Data
     async function createPaymentLink() {
         const title = document.getElementById('linkTitle').value.trim();
+        const description = document.getElementById('linkDescription').value.trim();
+        const redirectUrl = document.getElementById('linkRedirect').value.trim();
         const rawAmount = document.getElementById('linkAmount').value;
         
         if (!title) {
-            Swal.fire({ icon: 'error', title: 'Missing Title', text: 'Please enter what you are selling.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Missing Title', text: 'Please enter a product title.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             return;
         }
         
-        // If amount is empty, it's flexible. If it has a number, it's fixed.
         const isFlexibleAmount = !rawAmount || parseFloat(rawAmount) <= 0;
         const amount = isFlexibleAmount ? 0 : parseFloat(rawAmount);
         
@@ -201,28 +267,37 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            Swal.fire({ title: 'Creating Link...', text: 'Securing your payment route...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+            Swal.fire({ title: 'Publishing Product...', text: 'Securing your storefront route...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
             
+            const payload = {
+                title: title, 
+                description: description || 'Secure NATERPAY Product', 
+                redirectUrl: redirectUrl, 
+                amount: amount, 
+                currency: 'NGN', 
+                isFlexibleAmount: isFlexibleAmount,
+                productImageBase64: base64ProductImage // Sending image as text string to bypass complex multipart forms
+            };
+
             const res = await fetch('/api/payment-links', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ 
-                    title: title, 
-                    description: 'Secure NATERPAY Payment', 
-                    amount: amount, 
-                    currency: 'NGN', 
-                    isFlexibleAmount: isFlexibleAmount, 
-                    collectCustomerName: true, 
-                    collectCustomerEmail: true 
-                })
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Link Created!', html: `<p style="color:#ccc;">Your payment link is ready to share.</p>`, confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'success', title: 'Product Published!', html: `<p style="color:#ccc;">Your e-commerce payment link is live.</p>`, confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
                 
+                // Reset Form
                 document.getElementById('linkTitle').value = '';
+                document.getElementById('linkDescription').value = '';
+                document.getElementById('linkRedirect').value = '';
                 document.getElementById('linkAmount').value = '';
+                document.getElementById('productImageInput').value = '';
+                document.getElementById('imagePreview').style.display = 'none';
+                document.getElementById('uploadPlaceholder').style.display = 'block';
+                base64ProductImage = null;
                 
                 loadPaymentLinks();
             } else {
@@ -258,10 +333,18 @@
                         totalRev += collected;
                         totalTx += count;
 
+                        // Display thumbnail if the backend returned one, else fallback to a standard icon box
+                        const thumbHTML = link.productImageBase64 
+                            ? `<img src="${link.productImageBase64}" class="link-thumb" alt="Thumb">` 
+                            : `<div class="link-thumb d-flex justify-content-center align-items-center" style="background:#222; color:var(--gold);"><i class="fas fa-box"></i></div>`;
+
                         return `
                         <div class="link-item">
                             <div class="link-header">
-                                <h3 class="link-title">${link.title}</h3>
+                                <div class="link-title-group">
+                                    ${thumbHTML}
+                                    <h3 class="link-title">${link.title}</h3>
+                                </div>
                                 <span class="status-badge">LIVE</span>
                             </div>
                             
@@ -273,31 +356,32 @@
                             
                             <div class="link-actions">
                                 <div class="act-btn" onclick="copyLink('${linkUrl}')"><i class="fas fa-copy"></i> COPY LINK</div>
-                                <div class="act-btn qr-btn" onclick="showQR('${linkUrl}', '${link.title}')"><i class="fas fa-qrcode"></i> QR CODE</div>
+                                <div class="act-btn qr-btn" onclick="showQR('${linkUrl}', '${link.title.replace(/'/g, "\\'")}')"><i class="fas fa-qrcode"></i> QR CODE</div>
                             </div>
                         </div>
                         `;
                     }).join('');
 
-                    // Populate Top Dashboards Precisely
                     document.getElementById('dashTotalRev').innerText = '₦' + totalRev.toLocaleString(undefined, {minimumFractionDigits:2});
                     document.getElementById('dashTotalTx').innerText = totalTx;
 
                 } else {
-                    container.innerHTML = '<div class="text-center py-5 opacity-50 w-100" style="grid-column: 1 / -1;"><i class="fas fa-link fa-3x mb-3 text-secondary"></i><br>You have not created any payment links yet.</div>';
+                    container.innerHTML = '<div class="text-center py-5 opacity-50 w-100" style="grid-column: 1 / -1;"><i class="fas fa-store fa-3x mb-3 text-secondary"></i><br>Your storefront is empty. Create your first product above.</div>';
                     document.getElementById('dashTotalRev').innerText = '₦0.00';
                     document.getElementById('dashTotalTx').innerText = '0';
                 }
+            } else {
+                container.innerHTML = `<div class="text-center py-5 text-danger w-100" style="grid-column: 1 / -1;">${data.message || 'Error fetching links'}</div>`;
             }
         } catch (e) {
-            document.getElementById('linksContainer').innerHTML = '<div class="text-center py-5 text-danger w-100" style="grid-column: 1 / -1;">Connection Error. Failed to sync ledger.</div>';
+            container.innerHTML = '<div class="text-center py-5 text-danger w-100" style="grid-column: 1 / -1;">Connection Error. Check Backend Route.</div>';
         }
     }
     
     // Copy the Link
     function copyLink(linkUrl) {
         navigator.clipboard.writeText(linkUrl).then(() => {
-            Swal.fire({ icon: 'success', title: 'Link Copied', text: 'Share it with your customers!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'success', title: 'Link Copied', text: 'Share your storefront link!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' });
         });
     }
 
@@ -321,7 +405,7 @@
         if(!img) return;
         const link = document.createElement('a');
         link.href = img.src;
-        link.download = 'NATERPAY_Payment_QR.png';
+        link.download = 'NATERPAY_Product_QR.png';
         link.click();
     }
     
