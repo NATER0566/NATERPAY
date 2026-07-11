@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Reseller Hub</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root { --red: #d32f2f; --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
+        
+        body { 
+            background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; 
+            margin: 0; min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; 
+        }
+
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+        }
+
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; line-height: 0.85; display: flex; flex-direction: column; align-items: flex-start; }
+        .site-part-1 { color: var(--gold); font-size: 1.6rem; text-shadow: 0 2px 5px rgba(212,175,55,0.3); } 
+        .site-part-2 { color: var(--red); font-size: 1.1rem; letter-spacing: 3px; }
+
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; flex: 1; }
+        
+        .header-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; text-align: center; margin-bottom: 10px; font-size: 2.5rem; }
+        .header-sub { text-align: center; color: #aaa; font-weight: 600; margin-bottom: 40px; font-size: 0.9rem; letter-spacing: 1px; }
+
+        .pricing-card {
+            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
+            padding: 30px 25px; text-align: center; transition: 0.4s; height: 100%;
+            display: flex; flex-direction: column; position: relative; overflow: hidden;
+        }
+        .pricing-card:hover { transform: translateY(-10px); box-shadow: 0 15px 35px rgba(0,0,0,0.8); border-color: #555; }
+        
+        /* The VIP Card gets special styling */
+        .pricing-card.vip {
+            border: 2px solid var(--gold); background: linear-gradient(145deg, #111 0%, #1a1a1a 100%);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+        }
+        .pricing-card.vip:hover { box-shadow: 0 15px 40px rgba(212, 175, 55, 0.4); border-color: #FFF; }
+        
+        .badge-popular {
+            position: absolute; top: 15px; right: -30px; background: var(--gold); color: #000;
+            font-weight: 900; font-size: 0.7rem; padding: 5px 30px; transform: rotate(45deg);
+            letter-spacing: 1px;
+        }
+
+        .tier-name { font-size: 1.4rem; font-weight: 800; color: #FFF; text-transform: uppercase; margin-bottom: 15px; }
+        .tier-price { font-family: 'Cinzel', serif; font-size: 2.8rem; font-weight: 900; color: var(--gold); margin-bottom: 25px; line-height: 1; }
+        .tier-price span { font-size: 1rem; color: #888; font-family: 'Montserrat', sans-serif; font-weight: 600; }
+
+        .feature-list { list-style: none; padding: 0; margin: 0 0 30px 0; text-align: left; flex-grow: 1; }
+        .feature-list li { margin-bottom: 15px; font-size: 0.9rem; font-weight: 600; color: #ddd; display: flex; align-items: flex-start; gap: 10px; }
+        .feature-list li i { color: #2eb82e; margin-top: 3px; font-size: 1.1rem; }
+        .feature-list li.disabled { color: #555; }
+        .feature-list li.disabled i { color: #555; }
+
+        .btn-upgrade {
+            background: #222; color: #FFF; font-weight: 800; border: 1px solid #555;
+            padding: 15px; border-radius: 12px; width: 100%; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn-upgrade:hover { background: #333; color: #FFF; }
+        
+        .pricing-card.vip .btn-upgrade {
+            background: var(--gold); color: #000; border: none;
+        }
+        .pricing-card.vip .btn-upgrade:hover { background: #FFF; box-shadow: 0 0 15px rgba(255,255,255,0.4); }
+
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="dashboard.html" class="btn btn-warning rounded-pill px-4 fw-bold">Dashboard</a>
+</header>
+
+<div class="container">
+    <h1 class="header-title">CHOOSE YOUR TIER</h1>
+    <p class="header-sub">Upgrade your account to unlock wholesale rates, earn massive commissions, and build your own VTU empire.</p>
+
+    <div class="row g-4 justify-content-center">
+        
+        <!-- Standard User -->
+        <div class="col-12 col-md-4">
+            <div class="pricing-card">
+                <div class="tier-name">Standard</div>
+                <div class="tier-price">Free</div>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check-circle"></i> Standard Data & Airtime Rates</li>
+                    <li><i class="fas fa-check-circle"></i> Pay Electricity & Cable Bills</li>
+                    <li><i class="fas fa-check-circle"></i> Standard Wallet Funding</li>
+                    <li class="disabled"><i class="fas fa-times-circle"></i> No Reseller Discounts</li>
+                    <li class="disabled"><i class="fas fa-times-circle"></i> No Developer API Access</li>
+                </ul>
+                <button class="btn-upgrade" disabled style="opacity: 0.5;">Current Plan</button>
+            </div>
+        </div>
+
+        <!-- Pro Agent -->
+        <div class="col-12 col-md-4">
+            <div class="pricing-card">
+                <div class="tier-name">Pro Agent</div>
+                <div class="tier-price">₦2,000<br><span>/One-time</span></div>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check-circle"></i> Up to 5% Discount on Airtime</li>
+                    <li><i class="fas fa-check-circle"></i> Access to Wholesale SME Data</li>
+                    <li><i class="fas fa-check-circle"></i> Earn Commissions on Bills</li>
+                    <li><i class="fas fa-check-circle"></i> Priority Customer Support</li>
+                    <li class="disabled"><i class="fas fa-times-circle"></i> No Developer API Access</li>
+                </ul>
+                <button class="btn-upgrade" onclick="initiateUpgrade('Pro Agent', 2000, 'agent')">Upgrade to Pro</button>
+            </div>
+        </div>
+
+        <!-- VIP Reseller -->
+        <div class="col-12 col-md-4">
+            <div class="pricing-card vip">
+                <div class="badge-popular">TOP CHOICE</div>
+                <div class="tier-name" style="color: var(--gold);">VIP Reseller</div>
+                <div class="tier-price">₦5,000<br><span>/One-time</span></div>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check-circle"></i> Maximum Discounts on ALL Services</li>
+                    <li><i class="fas fa-check-circle"></i> Lowest Wholesale Data Rates</li>
+                    <li><i class="fas fa-check-circle"></i> Full Developer API Access</li>
+                    <li><i class="fas fa-check-circle"></i> Highest Referral Bonuses</li>
+                    <li><i class="fas fa-check-circle"></i> 24/7 Dedicated Account Manager</li>
+                </ul>
+                <button class="btn-upgrade" onclick="initiateUpgrade('VIP Reseller', 5000, 'reseller')">Become a VIP</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function initStars() {
+        const c = document.getElementById('starCanvas');
+        c.width = window.innerWidth; c.height = window.innerHeight;
+        const ctx = c.getContext('2d');
+        const stars = [];
+        for(let i = 0; i < 150; i++) {
+            stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        }
+        function animate() {
+            ctx.clearRect(0, 0, c.width, c.height);
+            stars.forEach(s => {
+                ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white";
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5;
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+    window.onload = initStars;
+    window.onresize = initStars;
+
+    async function initiateUpgrade(planName, amount, roleCode) {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) { window.location.href = '/index.html'; return; }
+
+        const { value: pin } = await Swal.fire({
+            title: `Upgrade to ${planName}`,
+            html: `<p style="color: #ccc; font-size: 0.95rem;">You are about to pay <strong>₦${amount.toLocaleString()}</strong> from your wallet to upgrade your account permanently.</p>`,
+            input: 'password',
+            inputPlaceholder: 'Enter your 4-digit PIN',
+            inputAttributes: { maxlength: 4, inputmode: 'numeric' },
+            showCancelButton: true,
+            confirmButtonText: 'Confirm Upgrade',
+            confirmButtonColor: '#d4af37',
+            cancelButtonColor: '#d32f2f',
+            background: '#111',
+            color: '#fff',
+            inputValidator: (value) => {
+                if (!value || value.length !== 4) return 'Please enter a valid 4-digit PIN!';
+            }
+        });
+
+        if (pin) {
+            Swal.fire({
+                title: 'Processing Upgrade...',
+                text: 'Deducting fee and upgrading your node...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+                background: '#111', color: '#d4af37'
+            });
+
+            try {
+                // Pointing to your internal user upgrade route (no VTpass involved)
+                const res = await fetch('/api/user/upgrade', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    body: JSON.stringify({ role: roleCode, amount: amount, pin: pin })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Upgrade Successful!',
+                        text: `Welcome to the ${planName} tier! Your discounts are now active.`,
+                        confirmButtonColor: '#d4af37', background: '#111', color: '#fff'
+                    }).then(() => {
+                        window.location.href = 'dashboard.html';
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Upgrade Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+                }
+            } catch (error) {
+                Swal.fire({ icon: 'error', title: 'Network Error', text: 'Please check your connection and try again.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            }
+        }
+    }
+</script>
+</body>
+</html>
