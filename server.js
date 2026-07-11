@@ -70,6 +70,11 @@ async function registerRoutes() {
   fastify.get('/api/auth/profile', { preHandler: require('./middleware/auth').authenticate }, authRoutes.getProfile);
   fastify.post('/api/auth/logout', { preHandler: require('./middleware/auth').authenticate }, authRoutes.logout);
   
+  // === NEW SECURITY ROUTES ===
+  fastify.post('/api/auth/change-password', { preHandler: require('./middleware/auth').authenticate }, authRoutes.changePassword);
+  fastify.post('/api/auth/logout-all', { preHandler: require('./middleware/auth').authenticate }, authRoutes.logoutAllSessions);
+  // ===========================
+  
   const userRoutes = require('./routes/user');
   fastify.get('/api/user/dashboard-data', { preHandler: require('./middleware/auth').authenticate }, userRoutes.getDashboardData);
   fastify.post('/api/user/dashboard-preferences', { preHandler: require('./middleware/auth').authenticate }, userRoutes.updatePreferences);
