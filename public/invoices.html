@@ -45,25 +45,34 @@
             background: var(--card-bg); border: 1px solid #333; border-radius: 25px;
             padding: 40px 30px; margin-bottom: 40px; backdrop-filter: blur(15px);
             box-shadow: 0 15px 40px rgba(0,0,0,0.6); position: relative; overflow: hidden;
+            max-width: 800px; margin-left: auto; margin-right: auto;
         }
         .creator-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
 
+        /* Unified Input Styling */
         .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; transition: 0.3s; }
         .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow); }
         .input-group-custom label { display: block; font-size: 0.85rem; color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
         .input-group-custom input, .input-group-custom textarea {
-            background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 600; outline: none;
+            background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 600; outline: none; font-family: 'Montserrat', sans-serif;
         }
         
+        /* Logo Upload Styling (Matches Payment Links) */
+        .image-upload-wrapper { border: 2px dashed #444; border-radius: 15px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; background: #0a0a0a; margin-bottom: 20px; }
+        .image-upload-wrapper:hover { border-color: var(--gold); background: #111; }
+        .image-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
+        .upload-placeholder { color: #888; font-weight: 600; font-size: 0.9rem; pointer-events: none; }
+        .upload-placeholder i { font-size: 2rem; color: var(--gold); margin-bottom: 10px; display: block; }
+        .image-preview { width: auto; max-width: 100%; height: 120px; object-fit: contain; border-radius: 10px; display: none; z-index: 1; position: relative; margin: 0 auto; }
+
         .item-list-container { background: #0a0a0a; border: 1px solid #222; border-radius: 15px; padding: 25px; margin-bottom: 25px; }
         .item-headers { display: flex; gap: 10px; margin-bottom: 10px; color: var(--gold); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
         .item-row { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; animation: slideIn 0.3s ease-out forwards; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
         
-        .item-input-wrapper { display: flex; flex-direction: column; }
         .item-input { background: #1a1a1a; border: 1px solid #444; color: #fff; padding: 15px; border-radius: 10px; outline: none; font-weight: 600; width: 100%; transition: 0.3s; }
         .item-input:focus { border-color: var(--gold); }
-        .btn-remove { background: rgba(255, 51, 51, 0.1); color: var(--red); border: 1px solid rgba(255, 51, 51, 0.3); border-radius: 10px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; flex-shrink: 0; margin-top: auto; }
+        .btn-remove { background: rgba(255, 51, 51, 0.1); color: var(--red); border: 1px solid rgba(255, 51, 51, 0.3); border-radius: 10px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; flex-shrink: 0; }
         .btn-remove:hover { background: var(--red); color: #fff; }
 
         .live-calc-box { background: linear-gradient(145deg, #111 0%, #1a1a1a 100%); border: 1px solid var(--gold); border-radius: 15px; padding: 25px; margin-bottom: 25px; box-shadow: 0 0 20px rgba(212, 175, 55, 0.1); }
@@ -74,13 +83,17 @@
         .btn-create:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255,255,255,0.2); }
 
         .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
-        .invoice-item { background: rgba(20,20,20,0.9); border: 1px solid #333; border-radius: 20px; padding: 25px; transition: 0.3s; position: relative; display: flex; flex-direction: column; }
+        .invoice-item { background: rgba(20,20,20,0.9); border: 1px solid #333; border-radius: 20px; padding: 25px; transition: 0.3s; position: relative; display: flex; flex-direction: column; word-wrap: break-word; overflow-wrap: break-word;}
         .invoice-item:hover { border-color: var(--gold); box-shadow: 0 10px 25px rgba(0,0,0,0.8); transform: translateY(-5px); }
-        .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
-        .inv-title { font-weight: 900; font-size: 1.2rem; margin: 0; color: #fff; text-transform: uppercase; }
-        .inv-email { font-size: 0.8rem; color: #888; font-family: monospace; }
+        .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; gap: 10px;}
         
-        .status-pill { padding: 5px 12px; border-radius: 50px; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid transparent; }
+        .inv-title-group { display: flex; align-items: center; gap: 15px; max-width: 75%; }
+        .inv-logo-thumb { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 1px solid #444; background: #000; flex-shrink: 0; }
+        
+        .inv-title { font-weight: 900; font-size: 1.1rem; margin: 0; color: #fff; text-transform: uppercase; line-height: 1.2;}
+        .inv-email { font-size: 0.75rem; color: #888; font-family: monospace; word-break: break-all;}
+        
+        .status-pill { padding: 5px 12px; border-radius: 50px; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid transparent; flex-shrink: 0; height: fit-content;}
         .status-draft { background: rgba(102, 102, 102, 0.2); color: #ccc; border-color: #666; }
         .status-sent { background: rgba(0, 191, 255, 0.2); color: var(--blue); border-color: var(--blue); }
         .status-paid { background: rgba(0, 255, 136, 0.2); color: var(--green); border-color: var(--green); }
@@ -135,6 +148,16 @@
     <div class="creator-card">
         <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; letter-spacing: 1px;">CREATE NEW INVOICE</h5>
         
+        <div class="image-upload-wrapper" id="uploadWrapper">
+            <input type="file" id="invoiceLogoInput" accept="image/jpeg, image/png, image/webp" onchange="previewImage(event)">
+            <div class="upload-placeholder" id="uploadPlaceholder">
+                <i class="fas fa-building"></i>
+                <span>Attach your Business Logo (Optional)</span><br>
+                <small class="text-muted fw-normal mt-1 d-block">(JPG, PNG - Max 2MB)</small>
+            </div>
+            <img id="imagePreview" class="image-preview" src="" alt="Logo Preview">
+        </div>
+
         <div class="row g-3">
             <div class="col-md-6">
                 <div class="input-group-custom">
@@ -156,8 +179,8 @@
         
         <div class="item-list-container">
             <div class="item-headers">
-                <div style="flex: 3;">WHAT ARE YOU SELLING?</div>
-                <div style="flex: 1; text-align: center;">HOW MANY?</div>
+                <div style="flex: 3;">WHAT ARE YOU BILLING FOR?</div>
+                <div style="flex: 1; text-align: center;">QTY</div>
                 <div style="flex: 1.5; text-align: right;">PRICE (₦)</div>
                 <div style="width: 50px;"></div>
             </div>
@@ -171,7 +194,7 @@
                 </div>
             </div>
             <button type="button" class="btn btn-outline-warning rounded-pill mt-4 fw-bold px-4 w-100 py-2" onclick="addItem()">
-                <i class="fas fa-plus-circle me-2"></i> Add Another Product
+                <i class="fas fa-plus-circle me-2"></i> Add Another Item
             </button>
         </div>
         
@@ -222,6 +245,8 @@
 </div>
 
 <script>
+    let base64BusinessLogo = null;
+
     function initStars() {
         const c = document.getElementById('starCanvas');
         c.width = window.innerWidth; c.height = window.innerHeight;
@@ -239,13 +264,37 @@
         defaultDate.setDate(defaultDate.getDate() + 7);
         document.getElementById('dueDate').valueAsDate = defaultDate;
     }
+
+    // Image Upload Logic
+    function previewImage(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            Swal.fire({ icon: 'error', title: 'File Too Large', text: 'Logo must be smaller than 2MB.', background: '#111', color: '#fff' });
+            event.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            base64BusinessLogo = e.target.result; 
+            const preview = document.getElementById('imagePreview');
+            const placeholder = document.getElementById('uploadPlaceholder');
+            
+            preview.src = base64BusinessLogo;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+        }
+        reader.readAsDataURL(file);
+    }
     
     function addItem() {
         const container = document.getElementById('itemsContainer');
         const newRow = document.createElement('div');
         newRow.className = 'item-row';
         newRow.innerHTML = `
-            <input type="text" class="item-input" style="flex: 3;" placeholder="e.g. Logo Design" oninput="calculateLiveTotal()">
+            <input type="text" class="item-input" style="flex: 3;" placeholder="e.g. Server Hosting" oninput="calculateLiveTotal()">
             <input type="number" class="item-input text-center" style="flex: 1;" placeholder="1" value="1" min="1" oninput="calculateLiveTotal()">
             <input type="number" class="item-input text-end" style="flex: 1.5;" placeholder="0.00" oninput="calculateLiveTotal()">
             <div class="btn-remove" onclick="removeItem(this)"><i class="fas fa-trash"></i></div>
@@ -314,15 +363,25 @@
         try {
             Swal.fire({ title: 'Generating...', text: 'Encrypting data...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
             
+            const payload = { 
+                customerName, 
+                customerEmail, 
+                items, 
+                taxRate, 
+                discountRate, 
+                dueDate, 
+                notes: "NATERPAY Secure Invoice",
+                businessLogoBase64: base64BusinessLogo // Sending the logo image
+            };
+
             const res = await fetch('/api/invoices', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ customerName, customerEmail, items, taxRate, discountRate, dueDate, notes: "NATERPAY Secure Invoice" })
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             
             if (data.success) {
-                // Notice we copy the link using our NEW invoice-view.html format
                 const newLink = `${window.location.origin}/invoice-view.html?id=${data.invoice.invoiceId}`;
                 
                 Swal.fire({ 
@@ -335,8 +394,14 @@
                     confirmButtonColor: '#d4af37', background: '#111', color: '#fff' 
                 });
                 
+                // Reset Form
                 document.getElementById('customerName').value = '';
                 document.getElementById('customerEmail').value = '';
+                document.getElementById('invoiceLogoInput').value = '';
+                document.getElementById('imagePreview').style.display = 'none';
+                document.getElementById('uploadPlaceholder').style.display = 'block';
+                base64BusinessLogo = null;
+
                 document.getElementById('itemsContainer').innerHTML = `
                     <div class="item-row">
                         <input type="text" class="item-input" style="flex: 3;" placeholder="e.g. Logo Design" oninput="calculateLiveTotal()">
@@ -383,16 +448,24 @@
                             'overdue': { cls: 'status-overdue', icon: 'fa-exclamation-circle' }
                         }[inv.status] || { cls: 'status-draft', icon: 'fa-pen' };
 
-                        // IMPORTANT: Point to the new customer view file!
                         const linkUrl = `${window.location.origin}/invoice-view.html?id=${inv.invoiceId}`;
                         const dateStr = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : 'N/A';
+
+                        // Display thumbnail if the merchant uploaded a logo
+                        const thumbHTML = inv.businessLogoBase64 
+                            ? `<img src="${inv.businessLogoBase64}" class="inv-logo-thumb" alt="Logo">` 
+                            : `<div class="inv-logo-thumb d-flex justify-content-center align-items-center" style="background:#222; color:var(--gold);"><i class="fas fa-file-invoice"></i></div>`;
+
 
                         return `
                         <div class="invoice-item">
                             <div class="inv-header">
-                                <div>
-                                    <h3 class="inv-title">${inv.customerName}</h3>
-                                    <div class="inv-email">${inv.customerEmail}</div>
+                                <div class="inv-title-group">
+                                    ${thumbHTML}
+                                    <div>
+                                        <h3 class="inv-title">${inv.customerName}</h3>
+                                        <div class="inv-email">${inv.customerEmail}</div>
+                                    </div>
                                 </div>
                                 <span class="status-pill ${sMap.cls}"><i class="fas ${sMap.icon}"></i> ${inv.status}</span>
                             </div>
