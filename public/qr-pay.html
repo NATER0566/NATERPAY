@@ -189,10 +189,14 @@
         }
     }
 
-    // Secure QR Generation
+    // THE FIX: Secure Universal URL Generation for QR
     function generateQR() {
         if(!myUserId) return;
-        const qrPayload = `NATERPAY:${myUserId}`; // Strict prefix to prevent fake links
+        
+        // This generates a full URL (e.g. https://naterpay.com/qr-pay.html?pay=09046974410)
+        // This ensures normal phone cameras open the app, instead of googling it.
+        const baseUrl = window.location.origin + window.location.pathname;
+        const qrPayload = `${baseUrl}?pay=${myUserId}`;
         
         document.getElementById('qrcode').innerHTML = ""; 
         new QRCode(document.getElementById("qrcode"), {
@@ -214,10 +218,20 @@
         link.click();
     }
 
+    // Check URL on Load (If scanned by a normal phone camera)
+    function checkUrlForPayment() {
+        const params = new URLSearchParams(window.location.search);
+        const payId = params.get('pay');
+        if(payId) {
+            // Remove the ?pay= param so it doesn't loop
+            window.history.replaceState({}, document.title, window.location.pathname);
+            processTransferUI(payId);
+        }
+    }
+
     // --- SCANNER LOGIC (Simplified & Robust) ---
     function openScanner() {
         document.getElementById('scannerModal').style.display = 'flex';
-        // Initialize scanner safely
         html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
         html5QrcodeScanner.render(onScanSuccess, onScanFailure);
     }
@@ -236,15 +250,16 @@
 
         let targetId = decodedText;
         
-        // Strict Validation: Ensure it's a NATERPAY code
-        if(decodedText.startsWith("NATERPAY:")) {
+        // Handle if they scanned the Universal URL format
+        if(decodedText.includes("?pay=")) {
+            targetId = decodedText.split("?pay=")[1];
+        } 
+        // Handle old text format fallback
+        else if(decodedText.startsWith("NATERPAY:")) {
             targetId = decodedText.replace("NATERPAY:", "").trim();
-        } else {
-            // It might just be a raw phone number, we will try to process it anyway
-            targetId = decodedText.trim(); 
         }
 
-        processTransferUI(targetId);
+        processTransferUI(targetId.trim());
     }
 
     function manualPayInit() {
@@ -317,7 +332,6 @@
         });
 
         try {
-            // This connects to the exact transfer route you have in routes/wallet.js
             const res = await fetch('/api/wallet/transfer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
@@ -326,9 +340,13 @@
             const data = await res.json();
             
             if (data.success) {
+                // THE FIX: We now look for recipientName in the API response
+                const receiverName = data.recipientName || recipientId;
+
                 Swal.fire({
-                    icon: 'success', title: 'Transfer Complete!',
-                    html: `You successfully sent <strong style="color: #FFD700;">₦${parseFloat(amount).toLocaleString()}</strong>.`,
+                    icon: 'success', 
+                    title: 'Transfer Complete!',
+                    html: `You successfully sent <strong style="color: #FFD700;">₦${parseFloat(amount).toLocaleString()}</strong> to <br><span style="color: #00ff88; font-size: 1.1rem; font-weight: bold;">${receiverName}</span>.`,
                     confirmButtonColor: '#FFD700', background: '#111', color: '#FFFFFF'
                 }).then(() => { window.location.href = 'dashboard.html'; });
             } else {
@@ -339,7 +357,11 @@
         }
     }
 
-    window.onload = () => { initStars(); fetchUserData(); };
+    window.onload = () => { 
+        initStars(); 
+        fetchUserData(); 
+        checkUrlForPayment(); // Trigger if someone scanned the URL from phone camera
+    };
     window.onresize = initStars;
 </script>
 </body>
