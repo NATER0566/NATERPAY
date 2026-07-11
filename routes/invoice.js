@@ -13,7 +13,7 @@ try { Notification = require('../models/Notification'); } catch(e) {}
 try { generateIdempotencyKey = require('../utils/auth').generateIdempotencyKey; } catch(e) {}
 
 /**
- * 1. Get user's invoices (Dashboard view)
+ * 1. Get user's invoices
  */
 async function getInvoices(request, reply) {
   try {
@@ -40,7 +40,7 @@ async function getInvoices(request, reply) {
 }
 
 /**
- * 2. Create invoice & Send Email
+ * 2. Create invoice & Send Real Email
  */
 async function createInvoice(request, reply) {
   try {
@@ -50,7 +50,7 @@ async function createInvoice(request, reply) {
       return reply.status(400).send({ success: false, message: 'Customer name, email, and valid items are required' });
     }
     
-    // EXACT MATHEMATICS ENGINE
+    // MATHEMATICS ENGINE
     let subtotal = 0;
     const processedItems = items.map(item => {
         const qty = parseFloat(item.quantity) || 1;
@@ -81,37 +81,42 @@ async function createInvoice(request, reply) {
     const invoiceLink = `${protocol}://${host}/invoice-view.html?id=${invoice.invoiceId}`;
 
     // ==========================================
-    // EMAIL DISPATCH ENGINE (RESEND)
+    // TRUE EMAIL DISPATCH ENGINE
     // ==========================================
+    // This MUST match the exact verified email address you use in auth.js!
+    const senderEmail = process.env.EMAIL_FROM || 'support@naterpay.com'; 
+
     try {
         await resend.emails.send({
-            from: process.env.EMAIL_FROM || 'onboarding@resend.dev', 
+            from: `NATERPAY Billing <${senderEmail}>`, 
             to: customerEmail,
-            subject: `New Invoice from NATERPAY Merchant (INV: ${invoice.invoiceId})`,
+            subject: `New Invoice from NATERPAY (INV: ${invoice.invoiceId})`,
             html: `
-                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #333; border-radius: 15px; background-color: #0a0a0a; color: #ffffff;">
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #333; border-radius: 15px; background-color: #0a0a0a; color: #ffffff; word-wrap: break-word;">
                     <h2 style="color: #FFD700; text-align: center; border-bottom: 2px solid #FFD700; padding-bottom: 15px; letter-spacing: 2px;">NATERPAY SECURE INVOICE</h2>
                     <p style="font-size: 16px;">Hello <strong>${customerName}</strong>,</p>
                     <p style="font-size: 16px; color: #ccc;">You have received a new invoice requesting payment.</p>
-                    <div style="background-color: #1a1a1a; padding: 20px; border-radius: 10px; margin: 25px 0; border: 1px solid #333;">
+                    
+                    <div style="background-color: #1a1a1a; padding: 20px; border-radius: 10px; margin: 25px 0; border: 1px solid #333; word-wrap: break-word;">
                         <p style="margin: 5px 0; font-size: 14px; color: #888;">Invoice ID:</p>
-                        <p style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold;">${invoice.invoiceId}</p>
+                        <p style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold; word-break: break-all;">${invoice.invoiceId}</p>
+                        
                         <p style="margin: 5px 0; font-size: 14px; color: #888;">Total Amount Due:</p>
                         <p style="margin: 0 0 15px 0; font-size: 24px; font-weight: bold; color: #FFD700;">₦${finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                        
                         <p style="margin: 5px 0; font-size: 14px; color: #888;">Due Date:</p>
                         <p style="margin: 0; font-size: 16px; font-weight: bold; color: #ff3333;">${new Date(invoice.dueDate).toLocaleDateString()}</p>
                     </div>
+                    
                     <div style="text-align: center; margin: 40px 0;">
                         <a href="${invoiceLink}" style="background-color: #FFD700; color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 8px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">View & Pay Securely</a>
                     </div>
                 </div>
             `
         });
-        console.log(`Email successfully sent to ${customerEmail}`);
+        console.log(`Invoice email successfully dispatched to ${customerEmail}`);
     } catch (emailError) {
-        console.error('\n--- EMAIL FAILED TO SEND ---');
-        console.error('Reason:', emailError.message);
-        console.error('NOTE: If using a free Resend account, you can only send emails to your own verified email address!\n');
+        console.error('Email failed. Please verify process.env.EMAIL_FROM matches your verified domain:', emailError.message);
     }
     // ==========================================
 
@@ -156,7 +161,7 @@ async function getInvoice(request, reply) {
 }
 
 /**
- * 4. Pay invoice (CRASH-PROOF MODE)
+ * 4. Pay invoice
  */
 async function payInvoice(request, reply) {
   try {
@@ -177,7 +182,6 @@ async function payInvoice(request, reply) {
 
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
     
-    // NO MONGODB SESSIONS - SAFE MATH
     wallet.availableBalance = String(currentAvail + finalCredit);
     wallet.balance = String(parseFloat(wallet.balance?.toString() || '0') + finalCredit);
     await wallet.save();
