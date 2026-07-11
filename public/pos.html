@@ -154,10 +154,11 @@
         });
 
         try {
-            const res = await fetch('/api/vtu/electricity', {
+            // FIXED: Pointing correctly to /pos route
+            const res = await fetch('/api/vtu/pos', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ meterNumber: terminalId, disco: 'vtpass-pos', amount: amount, meterType: 'prepaid', pin })
+                body: JSON.stringify({ terminalId: terminalId, amount: amount, pin })
             });
             const data = await res.json();
             
@@ -168,7 +169,8 @@
                     confirmButtonColor: '#FFD700', background: '#111111', color: '#FFFFFF'
                 }).then(() => { window.location.href = '/dashboard.html'; });
             } else {
-                Swal.fire({ icon: 'error', title: 'Funding Failed', text: "We encountered a temporary issue processing your POS funding. Please verify the Terminal ID and try again.", confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+                // FIXED: Displays the actual backend error directly
+                Swal.fire({ icon: 'error', title: 'Funding Failed', text: data.message || "An error occurred.", confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             }
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'Network Connection', text: 'Please check your internet connection.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
