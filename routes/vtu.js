@@ -4,7 +4,7 @@ const axios = require('axios');
 
 // --- SPEED BOOST: MEMORY BANK CACHE FOR PLANS ---
 const variationsCache = {};
-const CACHE_TIME = 1000 * 60 * 60 * 24; // Cache plans for 24 hours to eliminate live server delay
+const CACHE_TIME = 1000 * 60 * 60 * 24; 
 
 // --- HELPER: VTPASS STRICT REQUEST ID FORMATTER ---
 function generateVTpassRequestId() {
@@ -487,6 +487,44 @@ async function buyPOS(request, reply) {
     }
 }
 
+// ==================================================================
+// VTPASS WEBHOOK CALLBACK HANDLER
+// ==================================================================
+async function handleVTpassWebhook(request, reply) {
+    try {
+        const { type, data, summary, actionRequired } = request.body;
+
+        if (type === 'transaction-update') {
+            const { transactionId, status } = data.content.transactions;
+            const transaction = await Transaction.findOne({ providerReference: transactionId });
+
+            if (transaction && transaction.status === 'pending') {
+                if (status === 'delivered') {
+                    transaction.status = 'success';
+                } else if (status === 'reversed') {
+                    transaction.status = 'failed';
+                    // Refund Logic Here
+                    const wallet = await Wallet.findOne({ user: transaction.user });
+                    wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(transaction.amount)).toString();
+                    wallet.balance = (parseFloat(wallet.balance) + parseFloat(transaction.amount)).toString();
+                    await wallet.save();
+                }
+                await transaction.save();
+            }
+        } else if (type === 'variations-update') {
+            const { serviceID } = request.body;
+            // Clear the specific cache for this service to force a fresh fetch next time
+            if (variationsCache[serviceID]) {
+                delete variationsCache[serviceID];
+            }
+        }
+        
+        reply.send({ response: "success" });
+    } catch (error) {
+        reply.status(500).send({ response: "error" });
+    }
+}
+
 
 // ==================================================================
 // REAL VTPASS INTEGRATION CORE
@@ -655,4 +693,18 @@ async function processVTURequest(type, data) {
   }
 }
 
-module.exports = { getRates, getVariations, buyAirtime, buyData, buyElectricity, buyCable, buyEducation, buyBetting, buyInsurance, sendBulkSMS, buyPOS };
+// MAKE SURE TO EXPORT handleVTpassWebhook SO IT IS AVAILABLE IN SERVER.JS
+module.exports = { 
+  getRates, 
+  getVariations, 
+  buyAirtime, 
+  buyData, 
+  buyElectricity, 
+  buyCable, 
+  buyEducation, 
+  buyBetting, 
+  buyInsurance, 
+  sendBulkSMS, 
+  buyPOS,
+  handleVTpassWebhook 
+};
