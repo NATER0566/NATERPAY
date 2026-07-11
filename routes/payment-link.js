@@ -30,41 +30,43 @@ async function getLinks(request, reply) {
         transactionCount: link.transactionCount || 0,
         totalCollected: link.totalCollected ? link.totalCollected.toString() : '0',
         expiryDate: link.expiryDate,
-        createdAt: link.createdAt
+        createdAt: link.createdAt,
+        // E-Commerce Additions
+        redirectUrl: link.redirectUrl,
+        productImageBase64: link.productImageBase64
       }))
     });
   } catch (error) {
     console.error('Get payment links error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch payment links'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch payment links' });
   }
 }
 
 /**
- * 2. Create a new payment link
+ * 2. Create a new payment link (Storefront Product)
  */
 async function createLink(request, reply) {
   try {
-    const { title, description, amount, currency, isFlexibleAmount, minAmount, maxAmount, collectCustomerName, collectCustomerEmail, collectCustomerPhone, maxTransactions, expiryDate, successUrl, cancelUrl } = request.body;
+    const { 
+        title, description, amount, currency, isFlexibleAmount, 
+        minAmount, maxAmount, collectCustomerName, collectCustomerEmail, 
+        collectCustomerPhone, maxTransactions, expiryDate, 
+        redirectUrl, productImageBase64 
+    } = request.body;
     
-    if (!title || (!amount && !isFlexibleAmount)) {
-      return reply.status(400).send({
-        success: false,
-        message: 'Title and amount are required'
-      });
+    if (!title) {
+      return reply.status(400).send({ success: false, message: 'Product title is required' });
     }
 
-    // Generate a secure, unique 10-character string for the URL
-    const linkId = crypto.randomBytes(5).toString('hex');
+    // Generate a secure, unique string for the URL
+    const linkId = 'LN_' + crypto.randomBytes(5).toString('hex').toUpperCase();
     
     const paymentLink = new PaymentLink({
       user: request.user._id,
       linkId,
       title,
-      description: description || '',
-      amount: amount || 0,
+      description: description || 'Secure NATERPAY Product',
+      amount: isFlexibleAmount ? 0 : parseFloat(amount || 0),
       currency: currency || 'NGN',
       isFlexibleAmount: isFlexibleAmount || false,
       minAmount: isFlexibleAmount ? minAmount : null,
@@ -74,18 +76,19 @@ async function createLink(request, reply) {
       collectCustomerPhone: collectCustomerPhone || false,
       maxTransactions: maxTransactions || null,
       expiryDate: expiryDate || null,
-      successUrl: successUrl || null,
-      cancelUrl: cancelUrl || null
+      // E-Commerce Additions
+      redirectUrl: redirectUrl || '',
+      productImageBase64: productImageBase64 || null
     });
     
     await paymentLink.save();
     
-    // Safely log the action if AuditLog model exists
+    // Safely log the action
     if (AuditLog && typeof AuditLog.logAction === 'function') {
       await AuditLog.logAction({
         user: request.user._id,
         action: 'payment_link_create',
-        description: `Payment link created: ${title}`,
+        description: `Storefront product created: ${title}`,
         details: { linkId: paymentLink.linkId, amount },
         ipAddress: request.ip,
         userAgent: request.headers['user-agent']
@@ -94,32 +97,24 @@ async function createLink(request, reply) {
     
     reply.status(201).send({
       success: true,
-      message: 'Payment link created successfully',
-      link: {
-        _id: paymentLink._id,
-        linkId: paymentLink.linkId,
-        url: `${request.headers.host || ''}/pay/${paymentLink.linkId}`,
-        title: paymentLink.title,
-        amount: paymentLink.amount.toString()
-      }
+      message: 'Product published to storefront successfully',
+      linkId: paymentLink.linkId
     });
   } catch (error) {
     console.error('Create payment link error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to create payment link'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to create storefront link' });
   }
 }
 
 /**
- * 3. Get payment link by ID (Public Customer View)
+ * 3. Get payment link by ID (Public Customer View loaded by pay.html)
  */
 async function getLink(request, reply) {
   try {
-    const { linkId } = request.params;
+    const { id } = request.params;
     
-    const paymentLink = await PaymentLink.findOne({ linkId }).populate('user', 'name');
+    // Look for linkId using isActive to match your schema logic
+    const paymentLink = await PaymentLink.findOne({ linkId: id }).populate('user', 'name');
     
     if (!paymentLink) {
       return reply.status(404).send({ success: false, message: 'Payment link not found' });
@@ -139,69 +134,73 @@ async function getLink(request, reply) {
     
     reply.send({
       success: true,
-      linkData: {
+      paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY, // Dynamic injection from Render Env
+      link: {
         linkId: paymentLink.linkId,
         title: paymentLink.title,
         description: paymentLink.description,
         amount: paymentLink.amount ? paymentLink.amount.toString() : '0',
         currency: paymentLink.currency,
-        isFlexible: paymentLink.isFlexibleAmount,
+        isFlexibleAmount: paymentLink.isFlexibleAmount,
         minAmount: paymentLink.minAmount?.toString(),
         maxAmount: paymentLink.maxAmount?.toString(),
         collectCustomerName: paymentLink.collectCustomerName,
         collectCustomerEmail: paymentLink.collectCustomerEmail,
-        merchantName: paymentLink.user ? paymentLink.user.name : 'Merchant'
+        merchantName: paymentLink.user ? paymentLink.user.name : 'Merchant',
+        // E-Commerce Additions
+        redirectUrl: paymentLink.redirectUrl,
+        productImageBase64: paymentLink.productImageBase64
       }
     });
   } catch (error) {
     console.error('Get payment link error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch payment link details'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch payment link details' });
   }
 }
 
 /**
- * 4. Process the Link Payment (Webhook execution after payment gateway success)
+ * 4. Process the Link Payment (Calculates 2.5% Platform Fee & Teleports user)
  */
 async function payLink(request, reply) {
   try {
-    const { linkId } = request.params;
-    // Map data gracefully between old format & new gateway formats
-    const paymentAmount = parseFloat(request.body.paidAmount || request.body.amount);
+    const { id } = request.params;
     const { customerName, customerEmail, customerPhone, gatewayReference, paymentMethod } = request.body;
     
-    const paymentLink = await PaymentLink.findOne({ linkId });
+    // Map data gracefully
+    const paymentAmount = parseFloat(request.body.amount || request.body.paidAmount || 0);
+    
+    const paymentLink = await PaymentLink.findOne({ linkId: id });
     
     if (!paymentLink) {
-      return reply.status(404).send({ success: false, message: 'Payment link not found' });
+      return reply.status(404).send({ success: false, message: 'Product route missing' });
     }
     if (!paymentLink.isActive) {
-      return reply.status(410).send({ success: false, message: 'Payment link is not available' });
+      return reply.status(410).send({ success: false, message: 'Product is no longer available' });
     }
     
-    // Calculate NATERPAY Platform Fees (1.5%)
-    const fee = paymentAmount * 0.015;
-    const finalCredit = paymentAmount - fee;
+    // --- NATERPAY REVENUE ENGINE ---
+    // Calculate NATERPAY Platform Fees (2.5% total processing fee)
+    const platformFee = paymentAmount * 0.025; 
+    const finalCredit = paymentAmount - platformFee;
+    // -------------------------------
 
     // Safely fetch and credit the Merchant's Wallet
     const wallet = await Wallet.findOne({ user: paymentLink.user });
     if (!wallet) return reply.status(404).send({ success: false, message: 'Merchant wallet not found' });
 
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
-    wallet.availableBalance = (currentAvail + finalCredit).toString();
-    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') + finalCredit).toString();
+    wallet.availableBalance = String(currentAvail + finalCredit);
+    wallet.balance = String(parseFloat(wallet.balance?.toString() || '0') + finalCredit);
     await wallet.save();
 
     // Create the Audit Transaction Log
     const transaction = new Transaction({
       user: paymentLink.user,
       type: 'payment_link',
-      description: `Link Payment Received: ${paymentLink.title} from ${customerName || 'Anonymous Customer'}`,
+      description: `Storefront Sale: ${paymentLink.title} (Buyer: ${customerName || 'Anonymous'})`,
       amount: finalCredit,
-      fee: fee,
-      balanceBefore: currentAvail.toString(),
+      fee: platformFee,
+      balanceBefore: String(currentAvail),
       balanceAfter: wallet.availableBalance.toString(),
       status: 'success',
       provider: paymentMethod || 'paystack',
@@ -217,17 +216,17 @@ async function payLink(request, reply) {
     });
     await transaction.save();
     
-    // Update link statistics
+    // Update link statistics safely
     paymentLink.transactionCount = (paymentLink.transactionCount || 0) + 1;
-    paymentLink.totalCollected = (parseFloat(paymentLink.totalCollected?.toString() || '0') + paymentAmount).toString();
+    paymentLink.totalCollected = String(parseFloat(paymentLink.totalCollected?.toString() || '0') + paymentAmount);
     await paymentLink.save();
     
     // Database Notification
     if (Notification && typeof Notification.create === 'function') {
       await Notification.create({
         user: paymentLink.user,
-        title: 'Payment Received',
-        message: `₦${finalCredit.toLocaleString()} received via payment link: ${paymentLink.title}`,
+        title: 'Product Sale!',
+        message: `₦${finalCredit.toLocaleString()} received via storefront: ${paymentLink.title}`,
         type: 'transaction',
         priority: 'high'
       }).catch(e => console.warn('Notification log suppressed', e.message));
@@ -240,22 +239,21 @@ async function payLink(request, reply) {
       });
       request.server.io.to(`user:${paymentLink.user}`).emit('notification', { 
         type: 'success', 
-        title: 'Incoming Funds!', 
-        message: `You received ₦${finalCredit.toLocaleString()} from your link: ${paymentLink.title}` 
+        title: 'New Sale!', 
+        message: `You received ₦${finalCredit.toLocaleString()} from: ${paymentLink.title}` 
       });
+      request.server.io.to(`user:${paymentLink.user}`).emit('dashboard:refresh');
     }
     
     reply.send({
       success: true,
-      message: 'Payment routed successfully to Merchant',
-      transaction
+      message: 'Payment verified and settled.',
+      transaction,
+      redirectUrl: paymentLink.redirectUrl // Passed to frontend to teleport the buyer
     });
   } catch (error) {
-    console.error('Pay payment link error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to process payment data'
-    });
+    console.error('Pay storefront link error:', error);
+    reply.status(500).send({ success: false, message: 'Failed to process payment fulfillment' });
   }
 }
 
