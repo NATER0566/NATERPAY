@@ -75,6 +75,7 @@ async function registerRoutes() {
   fastify.post('/api/user/dashboard-preferences', { preHandler: require('./middleware/auth').authenticate }, userRoutes.updatePreferences);
   fastify.post('/api/user/profile', { preHandler: require('./middleware/auth').authenticate }, userRoutes.updateProfile);
   fastify.get('/api/user/referral-tree', { preHandler: require('./middleware/auth').authenticate }, userRoutes.getReferralTree);
+  fastify.post('/api/user/upgrade', { preHandler: require('./middleware/auth').authenticate }, userRoutes.upgradeUser);
   
   const walletRoutes = require('./routes/wallet');
   fastify.get('/api/wallet', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.getWallet);
