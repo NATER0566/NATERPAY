@@ -86,6 +86,10 @@ async function registerRoutes() {
   fastify.post('/api/wallet/set-pin', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.setPin);
   fastify.post('/api/wallet/verify-bank', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.resolveBankAccount);
 
+  // === PAYSTACK WEBHOOK (NO AUTH REQUIRED - IT USES SECRET KEY HASH) ===
+  fastify.post('/api/webhooks/paystack', walletRoutes.handlePaystackWebhook);
+  // ====================================================================
+
   const vtuRoutes = require('./routes/vtu');
   fastify.post('/api/vtu/airtime', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyAirtime);
   fastify.post('/api/vtu/data', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyData);
