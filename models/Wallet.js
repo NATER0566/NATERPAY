@@ -41,14 +41,14 @@ walletSchema.virtual('pinSet').get(function() {
 // Securely hash the PIN before saving
 walletSchema.methods.setPin = async function(rawPin) {
   const salt = await bcrypt.genSalt(10);
-  this.pin = await bcrypt.hash(rawPin.toString(), salt);
+  this.pin = await bcrypt.hash(String(rawPin), salt);
   return this.save();
 };
 
 // Securely verify the PIN
 walletSchema.methods.verifyPin = async function(rawPin) {
   if (!this.pin) return false;
-  return await bcrypt.compare(rawPin.toString(), this.pin);
+  return await bcrypt.compare(String(rawPin), this.pin);
 };
 
 // Static helper to quickly find a wallet
@@ -56,12 +56,12 @@ walletSchema.statics.findByUser = function(userId) {
   return this.findOne({ user: userId });
 };
 
-// Convert Decimal128 to clean readable strings for the frontend
+// Convert Decimal128 to clean readable strings for the frontend safely
 walletSchema.set('toJSON', {
   virtuals: true,
   transform: function(doc, ret) {
-    ret.balance = ret.balance ? parseFloat(ret.balance.toString()).toFixed(2) : '0.00';
-    ret.availableBalance = ret.availableBalance ? parseFloat(ret.availableBalance.toString()).toFixed(2) : '0.00';
+    ret.balance = ret.balance ? parseFloat(String(ret.balance)).toFixed(2) : '0.00';
+    ret.availableBalance = ret.availableBalance ? parseFloat(String(ret.availableBalance)).toFixed(2) : '0.00';
     delete ret.pin; // Never send the hashed PIN to the frontend
     return ret;
   }
