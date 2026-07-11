@@ -179,7 +179,8 @@
                     updateCounts();
                 });
             } else {
-                Swal.fire({ icon: 'error', title: 'Dispatch Failed', text: "We encountered a temporary issue sending your messages. Please check the recipient numbers and try again.", confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+                // FIXED: Displays the actual backend error directly
+                Swal.fire({ icon: 'error', title: 'Dispatch Failed', text: data.message || "An error occurred.", confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             }
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'Network Connection', text: 'Please check your internet connection.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
