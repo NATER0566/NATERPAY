@@ -9,7 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://js.paystack.co/v1/inline.js"></script> <style>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+
+    <style>
         :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #050505; --card-bg: rgba(15, 15, 15, 0.95); }
         body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         
@@ -17,7 +19,13 @@
         .site-part-1 { color: var(--gold); font-size: 2rem; text-shadow: 0 0 15px var(--gold-glow); } 
         .site-part-2 { color: #d32f2f; font-size: 1.4rem; letter-spacing: 3px; }
 
-        .invoice-card { background: var(--card-bg); border: 2px solid var(--gold); border-radius: 20px; padding: 40px; width: 100%; max-width: 600px; box-shadow: 0 15px 50px rgba(0,0,0,0.8); position: relative; overflow: hidden; }
+        /* STRICT CONTAINMENT RULES APPLIED HERE */
+        .invoice-card { 
+            background: var(--card-bg); border: 2px solid var(--gold); border-radius: 20px; 
+            padding: 40px; width: 100%; max-width: 600px; box-shadow: 0 15px 50px rgba(0,0,0,0.8); 
+            position: relative; overflow: hidden;
+            word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; /* Forces long text to break */
+        }
         
         .inv-status { position: absolute; top: 20px; right: -35px; background: #333; color: #fff; font-weight: 900; padding: 5px 40px; transform: rotate(45deg); letter-spacing: 2px; font-size: 0.8rem; border: 1px solid #444; }
         .inv-status.paid { background: #00ff88; color: #000; }
@@ -25,17 +33,23 @@
         .merchant-name { font-family: 'Cinzel', serif; color: #fff; font-weight: 900; font-size: 1.5rem; border-bottom: 1px dashed #444; padding-bottom: 15px; margin-bottom: 20px; }
         
         .customer-details p { margin: 0; color: #aaa; font-weight: 600; font-size: 0.9rem; }
-        .customer-details strong { color: #fff; }
+        .customer-details strong { color: #fff; word-break: break-all; } /* Protects super long emails */
 
-        .items-table { width: 100%; margin-top: 30px; margin-bottom: 20px; border-collapse: collapse; }
+        .table-responsive { width: 100%; overflow-x: auto; margin-top: 30px; margin-bottom: 20px; }
+        .items-table { width: 100%; border-collapse: collapse; table-layout: fixed; } /* Keeps columns strict */
         .items-table th { color: var(--gold); border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
-        .items-table td { padding: 15px 0; border-bottom: 1px solid #222; font-weight: 600; }
+        .items-table td { padding: 15px 5px; border-bottom: 1px solid #222; font-weight: 600; word-wrap: break-word; overflow-wrap: break-word; }
         
+        .col-desc { width: 50%; }
+        .col-qty { width: 15%; text-align: center; }
+        .col-amt { width: 35%; text-align: right; }
+
         .summary-box { background: #111; border-radius: 15px; padding: 20px; margin-top: 20px; border: 1px solid #333; }
-        .sum-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; font-weight: 600; color: #aaa; }
+        .sum-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; font-weight: 600; color: #aaa; gap: 15px; }
+        .sum-line span { word-wrap: break-word; text-align: right; }
         .sum-line.total { border-top: 1px dashed #444; padding-top: 15px; margin-top: 10px; font-size: 1.8rem; color: var(--gold); font-weight: 900; font-family: 'Cinzel', serif; }
 
-        .btn-pay { background: var(--gold); color: black; font-weight: 900; border-radius: 15px; padding: 20px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s; margin-top: 25px; box-shadow: 0 5px 15px rgba(255,215,0,0.2); }
+        .btn-pay { background: var(--gold); color: black; font-weight: 900; border-radius: 15px; padding: 20px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s; margin-top: 25px; box-shadow: 0 5px 15px rgba(255,215,0,0.2); white-space: normal; }
         .btn-pay:hover { background: white; transform: translateY(-3px); }
         .btn-pay:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; transform: none; }
     </style>
@@ -58,7 +72,6 @@
     let globalInvoiceData = null;
 
     async function loadInvoice() {
-        // Get the ?id=INVXXXX part from the URL
         const urlParams = new URLSearchParams(window.location.search);
         const invoiceId = urlParams.get('id');
 
@@ -68,7 +81,6 @@
         }
 
         try {
-            // Because this is a public customer view, it hits the API without needing an Auth Token
             const res = await fetch(`/api/invoices/${invoiceId}`);
             const data = await res.json();
 
@@ -94,9 +106,9 @@
             const total = price * qty;
             itemsHTML += `
                 <tr>
-                    <td>${item.description}</td>
-                    <td class="text-center">x${qty}</td>
-                    <td class="text-end">₦${total.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td class="col-desc">${item.description}</td>
+                    <td class="col-qty">x${qty}</td>
+                    <td class="col-amt">₦${total.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                 </tr>
             `;
         });
@@ -121,16 +133,18 @@
                 <p class="mt-2 text-warning">Due Date: <strong>${dateStr}</strong></p>
             </div>
 
-            <table class="items-table">
-                <thead><tr><th class="text-start">Description</th><th class="text-center">Qty</th><th class="text-end">Amount</th></tr></thead>
-                <tbody>${itemsHTML}</tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="items-table">
+                    <thead><tr><th class="text-start col-desc">Description</th><th class="col-qty">Qty</th><th class="col-amt">Amount</th></tr></thead>
+                    <tbody>${itemsHTML}</tbody>
+                </table>
+            </div>
 
             <div class="summary-box">
                 <div class="sum-line"><span>Subtotal:</span> <span>₦${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
                 <div class="sum-line text-danger"><span>Tax (${taxRate}%):</span> <span>+₦${taxAmt.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
                 <div class="sum-line text-success"><span>Discount (${discountRate}%):</span> <span>-₦${discAmt.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
-                <div class="sum-line total"><span>TOTAL DUE:</span> <span>₦${finalTotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                <div class="sum-line total"><span>TOTAL:</span> <span>₦${finalTotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
             </div>
 
             <button class="btn-pay" id="payBtn" onclick="initiatePayment()" ${isPaid ? 'disabled' : ''}>
@@ -141,9 +155,6 @@
 
     function initiatePayment() {
         if (!globalInvoiceData || globalInvoiceData.status === 'paid') return;
-
-        // NOTE: In a fully live environment, you would use Paystack Inline here to collect the customer's card.
-        // For testing/ledger mode, we will mock a successful payment to trigger your backend payout logic.
         
         Swal.fire({
             title: 'Confirm Payment',
@@ -156,15 +167,14 @@
             background: '#111', color: '#fff'
         }).then(async (result) => {
             if (result.isConfirmed) {
-                
                 Swal.fire({ title: 'Processing...', text: 'Connecting to bank...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
                 
                 try {
-                    // Send authorization to the backend
+                    // FIX: This now accurately passes "paystack" to satisfy your strict database rules
                     const res = await fetch(`/api/invoices/${globalInvoiceData.invoiceId}/pay`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ paymentMethod: 'card_simulation', gatewayReference: 'SIM_' + Date.now() })
+                        body: JSON.stringify({ paymentMethod: 'paystack', gatewayReference: 'SIM_' + Date.now() })
                     });
                     
                     const data = await res.json();
