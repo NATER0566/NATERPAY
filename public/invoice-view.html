@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Secure Invoice Checkout</title>
+    <title>NATER-PAY | Secure Invoice</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -12,204 +12,266 @@
     <script src="https://js.paystack.co/v1/inline.js"></script>
 
     <style>
-        :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #050505; --card-bg: rgba(15, 15, 15, 0.95); }
-        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        :root { --gold: #FFD700; --bg: #050505; --card-bg: rgba(15, 15, 15, 0.95); --red: #ff3333; --green: #00ff88; }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; padding: 40px 20px; }
         
-        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; line-height: 0.85; margin-bottom: 30px;}
-        .site-part-1 { color: var(--gold); font-size: 2rem; text-shadow: 0 0 15px var(--gold-glow); } 
-        .site-part-2 { color: #d32f2f; font-size: 1.4rem; letter-spacing: 3px; }
-
-        .invoice-card { 
+        .invoice-container { 
             background: var(--card-bg); border: 2px solid var(--gold); border-radius: 20px; 
-            padding: 40px; width: 100%; max-width: 600px; box-shadow: 0 15px 50px rgba(0,0,0,0.8); 
-            position: relative; overflow: hidden;
-            word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
+            max-width: 800px; margin: 0 auto; box-shadow: 0 15px 50px rgba(0,0,0,0.8); 
+            overflow: hidden; 
         }
-        
-        .inv-status { position: absolute; top: 20px; right: -35px; background: #333; color: #fff; font-weight: 900; padding: 5px 40px; transform: rotate(45deg); letter-spacing: 2px; font-size: 0.8rem; border: 1px solid #444; }
-        .inv-status.paid { background: #00ff88; color: #000; }
-        
-        .merchant-name { font-family: 'Cinzel', serif; color: #fff; font-weight: 900; font-size: 1.5rem; border-bottom: 1px dashed #444; padding-bottom: 15px; margin-bottom: 20px; }
-        
-        .customer-details p { margin: 0; color: #aaa; font-weight: 600; font-size: 0.9rem; }
-        .customer-details strong { color: #fff; word-break: break-all; } 
 
-        .table-responsive { width: 100%; overflow-x: auto; margin-top: 30px; margin-bottom: 20px; }
-        .items-table { width: 100%; border-collapse: collapse; table-layout: fixed; } 
-        .items-table th { color: var(--gold); border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
-        .items-table td { padding: 15px 5px; border-bottom: 1px solid #222; font-weight: 600; word-wrap: break-word; overflow-wrap: break-word; }
+        .invoice-header { background: #111; padding: 40px; border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
         
-        .col-desc { width: 50%; }
-        .col-qty { width: 15%; text-align: center; }
-        .col-amt { width: 35%; text-align: right; }
+        .business-logo { max-width: 150px; max-height: 80px; object-fit: contain; }
+        .fallback-logo { font-family: 'Cinzel', serif; font-size: 1.8rem; font-weight: 900; color: var(--gold); letter-spacing: 2px; margin: 0; }
+        
+        .invoice-meta { text-align: right; }
+        .invoice-meta h2 { color: var(--gold); font-family: 'Cinzel', serif; font-weight: 900; margin: 0 0 5px 0; letter-spacing: 2px; }
+        .invoice-id { color: #888; font-family: monospace; font-size: 1.1rem; }
 
-        .summary-box { background: #111; border-radius: 15px; padding: 20px; margin-top: 20px; border: 1px solid #333; }
-        .sum-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; font-weight: 600; color: #aaa; gap: 15px; }
-        .sum-line span { word-wrap: break-word; text-align: right; }
-        .sum-line.total { border-top: 1px dashed #444; padding-top: 15px; margin-top: 10px; font-size: 1.8rem; color: var(--gold); font-weight: 900; font-family: 'Cinzel', serif; }
+        .invoice-body { padding: 40px; }
+        
+        .bill-to-section { display: flex; justify-content: space-between; margin-bottom: 40px; flex-wrap: wrap; gap: 20px; }
+        .bill-to-box h6 { color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-size: 0.85rem; }
+        .client-name { font-size: 1.2rem; font-weight: 800; margin: 0; }
+        .client-email { color: #aaa; margin: 5px 0 0 0; }
 
-        .btn-pay { background: var(--gold); color: black; font-weight: 900; border-radius: 15px; padding: 20px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s; margin-top: 25px; box-shadow: 0 5px 15px rgba(255,215,0,0.2); white-space: normal; }
+        .status-badge { padding: 8px 20px; border-radius: 50px; font-size: 0.85rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; display: inline-block; }
+        .status-unpaid { background: rgba(255, 51, 51, 0.1); color: var(--red); border: 1px solid rgba(255, 51, 51, 0.3); }
+        .status-paid { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.3); }
+
+        .table-custom { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        .table-custom th { background: #111; color: var(--gold); padding: 15px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; text-align: left; border-bottom: 2px solid #333; }
+        .table-custom th.text-right, .table-custom td.text-right { text-align: right; }
+        .table-custom td { padding: 15px; border-bottom: 1px solid #222; font-weight: 600; color: #ccc; }
+        .table-custom tr:last-child td { border-bottom: none; }
+
+        .totals-box { width: 100%; max-width: 350px; margin-left: auto; background: #0a0a0a; border: 1px solid #222; border-radius: 15px; padding: 20px; }
+        .total-line { display: flex; justify-content: space-between; margin-bottom: 10px; color: #888; font-weight: 600; font-size: 0.95rem; }
+        .total-line.grand-total { border-top: 1px dashed #444; margin-top: 15px; padding-top: 15px; font-size: 1.8rem; color: var(--gold); font-weight: 900; font-family: 'Cinzel', serif; }
+
+        .payment-section { text-align: center; padding: 0 40px 40px 40px; }
+        .btn-pay { background: var(--gold); color: black; font-weight: 900; border-radius: 15px; padding: 20px 40px; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s; width: 100%; max-width: 400px; box-shadow: 0 5px 20px rgba(255,215,0,0.2); }
         .btn-pay:hover { background: white; transform: translateY(-3px); }
-        .btn-pay:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        .secure-badge { color: #555; font-size: 0.8rem; font-weight: 800; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; }
+
+        @media print {
+            body { background: white; color: black; padding: 0; }
+            .invoice-container { box-shadow: none; border: 1px solid #ccc; border-radius: 0; max-width: 100%; }
+            .invoice-header, .table-custom th, .totals-box { background: #f8f9fa; border-color: #ddd; color: #000; }
+            .payment-section, #starCanvas { display: none; }
+            .fallback-logo, .invoice-meta h2, .table-custom th, .bill-to-box h6 { color: #000; }
+            .table-custom td { color: #333; border-color: #eee; }
+            .total-line.grand-total { color: #000; }
+        }
     </style>
 </head>
 <body>
 
-<div class="brand-text">
-    <span class="site-part-1">NATER</span>
-    <span class="site-part-2">PAY</span>
+<canvas id="starCanvas"></canvas>
+
+<div class="invoice-container" id="invoiceCard">
+    <div class="py-5 text-center">
+        <i class="fas fa-spinner fa-spin fa-3x text-warning mb-3 mt-4"></i>
+        <p class="fw-bold">Retrieving Invoice Ledger...</p>
+    </div>
 </div>
 
-<div class="invoice-card" id="invoiceCard">
-    <div class="text-center py-5" id="loadingState">
-        <i class="fas fa-spinner fa-spin fa-3x text-warning mb-3"></i>
-        <p class="fw-bold">Locating Invoice Ledger...</p>
-    </div>
+<div class="text-center mt-4 print-hide" id="printBtnWrapper" style="display: none;">
+    <button class="btn btn-outline-secondary fw-bold rounded-pill px-4" onclick="window.print()"><i class="fas fa-print me-2"></i> Print / Save PDF</button>
 </div>
 
 <script>
     let globalInvoiceData = null;
-    let dynamicPaystackKey = null; // We will store the key from the backend here
+    let dynamicPaystackKey = null;
+
+    function initStars() {
+        const c = document.getElementById('starCanvas');
+        c.width = window.innerWidth; c.height = window.innerHeight;
+        const ctx = c.getContext('2d');
+        const stars = [];
+        for(let i = 0; i < 100; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        function animate() {
+            ctx.clearRect(0, 0, c.width, c.height);
+            stars.forEach(s => { ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5; });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
 
     async function loadInvoice() {
         const urlParams = new URLSearchParams(window.location.search);
         const invoiceId = urlParams.get('id');
 
         if (!invoiceId) {
-            document.getElementById('invoiceCard').innerHTML = '<h4 class="text-danger text-center fw-bold py-5"><i class="fas fa-times-circle d-block mb-3 fa-2x"></i>Invalid Link</h4>';
+            document.getElementById('invoiceCard').innerHTML = '<div class="py-5 text-center"><h4 class="text-danger fw-bold"><i class="fas fa-times-circle d-block mb-3 fa-2x"></i>Invalid Invoice Route</h4></div>';
             return;
         }
 
         try {
-            // Add cache-busting so it always gets fresh data
-            const res = await fetch(`/api/invoices/${invoiceId}`, {
-                headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
-            });
+            const res = await fetch(`/api/invoices/${invoiceId}`);
             const data = await res.json();
 
             if (data.success) {
-                // Dynamically store the key provided by your Render environment
-                dynamicPaystackKey = data.paystackPublicKey;
-                
                 globalInvoiceData = data.invoice;
-                renderInvoice(data.invoice);
+                dynamicPaystackKey = data.paystackPublicKey;
+                renderInvoice(globalInvoiceData);
+                document.getElementById('printBtnWrapper').style.display = 'block';
             } else {
-                document.getElementById('invoiceCard').innerHTML = '<h4 class="text-danger text-center fw-bold py-5"><i class="fas fa-exclamation-triangle d-block mb-3 fa-2x"></i>Invoice Not Found</h4>';
+                document.getElementById('invoiceCard').innerHTML = '<div class="py-5 text-center"><h4 class="text-danger fw-bold"><i class="fas fa-file-excel d-block mb-3 fa-2x"></i>Invoice Not Found</h4><p class="text-secondary">This invoice may have been deleted.</p></div>';
             }
         } catch (e) {
-            document.getElementById('invoiceCard').innerHTML = '<h4 class="text-danger text-center fw-bold py-5">Connection Error.</h4>';
+            document.getElementById('invoiceCard').innerHTML = '<div class="py-5 text-center"><h4 class="text-danger fw-bold">Connection Error</h4><p class="text-secondary">Could not reach the NATERPAY ledger.</p></div>';
         }
     }
 
-    function renderInvoice(inv) {
-        const isPaid = inv.status === 'paid';
-        const statusHTML = `<div class="inv-status ${isPaid ? 'paid' : ''}">${inv.status.toUpperCase()}</div>`;
-        
+    function renderInvoice(invoice) {
+        // Logo Logic
+        let logoHTML = `<h1 class="fallback-logo">INVOICE</h1>`;
+        if (invoice.businessLogoBase64) {
+            logoHTML = `<img src="${invoice.businessLogoBase64}" class="business-logo" alt="Business Logo">`;
+        }
+
+        // Items Logic
         let itemsHTML = '';
-        inv.items.forEach(item => {
-            const price = Number(item.unitPrice || 0);
-            const qty = Number(item.quantity || 1);
-            const total = price * qty;
-            itemsHTML += `
+        if (invoice.items && invoice.items.length > 0) {
+            itemsHTML = invoice.items.map(item => `
                 <tr>
-                    <td class="col-desc">${item.description}</td>
-                    <td class="col-qty">x${qty}</td>
-                    <td class="col-amt">₦${total.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td>${item.description}</td>
+                    <td class="text-right">${item.quantity}</td>
+                    <td class="text-right">₦${Number(item.unitPrice).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td class="text-right">₦${Number(item.total).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                 </tr>
+            `).join('');
+        }
+
+        // Status Logic
+        const isPaid = invoice.status === 'paid';
+        const statusHTML = isPaid 
+            ? `<div class="status-badge status-paid"><i class="fas fa-check-circle me-1"></i> PAID</div>`
+            : `<div class="status-badge status-unpaid"><i class="fas fa-exclamation-circle me-1"></i> OUTSTANDING</div>`;
+
+        // Payment Button Logic
+        const paymentSectionHTML = isPaid 
+            ? `<div class="text-center py-4"><h3 style="color: var(--green); font-family: 'Cinzel', serif; font-weight: 900;"><i class="fas fa-shield-check me-2"></i>PAYMENT SETTLED</h3><p class="text-secondary">Thank you for your business.</p></div>`
+            : `
+                <div class="payment-section">
+                    <button class="btn-pay" onclick="payInvoiceWithPaystack()">
+                        <i class="fas fa-lock me-2"></i> PAY ₦${Number(invoice.total).toLocaleString(undefined, {minimumFractionDigits:2})} NOW
+                    </button>
+                    <div class="secure-badge"><i class="fas fa-shield-alt"></i> Secured by Paystack</div>
+                </div>
             `;
-        });
 
-        const subtotal = Number(inv.subtotal || 0);
-        const taxRate = Number(inv.taxRate || 0);
-        const discountRate = Number(inv.discountRate || 0);
-        
-        const taxAmt = subtotal * (taxRate/100);
-        const discAmt = subtotal * (discountRate/100);
-        const finalTotal = Number(inv.total || 0);
-
-        const dateStr = new Date(inv.dueDate).toLocaleDateString();
+        const dateStr = invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A';
 
         document.getElementById('invoiceCard').innerHTML = `
-            ${statusHTML}
-            <div class="merchant-name"><i class="fas fa-building me-2 text-warning"></i> INVOICE #${inv.invoiceId}</div>
-            
-            <div class="customer-details">
-                <p>Billed To: <strong>${inv.customerName}</strong></p>
-                <p>Email: <strong>${inv.customerEmail}</strong></p>
-                <p class="mt-2 text-warning">Due Date: <strong>${dateStr}</strong></p>
+            <div class="invoice-header">
+                <div>${logoHTML}</div>
+                <div class="invoice-meta">
+                    <h2>INVOICE</h2>
+                    <div class="invoice-id">#${invoice.invoiceId}</div>
+                </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="items-table">
-                    <thead><tr><th class="text-start col-desc">Description</th><th class="col-qty">Qty</th><th class="col-amt">Amount</th></tr></thead>
-                    <tbody>${itemsHTML}</tbody>
+            <div class="invoice-body">
+                <div class="bill-to-section">
+                    <div class="bill-to-box">
+                        <h6>Billed To:</h6>
+                        <h4 class="client-name">${invoice.customerName}</h4>
+                        <p class="client-email">${invoice.customerEmail}</p>
+                    </div>
+                    <div class="bill-to-box text-md-right" style="text-align: right;">
+                        <h6>Status & Due Date:</h6>
+                        ${statusHTML}
+                        <p class="mt-2 text-secondary fw-bold">Due: ${dateStr}</p>
+                    </div>
+                </div>
+
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th class="text-right">Qty</th>
+                            <th class="text-right">Unit Price</th>
+                            <th class="text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHTML}
+                    </tbody>
                 </table>
-            </div>
 
-            <div class="summary-box">
-                <div class="sum-line"><span>Subtotal:</span> <span>₦${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
-                <div class="sum-line text-danger"><span>Tax (${taxRate}%):</span> <span>+₦${taxAmt.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
-                <div class="sum-line text-success"><span>Discount (${discountRate}%):</span> <span>-₦${discAmt.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
-                <div class="sum-line total"><span>TOTAL:</span> <span>₦${finalTotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                <div class="totals-box">
+                    <div class="total-line"><span>Subtotal:</span> <span>₦${Number(invoice.subtotal).toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                    <div class="total-line"><span>Tax (${invoice.taxRate || 0}%):</span> <span>+ ₦${Number(invoice.tax || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                    <div class="total-line"><span>Discount (${invoice.discountRate || 0}%):</span> <span>- ₦${Number(invoice.discount || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                    <div class="total-line grand-total"><span>TOTAL:</span> <span>₦${Number(invoice.total).toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                </div>
             </div>
-
-            <button class="btn-pay" id="payBtn" onclick="payWithPaystack()" ${isPaid ? 'disabled' : ''}>
-                ${isPaid ? '<i class="fas fa-check-circle me-2"></i> INVOICE PAID' : '<i class="fas fa-lock me-2"></i> PAY WITH CARD / BANK'}
-            </button>
+            
+            ${paymentSectionHTML}
         `;
     }
 
-    function payWithPaystack() {
-        if (!globalInvoiceData || globalInvoiceData.status === 'paid') return;
-
+    function payInvoiceWithPaystack() {
         if (!dynamicPaystackKey) {
-            Swal.fire({ icon: 'error', title: 'Gateway Error', text: 'Payment gateway configuration is missing.', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Gateway Error', text: 'Payment system offline.', background: '#111', color: '#fff' });
             return;
         }
 
-        const amountInKobo = Math.round(Number(globalInvoiceData.total) * 100);
+        const amountInKobo = Math.round(parseFloat(globalInvoiceData.total) * 100);
 
         let handler = PaystackPop.setup({
-            key: dynamicPaystackKey, // <--- SECURELY INJECTED FROM BACKEND
+            key: dynamicPaystackKey, 
             email: globalInvoiceData.customerEmail,
             amount: amountInKobo,
             currency: 'NGN',
-            ref: 'INV_' + Math.floor((Math.random() * 1000000000) + 1),
+            ref: 'INV_PAY_' + Math.floor((Math.random() * 1000000000) + 1),
             callback: function(response) {
-                verifyAndCreditMerchant(response.reference);
+                verifyInvoicePayment(response.reference);
             },
             onClose: function() {
-                Swal.fire({ icon: 'info', title: 'Cancelled', text: 'Payment window was closed.', background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'info', title: 'Cancelled', text: 'Payment window closed.', background: '#111', color: '#fff' });
             }
         });
 
         handler.openIframe();
     }
 
-    async function verifyAndCreditMerchant(paystackReference) {
-        Swal.fire({ title: 'Verifying Payment...', text: 'Please wait...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+    async function verifyInvoicePayment(reference) {
+        Swal.fire({ title: 'Verifying...', text: 'Settling invoice ledger...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
         
         try {
             const res = await fetch(`/api/invoices/${globalInvoiceData.invoiceId}/pay`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paymentMethod: 'paystack', gatewayReference: paystackReference })
+                body: JSON.stringify({ gatewayReference: reference, paymentMethod: 'paystack' })
             });
             
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Thank you. The merchant has been credited.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
-                .then(() => window.location.reload());
+                Swal.fire({ 
+                    icon: 'success', 
+                    title: 'Invoice Paid!', 
+                    text: 'The merchant has been successfully credited.', 
+                    confirmButtonColor: '#d4af37', background: '#111', color: '#fff' 
+                }).then(() => {
+                    window.location.reload();
+                });
             } else {
                 Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             }
         } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to verify payment with server.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to communicate with server.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
         }
     }
 
     window.onload = loadInvoice;
+    window.onresize = initStars;
 </script>
 
 </body>
