@@ -75,6 +75,13 @@
         .kyc-1 { background: #ffaa00; color: black; }
         .kyc-2 { background: #00ff88; color: black; }
         .kyc-3 { background: var(--gold); color: black; }
+
+        .copy-btn {
+            background: transparent; border: 1px solid var(--gold); color: var(--gold);
+            padding: 5px 15px; border-radius: 8px; cursor: pointer; transition: 0.3s;
+            font-size: 0.8rem; font-weight: bold;
+        }
+        .copy-btn:hover { background: var(--gold); color: black; }
     </style>
 </head>
 <body>
@@ -111,8 +118,8 @@
             </div>
             
             <div class="input-group-custom">
-                <label>EMAIL ADDRESS</label>
-                <input type="email" id="email" placeholder="yourname@domain.com" readonly style="opacity: 0.6;">
+                <label>EMAIL ADDRESS (Cannot be changed)</label>
+                <input type="email" id="email" placeholder="yourname@domain.com" readonly style="opacity: 0.6; cursor: not-allowed;">
             </div>
             
             <div class="input-group-custom">
@@ -122,21 +129,24 @@
             
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
-                    <div class="input-group-custom">
-                        <label>REFERRAL CODE</label>
-                        <input type="text" id="referralCode" readonly style="opacity: 0.6;">
+                    <div class="input-group-custom position-relative">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="mb-0">YOUR REFERRAL CODE</label>
+                            <button type="button" class="copy-btn" onclick="copyReferralCode()"><i class="fas fa-copy"></i> COPY</button>
+                        </div>
+                        <input type="text" id="referralCode" readonly style="color: var(--gold); opacity: 1;">
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="input-group-custom">
-                        <label>REFERRAL COUNT</label>
+                        <label>TOTAL REFERRALS</label>
                         <input type="text" id="referralCount" readonly style="opacity: 0.6;">
                     </div>
                 </div>
             </div>
             
             <div class="input-group-custom">
-                <label>ACCOUNT CREATED</label>
+                <label>ACCOUNT CREATED ON</label>
                 <input type="text" id="createdAt" readonly style="opacity: 0.6;">
             </div>
             
@@ -189,20 +199,27 @@
         }
         
         try {
+            // Fetching the real data from the database
             const res = await fetch('/api/user/dashboard-data', {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
             const data = await res.json();
             
             if (data.success) {
+                // Populate fields with REAL database values
                 document.getElementById('profileName').innerText = data.userFullName || 'User';
                 document.getElementById('profileEmail').innerText = data.userEmail || 'Not set';
                 document.getElementById('fullName').value = data.userFullName || '';
                 document.getElementById('email').value = data.userEmail || '';
                 document.getElementById('phone').value = data.userPhone || '';
-                document.getElementById('referralCode').value = 'NP' + (Math.random().toString(36).substring(2, 8).toUpperCase());
+                
+                // THE FIX: Pulling the actual database referral code
+                document.getElementById('referralCode').value = data.referralCode || 'NO_CODE_FOUND';
                 document.getElementById('referralCount').value = data.referralCount || 0;
-                document.getElementById('createdAt').value = new Date().toLocaleDateString();
+                
+                // THE FIX: Pulling the actual registration date from the database
+                const joinedDate = data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'Unknown';
+                document.getElementById('createdAt').value = joinedDate;
                 
                 const kycLevel = data.kycLevel || 0;
                 const kycBadge = document.getElementById('kycBadge');
@@ -222,7 +239,7 @@
                 }
             }
         } catch (e) {
-            console.error('Failed to load profile');
+            console.error('Failed to load profile details from server.', e);
         }
     }
     
@@ -241,7 +258,7 @@
         try {
             Swal.fire({
                 title: 'Saving...',
-                text: 'Updating profile',
+                text: 'Updating your profile securely...',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading(),
                 background: '#0a0a0a',
@@ -263,12 +280,12 @@
                 Swal.fire({
                     icon: 'success',
                     title: 'Profile Updated',
-                    text: 'Your profile has been updated successfully',
+                    text: 'Your details have been saved successfully.',
                     confirmButtonColor: '#d4af37',
                     background: '#0a0a0a',
                     color: '#fff'
                 });
-                loadProfile();
+                loadProfile(); // Reload to reflect changes globally
             } else {
                 Swal.fire({
                     icon: 'error',
@@ -283,10 +300,30 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Update Error',
-                text: 'Unable to update profile. Please try again.',
+                text: 'Unable to connect to the server. Please try again.',
                 confirmButtonColor: '#d32f2f',
                 background: '#0a0a0a',
                 color: '#fff'
+            });
+        }
+    }
+
+    // Added a quick copy button so users can easily share their real code
+    function copyReferralCode() {
+        const refCode = document.getElementById('referralCode').value;
+        if(refCode && refCode !== 'NO_CODE_FOUND') {
+            navigator.clipboard.writeText(refCode).then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Copied!',
+                    text: 'Your referral code is ready to share.',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    background: '#111',
+                    color: '#fff'
+                });
             });
         }
     }
