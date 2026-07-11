@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -141,6 +142,9 @@
 </div>
 
 <script>
+    // Global variable to store their actual balance
+    let currentWalletBalance = 0;
+
     function initStars() {
         const c = document.getElementById('starCanvas');
         c.width = window.innerWidth; c.height = window.innerHeight;
@@ -164,6 +168,9 @@
             const data = await res.json();
 
             if(data.success) {
+                // CAPTURE THE USER'S BALANCE SECURELY
+                currentWalletBalance = parseFloat(data.balance?.$numberDecimal || data.balance || 0);
+
                 const role = (data.userRole || 'user').toLowerCase();
                 const rankDisplay = document.getElementById('currentRankDisplay');
                 
@@ -197,6 +204,26 @@
     async function processUpgrade(targetTier, feeAmount) {
         const tierName = targetTier === 'vip' ? 'VIP Partner' : 'Sub-Agent';
         
+        // 1. FRONTEND BALANCE CHECK - Stops the process immediately if they are broke
+        if (currentWalletBalance < feeAmount) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Insufficient Balance',
+                html: `You need <strong>₦${feeAmount.toLocaleString()}</strong> to upgrade to ${tierName}, but your wallet balance is only <strong>₦${currentWalletBalance.toLocaleString()}</strong>.`,
+                confirmButtonColor: '#d4af37',
+                confirmButtonText: '<i class="fas fa-wallet me-1"></i> Add Fund Now',
+                showCancelButton: true,
+                cancelButtonText: 'Cancel',
+                background: '#111', color: '#fff'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = 'fund.html';
+                }
+            });
+            return; // Stops the code here. It will NOT send a request to the backend.
+        }
+
+        // 2. If they have enough money, proceed with the normal upgrade flow
         Swal.fire({
             title: `Upgrade to ${tierName}?`,
             html: `This will securely deduct <strong>₦${feeAmount.toLocaleString()}</strong> from your NATERPAY wallet.`,
@@ -212,10 +239,11 @@
                 Swal.fire({ title: 'Processing...', text: 'Authenticating upgrade...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
 
                 try {
+                    // Send the payload. I'm sending both targetTier and tier just in case your backend validation expects 'tier'
                     const res = await fetch('/api/user/upgrade', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                        body: JSON.stringify({ targetTier: targetTier })
+                        body: JSON.stringify({ targetTier: targetTier, tier: targetTier }) 
                     });
                     
                     const data = await res.json();
@@ -224,7 +252,8 @@
                         Swal.fire({ icon: 'success', title: 'Upgrade Complete!', text: `Welcome to the ${tierName} tier. Your new pricing is now active.`, confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
                         .then(() => { window.location.href = 'dashboard.html'; });
                     } else {
-                        Swal.fire({ icon: 'error', title: 'Upgrade Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+                        // If the backend fails for any other reason, show exactly what the backend says
+                        Swal.fire({ icon: 'error', title: 'Upgrade Failed', text: data.message || 'Validation error on server.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
                     }
                 } catch (err) {
                     Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to communicate with server.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
