@@ -177,6 +177,11 @@ async function registerRoutes() {
   fastify.delete('/api/api/keys', { preHandler: require('./middleware/auth').authenticate }, apiRoutes.revokeApiKey);
   fastify.get('/api/api/balance', { preHandler: apiRoutes.authenticateApiKey }, apiRoutes.apiGetBalance);
   fastify.post('/api/api/transactions', { preHandler: apiRoutes.authenticateApiKey }, apiRoutes.apiCreateTransaction);
+
+  // === SYSTEM STATUS ROUTE (PUBLIC) ===
+  const statusRoutes = require('./routes/status');
+  fastify.get('/api/system-status', statusRoutes.getSystemStatus);
+  // ====================================
   
   fastify.addHook('onRequest', async (request, reply) => {
     const path = request.url;
