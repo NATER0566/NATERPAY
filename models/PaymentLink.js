@@ -25,6 +25,7 @@ const paymentLinkSchema = new mongoose.Schema({
     default: null
   },
   
+  // Amounts (using Decimal128 for money safety)
   amount: {
     type: mongoose.Schema.Types.Decimal128,
     required: true
@@ -35,7 +36,7 @@ const paymentLinkSchema = new mongoose.Schema({
     default: 'NGN'
   },
   
-  // Flexible amount
+  // Flexible amount settings
   isFlexibleAmount: {
     type: Boolean,
     default: false
@@ -51,7 +52,7 @@ const paymentLinkSchema = new mongoose.Schema({
     default: null
   },
   
-  // Customer details collection
+  // Customer details collection settings
   collectCustomerName: {
     type: Boolean,
     default: true
@@ -67,13 +68,12 @@ const paymentLinkSchema = new mongoose.Schema({
     default: false
   },
   
-  // Status
+  // Status and Tracking
   isActive: {
     type: Boolean,
     default: true
   },
   
-  // Limits
   maxTransactions: {
     type: Number,
     default: null
@@ -84,12 +84,17 @@ const paymentLinkSchema = new mongoose.Schema({
     default: 0
   },
   
+  totalCollected: {
+    type: mongoose.Schema.Types.Decimal128,
+    default: 0
+  },
+  
   expiryDate: {
     type: Date,
     default: null
   },
   
-  // Success redirect
+  // Custom Success/Cancel redirects
   successUrl: {
     type: String,
     default: null
@@ -100,7 +105,7 @@ const paymentLinkSchema = new mongoose.Schema({
     default: null
   },
   
-  // Metadata
+  // Metadata for extensibility
   metadata: {
     type: Map,
     of: mongoose.Schema.Types.Mixed,
@@ -110,11 +115,11 @@ const paymentLinkSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes
+// Indexes for fast querying
 paymentLinkSchema.index({ user: 1, isActive: 1 });
 paymentLinkSchema.index({ linkId: 1 });
 
-// Pre-save middleware
+// Pre-save middleware to auto-generate linkId if not provided by the route
 paymentLinkSchema.pre('save', function(next) {
   if (!this.linkId) {
     this.linkId = 'pl_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
@@ -123,8 +128,9 @@ paymentLinkSchema.pre('save', function(next) {
 });
 
 // Instance methods
-paymentLinkSchema.methods.incrementTransactionCount = function() {
+paymentLinkSchema.methods.incrementTransactionCount = function(paidAmount = 0) {
   this.transactionCount += 1;
+  this.totalCollected = (parseFloat(this.totalCollected.toString()) + parseFloat(paidAmount)).toString();
   return this.save();
 };
 
@@ -150,8 +156,7 @@ paymentLinkSchema.methods.isMaxReached = function() {
 
 // Static methods
 paymentLinkSchema.statics.findByUser = function(userId) {
-  return this.find({ user: userId })
-    .sort({ createdAt: -1 });
+  return this.find({ user: userId }).sort({ createdAt: -1 });
 };
 
 paymentLinkSchema.statics.findByLinkId = function(linkId) {
@@ -159,8 +164,18 @@ paymentLinkSchema.statics.findByLinkId = function(linkId) {
 };
 
 paymentLinkSchema.statics.findActiveByUser = function(userId) {
-  return this.find({ user: userId, isActive: true })
-    .sort({ createdAt: -1 });
+  return this.find({ user: userId, isActive: true }).sort({ createdAt: -1 });
 };
+
+// Convert Decimal128 to pure numbers for the frontend to prevent crashing the UI
+paymentLinkSchema.set('toJSON', {
+  transform: function(doc, ret) {
+    if (ret.amount) ret.amount = parseFloat(ret.amount.toString()).toFixed(2);
+    if (ret.minAmount) ret.minAmount = parseFloat(ret.minAmount.toString()).toFixed(2);
+    if (ret.maxAmount) ret.maxAmount = parseFloat(ret.maxAmount.toString()).toFixed(2);
+    if (ret.totalCollected) ret.totalCollected = parseFloat(ret.totalCollected.toString()).toFixed(2);
+    return ret;
+  }
+});
 
 module.exports = mongoose.model('PaymentLink', paymentLinkSchema);
