@@ -34,6 +34,11 @@ const invoiceSchema = new mongoose.Schema({
         unique: true, 
         index: true 
     },
+    // Added Logo field here
+    businessLogoBase64: { 
+        type: String, 
+        default: null 
+    },
     customerName: { 
         type: String, 
         required: true 
