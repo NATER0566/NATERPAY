@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Device = require('../models/Device');
 const AuditLog = require('../models/AuditLog');
 const Notification = require('../models/Notification');
+const crypto = require('crypto'); // Added for secure code generation
 const { 
   generateAccessToken, 
   generateRefreshToken, 
@@ -59,9 +60,8 @@ async function register(request, reply) {
     // Check referral code (Bulletproof Version)
     let referrer = null;
     if (referralCode && referralCode.trim() !== '') {
-      const cleanCode = referralCode.trim(); // Removes accidental blank spaces
+      const cleanCode = referralCode.trim();
       
-      // Search database ignoring uppercase/lowercase differences
       referrer = await User.findOne({ 
         referralCode: { $regex: new RegExp(`^${cleanCode}$`, 'i') } 
       });
@@ -73,6 +73,9 @@ async function register(request, reply) {
         });
       }
     }
+
+    // Generate a secure, permanent 6-character referral code
+    const newReferralCode = 'NP' + crypto.randomBytes(3).toString('hex').toUpperCase();
     
     // Create user
     const user = new User({
@@ -80,7 +83,8 @@ async function register(request, reply) {
       email: email.toLowerCase(),
       phoneNumber,
       password,
-      referredBy: referrer?._id
+      referredBy: referrer ? referrer._id : null,
+      referralCode: newReferralCode // Explicitly inject the secure code
     });
     
     await user.save();
@@ -99,13 +103,15 @@ async function register(request, reply) {
     await kyc.save();
     
     // Log registration
-    await AuditLog.logAction({
-      user: user._id,
-      action: 'register',
-      description: 'User registered',
-      ipAddress: request.ip,
-      userAgent: request.headers['user-agent']
-    });
+    if (AuditLog && typeof AuditLog.logAction === 'function') {
+        await AuditLog.logAction({
+          user: user._id,
+          action: 'register',
+          description: 'User registered',
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent']
+        }).catch(() => {});
+    }
     
     // Send OTP email via Resend
     await sendOTPEmail(user.email, user.otp);
@@ -136,43 +142,60 @@ async function verifyOTP(request, reply) {
     const user = await User.findByEmail(email);
     
     if (!user) {
-      return reply.status(404).send({
-        success: false,
-        message: 'User not found'
-      });
+      return reply.status(404).send({ success: false, message: 'User not found' });
     }
     
     if (!user.verifyOTP(otp)) {
-      return reply.status(400).send({
-        success: false,
-        message: 'Invalid or expired OTP'
-      });
+      return reply.status(400).send({ success: false, message: 'Invalid or expired OTP' });
     }
     
     await user.consumeOTP();
     
-    // Award referral bonus if applicable
+    // THE FIX: Award real referral bonus to the inviter's wallet!
     if (user.referredBy) {
       const referrer = await User.findById(user.referredBy);
       if (referrer) {
+        const bonusAmount = config.business?.defaultReferralBonus || 500;
+        
+        // Update user stats
         referrer.referralCount += 1;
-        referrer.referralBonus = (parseFloat(referrer.referralBonus.toString()) + config.business.defaultReferralBonus).toString();
+        referrer.referralBonus = (parseFloat(referrer.referralBonus?.toString() || '0') + bonusAmount).toString();
         await referrer.save();
         
-        // Create referral transaction
-        const Transaction = require('../models/Transaction');
-        const transaction = new Transaction({
-          user: referrer._id,
-          type: 'referral_bonus',
-          description: `Referral bonus for ${user.name}`,
-          amount: config.business.defaultReferralBonus,
-          fee: 0,
-          balanceBefore: referrer.balance,
-          balanceAfter: referrer.balance,
-          status: 'success',
-          provider: 'internal'
-        });
-        await transaction.save();
+        // REAL MONEY DROP: Update Referrer's Wallet
+        const Wallet = require('../models/Wallet');
+        const referrerWallet = await Wallet.findOne({ user: referrer._id });
+
+        if (referrerWallet) {
+            referrerWallet.availableBalance = String(parseFloat(referrerWallet.availableBalance || '0') + bonusAmount);
+            referrerWallet.balance = String(parseFloat(referrerWallet.balance || '0') + bonusAmount);
+            await referrerWallet.save();
+
+            // Create referral transaction
+            const Transaction = require('../models/Transaction');
+            const transaction = new Transaction({
+                user: referrer._id,
+                type: 'credit', 
+                description: `Referral bonus for inviting ${user.name}`,
+                amount: bonusAmount,
+                fee: 0,
+                balanceBefore: String(parseFloat(referrerWallet.availableBalance) - bonusAmount),
+                balanceAfter: referrerWallet.availableBalance,
+                status: 'success',
+                provider: 'internal'
+            });
+            await transaction.save();
+
+            // Notify the referrer instantly if they are online
+            if (request.server && request.server.io) {
+                request.server.io.to(`user:${referrer._id}`).emit('wallet:update', { balance: referrerWallet.availableBalance });
+                request.server.io.to(`user:${referrer._id}`).emit('notification', {
+                    type: 'success',
+                    title: 'New Referral Bonus!',
+                    message: `You earned ₦${bonusAmount} for inviting ${user.name}`
+                });
+            }
+        }
       }
     }
     
@@ -255,7 +278,7 @@ async function login(request, reply) {
     
     // Track device
     const userAgent = request.headers['user-agent'] || '';
-    const fingerprint = require('crypto').createHash('sha256').update(userAgent + request.ip).digest('hex');
+    const fingerprint = crypto.createHash('sha256').update(userAgent + request.ip).digest('hex');
     
     let device = await Device.findByFingerprint(fingerprint);
     if (!device) {
@@ -279,14 +302,16 @@ async function login(request, reply) {
     const refreshToken = generateRefreshToken({ userId: user._id });
     
     // Log login
-    await AuditLog.logAction({
-      user: user._id,
-      action: 'login',
-      description: 'User logged in',
-      ipAddress: request.ip,
-      userAgent,
-      deviceId: device._id
-    });
+    if (AuditLog && typeof AuditLog.logAction === 'function') {
+        await AuditLog.logAction({
+          user: user._id,
+          action: 'login',
+          description: 'User logged in',
+          ipAddress: request.ip,
+          userAgent,
+          deviceId: device._id
+        }).catch(() => {});
+    }
     
     reply.send({
       success: true,
@@ -455,13 +480,15 @@ async function resetPassword(request, reply) {
     await user.consumeOTP();
     
     // Log password change
-    await AuditLog.logAction({
-      user: user._id,
-      action: 'password_change',
-      description: 'Password reset via OTP',
-      ipAddress: request.ip,
-      userAgent: request.headers['user-agent']
-    });
+    if (AuditLog && typeof AuditLog.logAction === 'function') {
+        await AuditLog.logAction({
+          user: user._id,
+          action: 'password_change',
+          description: 'Password reset via OTP',
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent']
+        }).catch(() => {});
+    }
     
     reply.send({
       success: true,
@@ -500,13 +527,15 @@ async function getProfile(request, reply) {
 async function logout(request, reply) {
   try {
     // Log logout
-    await AuditLog.logAction({
-      user: request.user._id,
-      action: 'logout',
-      description: 'User logged out',
-      ipAddress: request.ip,
-      userAgent: request.headers['user-agent']
-    });
+    if (AuditLog && typeof AuditLog.logAction === 'function') {
+        await AuditLog.logAction({
+          user: request.user._id,
+          action: 'logout',
+          description: 'User logged out',
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent']
+        }).catch(() => {});
+    }
     
     reply.send({
       success: true,
