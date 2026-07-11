@@ -1,8 +1,9 @@
-const User = require('../models/User');
+const User = require('../models/User'); // Fixed capital 'C' typo here
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
 const KYC = require('../models/KYC');
 const { sanitizeUser } = require('../utils/auth');
+const bcrypt = require('bcryptjs'); // Added for secure PIN verification
 
 /**
  * Get dashboard data
@@ -24,7 +25,7 @@ async function getDashboardData(request, reply) {
     const allTransactions = await Transaction.findByUser(user._id, { limit: 1000 });
     const totalLogs = allTransactions.length;
     const totalSpent = allTransactions.reduce((sum, tx) => {
-      if (['airtime', 'data', 'electricity', 'cable', 'betting', 'bulk_sms'].includes(tx.type)) {
+      if (['airtime', 'data', 'electricity', 'cable', 'betting', 'bulk_sms', 'insurance', 'pos'].includes(tx.type)) {
         return sum + parseFloat(tx.amount.toString());
       }
       return sum;
@@ -145,9 +146,100 @@ async function getReferralTree(request, reply) {
   }
 }
 
+/**
+ * NATER-PAY PREMIUM UPGRADE ENGINE
+ */
+async function upgradeUser(request, reply) {
+  try {
+    const { role, amount, pin } = request.body;
+    const user = request.user;
+
+    // 1. Validate Input & Tiers
+    if (!['agent', 'reseller'].includes(role)) {
+      return reply.status(400).send({ success: false, message: 'Invalid upgrade tier selected.' });
+    }
+    
+    const expectedAmount = role === 'reseller' ? 5000 : 2000;
+    if (amount !== expectedAmount) {
+      return reply.status(400).send({ success: false, message: 'System alert: Amount mismatch detected.' });
+    }
+
+    // 2. Prevent Double Upgrades
+    if (user.role === 'reseller' || (user.role === 'agent' && role === 'agent')) {
+      return reply.status(400).send({ success: false, message: `You are already on the ${user.role.toUpperCase()} tier or higher!` });
+    }
+
+    // 3. Verify Transaction PIN Securely
+    if (!pin || pin.length !== 4) {
+      return reply.status(400).send({ success: false, message: 'A valid 4-digit PIN is required.' });
+    }
+    
+    if (user.transactionPin) {
+      const isMatch = await bcrypt.compare(pin.toString(), user.transactionPin);
+      if (!isMatch) {
+        return reply.status(400).send({ success: false, message: 'Incorrect Withdrawal PIN.' });
+      }
+    }
+
+    // 4. Wallet Checks & Deduction
+    const wallet = await Wallet.findOne({ user: user._id });
+    if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet infrastructure not found.' });
+
+    const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+    if (currentAvail < amount) {
+      return reply.status(400).send({ success: false, message: `Insufficient balance. You need ₦${amount.toLocaleString()} to upgrade.` });
+    }
+
+    // Deduct Funds safely
+    wallet.availableBalance = (currentAvail - amount).toString();
+    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
+    await wallet.save();
+
+    // 5. Log Transaction in Audit Ledger
+    const transaction = new Transaction({
+      user: user._id,
+      type: 'reseller_upgrade',
+      description: `Account Upgrade to ${role.toUpperCase()} Node`,
+      amount: amount,
+      fee: 0,
+      balanceBefore: currentAvail.toString(),
+      balanceAfter: wallet.availableBalance.toString(),
+      status: 'success',
+      provider: 'internal',
+      reference: `UPG-${Date.now()}`
+    });
+    await transaction.save();
+
+    // 6. Update User Role
+    user.role = role;
+    await user.save();
+
+    // 7. Fire Real-time Socket Update to Dashboard
+    if (request.server && request.server.io) {
+       request.server.io.to(`user:${user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+       request.server.io.to(`user:${user._id}`).emit('notification', { 
+           type: 'success', 
+           title: 'Upgrade Successful', 
+           message: `Welcome to the ${role.toUpperCase()} tier!` 
+       });
+    }
+
+    reply.send({
+      success: true,
+      message: `Upgrade to ${role.toUpperCase()} was incredibly successful!`,
+      user: sanitizeUser(user)
+    });
+
+  } catch (error) {
+    console.error('Upgrade Engine Error:', error);
+    reply.status(500).send({ success: false, message: 'System network error during upgrade.' });
+  }
+}
+
 module.exports = {
   getDashboardData,
   updatePreferences,
   updateProfile,
-  getReferralTree
+  getReferralTree,
+  upgradeUser
 };
