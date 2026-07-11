@@ -549,6 +549,92 @@ async function logout(request, reply) {
   }
 }
 
+/**
+ * Change User Password (from Security Settings)
+ */
+async function changePassword(request, reply) {
+  try {
+    const { currentPassword, newPassword } = request.body;
+    
+    if (!currentPassword || !newPassword) {
+      return reply.status(400).send({ success: false, message: 'Both current and new passwords are required' });
+    }
+
+    const User = require('../models/User');
+    const user = await User.findById(request.user._id);
+    
+    if (!user) {
+      return reply.status(404).send({ success: false, message: 'User not found' });
+    }
+
+    // Verify the current password is correct
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return reply.status(400).send({ success: false, message: 'Incorrect current password' });
+    }
+
+    // Update to the new password (the pre-save hook in User.js will automatically hash it)
+    user.password = newPassword;
+    await user.save();
+
+    // Log the action securely
+    const AuditLog = require('../models/AuditLog');
+    if (AuditLog && typeof AuditLog.logAction === 'function') {
+        await AuditLog.logAction({
+          user: user._id,
+          action: 'password_change',
+          description: 'Password manually changed in security settings',
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent']
+        }).catch(() => {});
+    }
+
+    reply.send({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    reply.status(500).send({ success: false, message: 'Failed to update password' });
+  }
+}
+
+/**
+ * Terminate all other sessions
+ */
+async function logoutAllSessions(request, reply) {
+  try {
+    const Device = require('../models/Device');
+    
+    // Generate the fingerprint of the CURRENT device the user is using right now
+    const currentFingerprint = crypto
+      .createHash('sha256')
+      .update((request.headers['user-agent'] || '') + request.ip)
+      .digest('hex');
+
+    // Delete all devices linked to this user EXCEPT the current one
+    if (Device) {
+        await Device.deleteMany({ 
+            user: request.user._id, 
+            fingerprint: { $ne: currentFingerprint } 
+        }).catch(() => console.log('Device cleanup skipped'));
+    }
+
+    const AuditLog = require('../models/AuditLog');
+    if (AuditLog && typeof AuditLog.logAction === 'function') {
+        await AuditLog.logAction({
+          user: request.user._id,
+          action: 'logout_all',
+          description: 'Terminated all other active sessions',
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent']
+        }).catch(() => {});
+    }
+
+    reply.send({ success: true, message: 'All other sessions have been terminated' });
+  } catch (error) {
+    console.error('Session termination error:', error);
+    reply.status(500).send({ success: false, message: 'Failed to terminate sessions' });
+  }
+}
+
 // Helper functions
 function detectDeviceType(userAgent) {
   if (/mobile/i.test(userAgent)) return 'mobile';
@@ -583,5 +669,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   getProfile,
-  logout
+  logout,
+  changePassword,
+  logoutAllSessions
 };
