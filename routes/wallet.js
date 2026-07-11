@@ -4,6 +4,7 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const config = require('../config');
 const axios = require('axios');
+const crypto = require('crypto'); // Native Node.js module required for Webhook security
 
 // Optional imports (safely loaded so they don't crash if missing)
 let AuditLog, Notification, generateIdempotencyKey, generateTransactionReference;
@@ -89,7 +90,7 @@ async function fundWallet(request, reply) {
 }
 
 /**
- * 3. Verify Wallet Funding
+ * 3. Verify Wallet Funding (Frontend Fallback)
  */
 async function verifyFunding(request, reply) {
   try {
@@ -206,7 +207,6 @@ async function withdraw(request, reply) {
     reply.send({ success: true, message: 'Withdrawal processed successfully', transaction });
   } catch (error) {
     console.error('Withdrawal Server Error:', error); 
-    // This will securely send the real error to your frontend terminal if it fails again
     reply.status(500).send({ success: false, message: error.message || 'System error processing transfer.' });
   }
 }
@@ -283,7 +283,6 @@ async function transfer(request, reply) {
       request.server.io.to(`user:${recipientUser._id}`).emit('notification', { title: 'Funds Received', message: `₦${transferAmount.toLocaleString()} received from ${sender.name}` });
     }
     
-    // THE FIX: Added recipientName to the response payload
     reply.send({ 
         success: true, 
         message: 'Transfer successful', 
@@ -345,6 +344,76 @@ async function resolveBankAccount(request, reply) {
     }
 }
 
+/**
+ * 8. PAYSTACK SECURE WEBHOOK (100% Back-End Authority)
+ */
+async function handlePaystackWebhook(request, reply) {
+    try {
+        const secret = process.env.PAYSTACK_SECRET_KEY;
+        // Verify the request actually came from Paystack
+        const hash = crypto.createHmac('sha512', secret).update(JSON.stringify(request.body)).digest('hex');
+
+        if (hash !== request.headers['x-paystack-signature']) {
+            return reply.status(401).send({ success: false, message: 'Invalid Signature - Unauthorized Access' });
+        }
+
+        const event = request.body;
+
+        if (event.event === 'charge.success') {
+            const data = event.data;
+            const reference = data.reference;
+            
+            // Check if transaction was already marked success
+            const existingTx = await Transaction.findOne({ providerReference: reference, status: 'success' });
+            if (existingTx) {
+                return reply.code(200).send('Transaction already processed');
+            }
+
+            const pendingTx = await Transaction.findOne({ providerReference: reference, status: 'pending' });
+            if (!pendingTx) {
+                return reply.code(200).send('Pending transaction record not found');
+            }
+
+            // Paystack sends data in Kobo. Divide by 100 to get Naira.
+            const actualAmountPaid = data.amount / 100;
+
+            const wallet = await Wallet.findOne({ user: pendingTx.user });
+            if (!wallet) return reply.code(200).send('Wallet not found');
+
+            const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+            
+            // CREDIT THE WALLET (Server-side authority)
+            wallet.availableBalance = String(currentAvail + actualAmountPaid);
+            wallet.balance = String(parseFloat(wallet.balance?.toString() || '0') + actualAmountPaid);
+            await wallet.save();
+
+            // UPDATE TRANSACTION
+            pendingTx.status = 'success';
+            pendingTx.amount = actualAmountPaid;
+            pendingTx.balanceBefore = String(currentAvail);
+            pendingTx.balanceAfter = wallet.availableBalance;
+            await pendingTx.save();
+
+            // PUSH TO FRONTEND
+            if (request.server && request.server.io) {
+                request.server.io.to(`user:${pendingTx.user}`).emit('wallet:update', { balance: wallet.availableBalance });
+                request.server.io.to(`user:${pendingTx.user}`).emit('notification', { 
+                    type: 'success', 
+                    title: 'Deposit Successful', 
+                    message: `Your wallet has been funded with ₦${actualAmountPaid.toLocaleString()}` 
+                });
+            }
+        }
+
+        // Must respond 200 to Paystack to acknowledge receipt
+        reply.code(200).send('Webhook Processed');
+
+    } catch (error) {
+        console.error('Webhook Error:', error);
+        reply.code(500).send('Internal Server Error');
+    }
+}
+
 module.exports = {
   getWallet,
   fundWallet,
@@ -352,5 +421,6 @@ module.exports = {
   withdraw,
   transfer,
   setPin,
-  resolveBankAccount
+  resolveBankAccount,
+  handlePaystackWebhook // Exported so server.js can route it
 };
