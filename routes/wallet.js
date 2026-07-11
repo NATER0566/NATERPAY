@@ -46,9 +46,12 @@ async function fundWallet(request, reply) {
     
     const paymentReference = typeof generateTransactionReference === 'function' ? generateTransactionReference() : `FUND_${Date.now()}`;
     
+    // SAFE TO STRING
+    const startBalance = wallet.availableBalance?.toString() || '0';
+
     const transaction = new Transaction({
       user: request.user._id, type: 'funding', description: `Wallet funding via ${paymentProvider}`,
-      amount, fee: 0, balanceBefore: wallet.availableBalance.toString(), balanceAfter: wallet.availableBalance.toString(),
+      amount, fee: 0, balanceBefore: startBalance, balanceAfter: startBalance,
       status: 'pending', provider: paymentProvider, providerReference: paymentReference,
       idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `idem_${Date.now()}`, 
       ipAddress: request.ip, userAgent: request.headers['user-agent']
@@ -117,9 +120,9 @@ async function verifyFunding(request, reply) {
 
     const wallet = await Wallet.findOne({ user: transaction.user });
     
-    // Safely Credit Wallet
-    wallet.availableBalance = (parseFloat(wallet.availableBalance.toString()) + transaction.amount).toString();
-    wallet.balance = (parseFloat(wallet.balance.toString()) + transaction.amount).toString();
+    // SAFE CREDIT
+    wallet.availableBalance = (parseFloat(wallet.availableBalance?.toString() || '0') + transaction.amount).toString();
+    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') + transaction.amount).toString();
     await wallet.save();
     
     transaction.status = 'success';
@@ -140,7 +143,7 @@ async function verifyFunding(request, reply) {
 }
 
 /**
- * 4. Highly Secure Withdrawal Engine (CRASH-PROOF)
+ * 4. Withdraw Engine (CRASH-PROOF & SECURE)
  */
 async function withdraw(request, reply) {
   try {
@@ -163,7 +166,6 @@ async function withdraw(request, reply) {
     if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet error.' });
     if (wallet.isFrozen) return reply.status(403).send({ success: false, message: 'Wallet is frozen. Please contact support.' });
     
-    // Universal PIN Checker (Handles both User and Wallet schemas)
     if (!pin) return reply.status(400).send({ success: false, message: 'Security PIN is required' });
     
     let isPinValid = false;
@@ -177,18 +179,19 @@ async function withdraw(request, reply) {
 
     if (!isPinValid) return reply.status(401).send({ success: false, message: 'SECURITY ALERT: Incorrect Withdrawal PIN.' });
 
-    // Exact Math
     const transferFee = 50; 
     const totalDeduction = withdrawAmount + transferFee;
-    const currentAvail = parseFloat(wallet.availableBalance.toString() || '0');
+    
+    // THE CRITICAL FIX: Optional chaining ensures undefined values become '0'
+    const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
     
     if (currentAvail < totalDeduction) {
       return reply.status(400).send({ success: false, message: `Insufficient Funds. You need ₦${totalDeduction.toLocaleString()} including fees.` });
     }
     
-    // Deduct Funds safely without requiring MongoDB sessions
+    // Safe Math
     wallet.availableBalance = (currentAvail - totalDeduction).toString();
-    wallet.balance = (parseFloat(wallet.balance.toString() || '0') - totalDeduction).toString();
+    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - totalDeduction).toString();
     await wallet.save();
     
     const transaction = new Transaction({
@@ -205,13 +208,13 @@ async function withdraw(request, reply) {
     
     reply.send({ success: true, message: 'Withdrawal processed successfully', transaction });
   } catch (error) {
-    console.error('Withdrawal Server Error:', error); // This logs exactly what broke to your terminal
-    reply.status(500).send({ success: false, message: error.message || 'Failed to process withdrawal. Check server logs.' });
+    console.error('Withdrawal Server Error:', error); 
+    reply.status(500).send({ success: false, message: 'System error processing transfer. Check console.' });
   }
 }
 
 /**
- * 5. Peer-to-Peer Internal Transfer (CRASH-PROOF)
+ * 5. Peer-to-Peer Transfer (CRASH-PROOF & SECURE)
  */
 async function transfer(request, reply) {
   try {
@@ -223,8 +226,8 @@ async function transfer(request, reply) {
     const senderWallet = await Wallet.findOne({ user: request.user._id });
     const sender = await User.findById(request.user._id);
 
-    // Universal PIN Checker
     if (!pin) return reply.status(400).send({ success: false, message: 'PIN entry is required.' });
+    
     let isPinValid = false;
     if (typeof senderWallet.verifyPin === 'function') {
         isPinValid = await senderWallet.verifyPin(pin);
@@ -236,10 +239,11 @@ async function transfer(request, reply) {
 
     if (!isPinValid) return reply.status(401).send({ success: false, message: 'SECURITY ALERT: Incorrect Transfer PIN.' });
 
-    const currentAvail = parseFloat(senderWallet.availableBalance.toString() || '0');
+    // THE CRITICAL FIX
+    const currentAvail = parseFloat(senderWallet.availableBalance?.toString() || '0');
+    
     if (currentAvail < transferAmount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
     
-    // Find recipient
     let query = { $or: [{ email: recipient.toLowerCase() }, { phoneNumber: recipient }] };
     if (require('mongoose').Types.ObjectId.isValid(recipient)) query.$or.push({ _id: recipient });
 
@@ -249,13 +253,14 @@ async function transfer(request, reply) {
     
     const recipientWallet = await Wallet.findOne({ user: recipientUser._id });
     
-    // Safe Math without strict Sessions
+    // SAFE MATH DEDUCTION
     senderWallet.availableBalance = (currentAvail - transferAmount).toString();
-    senderWallet.balance = (parseFloat(senderWallet.balance.toString() || '0') - transferAmount).toString();
+    senderWallet.balance = (parseFloat(senderWallet.balance?.toString() || '0') - transferAmount).toString();
     await senderWallet.save();
     
-    recipientWallet.availableBalance = (parseFloat(recipientWallet.availableBalance.toString() || '0') + transferAmount).toString();
-    recipientWallet.balance = (parseFloat(recipientWallet.balance.toString() || '0') + transferAmount).toString();
+    // SAFE MATH CREDIT
+    recipientWallet.availableBalance = (parseFloat(recipientWallet.availableBalance?.toString() || '0') + transferAmount).toString();
+    recipientWallet.balance = (parseFloat(recipientWallet.balance?.toString() || '0') + transferAmount).toString();
     await recipientWallet.save();
     
     const senderTransaction = new Transaction({
@@ -266,7 +271,9 @@ async function transfer(request, reply) {
     
     const recipientTransaction = new Transaction({
       user: recipientUser._id, type: 'transfer', description: `Received from ${sender.name}`,
-      amount: transferAmount, fee: 0, balanceBefore: (parseFloat(recipientWallet.availableBalance.toString() || '0') - transferAmount).toString(), balanceAfter: recipientWallet.availableBalance.toString(),
+      amount: transferAmount, fee: 0, 
+      balanceBefore: (parseFloat(recipientWallet.availableBalance?.toString() || '0') - transferAmount).toString(), 
+      balanceAfter: recipientWallet.availableBalance.toString(),
       status: 'success', provider: 'internal'
     });
     
@@ -282,7 +289,7 @@ async function transfer(request, reply) {
     reply.send({ success: true, message: 'Transfer successful', transaction: senderTransaction });
   } catch (error) {
     console.error('Transfer Server Error:', error);
-    reply.status(500).send({ success: false, message: 'Failed to process transfer. Check server logs.' });
+    reply.status(500).send({ success: false, message: 'System error during transfer. Check console.' });
   }
 }
 
@@ -299,11 +306,9 @@ async function setPin(request, reply) {
     const wallet = await Wallet.findOne({ user: request.user._id });
     if (!user || !wallet) return reply.status(404).send({ success: false, message: 'Account not found' });
     
-    // Save to Wallet if logic exists
     if (typeof wallet.setPin === 'function') {
         await wallet.setPin(pin);
     } 
-    // Save to User as fallback
     const salt = await bcrypt.genSalt(10);
     user.transactionPin = await bcrypt.hash(pin.toString(), salt);
     user.isSecured = true;
