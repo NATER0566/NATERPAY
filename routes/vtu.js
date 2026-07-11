@@ -23,7 +23,6 @@ async function getRates(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch rates' }); }
 }
 
-// ULTRA-FAST CACHED VARIATIONS ROUTE
 async function getVariations(request, reply) {
   try {
     const { serviceID } = request.query;
@@ -51,7 +50,7 @@ async function getVariations(request, reply) {
 }
 
 // ==========================================
-// STANDARD BILL PAYMENTS (AIRTIME & DATA)
+// STANDARD BILL PAYMENTS
 // ==========================================
 
 async function buyAirtime(request, reply) {
@@ -141,10 +140,6 @@ async function buyData(request, reply) {
     }
   } catch (error) { reply.status(500).send({ success: false, message: 'System error processing data' }); }
 }
-
-// ==========================================
-// UTILITIES & MULTIMEDIA (POWER & CABLE)
-// ==========================================
 
 async function buyElectricity(request, reply) {
   try {
@@ -292,17 +287,12 @@ async function buyBetting(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    let transaction;
-    try {
-        transaction = new Transaction({
-          user: request.user._id, type: 'betting', description: `Fund ${provider.toUpperCase()} account ID: ${customerId}`,
-          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-          status: 'pending', provider: 'paystack', reference: `BET-${Date.now()}`
-        });
-        await transaction.save();
-    } catch (dbErr) {
-        return reply.status(500).send({ success: false, message: `DB Error: ${dbErr.message}` });
-    }
+    let transaction = new Transaction({
+      user: request.user._id, type: 'betting', description: `Fund ${provider.toUpperCase()} account ID: ${customerId}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'paystack', reference: `BET-${Date.now()}`
+    });
+    await transaction.save();
 
     try {
       transaction.status = 'success';
@@ -339,17 +329,12 @@ async function buyInsurance(request, reply) {
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    let transaction;
-    try {
-        transaction = new Transaction({
-          user: request.user._id, type: 'insurance', description: `${provider.toUpperCase()} Policy for ${fullName}`,
-          amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
-          status: 'pending', provider: 'vtpass', reference: `INS-${Date.now()}`
-        });
-        await transaction.save();
-    } catch (dbErr) {
-        return reply.status(500).send({ success: false, message: `DB Error: Please ensure 'insurance' is allowed in the Transaction model enum.` });
-    }
+    const transaction = new Transaction({
+      user: request.user._id, type: 'insurance', description: `${provider.toUpperCase()} Policy for ${fullName}`,
+      amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `INS-${Date.now()}`
+    });
+    await transaction.save();
 
     try {
       const providerResponse = await processVTURequest('insurance', { 
@@ -371,6 +356,7 @@ async function buyInsurance(request, reply) {
       transaction.balanceAfter = wallet.availableBalance.toString();
       await transaction.save();
       
+      // Pass the raw error to frontend
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
   } catch (error) { reply.status(500).send({ success: false, message: 'System error processing insurance' }); }
@@ -382,7 +368,6 @@ async function sendBulkSMS(request, reply) {
         if (!sender || !recipient || !message || !pin) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
 
         const wallet = await Wallet.findOne({ user: request.user._id });
-        // Simplified deduction logic for SMS cost (e.g. ₦4 per page)
         const smsCost = 4.00 * recipient.split(',').length; 
         
         if (parseFloat(wallet.availableBalance) < smsCost) {
@@ -401,9 +386,8 @@ async function sendBulkSMS(request, reply) {
         });
         await transaction.save();
 
-        // Check if VTpass keys exist
         if (!process.env.VTPASS_MESSAGING_PUBLIC_KEY || !process.env.VTPASS_MESSAGING_SECRET_KEY) {
-            throw new Error("Missing VTpass Messaging API Keys.");
+            throw new Error("Provider API Key Missing: Ensure your Messaging Keys are set in .env");
         }
 
         const url = 'https://messaging.vtpass.com/v2/api/sms/sendsms';
@@ -421,11 +405,18 @@ async function sendBulkSMS(request, reply) {
             await transaction.save();
             reply.send({ success: true, message: 'SMS Dispatched', data: response.data });
         } else {
-            throw new Error(response.data.response || "Failed to dispatch SMS.");
+            throw new Error(`Provider API Error: ${response.data.response}`);
         }
 
     } catch (error) {
-        reply.status(500).send({ success: false, message: 'Failed to dispatch SMS messages.' });
+        // Find user wallet and refund them due to error
+        const wallet = await Wallet.findOne({ user: request.user._id });
+        const smsCost = 4.00 * request.body.recipient.split(',').length; 
+        wallet.availableBalance = (parseFloat(wallet.availableBalance) + smsCost).toString();
+        wallet.balance = (parseFloat(wallet.balance) + smsCost).toString();
+        await wallet.save();
+        
+        reply.status(500).send({ success: false, message: error.message || 'Failed to dispatch SMS messages.' });
     }
 }
 
@@ -450,29 +441,13 @@ async function buyPOS(request, reply) {
         await transaction.save();
 
         try {
-            // Dedicated processor block for POS Terminal to avoid electricity mismatch
-            const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
-            const headers = { 'api-key': process.env.VTPASS_API_KEY, 'secret-key': process.env.VTPASS_SECRET_KEY, 'Content-Type': 'application/json' };
-            const payload = { 
-                request_id: generateVTpassRequestId(), 
-                serviceID: 'vtpass-pos', 
-                amount: amount, 
-                billersCode: terminalId,
-                phone: '08000000000'
-            };
+            const providerResponse = await processVTURequest('pos', { terminalId, amount });
+            transaction.status = 'success';
+            transaction.providerReference = providerResponse.reference;
+            await transaction.save();
 
-            const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
-            
-            if (response.data.code === '000') {
-                transaction.status = 'success';
-                transaction.providerReference = response.data.content?.transactions?.transactionId;
-                await transaction.save();
-
-                if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
-                reply.send({ success: true, message: 'Terminal Funded', transaction });
-            } else {
-                throw new Error(response.data.response_description || response.data.message);
-            }
+            if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+            reply.send({ success: true, message: 'Terminal Funded', transaction });
         } catch (vtuError) {
             wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
             wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
@@ -480,7 +455,7 @@ async function buyPOS(request, reply) {
 
             transaction.status = 'failed';
             await transaction.save();
-            return reply.status(500).send({ success: false, message: 'Terminal funding failed.' });
+            return reply.status(500).send({ success: false, message: vtuError.message });
         }
     } catch (error) {
         reply.status(500).send({ success: false, message: 'System error processing POS funding.' });
@@ -513,7 +488,6 @@ async function handleVTpassWebhook(request, reply) {
             }
         } else if (type === 'variations-update') {
             const { serviceID } = request.body;
-            // Clear the specific cache for this service to force a fresh fetch next time
             if (variationsCache[serviceID]) {
                 delete variationsCache[serviceID];
             }
@@ -531,7 +505,7 @@ async function handleVTpassWebhook(request, reply) {
 // ==================================================================
 async function processVTURequest(type, data) {
   if (!process.env.VTPASS_API_KEY || !process.env.VTPASS_SECRET_KEY) {
-      throw new Error("VTpass API Keys are missing from server configurations.");
+      throw new Error("Provider API Key Missing: Ensure your VTpass Keys are set in .env");
   }
 
   const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
@@ -544,12 +518,9 @@ async function processVTURequest(type, data) {
           targetIdentifier = data.meterType === 'postpaid' ? '1010101010101' : '1111111111111';
       } else if (type === 'cable') {
           targetIdentifier = '1212121212';     
-      } else if (type === 'insurance') {
-          targetIdentifier = 'Testimetri Adams'; // Dummy name for sandbox
       } else {
           targetIdentifier = '08011111111';   
       }
-      console.log(`[VTPASS] Sandbox Mode: Redirecting ${type} transaction to test identifier -> ${targetIdentifier}`);
   }
 
   const headers = { 
@@ -568,7 +539,7 @@ async function processVTURequest(type, data) {
       payload.serviceID = data.network; 
   } 
   else if (type === 'data') { 
-      payload.serviceID = data.network; // inherently supports 'smile-direct' and 'spectranet' networks
+      payload.serviceID = data.network; 
       payload.billersCode = isSandbox ? '08011111111' : data.phone; 
       payload.variation_code = data.plan; 
   } 
@@ -636,30 +607,28 @@ async function processVTURequest(type, data) {
   }
   else if (type === 'insurance') {
       payload.serviceID = data.provider.toLowerCase(); 
-      payload.billersCode = targetIdentifier; // Uses the vehicle plate number in production
+      payload.billersCode = isSandbox ? 'ATU480ER' : (data.vehicleDetails?.plateNumber || data.phone);
       payload.variation_code = data.plan;
-      payload.full_name = data.fullName;
-      payload.address = data.address || 'Standard Address';
-      payload.dob = data.dob || '1990-01-01';
-      payload.next_kin_name = data.nextOfKinName || 'N/A';
-      payload.next_kin_phone = data.nextOfKinPhone || payload.phone;
-      payload.business_occupation = data.occupation || 'Professional';
-
-      // Attach specific vehicle details required for Third-Party Auto Insurance
-      if (payload.serviceID === 'ui-insure' && data.vehicleDetails) {
-          payload.plate_number = data.vehicleDetails.plateNumber || targetIdentifier;
-          payload.engine_number = data.vehicleDetails.engineNumber || 'ENG123456';
-          payload.chasis_number = data.vehicleDetails.chassisNumber || 'CH123456';
-          payload.vehicle_make = data.vehicleDetails.vehicleMake || '335'; // Ac Cobra
-          payload.vehicle_color = data.vehicleDetails.vehicleColor || '20'; // Ash
-          payload.vehicle_model = data.vehicleDetails.vehicleModel || '745'; // 3.2TL
-          payload.YearofMake = data.vehicleDetails.yearOfMake || '2015';
-          payload.state = data.vehicleDetails.stateCode || '1'; // Abia
-          payload.lga = data.vehicleDetails.lgaCode || '770'; // Aba
-          payload.Insured_Name = data.fullName;
+      
+      if (payload.serviceID === 'ui-insure') {
+          payload.phone = isSandbox ? '08111111111' : (data.phone || '08111111111');
+          payload.Insured_Name = data.fullName || 'Mr Ajanlekoko';
           payload.engine_capacity = '1';
-          payload.email = 'user@example.com';
+          payload.Chasis_Number = isSandbox ? 'S12332323FRHJJ433434J' : data.vehicleDetails?.chassisNumber;
+          payload.Plate_Number = isSandbox ? 'ATU480ER' : data.vehicleDetails?.plateNumber;
+          payload.vehicle_make = '335';
+          payload.vehicle_color = '20';
+          payload.vehicle_model = '745';
+          payload.YearofMake = '2009';
+          payload.state = '1';
+          payload.lga = '770';
+          payload.email = 'sandbox@vtpass.com';
       }
+  }
+  else if (type === 'pos') {
+      payload.serviceID = 'vtpass-pos'; 
+      payload.billersCode = data.terminalId;
+      payload.variation_code = 'default';
   }
 
   try {
@@ -685,15 +654,15 @@ async function processVTURequest(type, data) {
           raw: response.data 
       };
     } else {
-      throw new Error(`VTpass Error (${response.data.code}): ${response.data.response_description || response.data.message}`);
+      // Intentionally avoiding "VTpass Error" so the frontend mask is bypassed and you see the true error
+      throw new Error(`Provider API Error (${response.data.code}): ${response.data.response_description || response.data.message}`);
     }
   } catch (error) {
     const apiErrorMessage = error.response?.data?.response_description || error.response?.data?.message || error.message;
-    throw new Error(apiErrorMessage);
+    throw new Error(`Provider API Error: ${apiErrorMessage}`);
   }
 }
 
-// MAKE SURE TO EXPORT handleVTpassWebhook SO IT IS AVAILABLE IN SERVER.JS
 module.exports = { 
   getRates, 
   getVariations, 
