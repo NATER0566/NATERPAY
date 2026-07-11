@@ -283,7 +283,13 @@ async function transfer(request, reply) {
       request.server.io.to(`user:${recipientUser._id}`).emit('notification', { title: 'Funds Received', message: `₦${transferAmount.toLocaleString()} received from ${sender.name}` });
     }
     
-    reply.send({ success: true, message: 'Transfer successful', transaction: senderTransaction });
+    // THE FIX: Added recipientName to the response payload
+    reply.send({ 
+        success: true, 
+        message: 'Transfer successful', 
+        transaction: senderTransaction,
+        recipientName: recipientUser.name 
+    });
   } catch (error) {
     console.error('Transfer Server Error:', error);
     reply.status(500).send({ success: false, message: 'Failed to process transfer. Check console.' });
