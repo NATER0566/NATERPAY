@@ -31,7 +31,8 @@ async function getInvoices(request, reply) {
         status: inv.status,
         dueDate: inv.dueDate,
         paidAt: inv.paidAt,
-        createdAt: inv.createdAt
+        createdAt: inv.createdAt,
+        businessLogoBase64: inv.businessLogoBase64 // Includes logo for frontend display
       }))
     });
   } catch (error) {
@@ -44,7 +45,8 @@ async function getInvoices(request, reply) {
  */
 async function createInvoice(request, reply) {
   try {
-    const { customerName, customerEmail, customerPhone, items, taxRate, discountRate, dueDate, notes } = request.body;
+    // Destructured businessLogoBase64 from the incoming request
+    const { customerName, customerEmail, customerPhone, items, taxRate, discountRate, dueDate, notes, businessLogoBase64 } = request.body;
     
     if (!customerName || !customerEmail || !items || items.length === 0) {
       return reply.status(400).send({ success: false, message: 'Customer name, email, and valid items are required' });
@@ -69,9 +71,20 @@ async function createInvoice(request, reply) {
     const invoiceId = 'INV' + crypto.randomBytes(4).toString('hex').toUpperCase();
     
     const invoice = new Invoice({
-      user: request.user._id, invoiceId, customerName, customerEmail, customerPhone,
-      items: processedItems, subtotal, taxRate: tax, discountRate: discount,
-      total: finalTotal, dueDate: new Date(dueDate || Date.now()), notes, status: 'sent'
+      user: request.user._id, 
+      invoiceId, 
+      customerName, 
+      customerEmail, 
+      customerPhone,
+      items: processedItems, 
+      subtotal, 
+      taxRate: tax, 
+      discountRate: discount,
+      total: finalTotal, 
+      dueDate: new Date(dueDate || Date.now()), 
+      notes, 
+      status: 'sent',
+      businessLogoBase64: businessLogoBase64 || null // Saves the logo string securely
     });
     
     await invoice.save();
@@ -143,12 +156,21 @@ async function getInvoice(request, reply) {
     
     reply.send({
       success: true,
-      paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY, // <--- PULLS DYNAMICALLY FROM RENDER
+      paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
       invoice: {
-        invoiceId: invoice.invoiceId, customerName: invoice.customerName, customerEmail: invoice.customerEmail,
-        items: invoice.items, subtotal: invoice.subtotal ? invoice.subtotal.toString() : '0',
-        taxRate: invoice.taxRate, discountRate: invoice.discountRate, total: invoice.total ? invoice.total.toString() : '0',
-        currency: invoice.currency || 'NGN', dueDate: invoice.dueDate, notes: invoice.notes, status: invoice.status
+        invoiceId: invoice.invoiceId, 
+        customerName: invoice.customerName, 
+        customerEmail: invoice.customerEmail,
+        items: invoice.items, 
+        subtotal: invoice.subtotal ? invoice.subtotal.toString() : '0',
+        taxRate: invoice.taxRate, 
+        discountRate: invoice.discountRate, 
+        total: invoice.total ? invoice.total.toString() : '0',
+        currency: invoice.currency || 'NGN', 
+        dueDate: invoice.dueDate, 
+        notes: invoice.notes, 
+        status: invoice.status,
+        businessLogoBase64: invoice.businessLogoBase64 // Returns logo payload for public rendering
       }
     });
   } catch (error) {
