@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Secure Checkout</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+
+    <style>
+        :root { --gold: #FFD700; --bg: #050505; --card-bg: rgba(15, 15, 15, 0.95); }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        
+        .checkout-card { 
+            background: var(--card-bg); border: 2px solid var(--gold); border-radius: 20px; 
+            padding: 40px 30px; width: 100%; max-width: 500px; box-shadow: 0 15px 50px rgba(0,0,0,0.8); 
+            text-align: center; word-wrap: break-word; overflow-wrap: break-word;
+        }
+
+        .store-icon { background: rgba(255,215,0,0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--gold); margin: 0 auto 20px auto; border: 2px solid var(--gold); }
+        
+        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.8rem; margin-bottom: 5px; }
+        .product-desc { color: #888; font-size: 0.9rem; font-weight: 600; margin-bottom: 30px; }
+
+        .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; text-align: left; transition: 0.3s; }
+        .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 900; text-transform: uppercase; margin-bottom: 8px; }
+        .input-group-custom input { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 600; outline: none; }
+        
+        .amount-display { font-family: 'Cinzel', serif; font-size: 2.5rem; color: var(--gold); font-weight: 900; margin: 20px 0; }
+
+        .btn-pay { background: var(--gold); color: black; font-weight: 900; border-radius: 15px; padding: 18px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s; margin-top: 10px; }
+        .btn-pay:hover { background: white; transform: translateY(-3px); }
+
+        .secure-badge { color: #555; font-size: 0.8rem; font-weight: 800; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+<div class="checkout-card" id="checkoutCard">
+    <div class="py-5" id="loadingState">
+        <i class="fas fa-spinner fa-spin fa-3x text-warning mb-3"></i>
+        <p class="fw-bold">Securing Payment Route...</p>
+    </div>
+</div>
+
+<script>
+    let globalLinkData = null;
+    let dynamicPaystackKey = null;
+
+    async function loadPaymentLink() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const linkId = urlParams.get('id');
+
+        if (!linkId) {
+            document.getElementById('checkoutCard').innerHTML = '<h4 class="text-danger fw-bold py-5">Invalid Checkout Link</h4>';
+            return;
+        }
+
+        try {
+            // NOTE: We need the backend to serve the link details publicly, just like the invoice
+            const res = await fetch(`/api/payment-links/${linkId}`);
+            const data = await res.json();
+
+            if (data.success) {
+                globalLinkData = data.link;
+                dynamicPaystackKey = data.paystackPublicKey;
+                renderCheckout(data.link);
+            } else {
+                document.getElementById('checkoutCard').innerHTML = '<h4 class="text-danger fw-bold py-5">Link Expired or Not Found</h4>';
+            }
+        } catch (e) {
+            document.getElementById('checkoutCard').innerHTML = '<h4 class="text-danger fw-bold py-5">Connection Error.</h4>';
+        }
+    }
+
+    function renderCheckout(link) {
+        let amountHTML = '';
+        
+        if (link.isFlexibleAmount) {
+            amountHTML = `
+                <div class="input-group-custom">
+                    <label>Enter Amount to Pay (₦)</label>
+                    <input type="number" id="customAmount" placeholder="0.00" min="100">
+                </div>
+            `;
+        } else {
+            amountHTML = `<div class="amount-display">₦${Number(link.amount).toLocaleString(undefined, {minimumFractionDigits:2})}</div>`;
+        }
+
+        document.getElementById('checkoutCard').innerHTML = `
+            <div class="store-icon"><i class="fas fa-shopping-bag"></i></div>
+            <h2 class="product-title">${link.title}</h2>
+            <div class="product-desc">${link.description || 'Secure NATERPAY Checkout'}</div>
+
+            ${amountHTML}
+
+            <div class="input-group-custom">
+                <label>Your Full Name</label>
+                <input type="text" id="customerName" placeholder="e.g. John Doe">
+            </div>
+            <div class="input-group-custom">
+                <label>Your Email Address</label>
+                <input type="email" id="customerEmail" placeholder="e.g. email@domain.com">
+            </div>
+
+            <button class="btn-pay" onclick="payWithPaystack()"><i class="fas fa-lock me-2"></i> PAY SECURELY NOW</button>
+            <div class="secure-badge"><i class="fas fa-shield-alt me-1"></i> Secured by Paystack</div>
+        `;
+    }
+
+    function payWithPaystack() {
+        const name = document.getElementById('customerName').value.trim();
+        const email = document.getElementById('customerEmail').value.trim();
+        
+        let finalAmount = globalLinkData.amount;
+        
+        if (globalLinkData.isFlexibleAmount) {
+            finalAmount = parseFloat(document.getElementById('customAmount').value);
+            if (!finalAmount || finalAmount < 100) {
+                Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'Minimum payment is ₦100', background: '#111', color: '#fff' });
+                return;
+            }
+        }
+
+        if (!name || !email) {
+            Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please provide your name and email.', background: '#111', color: '#fff' });
+            return;
+        }
+
+        if (!dynamicPaystackKey) {
+            Swal.fire({ icon: 'error', title: 'Gateway Error', text: 'Payment system offline.', background: '#111', color: '#fff' });
+            return;
+        }
+
+        const amountInKobo = Math.round(finalAmount * 100);
+
+        let handler = PaystackPop.setup({
+            key: dynamicPaystackKey, 
+            email: email,
+            amount: amountInKobo,
+            currency: 'NGN',
+            ref: 'PAY_' + Math.floor((Math.random() * 1000000000) + 1),
+            callback: function(response) {
+                verifyPayment(response.reference, finalAmount, name, email);
+            },
+            onClose: function() {
+                Swal.fire({ icon: 'info', title: 'Cancelled', text: 'Payment window closed.', background: '#111', color: '#fff' });
+            }
+        });
+
+        handler.openIframe();
+    }
+
+    async function verifyPayment(reference, amountPaid, customerName, customerEmail) {
+        Swal.fire({ title: 'Verifying...', text: 'Securing transaction...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+        
+        try {
+            // Note: Your backend needs this route to actually credit the merchant!
+            const res = await fetch(`/api/payment-links/${globalLinkData.linkId}/pay`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gatewayReference: reference, amount: amountPaid, customerName, customerEmail })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                document.getElementById('checkoutCard').innerHTML = `
+                    <div class="store-icon" style="color: #00ff88; border-color: #00ff88;"><i class="fas fa-check"></i></div>
+                    <h2 class="product-title" style="color: #00ff88;">Payment Successful</h2>
+                    <div class="product-desc">Thank you, ${customerName}. The merchant has been credited.</div>
+                    <button class="btn btn-outline-light mt-4 rounded-pill px-4" onclick="window.location.reload()">Make Another Payment</button>
+                `;
+                Swal.close();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to communicate with server.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+        }
+    }
+
+    window.onload = loadPaymentLink;
+</script>
+
+</body>
+</html>
