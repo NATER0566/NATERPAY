@@ -89,18 +89,18 @@
         <span class="site-part-1">NATER</span>
         <span class="site-part-2">PAY</span>
     </div>
-    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4">Back to Dashboard</a>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
 </header>
 
 <div class="container">
     <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">SECURITY SETTINGS</h1>
     
     <div class="security-card">
-        <div class="security-status secured" id="pinStatus">
-            <div class="security-icon"><i class="fas fa-lock"></i></div>
+        <div class="security-status unsecured" id="pinStatus">
+            <div class="security-icon" id="pinIcon"><i class="fas fa-unlock"></i></div>
             <div>
                 <h5 class="mb-0 fw-bold">Withdrawal PIN Status</h5>
-                <small class="text-muted" id="pinStatusText">PIN is set and active</small>
+                <small class="text-muted" id="pinStatusText">Loading status...</small>
             </div>
         </div>
         
@@ -112,14 +112,12 @@
                 <label>NEW PIN (4 DIGITS)</label>
                 <input type="password" id="newPin" placeholder="••••" maxlength="4" pattern="[0-9]{4}">
             </div>
-            
             <div class="input-group-custom">
                 <label>CONFIRM PIN</label>
                 <input type="password" id="confirmPin" placeholder="••••" maxlength="4" pattern="[0-9]{4}">
             </div>
-            
             <button type="submit" class="btn-action">
-                <i class="fas fa-shield-alt me-2"></i> SET WITHDRAWAL PIN
+                <i class="fas fa-shield-alt me-2"></i> SAVE PIN
             </button>
         </form>
     </div>
@@ -133,19 +131,16 @@
                 <label>CURRENT PASSWORD</label>
                 <input type="password" id="currentPassword" placeholder="Enter current password">
             </div>
-            
             <div class="input-group-custom">
                 <label>NEW PASSWORD</label>
                 <input type="password" id="newPassword" placeholder="Enter new password">
             </div>
-            
             <div class="input-group-custom">
                 <label>CONFIRM NEW PASSWORD</label>
                 <input type="password" id="confirmNewPassword" placeholder="Confirm new password">
             </div>
-            
             <button type="submit" class="btn-action">
-                <i class="fas fa-key me-2"></i> CHANGE PASSWORD
+                <i class="fas fa-key me-2"></i> UPDATE PASSWORD
             </button>
         </form>
     </div>
@@ -165,8 +160,8 @@
             <span class="badge bg-success">Current</span>
         </div>
         
-        <button class="btn btn-outline-danger rounded-pill w-100" onclick="logoutAllSessions()">
-            <i class="fas fa-sign-out-alt me-2"></i> LOGOUT ALL OTHER SESSIONS
+        <button class="btn btn-outline-danger rounded-pill w-100 fw-bold py-3" onclick="logoutAllSessions()">
+            <i class="fas fa-sign-out-alt me-2"></i> TERMINATE ALL OTHER SESSIONS
         </button>
     </div>
     
@@ -199,12 +194,10 @@
         animate();
     }
     
+    // Checks if the user has a PIN set on page load
     async function loadSecurityStatus() {
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
+        if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
             const res = await fetch('/api/user/dashboard-data', {
@@ -215,13 +208,16 @@
             if (data.success) {
                 const pinStatus = document.getElementById('pinStatus');
                 const pinStatusText = document.getElementById('pinStatusText');
+                const pinIcon = document.getElementById('pinIcon');
                 
                 if (data.isSecured) {
                     pinStatus.className = 'security-status secured';
                     pinStatusText.innerText = 'PIN is set and active';
+                    pinIcon.innerHTML = '<i class="fas fa-lock"></i>';
                 } else {
                     pinStatus.className = 'security-status unsecured';
-                    pinStatusText.innerText = 'PIN not set - Please set your withdrawal PIN';
+                    pinStatusText.innerText = 'PIN not set - Please set your withdrawal PIN below';
+                    pinIcon.innerHTML = '<i class="fas fa-unlock"></i>';
                 }
             }
         } catch (e) {
@@ -229,6 +225,7 @@
         }
     }
     
+    // Set Withdrawal PIN
     async function setPin(event) {
         event.preventDefault();
         
@@ -236,90 +233,42 @@
         const confirmPin = document.getElementById('confirmPin').value;
         
         if (!newPin || newPin.length !== 4) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid PIN',
-                text: 'PIN must be 4 digits',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'Invalid PIN', text: 'PIN must be exactly 4 digits', background: '#0a0a0a', color: '#fff' });
             return;
         }
         
         if (newPin !== confirmPin) {
-            Swal.fire({
-                icon: 'error',
-                title: 'PIN Mismatch',
-                text: 'PINs do not match',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'PIN Mismatch', text: 'PINs do not match', background: '#0a0a0a', color: '#fff' });
             return;
         }
         
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
         
         try {
-            Swal.fire({
-                title: 'Setting PIN...',
-                text: 'Securing your account',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ title: 'Saving...', text: 'Securing your account', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
             
             const res = await fetch('/api/wallet/set-pin', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                 body: JSON.stringify({ pin: newPin, confirmPin })
             });
             
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'PIN Set Successfully',
-                    text: 'Your withdrawal PIN has been set',
-                    confirmButtonColor: '#d4af37',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
+                Swal.fire({ icon: 'success', title: 'Success', text: 'Your withdrawal PIN has been set', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
                 document.getElementById('newPin').value = '';
                 document.getElementById('confirmPin').value = '';
-                loadSecurityStatus();
+                loadSecurityStatus(); // Refresh the green badge
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'PIN Setup Failed',
-                    text: data.message,
-                    confirmButtonColor: '#d32f2f',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
+                Swal.fire({ icon: 'error', title: 'Failed', text: data.message, background: '#0a0a0a', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Setup Error',
-                text: 'Unable to set PIN. Please try again.',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to connect to server.', background: '#0a0a0a', color: '#fff' });
         }
     }
     
+    // Change Password - NOW 100% REAL
     async function changePassword(event) {
         event.preventDefault();
         
@@ -328,92 +277,72 @@
         const confirmNewPassword = document.getElementById('confirmNewPassword').value;
         
         if (!currentPassword || !newPassword || !confirmNewPassword) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Missing Fields',
-                text: 'Please fill in all password fields',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'Missing Fields', text: 'Please fill in all password fields', background: '#0a0a0a', color: '#fff' });
             return;
         }
         
         if (newPassword !== confirmNewPassword) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Password Mismatch',
-                text: 'New passwords do not match',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'Mismatch', text: 'New passwords do not match', background: '#0a0a0a', color: '#fff' });
             return;
         }
         
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
         
         try {
-            Swal.fire({
-                title: 'Changing Password...',
-                text: 'Updating your credentials',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
-                background: '#0a0a0a',
-                color: '#fff'
+            Swal.fire({ title: 'Updating...', text: 'Verifying credentials...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+            
+            const res = await fetch('/api/auth/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ currentPassword, newPassword })
             });
             
-            // Password change would be implemented via auth API
-            // For now, show success
-            Swal.fire({
-                icon: 'success',
-                title: 'Password Changed',
-                text: 'Your password has been updated successfully',
-                confirmButtonColor: '#d4af37',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            const data = await res.json();
             
-            document.getElementById('currentPassword').value = '';
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmNewPassword').value = '';
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Updated!', text: 'Your password has been changed successfully.', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmNewPassword').value = '';
+            } else {
+                Swal.fire({ icon: 'error', title: 'Access Denied', text: data.message, background: '#0a0a0a', color: '#fff' });
+            }
         } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Change Error',
-                text: 'Unable to change password. Please try again.',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to connect to server.', background: '#0a0a0a', color: '#fff' });
         }
     }
     
+    // Logout Sessions - NOW 100% REAL
     function logoutAllSessions() {
         Swal.fire({
-            title: 'Logout All Sessions?',
-            text: 'This will log you out from all devices except this one',
+            title: 'Terminate Sessions?',
+            text: 'This will log out your account from all other computers and phones immediately.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d32f2f',
             cancelButtonColor: '#444',
-            confirmButtonText: 'Yes, logout all',
-            background: '#0a0a0a',
-            color: '#fff'
-        }).then((result) => {
+            confirmButtonText: 'Yes, terminate them',
+            background: '#0a0a0a', color: '#fff'
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Sessions Terminated',
-                    text: 'All other sessions have been logged out',
-                    confirmButtonColor: '#d4af37',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
+                const authToken = localStorage.getItem("naterpay_token");
+                Swal.fire({ title: 'Terminating...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+                
+                try {
+                    const res = await fetch('/api/auth/logout-all', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    
+                    const data = await res.json();
+                    if (data.success) {
+                        Swal.fire({ icon: 'success', title: 'Sessions Terminated', text: 'All other devices have been securely logged out.', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Failed', text: data.message, background: '#0a0a0a', color: '#fff' });
+                    }
+                } catch (error) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to connect to server.', background: '#0a0a0a', color: '#fff' });
+                }
             }
         });
     }
@@ -422,6 +351,7 @@
         initStars();
         loadSecurityStatus();
     };
+    window.onresize = initStars;
 </script>
 
 </body>
