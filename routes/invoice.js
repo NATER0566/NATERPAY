@@ -2,6 +2,10 @@ const Invoice = require('../models/Invoice');
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
 const crypto = require('crypto');
+const { Resend } = require('resend'); // Import Resend
+
+// Initialize Resend with your environment API key
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Safely load optional logging modules to prevent server crashes
 let AuditLog, Notification, generateIdempotencyKey;
@@ -41,7 +45,7 @@ async function getInvoices(request, reply) {
 }
 
 /**
- * 2. Create invoice (Strict Mathematics Engine)
+ * 2. Create invoice & Send Email via Resend
  */
 async function createInvoice(request, reply) {
   try {
@@ -96,6 +100,56 @@ async function createInvoice(request, reply) {
     
     await invoice.save();
     
+    // Construct the exact payment link to the customer-facing view
+    const protocol = request.headers['x-forwarded-proto'] || 'http';
+    const host = request.headers.host;
+    const invoiceLink = `${protocol}://${host}/invoice-view.html?id=${invoice.invoiceId}`;
+
+    // ==========================================
+    // EMAIL DISPATCH ENGINE (RESEND)
+    // ==========================================
+    try {
+        await resend.emails.send({
+            from: process.env.EMAIL_FROM || 'onboarding@resend.dev', // Ensure you set EMAIL_FROM in your .env
+            to: customerEmail,
+            subject: `New Invoice from NATERPAY Merchant (INV: ${invoice.invoiceId})`,
+            html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #333; border-radius: 15px; background-color: #0a0a0a; color: #ffffff;">
+                    
+                    <h2 style="color: #FFD700; text-align: center; border-bottom: 2px solid #FFD700; padding-bottom: 15px; letter-spacing: 2px;">NATERPAY SECURE INVOICE</h2>
+                    
+                    <p style="font-size: 16px;">Hello <strong>${customerName}</strong>,</p>
+                    <p style="font-size: 16px; color: #ccc;">You have received a new invoice requesting payment for services rendered.</p>
+                    
+                    <div style="background-color: #1a1a1a; padding: 20px; border-radius: 10px; margin: 25px 0; border: 1px solid #333;">
+                        <p style="margin: 5px 0; font-size: 14px; color: #888;">Invoice ID:</p>
+                        <p style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold;">${invoice.invoiceId}</p>
+                        
+                        <p style="margin: 5px 0; font-size: 14px; color: #888;">Total Amount Due:</p>
+                        <p style="margin: 0 0 15px 0; font-size: 24px; font-weight: bold; color: #FFD700;">₦${finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                        
+                        <p style="margin: 5px 0; font-size: 14px; color: #888;">Due Date:</p>
+                        <p style="margin: 0; font-size: 16px; font-weight: bold; color: #ff3333;">${new Date(invoice.dueDate).toLocaleDateString()}</p>
+                    </div>
+
+                    <div style="text-align: center; margin: 40px 0;">
+                        <a href="${invoiceLink}" style="background-color: #FFD700; color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 8px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">View & Pay Securely</a>
+                    </div>
+                    
+                    <p style="color: #666; font-size: 12px; text-align: center; margin-top: 40px; border-top: 1px solid #333; padding-top: 20px;">
+                        Secured by NATER-PAY Protocol v3.0<br>
+                        This is an automated message. Please do not reply directly to this email.
+                    </p>
+                </div>
+            `
+        });
+    } catch (emailError) {
+        // We log the error, but DO NOT crash the function. 
+        // The merchant still generated the link successfully and can copy/paste it manually if the email fails.
+        console.error('Resend Email Dispatch Failed:', emailError);
+    }
+    // ==========================================
+
     if (AuditLog && typeof AuditLog.logAction === 'function') {
         await AuditLog.logAction({
           user: request.user._id,
@@ -113,7 +167,7 @@ async function createInvoice(request, reply) {
       invoice: {
         _id: invoice._id,
         invoiceId: invoice.invoiceId,
-        url: `${request.headers.host || ''}/invoice/${invoice.invoiceId}`,
+        url: invoiceLink,
         total: invoice.total.toString()
       }
     });
@@ -166,7 +220,6 @@ async function getInvoice(request, reply) {
  * 4. Pay invoice (Atomic Transactions & Revenue Fee Logic)
  */
 async function payInvoice(request, reply) {
-  // Use MongoDB sessions to ensure money is never lost if the server crashes halfway
   let session = null;
   if (typeof Wallet.startSession === 'function') {
       session = await Wallet.startSession();
@@ -191,7 +244,6 @@ async function payInvoice(request, reply) {
 
     const paidAmount = parseFloat(invoice.total.toString());
     
-    // NATERPAY Business Logic: Take a 1.5% gateway/platform fee before crediting the merchant
     const platformFee = paidAmount * 0.015;
     const finalCredit = paidAmount - platformFee;
 
@@ -200,12 +252,10 @@ async function payInvoice(request, reply) {
 
     const currentAvail = parseFloat(wallet.availableBalance.toString() || '0');
     
-    // Credit Merchant Wallet
     wallet.availableBalance = (currentAvail + finalCredit).toString();
     wallet.balance = (parseFloat(wallet.balance.toString() || '0') + finalCredit).toString();
     await wallet.save({ session });
     
-    // Log the transaction
     const transaction = new Transaction({
       user: invoice.user,
       type: 'invoice',
@@ -229,7 +279,6 @@ async function payInvoice(request, reply) {
     
     await transaction.save({ session });
     
-    // Update Invoice Status
     invoice.status = 'paid';
     invoice.paidAt = new Date();
     await invoice.save({ session });
@@ -239,7 +288,6 @@ async function payInvoice(request, reply) {
         session.endSession();
     }
     
-    // Push Notification
     if (Notification && typeof Notification.create === 'function') {
         await Notification.create({
           user: invoice.user,
@@ -250,7 +298,6 @@ async function payInvoice(request, reply) {
         }).catch(e => console.warn('Notification suppressed:', e.message));
     }
     
-    // Real-Time UI Update
     if (request.server && request.server.io) {
       request.server.io.to(`user:${invoice.user}`).emit('wallet:update', {
         balance: wallet.availableBalance.toString()
