@@ -19,12 +19,11 @@
         .site-part-1 { color: var(--gold); font-size: 2rem; text-shadow: 0 0 15px var(--gold-glow); } 
         .site-part-2 { color: #d32f2f; font-size: 1.4rem; letter-spacing: 3px; }
 
-        /* STRICT CONTAINMENT RULES APPLIED HERE */
         .invoice-card { 
             background: var(--card-bg); border: 2px solid var(--gold); border-radius: 20px; 
             padding: 40px; width: 100%; max-width: 600px; box-shadow: 0 15px 50px rgba(0,0,0,0.8); 
             position: relative; overflow: hidden;
-            word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; /* Forces long text to break */
+            word-wrap: break-word; overflow-wrap: break-word; word-break: break-word;
         }
         
         .inv-status { position: absolute; top: 20px; right: -35px; background: #333; color: #fff; font-weight: 900; padding: 5px 40px; transform: rotate(45deg); letter-spacing: 2px; font-size: 0.8rem; border: 1px solid #444; }
@@ -33,10 +32,10 @@
         .merchant-name { font-family: 'Cinzel', serif; color: #fff; font-weight: 900; font-size: 1.5rem; border-bottom: 1px dashed #444; padding-bottom: 15px; margin-bottom: 20px; }
         
         .customer-details p { margin: 0; color: #aaa; font-weight: 600; font-size: 0.9rem; }
-        .customer-details strong { color: #fff; word-break: break-all; } /* Protects super long emails */
+        .customer-details strong { color: #fff; word-break: break-all; } 
 
         .table-responsive { width: 100%; overflow-x: auto; margin-top: 30px; margin-bottom: 20px; }
-        .items-table { width: 100%; border-collapse: collapse; table-layout: fixed; } /* Keeps columns strict */
+        .items-table { width: 100%; border-collapse: collapse; table-layout: fixed; } 
         .items-table th { color: var(--gold); border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
         .items-table td { padding: 15px 5px; border-bottom: 1px solid #222; font-weight: 600; word-wrap: break-word; overflow-wrap: break-word; }
         
@@ -70,6 +69,7 @@
 
 <script>
     let globalInvoiceData = null;
+    let dynamicPaystackKey = null; // We will store the key from the backend here
 
     async function loadInvoice() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -81,10 +81,16 @@
         }
 
         try {
-            const res = await fetch(`/api/invoices/${invoiceId}`);
+            // Add cache-busting so it always gets fresh data
+            const res = await fetch(`/api/invoices/${invoiceId}`, {
+                headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+            });
             const data = await res.json();
 
             if (data.success) {
+                // Dynamically store the key provided by your Render environment
+                dynamicPaystackKey = data.paystackPublicKey;
+                
                 globalInvoiceData = data.invoice;
                 renderInvoice(data.invoice);
             } else {
@@ -147,49 +153,60 @@
                 <div class="sum-line total"><span>TOTAL:</span> <span>₦${finalTotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
             </div>
 
-            <button class="btn-pay" id="payBtn" onclick="initiatePayment()" ${isPaid ? 'disabled' : ''}>
-                ${isPaid ? '<i class="fas fa-check-circle me-2"></i> INVOICE PAID' : '<i class="fas fa-lock me-2"></i> PAY SECURELY NOW'}
+            <button class="btn-pay" id="payBtn" onclick="payWithPaystack()" ${isPaid ? 'disabled' : ''}>
+                ${isPaid ? '<i class="fas fa-check-circle me-2"></i> INVOICE PAID' : '<i class="fas fa-lock me-2"></i> PAY WITH CARD / BANK'}
             </button>
         `;
     }
 
-    function initiatePayment() {
+    function payWithPaystack() {
         if (!globalInvoiceData || globalInvoiceData.status === 'paid') return;
-        
-        Swal.fire({
-            title: 'Confirm Payment',
-            text: `You are about to pay ₦${Number(globalInvoiceData.total).toLocaleString()} to settle this invoice.`,
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonColor: '#d4af37',
-            cancelButtonColor: '#333',
-            confirmButtonText: 'Pay Now',
-            background: '#111', color: '#fff'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                Swal.fire({ title: 'Processing...', text: 'Connecting to bank...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
-                
-                try {
-                    // FIX: This now accurately passes "paystack" to satisfy your strict database rules
-                    const res = await fetch(`/api/invoices/${globalInvoiceData.invoiceId}/pay`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ paymentMethod: 'paystack', gatewayReference: 'SIM_' + Date.now() })
-                    });
-                    
-                    const data = await res.json();
-                    
-                    if (data.success) {
-                        Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Thank you. The merchant has been notified.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
-                        .then(() => window.location.reload());
-                    } else {
-                        Swal.fire({ icon: 'error', title: 'Payment Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
-                    }
-                } catch (err) {
-                    Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to reach payment gateway.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
-                }
+
+        if (!dynamicPaystackKey) {
+            Swal.fire({ icon: 'error', title: 'Gateway Error', text: 'Payment gateway configuration is missing.', background: '#111', color: '#fff' });
+            return;
+        }
+
+        const amountInKobo = Math.round(Number(globalInvoiceData.total) * 100);
+
+        let handler = PaystackPop.setup({
+            key: dynamicPaystackKey, // <--- SECURELY INJECTED FROM BACKEND
+            email: globalInvoiceData.customerEmail,
+            amount: amountInKobo,
+            currency: 'NGN',
+            ref: 'INV_' + Math.floor((Math.random() * 1000000000) + 1),
+            callback: function(response) {
+                verifyAndCreditMerchant(response.reference);
+            },
+            onClose: function() {
+                Swal.fire({ icon: 'info', title: 'Cancelled', text: 'Payment window was closed.', background: '#111', color: '#fff' });
             }
         });
+
+        handler.openIframe();
+    }
+
+    async function verifyAndCreditMerchant(paystackReference) {
+        Swal.fire({ title: 'Verifying Payment...', text: 'Please wait...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+        
+        try {
+            const res = await fetch(`/api/invoices/${globalInvoiceData.invoiceId}/pay`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paymentMethod: 'paystack', gatewayReference: paystackReference })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Thank you. The merchant has been credited.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+                .then(() => window.location.reload());
+            } else {
+                Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to verify payment with server.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+        }
     }
 
     window.onload = loadInvoice;
