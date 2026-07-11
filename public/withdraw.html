@@ -114,18 +114,17 @@
             <div class="col-md-6">
                 <div class="input-group-custom">
                     <label>DESTINATION BANK</label>
-                    <select id="bankName">
+                    <select id="bankCode">
                         <option value="">Select Bank...</option>
-                        <option value="access">Access Bank</option>
-                        <option value="gtbank">Guaranty Trust Bank</option>
-                        <option value="firstbank">First Bank</option>
-                        <option value="zenith">Zenith Bank</option>
-                        <option value="uba">UBA</option>
-                        <option value="kuda">Kuda Bank</option>
-                        <option value="moniepoint">Moniepoint MFB</option>
-                        <option value="opay">OPay</option>
-                        <option value="palmpay">PalmPay</option>
-                        <option value="other">Other</option>
+                        <option value="044">Access Bank</option>
+                        <option value="058">Guaranty Trust Bank</option>
+                        <option value="011">First Bank</option>
+                        <option value="057">Zenith Bank</option>
+                        <option value="033">UBA</option>
+                        <option value="090267">Kuda Bank</option>
+                        <option value="090405">Moniepoint MFB</option>
+                        <option value="100004">OPay</option>
+                        <option value="100033">PalmPay</option>
                     </select>
                 </div>
             </div>
@@ -162,7 +161,7 @@
             <h6 style="color: var(--gold); font-weight: 800; margin-bottom: 12px; font-size: 0.8rem; text-transform: uppercase;">Transfer Logistics</h6>
             <div class="d-flex justify-content-between mb-2"><span class="text-secondary fw-bold">Min. Withdrawal:</span><span class="fw-bold text-white">₦1,000</span></div>
             <div class="d-flex justify-content-between mb-2"><span class="text-secondary fw-bold">Max. Withdrawal:</span><span class="fw-bold text-white">₦500,000</span></div>
-            <div class="d-flex justify-content-between"><span class="text-secondary fw-bold">Clearance Time:</span><span class="fw-bold" style="color: var(--green);">Instant to 15 Mins</span></div>
+            <div class="d-flex justify-content-between"><span class="text-secondary fw-bold">Clearance Time:</span><span class="fw-bold" style="color: var(--green);">Up to 24 Hours</span></div>
         </div>
     </div>
     
@@ -174,7 +173,8 @@
 
 <script>
     let currentWalletBalance = 0;
-    const transferFee = 50; // Fixed fee for example
+    const transferFee = 50; 
+    let isAccountVerified = false; // Security lock
 
     function initStars() {
         const c = document.getElementById('starCanvas');
@@ -203,7 +203,7 @@
                 document.getElementById('availableBalance').innerText = '₦' + currentWalletBalance.toLocaleString(undefined, {minimumFractionDigits:2});
                 calculateAfterBalance();
             }
-        } catch (e) { console.error('Failed to load balance'); }
+        } catch (e) {}
     }
 
     function calculateAfterBalance() {
@@ -222,30 +222,59 @@
         }
     }
 
-    function verifyAccount() {
+    // Instantly reset the verification lock if the user changes the number or bank
+    document.getElementById('accountNumber').addEventListener('input', resetVerification);
+    document.getElementById('bankCode').addEventListener('change', resetVerification);
+
+    function resetVerification() {
+        isAccountVerified = false;
+        document.getElementById('accountName').value = '';
+    }
+
+    async function verifyAccount() {
         const accNo = document.getElementById('accountNumber').value;
-        const bank = document.getElementById('bankName').value;
+        const bankCode = document.getElementById('bankCode').value;
         
-        if(accNo.length !== 10 || !bank) {
+        if(accNo.length !== 10 || !bankCode) {
             Swal.fire({ icon: 'error', title: 'Invalid Details', text: 'Select a bank and enter a 10-digit account number.', background: '#111', color: '#fff', confirmButtonColor: '#d32f2f' });
             return;
         }
 
-        Swal.fire({ title: 'Querying NIBSS...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+        const authToken = localStorage.getItem("naterpay_token");
+        Swal.fire({ title: 'Querying NIBSS...', text: 'Checking banking records...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
         
-        // Mock verification delay to look authentic
-        setTimeout(() => {
-            Swal.close();
-            // In a real app, this fetches from your API.
-            document.getElementById('accountName').value = "VERIFIED ACCOUNT HOLDER";
-            document.getElementById('accountName').readOnly = false; // Allow them to edit if API fails
-            Swal.fire({ icon: 'success', title: 'Account Verified', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' });
-        }, 1500);
+        try {
+            const res = await fetch('/api/wallet/verify-bank', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ accountNumber: accNo, bankCode: bankCode })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                isAccountVerified = true;
+                document.getElementById('accountName').value = data.accountName;
+                Swal.fire({ icon: 'success', title: 'Account Verified', text: data.accountName, toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#111', color: '#fff' });
+            } else {
+                resetVerification();
+                Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message || 'Account not found. Please check details.', background: '#111', color: '#fff', confirmButtonColor: '#d32f2f' });
+            }
+        } catch (error) {
+            resetVerification();
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Could not connect to the banking network.', background: '#111', color: '#fff', confirmButtonColor: '#d32f2f' });
+        }
     }
     
     async function processWithdrawal() {
+        if (!isAccountVerified) {
+            Swal.fire({ icon: 'error', title: 'Unverified Account', text: 'You must click VERIFY to confirm the account name before withdrawing.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' }); 
+            return;
+        }
+
         const amount = parseFloat(document.getElementById('withdrawAmount').value);
-        const bankName = document.getElementById('bankName').value;
+        const bankSelect = document.getElementById('bankCode');
+        const bankCode = bankSelect.value;
+        const bankName = bankSelect.options[bankSelect.selectedIndex].text;
         const accountNumber = document.getElementById('accountNumber').value;
         const accountName = document.getElementById('accountName').value;
         const pin = document.getElementById('withdrawalPin').value;
@@ -256,9 +285,6 @@
         if ((amount + transferFee) > currentWalletBalance) {
             Swal.fire({ icon: 'error', title: 'Insufficient Funds', text: 'Amount plus fee exceeds your available balance.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' }); return;
         }
-        if (!bankName || accountNumber.length !== 10 || !accountName) {
-            Swal.fire({ icon: 'error', title: 'Missing Information', text: 'Complete your bank details.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' }); return;
-        }
         if (pin.length !== 4) {
             Swal.fire({ icon: 'error', title: 'Authentication Failed', text: 'Valid 4-digit PIN required.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' }); return;
         }
@@ -267,23 +293,28 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            Swal.fire({ title: 'Executing Transfer...', html: '<span style="color:#aaa;">Connecting to inter-bank clearing gateway...</span>', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+            Swal.fire({ title: 'Locking Ledger...', html: '<span style="color:#aaa;">Securing internal database transaction...</span>', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
             
             const res = await fetch('/api/wallet/withdraw', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ amount, bankAccount: { bankName, accountNumber, accountName }, pin })
+                body: JSON.stringify({ amount, bankAccount: { bankCode, bankName, accountNumber, accountName }, pin })
             });
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Transfer Authorized!', html: `<div style="font-size: 1.1rem; color: #FFF;">₦${amount.toLocaleString()} is en route to ${bankName.toUpperCase()}.</div>`, confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
-                .then(() => { window.location.href = '/dashboard.html'; });
+                // HONEST SUCCESS MESSAGE
+                Swal.fire({ 
+                    icon: 'success', 
+                    title: 'Withdrawal Processing!', 
+                    html: `<div style="font-size: 1.1rem; color: #FFF;">₦${amount.toLocaleString()} has been queued for payout to ${bankName}.<br><br><span style="color: var(--gold); font-size: 0.9rem;">Please allow up to 24 hours for funds to reflect.</span></div>`, 
+                    confirmButtonColor: '#d4af37', background: '#111', color: '#fff' 
+                }).then(() => { window.location.href = '/dashboard.html'; });
             } else {
                 Swal.fire({ icon: 'error', title: 'Transfer Declined', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({ icon: 'error', title: 'Gateway Error', text: 'Unable to connect to the clearinghouse.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Server Error', text: 'Unable to communicate with NATERPAY servers.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
         }
     }
     
