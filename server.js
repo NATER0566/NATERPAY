@@ -84,26 +84,19 @@ async function registerRoutes() {
   fastify.post('/api/wallet/withdraw', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.withdraw);
   fastify.post('/api/wallet/transfer', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.transfer);
   fastify.post('/api/wallet/set-pin', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.setPin);
-  
-  // === THIS IS THE MISSING ROUTE THAT FIXES YOUR ERROR ===
   fastify.post('/api/wallet/verify-bank', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.resolveBankAccount);
-  // =======================================================
 
   const vtuRoutes = require('./routes/vtu');
   fastify.post('/api/vtu/airtime', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyAirtime);
   fastify.post('/api/vtu/data', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyData);
   fastify.post('/api/vtu/electricity', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyElectricity);
   fastify.post('/api/vtu/cable', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyCable);
-  
-  // --- COMPLETE VTU ROUTE SUITE ---
   fastify.post('/api/vtu/education', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyEducation);
   fastify.post('/api/vtu/betting', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyBetting);
   fastify.post('/api/vtu/insurance', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyInsurance);
   fastify.post('/api/vtu/sms', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.sendBulkSMS);
   fastify.post('/api/vtu/pos', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyPOS);
   fastify.post('/api/vtu/webhook', vtuRoutes.handleVTpassWebhook);
-  // ---------------------------------
-  
   fastify.get('/api/vtu/rates', vtuRoutes.getRates);
   fastify.get('/api/vtu/variations', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getVariations);
   
@@ -117,11 +110,14 @@ async function registerRoutes() {
   fastify.post('/api/kyc/level2', { preHandler: require('./middleware/auth').authenticate }, kycRoutes.submitLevel2);
   fastify.post('/api/kyc/level3', { preHandler: require('./middleware/auth').authenticate }, kycRoutes.submitLevel3);
   
-  const paymentLinkRoutes = require('./routes/payment-link');
+  // === UPGRADED STOREFRONT & PAYMENT LINKS ROUTES ===
+  const paymentLinkRoutes = require('./routes/payment-link'); // Ensures it reads from your exact file name
   fastify.get('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.getLinks);
   fastify.post('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.createLink);
-  fastify.get('/api/payment-links/:linkId', paymentLinkRoutes.getLink);
-  fastify.post('/api/payment-links/:linkId/pay', paymentLinkRoutes.payLink);
+  // Using :id instead of :linkId to perfectly match the backend controller math
+  fastify.get('/api/payment-links/:id', paymentLinkRoutes.getLink);
+  fastify.post('/api/payment-links/:id/pay', paymentLinkRoutes.payLink);
+  // ==================================================
   
   const invoiceRoutes = require('./routes/invoice');
   fastify.get('/api/invoices', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.getInvoices);
