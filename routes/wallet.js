@@ -34,7 +34,7 @@ async function getWallet(request, reply) {
 async function fundWallet(request, reply) {
   try {
     const { amount, provider } = request.body;
-    const paymentProvider = (provider || 'paystack').toLowerCase();
+    const paymentProvider = String(provider || 'paystack').toLowerCase();
     
     if (!amount || amount < (config.business?.minWithdrawal || 100)) {
       return reply.status(400).send({ success: false, message: `Minimum funding amount is ₦${config.business?.minWithdrawal || 100}` });
@@ -46,8 +46,8 @@ async function fundWallet(request, reply) {
     
     const paymentReference = typeof generateTransactionReference === 'function' ? generateTransactionReference() : `FUND_${Date.now()}`;
     
-    // SAFE TO STRING
-    const startBalance = wallet.availableBalance?.toString() || '0';
+    // CRASH-PROOF STRING CONVERSION
+    const startBalance = String(wallet.availableBalance || 0);
 
     const transaction = new Transaction({
       user: request.user._id, type: 'funding', description: `Wallet funding via ${paymentProvider}`,
@@ -59,15 +59,14 @@ async function fundWallet(request, reply) {
     await transaction.save();
     
     let checkoutUrl = '';
-
+    // Paystack and Monnify logic...
     if (paymentProvider === 'paystack') {
       const paystackResponse = await axios.post('https://api.paystack.co/transaction/initialize',
         { email: user.email, amount: amount * 100, reference: paymentReference, callback_url: `${request.protocol}://${request.hostname}/dashboard.html` },
         { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' } }
       );
       checkoutUrl = paystackResponse.data.data.authorization_url;
-    } 
-    else if (paymentProvider === 'monnify') {
+    } else if (paymentProvider === 'monnify') {
       const baseUrl = process.env.MONNIFY_URL || 'https://sandbox.monnify.com';
       const encodedKeys = Buffer.from(`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`).toString('base64');
       const authResponse = await axios.post(`${baseUrl}/api/v1/auth/login`, {}, { headers: { Authorization: `Basic ${encodedKeys}` } });
@@ -102,12 +101,10 @@ async function verifyFunding(request, reply) {
     if (transaction.status === 'success') return reply.send({ success: true, message: 'Wallet already credited' });
 
     let isSuccessful = false;
-
     if (transaction.provider === 'paystack') {
       const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } });
       if (response.data.data.status === 'success') isSuccessful = true;
-    } 
-    else if (transaction.provider === 'monnify') {
+    } else if (transaction.provider === 'monnify') {
       const baseUrl = process.env.MONNIFY_URL || 'https://sandbox.monnify.com';
       const encodedKeys = Buffer.from(`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`).toString('base64');
       const authResponse = await axios.post(`${baseUrl}/api/v1/auth/login`, {}, { headers: { Authorization: `Basic ${encodedKeys}` } });
@@ -120,20 +117,19 @@ async function verifyFunding(request, reply) {
 
     const wallet = await Wallet.findOne({ user: transaction.user });
     
-    // SAFE CREDIT
-    wallet.availableBalance = (parseFloat(wallet.availableBalance?.toString() || '0') + transaction.amount).toString();
-    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') + transaction.amount).toString();
+    // CRASH-PROOF MATH
+    wallet.availableBalance = String(parseFloat(wallet.availableBalance || 0) + transaction.amount);
+    wallet.balance = String(parseFloat(wallet.balance || 0) + transaction.amount);
     await wallet.save();
     
     transaction.status = 'success';
-    transaction.balanceAfter = wallet.availableBalance.toString();
+    transaction.balanceAfter = String(wallet.availableBalance || 0);
     await transaction.save();
     
     if (Notification && typeof Notification.create === 'function') {
         await Notification.create({ user: transaction.user, title: 'Wallet Funded', message: `Your wallet was credited with ₦${transaction.amount.toLocaleString()}`, type: 'transaction', priority: 'high' }).catch(() => {});
     }
-    
-    if (request.server && request.server.io) request.server.io.to(`user:${transaction.user}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+    if (request.server && request.server.io) request.server.io.to(`user:${transaction.user}`).emit('wallet:update', { balance: String(wallet.availableBalance || 0) });
     
     reply.send({ success: true, message: 'Payment verified and wallet credited!' });
   } catch (error) {
@@ -165,14 +161,13 @@ async function withdraw(request, reply) {
     
     if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet error.' });
     if (wallet.isFrozen) return reply.status(403).send({ success: false, message: 'Wallet is frozen. Please contact support.' });
-    
     if (!pin) return reply.status(400).send({ success: false, message: 'Security PIN is required' });
     
     let isPinValid = false;
     if (typeof wallet.verifyPin === 'function') {
-        isPinValid = await wallet.verifyPin(pin);
+        isPinValid = await wallet.verifyPin(String(pin));
     } else if (user.transactionPin) {
-        isPinValid = await bcrypt.compare(pin.toString(), user.transactionPin);
+        isPinValid = await bcrypt.compare(String(pin), user.transactionPin);
     } else {
         return reply.status(400).send({ success: false, message: 'Please setup your withdrawal PIN in settings first.' });
     }
@@ -182,34 +177,37 @@ async function withdraw(request, reply) {
     const transferFee = 50; 
     const totalDeduction = withdrawAmount + transferFee;
     
-    // THE CRITICAL FIX: Optional chaining ensures undefined values become '0'
-    const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+    // CRASH-PROOF MATH
+    const currentAvail = parseFloat(wallet.availableBalance || 0);
     
     if (currentAvail < totalDeduction) {
       return reply.status(400).send({ success: false, message: `Insufficient Funds. You need ₦${totalDeduction.toLocaleString()} including fees.` });
     }
     
-    // Safe Math
-    wallet.availableBalance = (currentAvail - totalDeduction).toString();
-    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - totalDeduction).toString();
+    wallet.availableBalance = String(currentAvail - totalDeduction);
+    wallet.balance = String(parseFloat(wallet.balance || 0) - totalDeduction);
     await wallet.save();
     
+    const safeBankName = String(bankAccount?.bankName || 'Bank').toUpperCase();
+    const safeAccountNo = String(bankAccount?.accountNumber || 'Unknown');
+
     const transaction = new Transaction({
-      user: request.user._id, type: 'withdrawal', description: `Transfer to ${bankAccount.bankName.toUpperCase()} - ${bankAccount.accountNumber}`,
-      amount: withdrawAmount, fee: transferFee, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      user: request.user._id, type: 'withdrawal', description: `Transfer to ${safeBankName} - ${safeAccountNo}`,
+      amount: withdrawAmount, fee: transferFee, balanceBefore: String(currentAvail), balanceAfter: String(wallet.availableBalance || 0),
       status: 'pending', provider: 'internal', idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `wth_${Date.now()}`, 
       metadata: { bankAccount }, ipAddress: request.ip, userAgent: request.headers['user-agent']
     });
     await transaction.save();
     
     if (request.server && request.server.io) {
-        request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+        request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: String(wallet.availableBalance || 0) });
     }
     
     reply.send({ success: true, message: 'Withdrawal processed successfully', transaction });
   } catch (error) {
     console.error('Withdrawal Server Error:', error); 
-    reply.status(500).send({ success: false, message: 'System error processing transfer. Check console.' });
+    // This will securely send the real error to your frontend terminal if it fails again
+    reply.status(500).send({ success: false, message: error.message || 'System error processing transfer.' });
   }
 }
 
@@ -230,21 +228,19 @@ async function transfer(request, reply) {
     
     let isPinValid = false;
     if (typeof senderWallet.verifyPin === 'function') {
-        isPinValid = await senderWallet.verifyPin(pin);
+        isPinValid = await senderWallet.verifyPin(String(pin));
     } else if (sender.transactionPin) {
-        isPinValid = await bcrypt.compare(pin.toString(), sender.transactionPin);
+        isPinValid = await bcrypt.compare(String(pin), sender.transactionPin);
     } else {
         return reply.status(400).send({ success: false, message: 'Please setup your transfer PIN in settings first.' });
     }
 
     if (!isPinValid) return reply.status(401).send({ success: false, message: 'SECURITY ALERT: Incorrect Transfer PIN.' });
 
-    // THE CRITICAL FIX
-    const currentAvail = parseFloat(senderWallet.availableBalance?.toString() || '0');
-    
+    const currentAvail = parseFloat(senderWallet.availableBalance || 0);
     if (currentAvail < transferAmount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
     
-    let query = { $or: [{ email: recipient.toLowerCase() }, { phoneNumber: recipient }] };
+    let query = { $or: [{ email: String(recipient).toLowerCase() }, { phoneNumber: String(recipient) }] };
     if (require('mongoose').Types.ObjectId.isValid(recipient)) query.$or.push({ _id: recipient });
 
     const recipientUser = await User.findOne(query);
@@ -252,28 +248,29 @@ async function transfer(request, reply) {
     if (recipientUser._id.toString() === request.user._id.toString()) return reply.status(400).send({ success: false, message: 'You cannot transfer to yourself' });
     
     const recipientWallet = await Wallet.findOne({ user: recipientUser._id });
-    
+    if (!recipientWallet) return reply.status(404).send({ success: false, message: 'Recipient wallet not configured' });
+
     // SAFE MATH DEDUCTION
-    senderWallet.availableBalance = (currentAvail - transferAmount).toString();
-    senderWallet.balance = (parseFloat(senderWallet.balance?.toString() || '0') - transferAmount).toString();
+    senderWallet.availableBalance = String(currentAvail - transferAmount);
+    senderWallet.balance = String(parseFloat(senderWallet.balance || 0) - transferAmount);
     await senderWallet.save();
     
     // SAFE MATH CREDIT
-    recipientWallet.availableBalance = (parseFloat(recipientWallet.availableBalance?.toString() || '0') + transferAmount).toString();
-    recipientWallet.balance = (parseFloat(recipientWallet.balance?.toString() || '0') + transferAmount).toString();
+    recipientWallet.availableBalance = String(parseFloat(recipientWallet.availableBalance || 0) + transferAmount);
+    recipientWallet.balance = String(parseFloat(recipientWallet.balance || 0) + transferAmount);
     await recipientWallet.save();
     
     const senderTransaction = new Transaction({
       user: request.user._id, type: 'transfer', description: `Transfer to ${recipientUser.name}`,
-      amount: transferAmount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: senderWallet.availableBalance.toString(),
+      amount: transferAmount, fee: 0, balanceBefore: String(currentAvail), balanceAfter: String(senderWallet.availableBalance || 0),
       status: 'success', provider: 'internal'
     });
     
     const recipientTransaction = new Transaction({
       user: recipientUser._id, type: 'transfer', description: `Received from ${sender.name}`,
       amount: transferAmount, fee: 0, 
-      balanceBefore: (parseFloat(recipientWallet.availableBalance?.toString() || '0') - transferAmount).toString(), 
-      balanceAfter: recipientWallet.availableBalance.toString(),
+      balanceBefore: String(parseFloat(recipientWallet.availableBalance || 0) - transferAmount), 
+      balanceAfter: String(recipientWallet.availableBalance || 0),
       status: 'success', provider: 'internal'
     });
     
@@ -281,15 +278,15 @@ async function transfer(request, reply) {
     await recipientTransaction.save();
     
     if (request.server && request.server.io) {
-      request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: senderWallet.availableBalance.toString() });
-      request.server.io.to(`user:${recipientUser._id}`).emit('wallet:update', { balance: recipientWallet.availableBalance.toString() });
+      request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: String(senderWallet.availableBalance || 0) });
+      request.server.io.to(`user:${recipientUser._id}`).emit('wallet:update', { balance: String(recipientWallet.availableBalance || 0) });
       request.server.io.to(`user:${recipientUser._id}`).emit('notification', { title: 'Funds Received', message: `₦${transferAmount.toLocaleString()} received from ${sender.name}` });
     }
     
     reply.send({ success: true, message: 'Transfer successful', transaction: senderTransaction });
   } catch (error) {
     console.error('Transfer Server Error:', error);
-    reply.status(500).send({ success: false, message: 'System error during transfer. Check console.' });
+    reply.status(500).send({ success: false, message: 'Failed to process transfer. Check console.' });
   }
 }
 
@@ -299,18 +296,18 @@ async function transfer(request, reply) {
 async function setPin(request, reply) {
   try {
     const { pin, confirmPin } = request.body;
-    if (!pin || pin.length !== 4) return reply.status(400).send({ success: false, message: 'PIN must be 4 digits' });
-    if (pin !== confirmPin) return reply.status(400).send({ success: false, message: 'PINs do not match' });
+    if (!pin || String(pin).length !== 4) return reply.status(400).send({ success: false, message: 'PIN must be 4 digits' });
+    if (String(pin) !== String(confirmPin)) return reply.status(400).send({ success: false, message: 'PINs do not match' });
     
     const user = await User.findById(request.user._id);
     const wallet = await Wallet.findOne({ user: request.user._id });
     if (!user || !wallet) return reply.status(404).send({ success: false, message: 'Account not found' });
     
     if (typeof wallet.setPin === 'function') {
-        await wallet.setPin(pin);
+        await wallet.setPin(String(pin));
     } 
     const salt = await bcrypt.genSalt(10);
-    user.transactionPin = await bcrypt.hash(pin.toString(), salt);
+    user.transactionPin = await bcrypt.hash(String(pin), salt);
     user.isSecured = true;
     await user.save();
     
@@ -321,11 +318,33 @@ async function setPin(request, reply) {
   }
 }
 
+/**
+ * 7. Resolve Bank Account
+ */
+async function resolveBankAccount(request, reply) {
+    try {
+        const { accountNumber, bankCode } = request.body;
+        if (!accountNumber || !bankCode) {
+            return reply.status(400).send({ success: false, message: 'Account Number and Bank Code required' });
+        }
+
+        const response = await axios.get(`https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`, {
+            headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
+        });
+
+        reply.send({ success: true, accountName: response.data.data.account_name });
+    } catch (error) {
+        console.error("Bank Resolve Error:", error.response?.data || error.message);
+        reply.status(400).send({ success: false, message: 'Invalid Account Details.' });
+    }
+}
+
 module.exports = {
   getWallet,
   fundWallet,
   verifyFunding,
   withdraw,
   transfer,
-  setPin
+  setPin,
+  resolveBankAccount
 };
