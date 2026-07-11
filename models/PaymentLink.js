@@ -22,7 +22,7 @@ const paymentLinkSchema = new mongoose.Schema({
   
   description: {
     type: String,
-    default: null
+    default: 'Secure NATERPAY Product'
   },
   
   // Amounts (using Decimal128 for money safety)
@@ -51,6 +51,18 @@ const paymentLinkSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Decimal128,
     default: null
   },
+
+  // ---> NEW E-COMMERCE FIELDS INTEGRATED HERE <---
+  redirectUrl: {
+    type: String,
+    default: ''
+  },
+  
+  productImageBase64: {
+    type: String,
+    default: null
+  },
+  // ------------------------------------------------
   
   // Customer details collection settings
   collectCustomerName: {
