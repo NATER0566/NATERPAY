@@ -1,16 +1,17 @@
-const User = require('../models/User'); // Fixed capital 'C' typo here
+const User = require('../models/User'); 
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
 const KYC = require('../models/KYC');
 const { sanitizeUser } = require('../utils/auth');
-const bcrypt = require('bcryptjs'); // Added for secure PIN verification
+const bcrypt = require('bcryptjs'); 
 
 /**
  * Get dashboard data
  */
 async function getDashboardData(request, reply) {
   try {
-    const user = request.user;
+    // THE FIX: Fetch fresh user data directly from DB to guarantee we have the referral code and exact creation date
+    const user = await User.findById(request.user._id);
     
     // Get wallet
     const wallet = await Wallet.findByUser(user._id);
@@ -42,9 +43,15 @@ async function getDashboardData(request, reply) {
       balance: wallet ? wallet.availableBalance.toString() : '0',
       totalLogs,
       totalSpent,
-      referralCount: user.referralCount,
-      referralBonus: user.referralBonus.toString(),
+      referralCount: user.referralCount || 0,
+      referralBonus: user.referralBonus ? user.referralBonus.toString() : '0',
       hiddenWidgets: user.hiddenWidgets || [],
+      
+      // ---> THE REFERRAL FIX: Sending the real code and date to profile.html <---
+      referralCode: user.referralCode,
+      createdAt: user.createdAt,
+      // --------------------------------------------------------------------------
+      
       recentTransactions: recentTransactions.map(tx => ({
         _id: tx._id,
         date: tx.createdAt,
