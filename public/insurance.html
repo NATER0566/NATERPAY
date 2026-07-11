@@ -294,11 +294,8 @@
                     confirmButtonColor: '#FFD700', background: '#111111', color: '#FFFFFF'
                 }).then(() => { window.location.href = '/dashboard.html'; });
             } else {
-                let msg = data.message || "An error occurred.";
-                if (msg.toLowerCase().includes("vtpass") || msg.toLowerCase().includes("db error")) {
-                    msg = "We encountered a temporary issue generating your policy. Please verify your details or try again.";
-                }
-                Swal.fire({ icon: 'error', title: 'Transaction Failed', text: msg, confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+                // FIXED: Displays the actual backend error directly
+                Swal.fire({ icon: 'error', title: 'Transaction Failed', text: data.message || "An error occurred.", confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             }
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'Network Connection', text: 'Please check your internet connection and try again.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
