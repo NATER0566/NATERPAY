@@ -1,346 +1,402 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Payment Links</title>
+    <title>NATER-PAY | Payment Links Engine</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <style>
-        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
-        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; }
+        :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #030303; --card-bg: rgba(15, 15, 15, 0.85); }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
         header {
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
-            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
-            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+            background: rgba(0, 0, 0, 0.95); border-bottom: 2px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(10px);
         }
 
-        .brand-text { 
-            font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
-            text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start;
-        }
-        .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
-        .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;}
+        .site-part-1 { color: var(--gold); font-size: 1.6rem; text-shadow: 0 0 10px var(--gold-glow); } 
+        .site-part-2 { color: #d32f2f; font-size: 1.1rem; letter-spacing: 3px; }
 
-        .container { max-width: 1200px; margin: 50px auto; padding: 0 20px; }
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
         
-        .link-card {
-            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
-            padding: 30px; margin-bottom: 30px;
+        .header-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; text-align: center; margin-bottom: 30px; font-size: 2.2rem; text-shadow: 0 0 15px var(--gold-glow); }
+
+        /* Dashboard Mini-Stats */
+        .stats-row { display: flex; gap: 20px; margin-bottom: 40px; flex-wrap: wrap; }
+        .stat-box { 
+            flex: 1; min-width: 250px; background: var(--card-bg); border: 1px solid #333; 
+            border-radius: 20px; padding: 25px; display: flex; align-items: center; gap: 20px;
+            backdrop-filter: blur(15px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: 0.3s;
         }
-        
-        .input-group-custom {
-            background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212,175,55,0.35);
-            border-radius: 15px; padding: 20px; margin-bottom: 20px;
+        .stat-box:hover { border-color: var(--gold); transform: translateY(-5px); }
+        .stat-icon { background: rgba(255,215,0,0.1); width: 60px; height: 60px; border-radius: 15px; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: var(--gold); }
+        .stat-details h6 { color: #888; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
+        .stat-details h3 { color: #FFF; font-size: 1.8rem; font-weight: 900; margin: 5px 0 0 0; font-family: 'Cinzel', serif; }
+
+        /* Creator Card */
+        .creator-card {
+            background: var(--card-bg); border: 1px solid #333; border-radius: 25px;
+            padding: 40px 30px; margin-bottom: 40px; backdrop-filter: blur(15px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6); position: relative; overflow: hidden;
         }
-        .input-group-custom label {
-            display: block; font-size: 0.75rem; color: var(--gold); font-weight: 800;
-            text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;
+        .creator-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+
+        .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; transition: 0.3s; }
+        .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow); }
+        .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px; }
+        .input-group-custom input, .input-group-custom textarea, .input-group-custom select {
+            background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 600; outline: none;
         }
-        .input-group-custom input, .input-group-custom textarea {
-            background: transparent; border: none; color: white; width: 100%;
-            font-size: 1.1rem; font-weight: 700; outline: none;
-        }
-        
-        .amount-input {
-            background: rgba(0,0,0,0.6); border: 2px solid rgba(212,175,55,0.3); border-radius: 15px;
-            padding: 25px; font-size: 2rem; color: white; font-weight: 700; text-align: center;
-            width: 100%; outline: none; transition: 0.3s;
-        }
-        .amount-input:focus { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,175,55,0.3); }
-        
+        .input-group-custom select option { background: #111; }
+
+        /* Custom Modern Toggle Switch */
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; background: #111; padding: 15px 20px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #333; }
+        .toggle-row span { font-weight: 700; font-size: 0.95rem; color: #ccc; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--gold); box-shadow: 0 0 10px var(--gold-glow); }
+        input:checked + .slider:before { transform: translateX(24px); background-color: #000; }
+
         .btn-create {
             background: var(--gold); color: black; font-weight: 900; border-radius: 15px;
-            padding: 18px; width: 100%; border: none; font-size: 1.1rem; letter-spacing: 2px;
-            transition: 0.3s;
+            padding: 20px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s; margin-top: 15px;
         }
-        .btn-create:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
+        .btn-create:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255,255,255,0.2); }
+
+        /* Link Grid Display */
+        .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+        .link-item {
+            background: rgba(20,20,20,0.9); border: 1px solid #333; border-radius: 20px;
+            padding: 25px; transition: 0.3s; position: relative; display: flex; flex-direction: column;
+        }
+        .link-item:hover { border-color: var(--gold); box-shadow: 0 10px 25px rgba(0,0,0,0.8); transform: translateY(-5px); }
+        .link-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+        .link-title { font-weight: 900; font-size: 1.1rem; margin: 0; color: #fff; text-transform: uppercase; }
+        .link-desc { font-size: 0.8rem; color: #888; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .status-badge { background: rgba(46, 184, 46, 0.2); color: #2eb82e; padding: 4px 10px; border-radius: 50px; font-size: 0.7rem; font-weight: 900; border: 1px solid #2eb82e; }
         
-        .existing-link {
-            background: rgba(30,30,30,0.95); border: 1px solid #444; border-radius: 15px;
-            padding: 20px; margin-bottom: 15px;
-        }
-        
-        .copy-btn {
-            background: rgba(212,175,55,0.2); border: 1px solid var(--gold); color: var(--gold);
-            padding: 8px 16px; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
-            transition: 0.3s;
-        }
-        .copy-btn:hover { background: var(--gold); color: black; }
+        .link-stats { background: #0a0a0a; border-radius: 12px; padding: 15px; margin-bottom: 20px; flex-grow: 1; border: 1px solid #222; }
+        .stat-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; font-weight: 600; }
+        .stat-line:last-child { margin-bottom: 0; }
+        .stat-line .val { color: var(--gold); font-family: monospace; font-size: 1rem; }
+
+        .link-actions { display: flex; gap: 10px; }
+        .act-btn { flex: 1; background: #1a1a1a; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; transition: 0.3s; text-align: center; cursor: pointer; }
+        .act-btn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
+        .act-btn.qr-btn:hover { background: #fff; color: #000; border-color: #fff; }
+
+        /* QR Modal */
+        #qrModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .qr-content { background: var(--card-bg); padding: 30px; border-radius: 20px; border: 2px solid var(--gold); text-align: center; box-shadow: 0 0 40px var(--gold-glow); max-width: 90%; }
+        #qrDisplay { background: #fff; padding: 15px; border-radius: 10px; display: inline-block; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
 <canvas id="starCanvas"></canvas>
 
+<div id="qrModal">
+    <div class="qr-content">
+        <h4 class="fw-bold mb-3 text-white" id="qrTitle">Payment QR</h4>
+        <div id="qrDisplay"></div>
+        <div class="d-flex gap-2 justify-content-center">
+            <button class="btn btn-warning fw-bold px-4" onclick="downloadQR()"><i class="fas fa-download"></i> Save Image</button>
+            <button class="btn btn-outline-light fw-bold px-4" onclick="document.getElementById('qrModal').style.display='none'">Close</button>
+        </div>
+    </div>
+</div>
+
 <header>
     <div class="brand-text">
         <span class="site-part-1">NATER</span>
         <span class="site-part-2">PAY</span>
     </div>
-    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4">Back to Dashboard</a>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
 </header>
 
 <div class="container">
-    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">PAYMENT LINKS</h1>
+    <h1 class="header-title"><i class="fas fa-link me-2"></i> PAYMENT LINKS</h1>
     
-    <div class="link-card">
-        <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">CREATE NEW PAYMENT LINK</h5>
-        
-        <div class="input-group-custom">
-            <label>LINK TITLE</label>
-            <input type="text" id="linkTitle" placeholder="e.g. Product Payment">
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+            <div class="stat-details">
+                <h6>Total Revenue Collected</h6>
+                <h3 id="dashTotalRev">₦0.00</h3>
+            </div>
         </div>
-        
-        <div class="input-group-custom">
-            <label>DESCRIPTION</label>
-            <textarea id="linkDescription" rows="2" placeholder="Brief description of what this payment is for"></textarea>
+        <div class="stat-box">
+            <div class="stat-icon" style="color: #4da6ff; background: rgba(77, 166, 255, 0.1);"><i class="fas fa-exchange-alt"></i></div>
+            <div class="stat-details">
+                <h6>Total Transactions</h6>
+                <h3 id="dashTotalTx">0</h3>
+            </div>
         </div>
+    </div>
+
+    <div class="creator-card">
+        <h5 class="mb-4 text-center" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; letter-spacing: 1px;">CREATE NEW LINK</h5>
         
-        <div class="row g-3 mb-3">
+        <div class="row g-3">
             <div class="col-md-6">
                 <div class="input-group-custom">
-                    <label>AMOUNT (₦)</label>
-                    <input type="number" id="linkAmount" placeholder="0.00">
+                    <label>LINK TITLE</label>
+                    <input type="text" id="linkTitle" placeholder="e.g. Masterclass Ticket">
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="input-group-custom">
+                    <label>DESCRIPTION (OPTIONAL)</label>
+                    <input type="text" id="linkDescription" placeholder="What is this payment for?">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row g-3">
+            <div class="col-md-8">
+                <div class="input-group-custom" id="amountContainer">
+                    <label>AMOUNT (₦)</label>
+                    <input type="number" id="linkAmount" placeholder="0.00" style="font-size: 1.5rem; color: var(--gold);">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group-custom">
                     <label>CURRENCY</label>
                     <select id="linkCurrency">
-                        <option value="NGN">NGN</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
+                        <option value="NGN">NGN (Naira)</option>
                     </select>
                 </div>
             </div>
         </div>
-        
-        <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="flexibleAmount">
-            <label class="form-check-label" for="flexibleAmount">Allow customers to enter their own amount</label>
-        </div>
-        
-        <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="collectName" checked>
-            <label class="form-check-label" for="collectName">Collect customer name</label>
-        </div>
-        
-        <div class="form-check mb-4">
-            <input class="form-check-input" type="checkbox" id="collectEmail" checked>
-            <label class="form-check-label" for="collectEmail">Collect customer email</label>
+
+        <div class="row g-3 mt-1">
+            <div class="col-md-4">
+                <div class="toggle-row">
+                    <span>Flexible Amount</span>
+                    <label class="switch">
+                        <input type="checkbox" id="flexibleAmount" onchange="toggleAmountInput()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="toggle-row">
+                    <span>Collect Name</span>
+                    <label class="switch">
+                        <input type="checkbox" id="collectName" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="toggle-row">
+                    <span>Collect Email</span>
+                    <label class="switch">
+                        <input type="checkbox" id="collectEmail" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
         </div>
         
         <button class="btn-create" onclick="createPaymentLink()">
-            <i class="fas fa-link me-2"></i> CREATE PAYMENT LINK
+            <i class="fas fa-magic me-2"></i> GENERATE LINK
         </button>
     </div>
     
-    <div class="link-card">
-        <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold);">YOUR PAYMENT LINKS</h5>
-        
-        <div id="linksContainer">
-            <div class="text-center py-5 opacity-50">
-                <i class="fas fa-spinner fa-spin me-2"></i> Loading payment links...
-            </div>
+    <h5 class="mb-4" style="font-family: 'Cinzel'; color: #fff; font-weight: 800; border-left: 4px solid var(--gold); padding-left: 10px;">YOUR ACTIVE LINKS</h5>
+    
+    <div id="linksContainer" class="links-grid">
+        <div class="text-center py-5 opacity-50 w-100" style="grid-column: 1 / -1;">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing payment routes...
         </div>
     </div>
     
-    <div class="text-center text-muted small">
-        <p class="mb-1">Accept payments from anyone, anywhere</p>
-        <p>Secured by NATER-PAY Protocol v3.0</p>
+    <div class="text-center text-muted small mt-5 mb-4 fw-bold">
+        <p class="mb-1">Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
 
 <script>
     function initStars() {
-        const canvas = document.getElementById('starCanvas');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        const ctx = canvas.getContext('2d');
+        const c = document.getElementById('starCanvas');
+        c.width = window.innerWidth; c.height = window.innerHeight;
+        const ctx = c.getContext('2d');
         const stars = [];
-        
-        for(let i = 0; i < 150; i++) {
-            stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
-        }
-        
+        for(let i = 0; i < 100; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            stars.forEach(s => {
-                ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white";
-                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
-                ctx.shadowBlur = 0; s.y += s.v; if(s.y > canvas.height) s.y = -5;
-            });
+            ctx.clearRect(0, 0, c.width, c.height);
+            stars.forEach(s => { ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5; });
             requestAnimationFrame(animate);
         }
         animate();
     }
     
+    function toggleAmountInput() {
+        const isFlex = document.getElementById('flexibleAmount').checked;
+        const amountInput = document.getElementById('linkAmount');
+        const container = document.getElementById('amountContainer');
+        
+        if (isFlex) {
+            amountInput.value = '';
+            amountInput.disabled = true;
+            container.style.opacity = '0.5';
+            amountInput.placeholder = 'Any Amount';
+        } else {
+            amountInput.disabled = false;
+            container.style.opacity = '1';
+            amountInput.placeholder = '0.00';
+        }
+    }
+
     async function createPaymentLink() {
-        const title = document.getElementById('linkTitle').value;
-        const description = document.getElementById('linkDescription').value;
-        const amount = parseFloat(document.getElementById('linkAmount').value);
-        const currency = document.getElementById('linkCurrency').value;
+        const title = document.getElementById('linkTitle').value.trim();
+        const description = document.getElementById('linkDescription').value.trim();
         const isFlexibleAmount = document.getElementById('flexibleAmount').checked;
+        const amount = isFlexibleAmount ? 0 : parseFloat(document.getElementById('linkAmount').value);
+        const currency = document.getElementById('linkCurrency').value;
         const collectName = document.getElementById('collectName').checked;
         const collectEmail = document.getElementById('collectEmail').checked;
         
-        if (!title || !amount) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Missing Information',
-                text: 'Please provide a title and amount',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+        if (!title || (!isFlexibleAmount && (!amount || amount <= 0))) {
+            Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please provide a Title and a valid Amount.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             return;
         }
         
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
+        if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            Swal.fire({
-                title: 'Creating Link...',
-                text: 'Generating your payment link',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ title: 'Encrypting Link...', html: '<span style="color:#aaa;">Generating secure payment route...</span>', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
             
             const res = await fetch('/api/payment-links', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({ 
-                    title, description, amount, currency, isFlexibleAmount,
-                    collectCustomerName: collectName, collectCustomerEmail: collectEmail
-                })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ title, description, amount, currency, isFlexibleAmount, collectCustomerName: collectName, collectCustomerEmail: collectEmail })
             });
-            
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Payment Link Created',
-                    text: `Your payment link is ready to share`,
-                    confirmButtonColor: '#d4af37',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
-                loadPaymentLinks();
+                Swal.fire({ icon: 'success', title: 'Route Created!', html: `<p style="color:#ccc;">Your payment link is live.</p><code style="color:var(--gold); font-size:1.1rem; background:#000; padding:10px; border-radius:8px; display:block; margin-top:10px;">${data.link.url}</code>`, confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
                 
-                // Clear form
                 document.getElementById('linkTitle').value = '';
                 document.getElementById('linkDescription').value = '';
                 document.getElementById('linkAmount').value = '';
+                document.getElementById('flexibleAmount').checked = false;
+                toggleAmountInput();
+                
+                loadPaymentLinks();
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Creation Failed',
-                    text: data.message,
-                    confirmButtonColor: '#d32f2f',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
+                Swal.fire({ icon: 'error', title: 'Generation Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Creation Error',
-                text: 'Unable to create payment link. Please try again.',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Unable to connect to NATERPAY servers.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
         }
     }
     
     async function loadPaymentLinks() {
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
+        if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            const res = await fetch('/api/payment-links', {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
+            const res = await fetch('/api/payment-links', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
             
+            const container = document.getElementById('linksContainer');
+            
             if (data.success) {
-                const container = document.getElementById('linksContainer');
-                
                 if (data.links && data.links.length > 0) {
-                    container.innerHTML = data.links.map(link => `
-                        <div class="existing-link">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
+                    let totalRev = 0;
+                    let totalTx = 0;
+
+                    container.innerHTML = data.links.map(link => {
+                        const linkUrl = `${window.location.origin}/pay.html?id=${link.linkId}`;
+                        const displayAmount = link.isFlexibleAmount ? 'ANY AMOUNT' : `₦${Number(link.amount).toLocaleString()}`;
+                        const collected = Number(link.totalCollected || 0);
+                        
+                        totalRev += collected;
+                        totalTx += (link.transactionCount || 0);
+
+                        return `
+                        <div class="link-item">
+                            <div class="link-header">
                                 <div>
-                                    <h6 class="fw-bold mb-1">${link.title}</h6>
-                                    <small class="text-muted">${link.description || 'No description'}</small>
+                                    <h3 class="link-title">${link.title}</h3>
+                                    <div class="link-desc">${link.description || 'Standard Payment'}</div>
                                 </div>
-                                <span class="badge ${link.isActive ? 'bg-success' : 'bg-danger'}">${link.isActive ? 'Active' : 'Inactive'}</span>
+                                <span class="status-badge"><i class="fas fa-circle me-1" style="font-size:0.5rem;"></i> LIVE</span>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <span class="fw-bold text-warning">₦${Number(link.amount).toLocaleString()}</span>
-                                    <small class="text-muted ms-2">${link.transactionCount || 0} transactions</small>
-                                </div>
-                                <button class="copy-btn" onclick="copyLink('${link.linkId}')">
-                                    <i class="fas fa-copy me-1"></i> Copy Link
-                                </button>
+                            
+                            <div class="link-stats">
+                                <div class="stat-line"><span class="text-secondary">PRICE</span> <span class="val text-white">${displayAmount}</span></div>
+                                <div class="stat-line"><span class="text-secondary">REVENUE</span> <span class="val text-success">+₦${collected.toLocaleString()}</span></div>
+                                <div class="stat-line"><span class="text-secondary">SALES</span> <span class="val text-white">${link.transactionCount || 0}</span></div>
+                            </div>
+                            
+                            <div class="link-actions">
+                                <div class="act-btn" onclick="copyLink('${linkUrl}')"><i class="fas fa-copy"></i> COPY</div>
+                                <div class="act-btn qr-btn" onclick="showQR('${linkUrl}', '${link.title}')"><i class="fas fa-qrcode"></i> QR CODE</div>
                             </div>
                         </div>
-                    `).join('');
+                        `;
+                    }).join('');
+
+                    document.getElementById('dashTotalRev').innerText = '₦' + totalRev.toLocaleString(undefined, {minimumFractionDigits:2});
+                    document.getElementById('dashTotalTx').innerText = totalTx;
+
                 } else {
-                    container.innerHTML = '<div class="text-center py-5 opacity-50">No payment links created yet</div>';
+                    container.innerHTML = '<div class="text-center py-5 opacity-50 w-100" style="grid-column: 1 / -1;"><i class="fas fa-link fa-3x mb-3 text-secondary"></i><br>No payment links generated yet.</div>';
                 }
             }
         } catch (e) {
-            console.error('Failed to load payment links');
-            document.getElementById('linksContainer').innerHTML = '<div class="text-center py-5 opacity-50">Failed to load payment links</div>';
+            document.getElementById('linksContainer').innerHTML = '<div class="text-center py-5 text-danger w-100" style="grid-column: 1 / -1;">Connection Error. Failed to sync ledger.</div>';
         }
     }
     
-    function copyLink(linkId) {
-        const linkUrl = `${window.location.origin}/pay/${linkId}`;
+    function copyLink(linkUrl) {
         navigator.clipboard.writeText(linkUrl).then(() => {
-            Swal.fire({
-                icon: 'success',
-                title: 'Link Copied',
-                text: 'Payment link copied to clipboard',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 2000,
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'success', title: 'Link Copied', text: 'Copied to clipboard!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' });
         });
     }
+
+    let currentQrCode = null;
+    function showQR(linkUrl, title) {
+        document.getElementById('qrTitle').innerText = title;
+        const display = document.getElementById('qrDisplay');
+        display.innerHTML = '';
+        
+        currentQrCode = new QRCode(display, {
+            text: linkUrl, width: 200, height: 200,
+            colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H
+        });
+
+        document.getElementById('qrModal').style.display = 'flex';
+    }
+
+    function downloadQR() {
+        const img = document.querySelector('#qrDisplay img');
+        if(!img) return;
+        const link = document.createElement('a');
+        link.href = img.src;
+        link.download = 'NATERPAY_PaymentQR.png';
+        link.click();
+    }
     
-    window.onload = () => {
-        initStars();
-        loadPaymentLinks();
-    };
+    window.onload = () => { initStars(); loadPaymentLinks(); };
+    window.onresize = initStars;
 </script>
 
 </body>
