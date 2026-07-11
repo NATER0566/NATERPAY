@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Secure Invoice Checkout</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://js.paystack.co/v1/inline.js"></script> <style>
+        :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #050505; --card-bg: rgba(15, 15, 15, 0.95); }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; line-height: 0.85; margin-bottom: 30px;}
+        .site-part-1 { color: var(--gold); font-size: 2rem; text-shadow: 0 0 15px var(--gold-glow); } 
+        .site-part-2 { color: #d32f2f; font-size: 1.4rem; letter-spacing: 3px; }
+
+        .invoice-card { background: var(--card-bg); border: 2px solid var(--gold); border-radius: 20px; padding: 40px; width: 100%; max-width: 600px; box-shadow: 0 15px 50px rgba(0,0,0,0.8); position: relative; overflow: hidden; }
+        
+        .inv-status { position: absolute; top: 20px; right: -35px; background: #333; color: #fff; font-weight: 900; padding: 5px 40px; transform: rotate(45deg); letter-spacing: 2px; font-size: 0.8rem; border: 1px solid #444; }
+        .inv-status.paid { background: #00ff88; color: #000; }
+        
+        .merchant-name { font-family: 'Cinzel', serif; color: #fff; font-weight: 900; font-size: 1.5rem; border-bottom: 1px dashed #444; padding-bottom: 15px; margin-bottom: 20px; }
+        
+        .customer-details p { margin: 0; color: #aaa; font-weight: 600; font-size: 0.9rem; }
+        .customer-details strong { color: #fff; }
+
+        .items-table { width: 100%; margin-top: 30px; margin-bottom: 20px; border-collapse: collapse; }
+        .items-table th { color: var(--gold); border-bottom: 2px solid #333; padding-bottom: 10px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+        .items-table td { padding: 15px 0; border-bottom: 1px solid #222; font-weight: 600; }
+        
+        .summary-box { background: #111; border-radius: 15px; padding: 20px; margin-top: 20px; border: 1px solid #333; }
+        .sum-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; font-weight: 600; color: #aaa; }
+        .sum-line.total { border-top: 1px dashed #444; padding-top: 15px; margin-top: 10px; font-size: 1.8rem; color: var(--gold); font-weight: 900; font-family: 'Cinzel', serif; }
+
+        .btn-pay { background: var(--gold); color: black; font-weight: 900; border-radius: 15px; padding: 20px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s; margin-top: 25px; box-shadow: 0 5px 15px rgba(255,215,0,0.2); }
+        .btn-pay:hover { background: white; transform: translateY(-3px); }
+        .btn-pay:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; transform: none; }
+    </style>
+</head>
+<body>
+
+<div class="brand-text">
+    <span class="site-part-1">NATER</span>
+    <span class="site-part-2">PAY</span>
+</div>
+
+<div class="invoice-card" id="invoiceCard">
+    <div class="text-center py-5" id="loadingState">
+        <i class="fas fa-spinner fa-spin fa-3x text-warning mb-3"></i>
+        <p class="fw-bold">Locating Invoice Ledger...</p>
+    </div>
+</div>
+
+<script>
+    let globalInvoiceData = null;
+
+    async function loadInvoice() {
+        // Get the ?id=INVXXXX part from the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const invoiceId = urlParams.get('id');
+
+        if (!invoiceId) {
+            document.getElementById('invoiceCard').innerHTML = '<h4 class="text-danger text-center fw-bold py-5"><i class="fas fa-times-circle d-block mb-3 fa-2x"></i>Invalid Link</h4>';
+            return;
+        }
+
+        try {
+            // Because this is a public customer view, it hits the API without needing an Auth Token
+            const res = await fetch(`/api/invoices/${invoiceId}`);
+            const data = await res.json();
+
+            if (data.success) {
+                globalInvoiceData = data.invoice;
+                renderInvoice(data.invoice);
+            } else {
+                document.getElementById('invoiceCard').innerHTML = '<h4 class="text-danger text-center fw-bold py-5"><i class="fas fa-exclamation-triangle d-block mb-3 fa-2x"></i>Invoice Not Found</h4>';
+            }
+        } catch (e) {
+            document.getElementById('invoiceCard').innerHTML = '<h4 class="text-danger text-center fw-bold py-5">Connection Error.</h4>';
+        }
+    }
+
+    function renderInvoice(inv) {
+        const isPaid = inv.status === 'paid';
+        const statusHTML = `<div class="inv-status ${isPaid ? 'paid' : ''}">${inv.status.toUpperCase()}</div>`;
+        
+        let itemsHTML = '';
+        inv.items.forEach(item => {
+            const price = Number(item.unitPrice || 0);
+            const qty = Number(item.quantity || 1);
+            const total = price * qty;
+            itemsHTML += `
+                <tr>
+                    <td>${item.description}</td>
+                    <td class="text-center">x${qty}</td>
+                    <td class="text-end">₦${total.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                </tr>
+            `;
+        });
+
+        const subtotal = Number(inv.subtotal || 0);
+        const taxRate = Number(inv.taxRate || 0);
+        const discountRate = Number(inv.discountRate || 0);
+        
+        const taxAmt = subtotal * (taxRate/100);
+        const discAmt = subtotal * (discountRate/100);
+        const finalTotal = Number(inv.total || 0);
+
+        const dateStr = new Date(inv.dueDate).toLocaleDateString();
+
+        document.getElementById('invoiceCard').innerHTML = `
+            ${statusHTML}
+            <div class="merchant-name"><i class="fas fa-building me-2 text-warning"></i> INVOICE #${inv.invoiceId}</div>
+            
+            <div class="customer-details">
+                <p>Billed To: <strong>${inv.customerName}</strong></p>
+                <p>Email: <strong>${inv.customerEmail}</strong></p>
+                <p class="mt-2 text-warning">Due Date: <strong>${dateStr}</strong></p>
+            </div>
+
+            <table class="items-table">
+                <thead><tr><th class="text-start">Description</th><th class="text-center">Qty</th><th class="text-end">Amount</th></tr></thead>
+                <tbody>${itemsHTML}</tbody>
+            </table>
+
+            <div class="summary-box">
+                <div class="sum-line"><span>Subtotal:</span> <span>₦${subtotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                <div class="sum-line text-danger"><span>Tax (${taxRate}%):</span> <span>+₦${taxAmt.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                <div class="sum-line text-success"><span>Discount (${discountRate}%):</span> <span>-₦${discAmt.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                <div class="sum-line total"><span>TOTAL DUE:</span> <span>₦${finalTotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+            </div>
+
+            <button class="btn-pay" id="payBtn" onclick="initiatePayment()" ${isPaid ? 'disabled' : ''}>
+                ${isPaid ? '<i class="fas fa-check-circle me-2"></i> INVOICE PAID' : '<i class="fas fa-lock me-2"></i> PAY SECURELY NOW'}
+            </button>
+        `;
+    }
+
+    function initiatePayment() {
+        if (!globalInvoiceData || globalInvoiceData.status === 'paid') return;
+
+        // NOTE: In a fully live environment, you would use Paystack Inline here to collect the customer's card.
+        // For testing/ledger mode, we will mock a successful payment to trigger your backend payout logic.
+        
+        Swal.fire({
+            title: 'Confirm Payment',
+            text: `You are about to pay ₦${Number(globalInvoiceData.total).toLocaleString()} to settle this invoice.`,
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#d4af37',
+            cancelButtonColor: '#333',
+            confirmButtonText: 'Pay Now',
+            background: '#111', color: '#fff'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                
+                Swal.fire({ title: 'Processing...', text: 'Connecting to bank...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+                
+                try {
+                    // Send authorization to the backend
+                    const res = await fetch(`/api/invoices/${globalInvoiceData.invoiceId}/pay`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ paymentMethod: 'card_simulation', gatewayReference: 'SIM_' + Date.now() })
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Thank you. The merchant has been notified.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+                        .then(() => window.location.reload());
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Payment Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+                    }
+                } catch (err) {
+                    Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to reach payment gateway.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+                }
+            }
+        });
+    }
+
+    window.onload = loadInvoice;
+</script>
+
+</body>
+</html>
