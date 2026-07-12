@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Identity Verification</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; }
+        
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+        }
+
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; }
+        .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
+        .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
+
+        .container { max-width: 800px; margin: 50px auto; padding: 0 20px; }
+        
+        .kyc-header { text-align: center; margin-bottom: 40px; }
+        .kyc-header h1 { font-family: 'Cinzel', serif; font-weight: 900; color: var(--gold); }
+        
+        .tier-card {
+            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
+            padding: 30px; margin-bottom: 25px; transition: 0.3s; position: relative;
+            overflow: hidden;
+        }
+        .tier-card.locked { opacity: 0.5; pointer-events: none; filter: grayscale(100%); }
+        .tier-card.completed { border-color: #00ff88; background: rgba(0, 255, 136, 0.05); }
+        .tier-card.active { border-color: var(--gold); box-shadow: 0 10px 30px rgba(212,175,55,0.15); }
+        
+        .tier-badge {
+            position: absolute; top: 20px; right: 20px; padding: 5px 15px;
+            border-radius: 50px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase;
+        }
+        .badge-locked { background: #333; color: #888; }
+        .badge-active { background: rgba(212,175,55,0.2); color: var(--gold); border: 1px solid var(--gold); }
+        .badge-completed { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff88; }
+        .badge-pending { background: rgba(255, 170, 0, 0.2); color: #ffaa00; border: 1px solid #ffaa00; }
+
+        .input-group-custom { background: rgba(0,0,0,0.6); border: 1.5px solid #444; border-radius: 12px; padding: 15px; margin-bottom: 15px; transition: 0.3s; }
+        .input-group-custom:focus-within { border-color: var(--gold); }
+        .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 800; letter-spacing: 1px; margin-bottom: 8px; }
+        .input-group-custom input, .input-group-custom select { background: transparent; border: none; color: white; width: 100%; font-size: 1rem; outline: none; }
+        
+        .file-upload-wrapper { border: 2px dashed #444; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; margin-bottom: 15px; }
+        .file-upload-wrapper:hover { border-color: var(--gold); background: rgba(212,175,55,0.05); }
+        .file-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
+        
+        .btn-submit { background: var(--gold); color: black; font-weight: 900; border-radius: 12px; padding: 15px; width: 100%; border: none; font-size: 1rem; letter-spacing: 1px; transition: 0.3s; margin-top: 10px; }
+        .btn-submit:hover { background: white; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
+</header>
+
+<div class="container">
+    <div class="kyc-header">
+        <h1>IDENTITY VERIFICATION</h1>
+        <p class="text-muted">Complete your KYC to unlock higher transaction limits and premium features.</p>
+    </div>
+    
+    <div class="tier-card locked" id="tier1Card">
+        <div class="tier-badge badge-locked" id="tier1Badge">LOCKED</div>
+        <h4 style="color: var(--gold);"><i class="fas fa-id-badge me-2"></i> TIER 1: Basic Identity</h4>
+        <p class="text-muted small mb-4">Required for basic wallet funding and VTU purchases.</p>
+        
+        <div id="tier1Form">
+            <div class="input-group-custom">
+                <label>BANK VERIFICATION NUMBER (BVN)</label>
+                <input type="text" id="bvnInput" placeholder="Enter 11-digit BVN" maxlength="11">
+            </div>
+            <div class="input-group-custom">
+                <label>NATIONAL IDENTITY NUMBER (NIN)</label>
+                <input type="text" id="ninInput" placeholder="Enter 11-digit NIN" maxlength="11">
+            </div>
+            <button class="btn-submit" onclick="submitTier1()"><i class="fas fa-check-circle me-2"></i> VERIFY TIER 1</button>
+        </div>
+    </div>
+
+    <div class="tier-card locked" id="tier2Card">
+        <div class="tier-badge badge-locked" id="tier2Badge">LOCKED</div>
+        <h4 style="color: var(--gold);"><i class="fas fa-passport me-2"></i> TIER 2: Document Upload</h4>
+        <p class="text-muted small mb-4">Unlocks bank withdrawals and peer-to-peer transfers.</p>
+        
+        <div id="tier2Form">
+            <div class="input-group-custom">
+                <label>DOCUMENT TYPE</label>
+                <select id="idType">
+                    <option value="national_id">National ID Card</option>
+                    <option value="voters_card">Voter's Card</option>
+                    <option value="drivers_license">Driver's License</option>
+                    <option value="international_passport">International Passport</option>
+                </select>
+            </div>
+            <div class="input-group-custom">
+                <label>DOCUMENT NUMBER</label>
+                <input type="text" id="idNumber" placeholder="Enter Document ID Number">
+            </div>
+            
+            <div class="file-upload-wrapper">
+                <input type="file" id="idImage" accept="image/jpeg, image/png, image/webp" onchange="updateFileName(this, 'idFileName')">
+                <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-warning"></i>
+                <div class="fw-bold" id="idFileName">Upload Official ID Front</div>
+                <small class="text-muted">JPG or PNG (Max 5MB)</small>
+            </div>
+
+            <div class="file-upload-wrapper">
+                <input type="file" id="selfieImage" accept="image/jpeg, image/png, image/webp" onchange="updateFileName(this, 'selfieFileName')">
+                <i class="fas fa-camera fa-2x mb-2 text-warning"></i>
+                <div class="fw-bold" id="selfieFileName">Upload Clear Selfie</div>
+                <small class="text-muted">JPG or PNG (Max 5MB)</small>
+            </div>
+
+            <button class="btn-submit" onclick="submitTier2()"><i class="fas fa-upload me-2"></i> SUBMIT TIER 2 DOCUMENTS</button>
+        </div>
+    </div>
+
+    <div class="tier-card locked" id="tier3Card">
+        <div class="tier-badge badge-locked" id="tier3Badge">LOCKED</div>
+        <h4 style="color: var(--gold);"><i class="fas fa-map-marker-alt me-2"></i> TIER 3: Address Proof</h4>
+        <p class="text-muted small mb-4">Unlocks Reseller limits, Agent POS, and unrestricted API access.</p>
+        
+        <div id="tier3Form">
+            <div class="input-group-custom">
+                <label>FULL RESIDENTIAL ADDRESS</label>
+                <input type="text" id="addressInput" placeholder="Street Name & Number">
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    <div class="input-group-custom">
+                        <label>CITY</label>
+                        <input type="text" id="cityInput" placeholder="e.g. Makurdi">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="input-group-custom">
+                        <label>STATE</label>
+                        <input type="text" id="stateInput" placeholder="e.g. Benue">
+                    </div>
+                </div>
+            </div>
+            <button class="btn-submit" onclick="submitTier3()"><i class="fas fa-home me-2"></i> VERIFY TIER 3</button>
+        </div>
+    </div>
+    
+    <div class="text-center text-muted small mt-4 fw-bold">
+        <p><i class="fas fa-shield-alt text-success me-1"></i> Data is heavily encrypted and stored securely.</p>
+    </div>
+</div>
+
+<script>
+    function initStars() {
+        const c = document.getElementById('starCanvas');
+        c.width = window.innerWidth; c.height = window.innerHeight;
+        const ctx = c.getContext('2d');
+        const stars = [];
+        for(let i = 0; i < 100; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        function animate() {
+            ctx.clearRect(0, 0, c.width, c.height);
+            stars.forEach(s => { ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5; });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+
+    function updateFileName(input, textElementId) {
+        if (input.files && input.files[0]) {
+            document.getElementById(textElementId).innerText = input.files[0].name;
+            document.getElementById(textElementId).style.color = '#00ff88';
+        }
+    }
+
+    // Convert file to Base64 for secure JSON transmission
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    async function checkKYCStatus() {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) { window.location.href = '/index.html'; return; }
+
+        try {
+            const res = await fetch('/api/kyc', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const data = await res.json();
+
+            if (data.success) {
+                const kycLevel = data.kyc.currentLevel;
+                const status = data.kyc.status;
+
+                const t1 = document.getElementById('tier1Card'); const b1 = document.getElementById('tier1Badge'); const f1 = document.getElementById('tier1Form');
+                const t2 = document.getElementById('tier2Card'); const b2 = document.getElementById('tier2Badge'); const f2 = document.getElementById('tier2Form');
+                const t3 = document.getElementById('tier3Card'); const b3 = document.getElementById('tier3Badge'); const f3 = document.getElementById('tier3Form');
+
+                // Reset
+                [t1, t2, t3].forEach(t => t.className = 'tier-card locked');
+
+                // Logic to unlock specific tiers based on backend status
+                if (kycLevel === 0) {
+                    t1.className = 'tier-card active';
+                    b1.className = 'tier-badge badge-active'; b1.innerText = 'ACTION REQUIRED';
+                } 
+                else if (kycLevel === 1) {
+                    t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
+                    if(status === 'pending') {
+                        t2.className = 'tier-card'; b2.className = 'tier-badge badge-pending'; b2.innerText = 'REVIEW PENDING'; f2.style.display = 'none';
+                    } else {
+                        t2.className = 'tier-card active'; b2.className = 'tier-badge badge-active'; b2.innerText = 'ACTION REQUIRED';
+                    }
+                }
+                else if (kycLevel === 2) {
+                    t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
+                    t2.className = 'tier-card completed'; b2.className = 'tier-badge badge-completed'; b2.innerText = 'COMPLETED'; f2.style.display = 'none';
+                    if(status === 'pending') {
+                        t3.className = 'tier-card'; b3.className = 'tier-badge badge-pending'; b3.innerText = 'REVIEW PENDING'; f3.style.display = 'none';
+                    } else {
+                        t3.className = 'tier-card active'; b3.className = 'tier-badge badge-active'; b3.innerText = 'ACTION REQUIRED';
+                    }
+                }
+                else if (kycLevel === 3) {
+                    t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
+                    t2.className = 'tier-card completed'; b2.className = 'tier-badge badge-completed'; b2.innerText = 'COMPLETED'; f2.style.display = 'none';
+                    t3.className = 'tier-card completed'; b3.className = 'tier-badge badge-completed'; b3.innerText = 'MAX TIER REACHED'; f3.style.display = 'none';
+                }
+            }
+        } catch (e) {
+            console.error('KYC Load Error:', e);
+        }
+    }
+
+    async function submitTier1() {
+        const bvn = document.getElementById('bvnInput').value;
+        const nin = document.getElementById('ninInput').value;
+
+        if (!bvn && !nin) {
+            Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please provide either BVN or NIN.', background: '#111', color: '#fff' });
+            return;
+        }
+
+        executeApiCall('/api/kyc/level1', { bvn, nin }, 'Submitting Basic Details...');
+    }
+
+    async function submitTier2() {
+        const idType = document.getElementById('idType').value;
+        const idNumber = document.getElementById('idNumber').value;
+        const idFile = document.getElementById('idImage').files[0];
+        const selfieFile = document.getElementById('selfieImage').files[0];
+
+        if (!idNumber || !idFile || !selfieFile) {
+            Swal.fire({ icon: 'error', title: 'Incomplete', text: 'Please provide Document Number, ID Image, and Selfie.', background: '#111', color: '#fff' });
+            return;
+        }
+
+        Swal.fire({ title: 'Encrypting Images...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+
+        try {
+            const idImageBase64 = await fileToBase64(idFile);
+            const selfieImageBase64 = await fileToBase64(selfieFile);
+            
+            executeApiCall('/api/kyc/level2', { idType, idNumber, idImage: idImageBase64, selfieImage: selfieImageBase64 }, 'Uploading Securely...');
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'File Error', text: 'Failed to process images.', background: '#111', color: '#fff' });
+        }
+    }
+
+    async function submitTier3() {
+        const address = document.getElementById('addressInput').value;
+        const city = document.getElementById('cityInput').value;
+        const state = document.getElementById('stateInput').value;
+
+        if (!address || !city || !state) {
+            Swal.fire({ icon: 'error', title: 'Incomplete', text: 'Please fill out your full address details.', background: '#111', color: '#fff' });
+            return;
+        }
+
+        executeApiCall('/api/kyc/level3', { address, city, state }, 'Submitting Address...');
+    }
+
+    async function executeApiCall(endpoint, payload, loadingText) {
+        const authToken = localStorage.getItem("naterpay_token");
+        Swal.fire({ title: loadingText, allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Submitted', text: data.message || 'Details submitted successfully.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+                .then(() => checkKYCStatus()); // Reload the UI to lock the tier
+            } else {
+                Swal.fire({ icon: 'error', title: 'Failed', text: data.message, background: '#111', color: '#fff' });
+            }
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Connection failed.', background: '#111', color: '#fff' });
+        }
+    }
+
+    window.onload = () => { initStars(); checkKYCStatus(); };
+    window.onresize = initStars;
+</script>
+</body>
+</html>
