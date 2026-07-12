@@ -204,12 +204,19 @@ cmsSchema.statics.updateHomepage = function(data) {
   return this.findOneAndUpdate({}, { $set: { homepage: data } }, { upsert: true, new: true });
 };
 
-cmsSchema.statics.addSlide = function(slideData) {
-  return this.findOneAndUpdate(
-    {},
-    { $push: { slides: slideData } },
-    { upsert: true, new: true }
-  );
+// --- FIX APPLIED HERE: Bulletproof Slide Addition ---
+cmsSchema.statics.addSlide = async function(slideData) {
+  try {
+    let cms = await this.findOne({});
+    if (!cms) {
+      cms = new this({ slides: [], announcements: [] });
+    }
+    cms.slides.push(slideData);
+    return await cms.save(); // This enforces strict DB validation
+  } catch (error) {
+    console.error("CRITICAL DB ERROR SAVING SLIDE:", error);
+    throw error;
+  }
 };
 
 cmsSchema.statics.updateSlide = function(slideId, slideData) {
@@ -228,12 +235,19 @@ cmsSchema.statics.deleteSlide = function(slideId) {
   );
 };
 
-cmsSchema.statics.addAnnouncement = function(announcementData) {
-  return this.findOneAndUpdate(
-    {},
-    { $push: { announcements: announcementData } },
-    { upsert: true, new: true }
-  );
+// --- FIX APPLIED HERE: Bulletproof Announcement Addition ---
+cmsSchema.statics.addAnnouncement = async function(announcementData) {
+  try {
+    let cms = await this.findOne({});
+    if (!cms) {
+      cms = new this({ slides: [], announcements: [] });
+    }
+    cms.announcements.push(announcementData);
+    return await cms.save(); // This enforces strict DB validation
+  } catch (error) {
+    console.error("CRITICAL DB ERROR SAVING ANNOUNCEMENT:", error);
+    throw error;
+  }
 };
 
 cmsSchema.statics.updateAnnouncement = function(announcementId, announcementData) {
