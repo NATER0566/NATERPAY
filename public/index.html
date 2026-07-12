@@ -524,11 +524,11 @@
 
     async function deployMediaSlideshowEngine() {
         try {
-            // FIX 1: Appended a timestamp cache-buster so new slides show immediately
-            const res = await fetch('/api/cms/slides?_t=' + new Date().getTime());
+            // FIX: Changed '/api/cms/slides' to exactly '/api/slides' as registered in server.js
+            const res = await fetch('/api/slides?_t=' + new Date().getTime());
             const dataResult = await res.json();
             
-            // FIX 2: Bulletproof extraction to prevent .forEach() crashes
+            // Bulletproof extraction to prevent .forEach() crashes
             let slidesArray = [];
             if (Array.isArray(dataResult)) {
                 slidesArray = dataResult;
@@ -561,7 +561,7 @@
             const actionHyperlink = slide.link || slide.ctaLink || '#authTitle'; 
             const actionLabel = slide.ctaText || 'EXPLORE NOW';
             
-            // FIX: Added broader fallbacks for image URL property names (image, image_url, etc.)
+            // Added broader fallbacks for image URL property names (image, image_url, etc.)
             const imgUrl = slide.imageUrl || slide.mediaUrl || slide.image || slide.image_url || slide.url || '';
             const title = slide.title || slide.heading || 'PROMO';
             const caption = slide.caption || slide.description || slide.text || '';
