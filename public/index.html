@@ -497,7 +497,7 @@
             if(dataResult.success && dataResult.data) {
                 const brandingTitle = dataResult.data.siteName || "NATER-PAY";
                 const textNodes = brandingTitle.split(' ');
-                const primaryText = textNodes;
+                const primaryText = textNodes[0];
                 const secondaryText = textNodes.slice(1).join(' ');
 
                 document.getElementById('siteBranding').innerHTML = `<span class="site-part-1">${primaryText}</span><span class="site-part-2"> ${secondaryText}</span>`;
@@ -524,7 +524,8 @@
 
     async function deployMediaSlideshowEngine() {
         try {
-            const res = await fetch('/api/slides');
+            // FIX APPLIED HERE: Changed from /api/slides to /api/cms/slides
+            const res = await fetch('/api/cms/slides');
             const dataResult = await res.json();
             
             const slidesArray = dataResult.slides || dataResult.data; 
@@ -833,5 +834,3 @@
 </script>
 </body>
 </html>
-
-
