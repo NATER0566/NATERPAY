@@ -93,27 +93,52 @@
         .service-wrapper-node { transition: all 0.35s ease; position: relative; }
         .service-link { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; padding: 15px 8px; text-align: center; transition: 0.4s; text-decoration: none; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 110px; position: relative; overflow: hidden; }
         .service-link:hover { border-color: #ffffff; transform: translateY(-5px); box-shadow: 0 8px 25px rgba(255,215,0,0.25); background: rgba(30, 30, 30, 0.95); }
-        .service-link i { font-size: 1.6rem; margin-bottom: 10px; color: var(--gold); text-shadow: 0 0 10px rgba(255,215,0,0.4); position: relative; z-index: 2; transition: 0.3s; }
+        .service-link i.main-icon { font-size: 1.6rem; margin-bottom: 10px; color: var(--gold); text-shadow: 0 0 10px rgba(255,215,0,0.4); position: relative; z-index: 2; transition: 0.3s; }
         .service-link span { font-size: clamp(0.6rem, 2vw, 0.72rem); color: #ffffff !important; font-weight: 800; text-transform: uppercase; width: 100%; word-wrap: break-word; line-height: 1.3; letter-spacing: 0.5px; text-shadow: 0 1px 2px #000; position: relative; z-index: 2; }
 
         .service-link.loading { border-color: #2eb82e; background: rgba(46, 184, 46, 0.1); transform: scale(0.95); box-shadow: inset 0 0 15px rgba(46, 184, 46, 0.2); }
-        .service-link.loading i { color: #2eb82e; text-shadow: 0 0 15px rgba(46, 184, 46, 0.6); }
+        .service-link.loading i.main-icon { color: #2eb82e; text-shadow: 0 0 15px rgba(46, 184, 46, 0.6); }
 
         /* --- HIGH PRIORITY REFRACTIVE ANIMATION --- */
+        @keyframes pumping {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes spin-pulse {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.3); filter: drop-shadow(0 0 8px #fff); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
         .high-priority-glow {
             position: relative;
             overflow: hidden;
             border: 1.5px solid var(--gold) !important;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3) !important;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4) !important;
+            animation: pumping 2.5s infinite ease-in-out !important;
         }
         .high-priority-glow::before {
             content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
-            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,215,0,0.6) 50%, rgba(255,255,255,0) 100%);
             transform: skewX(-25deg);
             animation: refractive-shine 3.5s infinite;
             z-index: 1; pointer-events: none;
         }
         .high-priority-glow > * { position: relative; z-index: 2; }
+        
+        .star-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            color: #fff;
+            font-size: 1rem !important;
+            z-index: 3;
+            text-shadow: 0 0 8px rgba(255,215,0,1);
+            animation: spin-pulse 3s infinite linear;
+            margin-bottom: 0 !important;
+        }
+
         @keyframes refractive-shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
 
         @keyframes pulse-border {
@@ -153,7 +178,7 @@
         .custom-terminal-sidebar { background: rgba(10, 10, 10, 0.95) !important; border-right: 2px solid var(--gold); backdrop-filter: blur(25px); box-shadow: 15px 0 40px rgba(0,0,0,0.8); width: 280px !important; }
         .sidebar-menu-link { display: flex; align-items: center; gap: 15px; padding: 16px 24px; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: all 0.3s ease; }
         .sidebar-menu-link:hover { background: rgba(255,215,0,0.05); color: var(--gold); padding-left: 32px; }
-        .sidebar-menu-link i { color: var(--gold); font-size: 1.1rem; width: 24px; text-align: center; }
+        .sidebar-menu-link i.main-icon { color: var(--gold); font-size: 1.1rem; width: 24px; text-align: center; }
         
         footer { background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%; margin-top: 60px; position: relative; z-index: 5; }
         .footer-compliance-tag { color: #ffffff !important; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
@@ -172,8 +197,7 @@
 
 <canvas id="starCanvas"></canvas>
 
-<div id="opayNotifCard">
-    </div>
+<div id="opayNotifCard"></div>
 
 <div class="offcanvas offcanvas-start custom-terminal-sidebar" tabindex="-1" id="terminalHubSidebar" aria-labelledby="terminalHubSidebarLabel">
     <div class="offcanvas-header border-bottom border-secondary border-opacity-25 py-4 px-4">
@@ -184,14 +208,14 @@
     </div>
     <div class="offcanvas-body p-0">
         <nav class="d-flex flex-column">
-            <a href="dashboard.html" class="sidebar-menu-link"><i class="fas fa-th-large"></i> Hub Central</a>
-            <a href="kyc.html" class="sidebar-menu-link text-warning"><i class="fas fa-id-badge"></i> Identity KYC</a>
-            <a href="profile.html" class="sidebar-menu-link"><i class="fas fa-id-card"></i> Profile Terminal</a>
-            <a href="merchant-dashboard.html" class="sidebar-menu-link"><i class="fas fa-store"></i> Merchant Hub</a>
-            <a href="pos.html" class="sidebar-menu-link"><i class="fas fa-cash-register"></i> POS Terminal Node</a>
-            <a href="security.html" class="sidebar-menu-link"><i class="fas fa-lock"></i> Vault Security</a>
-            <a href="support.html" class="sidebar-menu-link"><i class="fas fa-headset"></i> Support Tickets</a>
-            <a href="api.html" class="sidebar-menu-link"><i class="fas fa-code"></i> Developer APIs</a>
+            <a href="dashboard.html" class="sidebar-menu-link"><i class="fas fa-th-large main-icon"></i> Hub Central</a>
+            <a href="kyc.html" class="sidebar-menu-link text-warning"><i class="fas fa-id-badge main-icon"></i> Identity KYC</a>
+            <a href="profile.html" class="sidebar-menu-link"><i class="fas fa-id-card main-icon"></i> Profile Terminal</a>
+            <a href="merchant-dashboard.html" class="sidebar-menu-link"><i class="fas fa-store main-icon"></i> Merchant Hub</a>
+            <a href="pos.html" class="sidebar-menu-link"><i class="fas fa-cash-register main-icon"></i> POS Terminal Node</a>
+            <a href="security.html" class="sidebar-menu-link"><i class="fas fa-lock main-icon"></i> Vault Security</a>
+            <a href="support.html" class="sidebar-menu-link"><i class="fas fa-headset main-icon"></i> Support Tickets</a>
+            <a href="api.html" class="sidebar-menu-link"><i class="fas fa-code main-icon"></i> Developer APIs</a>
         </nav>
     </div>
 </div>
@@ -206,13 +230,7 @@
     </div>
     
     <div class="d-flex align-items-center gap-2 gap-sm-3 ms-auto">
-        <button class="btn btn-dark position-relative rounded-circle d-flex align-items-center justify-content-center" type="button" onclick="showNextNotification()" style="width: 42px; height: 42px; border: 1px solid rgba(212,175,55,0.4); background: rgba(0,0,0,0.8);">
-            <i class="fas fa-bell text-warning"></i>
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="unreadBadge" style="display: none; font-size: 0.6rem; transform: translate(-30%, -20%) !important;">
-                0
-            </span>
-        </button>
-
+        <!-- Bell icon previously here was removed to keep gateway pristine -->
         <div class="gateway-btn-wrapper dropdown m-0">
             <button class="btn btn-warning text-dark rounded-pill fw-bold dropdown-toggle" type="button" id="gatewayMenuDropdownLinkBtn" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid var(--gold); box-shadow: 0 4px 15px rgba(255,215,0,0.4);">
                 <i class="fas fa-terminal me-sm-1" style="font-size: 1.1rem;"></i>
@@ -272,6 +290,7 @@
             </div>
             <div class="col-md-6 d-flex flex-wrap gap-2">
                 <button class="btn btn-warning fw-bold py-3 rounded-pill flex-grow-1 high-priority-glow" onclick="location.href='fund.html'">
+                    <i class="fas fa-star star-badge"></i>
                     <i class="fas fa-wallet me-1"></i> ADD FUND
                 </button>
                 <button class="btn btn-outline-warning fw-bold py-3 rounded-pill flex-grow-1" onclick="location.href='withdraw.html'">
@@ -292,82 +311,101 @@
     <h5 class="ecosystem-section-title"><i class="fas fa-plug"></i> Bills & Utilities</h5>
     <div class="row g-2" id="gridUtilities">
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="data.html" class="service-link high-priority-glow" onclick="triggerLoad(this)"><i class="fas fa-wifi"></i><span>Buy Data</span></a>
+            <a href="data.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
+                <i class="fas fa-star star-badge"></i>
+                <i class="fas fa-wifi main-icon"></i><span>Buy Data</span>
+            </a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="airtime.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-phone"></i><span>Airtime</span></a>
+            <a href="airtime.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-phone main-icon"></i><span>Airtime</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="power.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-bolt"></i><span>Electricity</span></a>
+            <a href="power.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-bolt main-icon"></i><span>Electricity</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="cable.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-satellite-dish"></i><span>Cable TV</span></a>
+            <a href="cable.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-satellite-dish main-icon"></i><span>Cable TV</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="exams.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-graduation-cap"></i><span>Exam Pins</span></a>
+            <a href="exams.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-graduation-cap main-icon"></i><span>Exam Pins</span></a>
         </div>
     </div>
 
     <h5 class="ecosystem-section-title"><i class="fas fa-store"></i> Merchant & Business</h5>
     <div class="row g-2" id="gridBusiness">
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="pos.html" class="service-link high-priority-glow" onclick="triggerLoad(this)"><i class="fas fa-cash-register"></i><span>POS Terminal</span></a>
+            <a href="pos.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
+                <i class="fas fa-star star-badge"></i>
+                <i class="fas fa-cash-register main-icon"></i><span>POS Terminal</span>
+            </a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="bulksms.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-paper-plane"></i><span>Bulk SMS</span></a>
+            <a href="bulksms.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-paper-plane main-icon"></i><span>Bulk SMS</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="insurance.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-shield-alt"></i><span>Insurance</span></a>
+            <a href="insurance.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-shield-alt main-icon"></i><span>Insurance</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="merchant-dashboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-chart-line"></i><span>Biz Analytics</span></a>
+            <a href="merchant-dashboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-chart-line main-icon"></i><span>Biz Analytics</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="reseller.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-network-wired"></i><span>Reseller Hub</span></a>
+            <a href="reseller.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-network-wired main-icon"></i><span>Reseller Hub</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="payment-links.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-link"></i><span>Pay Links</span></a>
+            <a href="payment-links.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-link main-icon"></i><span>Pay Links</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="qr-pay.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-qrcode"></i><span>QR Collect</span></a>
+            <a href="qr-pay.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-qrcode main-icon"></i><span>QR Collect</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="invoices.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-file-invoice-dollar"></i><span>Invoicing</span></a>
+            <a href="invoices.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-file-invoice-dollar main-icon"></i><span>Invoicing</span></a>
         </div>
     </div>
 
     <h5 class="ecosystem-section-title"><i class="fas fa-rocket"></i> Rewards & Growth</h5>
     <div class="row g-2" id="gridGrowth">
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="cashback.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-undo-alt"></i><span>Cashback</span></a>
+            <a href="cashback.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-undo-alt main-icon"></i><span>Cashback</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="tasks.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-tasks"></i><span>Task & Earn</span></a>
+            <a href="tasks.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
+                <i class="fas fa-star star-badge"></i>
+                <i class="fas fa-tasks main-icon"></i><span>Task & Earn</span>
+            </a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="ads.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-bullhorn"></i><span>Adverts</span></a>
+            <a href="ads.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-bullhorn main-icon"></i><span>Adverts</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="marketplace.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-store-alt"></i><span>Marketplace</span></a>
+            <a href="marketplace.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-store-alt main-icon"></i><span>Marketplace</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="leaderboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-trophy"></i><span>Leaderboard</span></a>
+            <a href="leaderboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-trophy main-icon"></i><span>Leaderboard</span></a>
         </div>
     </div>
 
     <h5 class="ecosystem-section-title"><i class="fas fa-user-shield"></i> Security & Profile</h5>
     <div class="row g-2" id="gridSecurity">
+        <!-- Notification Moved Here -->
         <div class="col-4 col-md-3 service-wrapper-node">
-            <a href="kyc.html" class="service-link high-priority-glow" onclick="triggerLoad(this)"><i class="fas fa-id-badge text-warning"></i><span>Identity KYC</span></a>
+            <a href="#" class="service-link" onclick="showNextNotification(); return false;" style="position: relative;">
+                <span class="position-absolute badge rounded-pill bg-danger" id="unreadBadge" style="display: none; top: 15px; right: 15px; font-size: 0.65rem; z-index: 5;">0</span>
+                <i class="fas fa-bell text-warning main-icon"></i><span>Alerts</span>
+            </a>
         </div>
         <div class="col-4 col-md-3 service-wrapper-node">
-            <a href="security.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-lock"></i><span>Vault Security</span></a>
+            <a href="kyc.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
+                <i class="fas fa-star star-badge"></i>
+                <i class="fas fa-id-badge text-warning main-icon"></i><span>Identity KYC</span>
+            </a>
         </div>
         <div class="col-4 col-md-3 service-wrapper-node">
-            <a href="profile.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-user-edit"></i><span>Profile Setup</span></a>
+            <a href="security.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-lock main-icon"></i><span>Vault Security</span></a>
         </div>
         <div class="col-4 col-md-3 service-wrapper-node">
-            <a href="referrals.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-users"></i><span>Network Tree</span></a>
+            <a href="profile.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-user-edit main-icon"></i><span>Profile Setup</span></a>
+        </div>
+        <div class="col-4 col-md-3 service-wrapper-node">
+            <a href="referrals.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-users main-icon"></i><span>Network Tree</span></a>
         </div>
     </div>
 
@@ -396,8 +434,8 @@
 
     function triggerLoad(element) {
         element.classList.add('loading');
-        const icon = element.querySelector('i');
-        icon.className = 'fas fa-check-circle';
+        const icon = element.querySelector('i.main-icon');
+        if(icon) icon.className = 'fas fa-check-circle main-icon';
     }
     
     function initStars() {
@@ -462,7 +500,7 @@
         cardContainer.innerHTML = `
             <div style="padding: 18px;">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="text-gold fw-bold mb-0" style="font-size: 0.95rem; text-transform: uppercase;"><i class="fas fa-bullhorn me-2"></i>${notif.title}</h6>
+                    <h6 class="text-gold fw-bold mb-0" style="color: var(--gold); font-size: 0.95rem; text-transform: uppercase;"><i class="fas fa-bullhorn me-2"></i>${notif.title}</h6>
                     <button onclick="closeNotificationCard()" style="background:none; border:none; color:#888; font-size:1.2rem; padding:0; line-height:1; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'"><i class="fas fa-times-circle"></i></button>
                 </div>
                 <p class="text-white mb-3 mt-2" style="font-size: 0.85rem; line-height: 1.5; font-weight: 500;">${notif.message}</p>
