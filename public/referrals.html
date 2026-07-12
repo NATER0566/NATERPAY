@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Network Tree</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; }
+        
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+        }
+
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; }
+        .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
+        .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
+
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        
+        .stats-card {
+            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
+            padding: 30px; margin-bottom: 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .referral-box {
+            background: rgba(0,0,0,0.6); border: 1.5px dashed var(--gold);
+            border-radius: 15px; padding: 20px; margin: 20px auto; max-width: 500px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .referral-code { font-size: 1.8rem; font-weight: 900; color: var(--gold); letter-spacing: 3px; font-family: monospace;}
+        
+        .network-list {
+            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
+            padding: 30px;
+        }
+        
+        .user-node {
+            background: rgba(30,30,30,0.8); border: 1px solid #444; border-radius: 12px;
+            padding: 15px 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;
+            transition: 0.3s;
+        }
+        .user-node:hover { border-color: var(--gold); transform: translateX(5px); }
+        .node-icon { width: 45px; height: 45px; background: rgba(212,175,55,0.1); color: var(--gold); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; }
+        
+        .btn-copy { background: var(--gold); color: black; font-weight: 800; border: none; padding: 10px 20px; border-radius: 10px; transition: 0.3s; }
+        .btn-copy:hover { background: white; }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
+</header>
+
+<div class="container">
+    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">NETWORK TREE</h1>
+    
+    <div class="stats-card">
+        <h5 class="text-muted mb-2 fw-bold">YOUR UNIQUE INVITE CODE</h5>
+        
+        <div class="referral-box">
+            <span class="referral-code" id="myRefCode">Loading...</span>
+            <button class="btn-copy" onclick="copyRef()"><i class="fas fa-copy"></i> COPY</button>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-6">
+                <h6 class="text-muted">TOTAL INVITES</h6>
+                <h3 class="fw-bold text-white" id="totalInvites">0</h3>
+            </div>
+            <div class="col-6" style="border-left: 1px solid #444;">
+                <h6 class="text-muted">BONUS EARNED</h6>
+                <h3 class="fw-bold" style="color: #00ff88;" id="totalBonus">₦0.00</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="network-list">
+        <h5 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold);"><i class="fas fa-users me-2"></i> YOUR DOWNLINE</h5>
+        
+        <div id="treeContainer">
+            <div class="text-center py-5 opacity-50">
+                <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing network data...
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-center text-muted small mt-4 fw-bold">
+        <p>Earn ₦500 instantly for every friend who registers with your code!</p>
+        <p>Secured by NATER-PAY Protocol v3.0</p>
+    </div>
+</div>
+
+<script>
+    let myCode = "";
+
+    function initStars() {
+        const c = document.getElementById('starCanvas');
+        c.width = window.innerWidth; c.height = window.innerHeight;
+        const ctx = c.getContext('2d');
+        const stars = [];
+        for(let i = 0; i < 100; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        function animate() {
+            ctx.clearRect(0, 0, c.width, c.height);
+            stars.forEach(s => { ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5; });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+    
+    async function loadNetworkTree() {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) { window.location.href = '/index.html'; return; }
+        
+        try {
+            // Fetch basic stats from dashboard endpoint
+            const dashRes = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const dashData = await dashRes.json();
+            
+            if (dashData.success) {
+                myCode = dashData.referralCode || "N/A";
+                document.getElementById('myRefCode').innerText = myCode;
+                document.getElementById('totalInvites').innerText = dashData.referralCount || "0";
+                
+                // Safe parsing for Decimal128 values from MongoDB
+                const rawBonus = dashData.referralBonus?.$numberDecimal || dashData.referralBonus || 0;
+                document.getElementById('totalBonus').innerText = `₦${Number(rawBonus).toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            }
+
+            // Fetch the actual list of people they invited
+            const treeRes = await fetch('/api/user/referral-tree', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const treeData = await treeRes.json();
+            
+            const container = document.getElementById('treeContainer');
+            
+            if (treeData.success && treeData.referrals.length > 0) {
+                container.innerHTML = treeData.referrals.map(user => `
+                    <div class="user-node">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="node-icon"><i class="fas fa-user"></i></div>
+                            <div>
+                                <h6 class="mb-0 fw-bold text-white">${user.name}</h6>
+                                <small class="text-muted">Joined: ${new Date(user.joinedAt).toLocaleDateString()}</small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success opacity-75">Active</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = `
+                    <div class="text-center py-5 opacity-50">
+                        <i class="fas fa-user-plus fa-3x mb-3 text-secondary"></i><br>
+                        You haven't invited anyone yet.<br>Share your code to start earning!
+                    </div>
+                `;
+            }
+        } catch (error) {
+            document.getElementById('treeContainer').innerHTML = '<div class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to sync network tree.</div>';
+        }
+    }
+
+    function copyRef() {
+        if (myCode && myCode !== "N/A") {
+            navigator.clipboard.writeText(myCode).then(() => {
+                Swal.fire({ icon: 'success', title: 'Copied!', text: 'Code copied to clipboard.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' });
+            });
+        }
+    }
+
+    window.onload = () => { initStars(); loadNetworkTree(); };
+    window.onresize = initStars;
+</script>
+
+</body>
+</html>
