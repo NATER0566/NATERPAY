@@ -82,6 +82,9 @@
             transition: all 0.3s ease; white-space: nowrap;
         }
 
+        .kyc-clickable-badge { cursor: pointer; transition: 0.3s; }
+        .kyc-clickable-badge:hover { transform: scale(1.05); filter: brightness(1.2); }
+
         .balance-card { background: linear-gradient(145deg, #111 0%, #222 100%); border: 2px solid var(--gold); border-radius: 30px; padding: clamp(25px, 5vw, 45px); margin: 25px 0 40px 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; animation: pulse-border 5s infinite ease-in-out; }
         .amount-text { font-family: 'Cinzel', serif; font-size: clamp(2rem, 8vw, 3.5rem); color: var(--gold); font-weight: 900; margin: 10px 0; word-break: break-word; }
 
@@ -149,6 +152,7 @@
     <div class="offcanvas-body p-0">
         <nav class="d-flex flex-column">
             <a href="dashboard.html" class="sidebar-menu-link"><i class="fas fa-th-large"></i> Hub Central</a>
+            <a href="kyc.html" class="sidebar-menu-link text-warning"><i class="fas fa-id-badge"></i> Identity KYC</a>
             <a href="profile.html" class="sidebar-menu-link"><i class="fas fa-id-card"></i> Profile Terminal</a>
             <a href="merchant-dashboard.html" class="sidebar-menu-link"><i class="fas fa-store"></i> Merchant Hub</a>
             <a href="pos.html" class="sidebar-menu-link"><i class="fas fa-cash-register"></i> POS Terminal Node</a>
@@ -183,6 +187,7 @@
             </li>
             <li id="adminDivider" style="display: none;"><hr class="dropdown-divider"></li>
             
+            <li><a class="dropdown-item fw-bold" href="kyc.html"><i class="fas fa-id-badge me-2 text-warning"></i> Identity KYC</a></li>
             <li><a class="dropdown-item fw-bold" href="profile.html"><i class="fas fa-id-card me-2"></i> Profile Setup</a></li>
             <li><a class="dropdown-item fw-bold" href="security.html"><i class="fas fa-lock me-2"></i> Security Pins</a></li>
             <li><a class="dropdown-item fw-bold" href="referrals.html"><i class="fas fa-users me-2"></i> Network Tree</a></li>
@@ -202,9 +207,9 @@
                 <h5 class="identity-badge-title" id="profileBadgeName">Terminal Node Core</h5>
             </div>
             <div class="col-auto ms-auto d-flex flex-wrap gap-2 justify-content-end">
-                <span class="badge bg-secondary text-light fw-bolder px-3 py-2 rounded-pill" id="profileBadgeLevel" style="font-size:0.65rem;">SYNCING...</span>
                 
-                <!-- DYNAMIC TIER BADGE -->
+                <span class="badge bg-secondary text-light fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge" id="kycStatusBadge" onclick="location.href='kyc.html'" style="font-size:0.65rem;" title="Click to verify Identity">SYNCING...</span>
+                
                 <span class="badge d-none" id="tierBadge" style="font-size:0.65rem;"></span>
 
                 <div class="security-guard-warning-pill bg-dark border-secondary text-secondary" id="securityStatusPill"><i class="fas fa-sync fa-spin"></i> Checking Vault...</div>
@@ -236,7 +241,6 @@
         </div>
     </div>
 
-    <!-- DYNAMIC UPGRADE BANNER -->
     <div class="promo-banner" id="dashboardPromoEngine" style="display: none;">
         <div>
             <h6 class="mb-0 fw-bold small text-white" id="promoTitle"><i class="fas fa-bolt me-1"></i> RESELLER OPPORTUNITY</h6>
@@ -292,28 +296,19 @@
         </div>
     </div>
 
-    <h5 class="ecosystem-section-title"><i class="fas fa-rocket"></i> Rewards & Growth</h5>
-    <div class="row g-2" id="gridGrowth">
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="cashback.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-undo-alt"></i><span>Cashback</span></a>
+    <h5 class="ecosystem-section-title"><i class="fas fa-user-shield"></i> Security & Profile</h5>
+    <div class="row g-2" id="gridSecurity">
+        <div class="col-4 col-md-3 service-wrapper-node">
+            <a href="kyc.html" class="service-link border-warning" onclick="triggerLoad(this)"><i class="fas fa-id-badge text-warning"></i><span>Identity KYC</span></a>
         </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="airtime-cash.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-exchange-alt"></i><span>Airtime2Cash</span></a>
+        <div class="col-4 col-md-3 service-wrapper-node">
+            <a href="security.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-lock"></i><span>Vault Security</span></a>
         </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="spin.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-dharmachakra"></i><span>Spin & Win</span></a>
+        <div class="col-4 col-md-3 service-wrapper-node">
+            <a href="profile.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-user-edit"></i><span>Profile Setup</span></a>
         </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="tasks.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-tasks"></i><span>Task & Earn</span></a>
-        </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="ads.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-bullhorn"></i><span>Adverts</span></a>
-        </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="marketplace.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-store-alt"></i><span>Marketplace</span></a>
-        </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="leaderboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-trophy"></i><span>Leaderboard</span></a>
+        <div class="col-4 col-md-3 service-wrapper-node">
+            <a href="referrals.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-users"></i><span>Network Tree</span></a>
         </div>
     </div>
 
@@ -409,15 +404,25 @@
             if(data.success) {
                 document.getElementById('profileBadgeName').innerText = data.userFullName || "Verified Terminal Operator";
                 
+                // --- FULLY INTEGRATED KYC BADGE ---
                 const kycLevel = data.kycLevel || 0;
-                const badgeEl = document.getElementById('profileBadgeLevel');
-                if(kycLevel === 0) {
-                    badgeEl.className = "badge bg-danger text-white fw-bolder px-3 py-2 rounded-pill";
-                    badgeEl.innerText = "UNVERIFIED";
-                } else {
-                    badgeEl.className = "badge bg-success text-white fw-bolder px-3 py-2 rounded-pill";
-                    badgeEl.innerText = `LEVEL ${kycLevel} KYC`;
+                const kycBadge = document.getElementById('kycStatusBadge'); 
+
+                if (kycLevel === 0) {
+                    kycBadge.innerText = 'UNVERIFIED';
+                    kycBadge.className = 'badge bg-danger text-white fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge'; 
+                } else if (kycLevel === 1) {
+                    kycBadge.innerText = 'TIER 1 ACTIVE';
+                    kycBadge.className = 'badge bg-warning text-dark fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge'; 
+                } else if (kycLevel === 2) {
+                    kycBadge.innerText = 'TIER 2 ACTIVE';
+                    kycBadge.className = 'badge bg-success text-white fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge'; 
+                } else if (kycLevel === 3) {
+                    kycBadge.innerText = 'MAX TIER (PRO)';
+                    kycBadge.className = 'badge text-dark fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge';
+                    kycBadge.style.backgroundColor = '#d4af37'; 
                 }
+                // ------------------------------------
 
                 // --- THE SUPER PREMIUM TIER ENGINE ---
                 const role = (data.userRole || 'user').toLowerCase();
@@ -428,15 +433,12 @@
                 const promoBtn = document.getElementById('promoBtn');
 
                 if (role === 'admin' || role === 'vip') {
-                    // Top Tier: Show Elite Badge, Hide Upgrades
                     tierBadge.classList.remove('d-none');
                     tierBadge.className = "badge bg-warning text-dark fw-bolder px-3 py-2 rounded-pill";
                     tierBadge.innerHTML = `<i class="fas fa-crown me-1"></i> ${role === 'admin' ? 'SYSTEM ADMIN' : 'VIP PARTNER'}`;
-                    
                     if(promoBanner) promoBanner.style.display = 'none';
                     
                 } else if (role === 'reseller' || role === 'agent') {
-                    // Mid Tier: Show Reseller Badge, Pitch VIP Upgrade
                     tierBadge.classList.remove('d-none');
                     tierBadge.className = "badge bg-primary text-white fw-bolder px-3 py-2 rounded-pill";
                     tierBadge.style.border = "1px solid #4da6ff";
@@ -445,19 +447,17 @@
                     
                     if(promoBanner) {
                         promoBanner.style.display = 'flex';
-                        promoBanner.style.background = 'linear-gradient(90deg, #4b0082, #1a0033)'; // Premium Purple
+                        promoBanner.style.background = 'linear-gradient(90deg, #4b0082, #1a0033)'; 
                         promoTitle.innerHTML = '<i class="fas fa-crown me-1 text-warning"></i> VIP UPGRADE';
                         promoDesc.innerText = 'Upgrade to VIP Partner for maximum wholesale discounts and API access.';
                         promoBtn.innerText = 'BECOME VIP';
                         promoBtn.className = "btn btn-warning btn-sm rounded-pill fw-bold px-4 py-2 text-dark";
                     }
                 } else {
-                    // Base Tier: No Tier Badge, Pitch Reseller Upgrade
                     tierBadge.classList.add('d-none');
-                    
                     if(promoBanner) {
                         promoBanner.style.display = 'flex';
-                        promoBanner.style.background = 'linear-gradient(90deg, #d32f2f, #8b0000)'; // Action Red
+                        promoBanner.style.background = 'linear-gradient(90deg, #d32f2f, #8b0000)'; 
                         promoTitle.innerHTML = '<i class="fas fa-bolt me-1"></i> RESELLER OPPORTUNITY';
                         promoDesc.innerText = 'Upgrade to Sub-Agent to unlock wholesale data pricing.';
                         promoBtn.innerText = 'UPGRADE NOW';
