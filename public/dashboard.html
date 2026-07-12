@@ -120,7 +120,6 @@
         .tx-amount { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.1rem; }
         .status-pill { padding: 3px 10px; border-radius: 50px; font-size: 0.6rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;}
         
-        /* Premium Upgrade Banner Styling */
         .promo-banner { 
             background: linear-gradient(90deg, #d32f2f, #8b0000); 
             border-radius: 20px; padding: 20px; margin-bottom: 35px; 
@@ -172,28 +171,47 @@
         </div>
     </div>
     
-    <div class="gateway-btn-wrapper dropdown">
-        <button class="btn btn-warning text-dark rounded-pill fw-bold dropdown-toggle" type="button" id="gatewayMenuDropdownLinkBtn" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid var(--gold); box-shadow: 0 4px 15px rgba(255,215,0,0.4);">
-            <i class="fas fa-terminal me-sm-1" style="font-size: 1.1rem;"></i>
-            <span class="d-none d-sm-inline">GATEWAY TERMINAL</span>
-            <span class="d-inline d-sm-none" style="font-size: 0.72rem; font-weight: 900;">GATEWAY<br>NODE</span>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-warning shadow-lg" aria-labelledby="gatewayMenuDropdownLinkBtn">
-            
-            <li id="adminMenuWrapper" style="display: none;">
-                <a class="dropdown-item text-warning fw-bold" href="admin.html">
-                    <i class="fas fa-user-shield me-2"></i> ADMIN CONTROL PANEL
-                </a>
-            </li>
-            <li id="adminDivider" style="display: none;"><hr class="dropdown-divider"></li>
-            
-            <li><a class="dropdown-item fw-bold" href="kyc.html"><i class="fas fa-id-badge me-2 text-warning"></i> Identity KYC</a></li>
-            <li><a class="dropdown-item fw-bold" href="profile.html"><i class="fas fa-id-card me-2"></i> Profile Setup</a></li>
-            <li><a class="dropdown-item fw-bold" href="security.html"><i class="fas fa-lock me-2"></i> Security Pins</a></li>
-            <li><a class="dropdown-item fw-bold" href="referrals.html"><i class="fas fa-users me-2"></i> Network Tree</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-danger fw-bold" href="logout.html"><i class="fas fa-sign-out-alt me-2"></i> Disconnect Session</a></li>
-        </ul>
+    <div class="d-flex align-items-center gap-3 ms-auto">
+        
+        <div class="dropdown">
+            <button class="btn btn-dark position-relative rounded-circle" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="width: 45px; height: 45px; border: 1px solid rgba(212,175,55,0.4);">
+                <i class="fas fa-bell text-warning"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="unreadBadge" style="display: none; font-size: 0.6rem;">
+                    0
+                </span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" aria-labelledby="notificationDropdown" style="width: 320px; max-height: 400px; overflow-y: auto; border: 1px solid var(--gold);" id="notificationList">
+                <li><h6 class="dropdown-header text-gold fw-bold">Recent Announcements</h6></li>
+                <li><hr class="dropdown-divider"></li>
+                <div id="notificationItems">
+                    <li class="text-center p-3 opacity-50 small">Loading alerts...</li>
+                </div>
+            </ul>
+        </div>
+
+        <div class="gateway-btn-wrapper dropdown m-0">
+            <button class="btn btn-warning text-dark rounded-pill fw-bold dropdown-toggle" type="button" id="gatewayMenuDropdownLinkBtn" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid var(--gold); box-shadow: 0 4px 15px rgba(255,215,0,0.4);">
+                <i class="fas fa-terminal me-sm-1" style="font-size: 1.1rem;"></i>
+                <span class="d-none d-sm-inline">GATEWAY TERMINAL</span>
+                <span class="d-inline d-sm-none" style="font-size: 0.72rem; font-weight: 900;">GATEWAY<br>NODE</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-warning shadow-lg" aria-labelledby="gatewayMenuDropdownLinkBtn">
+                
+                <li id="adminMenuWrapper" style="display: none;">
+                    <a class="dropdown-item text-warning fw-bold" href="admin.html">
+                        <i class="fas fa-user-shield me-2"></i> ADMIN CONTROL PANEL
+                    </a>
+                </li>
+                <li id="adminDivider" style="display: none;"><hr class="dropdown-divider"></li>
+                
+                <li><a class="dropdown-item fw-bold" href="kyc.html"><i class="fas fa-id-badge me-2 text-warning"></i> Identity KYC</a></li>
+                <li><a class="dropdown-item fw-bold" href="profile.html"><i class="fas fa-id-card me-2"></i> Profile Setup</a></li>
+                <li><a class="dropdown-item fw-bold" href="security.html"><i class="fas fa-lock me-2"></i> Security Pins</a></li>
+                <li><a class="dropdown-item fw-bold" href="referrals.html"><i class="fas fa-users me-2"></i> Network Tree</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger fw-bold" href="logout.html"><i class="fas fa-sign-out-alt me-2"></i> Disconnect Session</a></li>
+            </ul>
+        </div>
     </div>
 </header>
 
@@ -363,6 +381,58 @@
         requestAnimationFrame(animate);
     }
 
+    // THE FIX: FETCH NOTIFICATIONS FROM DATABASE
+    async function loadNotifications() {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) return;
+
+        try {
+            const res = await fetch('/api/notifications', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const data = await res.json();
+
+            if (data.success) {
+                const badge = document.getElementById('unreadBadge');
+                const list = document.getElementById('notificationItems');
+                
+                // Update Unread Counter
+                if (data.unreadCount > 0) {
+                    badge.style.display = 'block';
+                    badge.innerText = data.unreadCount;
+                } else {
+                    badge.style.display = 'none';
+                }
+
+                // Populate Dropdown
+                if (data.notifications && data.notifications.length > 0) {
+                    list.innerHTML = data.notifications.map(notif => `
+                        <li>
+                            <a class="dropdown-item px-3 py-2 ${notif.isRead ? 'opacity-75' : 'bg-dark'}" href="#" onclick="markRead('${notif._id}'); return false;" style="white-space: normal; border-bottom: 1px solid #333;">
+                                <div class="d-flex justify-content-between">
+                                    <strong class="text-warning" style="font-size: 0.85rem;">${notif.title}</strong>
+                                    ${!notif.isRead ? '<span class="badge bg-danger ms-2" style="font-size: 0.5rem;">NEW</span>' : ''}
+                                </div>
+                                <div class="small text-white mt-1" style="font-size: 0.75rem;">${notif.message}</div>
+                                <div class="text-muted mt-1" style="font-size: 0.65rem;">${new Date(notif.createdAt).toLocaleDateString()}</div>
+                            </a>
+                        </li>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<li class="text-center p-3 opacity-50 small">No recent announcements.</li>';
+                }
+            }
+        } catch (e) {
+            console.warn("Failed to fetch notification history.");
+        }
+    }
+
+    async function markRead(id) {
+        const authToken = localStorage.getItem("naterpay_token");
+        await fetch(`/api/notifications/${id}/read`, { 
+            method: 'PUT', headers: { 'Authorization': `Bearer ${authToken}` } 
+        });
+        loadNotifications(); // Reload list to update badge and colors
+    }
+
     async function checkPendingFunding() {
         const pendingRef = localStorage.getItem('pending_funding_ref');
         if (pendingRef) {
@@ -404,7 +474,6 @@
             if(data.success) {
                 document.getElementById('profileBadgeName').innerText = data.userFullName || "Verified Terminal Operator";
                 
-                // --- FULLY INTEGRATED KYC BADGE ---
                 const kycLevel = data.kycLevel || 0;
                 const kycBadge = document.getElementById('kycStatusBadge'); 
 
@@ -422,9 +491,7 @@
                     kycBadge.className = 'badge text-dark fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge';
                     kycBadge.style.backgroundColor = '#d4af37'; 
                 }
-                // ------------------------------------
 
-                // --- THE SUPER PREMIUM TIER ENGINE ---
                 const role = (data.userRole || 'user').toLowerCase();
                 const tierBadge = document.getElementById('tierBadge');
                 const promoBanner = document.getElementById('dashboardPromoEngine');
@@ -464,7 +531,6 @@
                         promoBtn.className = "btn btn-light btn-sm rounded-pill fw-bold px-4 py-2";
                     }
                 }
-                // --- END TIER ENGINE ---
 
                 const secPill = document.getElementById('securityStatusPill');
                 if(data.isSecured !== false) { 
@@ -542,6 +608,7 @@
         animate(); 
         syncDashboardData(); 
         checkPendingFunding();
+        loadNotifications(); // THE FIX: Fetch old notifications automatically when dashboard loads
         
         try {
             socketConnectionLink = io(window.location.origin, {
@@ -561,6 +628,7 @@
             socketConnectionLink.on('dashboard:refresh', () => { syncDashboardData(); });
 
             socketConnectionLink.on('notification', (payload) => {
+                loadNotifications(); // THE FIX: Refetch the list when a new live ping hits
                 Swal.fire({
                     icon: payload.type === 'error' ? 'error' : (payload.type === 'success' ? 'success' : 'info'),
                     title: payload.title, text: payload.message, background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d4af37'
