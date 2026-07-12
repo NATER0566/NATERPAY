@@ -524,23 +524,25 @@
 
     async function deployMediaSlideshowEngine() {
         try {
-            const res = await fetch('/api/cms/slides');
+            // FIX 1: Appended a timestamp cache-buster so new slides show immediately
+            const res = await fetch('/api/cms/slides?_t=' + new Date().getTime());
             const dataResult = await res.json();
             
-            // FIX: Gracefully handle both plain arrays AND nested objects
+            // FIX 2: Bulletproof extraction to prevent .forEach() crashes
             let slidesArray = [];
             if (Array.isArray(dataResult)) {
                 slidesArray = dataResult;
-            } else if (dataResult && typeof dataResult === 'object') {
-                slidesArray = dataResult.slides || dataResult.data || [];
+            } else if (dataResult) {
+                // Dig through potential backend wrappers safely
+                slidesArray = dataResult.slides || (Array.isArray(dataResult.data) ? dataResult.data : (dataResult.data?.slides || []));
             }
             
-            // FIX: Remove the strict requirement for 'dataResult.success'
-            if(slidesArray && slidesArray.length > 0) {
+            // Final safety check before executing the compiler
+            if(Array.isArray(slidesArray) && slidesArray.length > 0) {
                 applicationSlides = slidesArray;
                 compileSlideshowMarkup();
             } else {
-                console.warn("[NATER-PAY] No slides found in the database payload.");
+                console.warn("[NATER-PAY] No slides found in the database payload. Showing fallback.");
             }
         } catch (err) {
             console.error("[NATER-PAY] Slideshow streaming channel detached:", err);
