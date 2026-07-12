@@ -29,15 +29,29 @@ async function getHomepageData(request, reply) {
 
 /**
  * Get slides (public and admin)
+ * THE FIX: Ensure the array structure is perfectly flattened for the frontend.
  */
 async function getSlides(request, reply) {
   try {
-    const slides = await CMS.getActiveSlides();
+    const rawSlides = await CMS.getActiveSlides();
     
+    // Normalize the data. Mongoose sometimes returns nested objects depending on the Schema.
+    // We map it out strictly so index.html and admin.html can both read it perfectly.
+    const cleanSlides = (rawSlides || []).map(slide => ({
+      _id: slide._id,
+      title: slide.title,
+      caption: slide.caption || 'Welcome to the NATER-PAY ecosystem.',
+      mediaUrl: slide.mediaUrl || slide.imageUrl,
+      imageUrl: slide.mediaUrl || slide.imageUrl, // Send both keys to be safe
+      ctaText: slide.ctaText || 'EXPLORE NOW',
+      ctaLink: slide.ctaLink || slide.link || '#authTitle',
+      link: slide.ctaLink || slide.link || '#authTitle' // Send both keys to be safe
+    }));
+
     reply.send({
       success: true,
-      data: slides,
-      slides: slides // Sent as both so older and newer frontends can read it
+      data: cleanSlides,
+      slides: cleanSlides
     });
   } catch (error) {
     console.error('Get slides error:', error);
@@ -54,7 +68,6 @@ async function updateHomepage(request, reply) {
     
     await CMS.updateHomepage({ siteName, logoUrl, tagline, rates });
     
-    // Emit socket event for real-time update
     if (request.server.io) {
       request.server.io.emit('cms_update');
     }
@@ -71,7 +84,6 @@ async function updateHomepage(request, reply) {
  */
 async function addSlide(request, reply) {
   try {
-    // Map incoming Base64 JSON payload to the database's expected fields
     const title = request.body.title;
     const mediaUrl = request.body.imageUrl || request.body.mediaUrl;
     const ctaLink = request.body.link || request.body.ctaLink || '#';
@@ -87,13 +99,12 @@ async function addSlide(request, reply) {
       title,
       caption,
       mediaType,
-      mediaUrl,
+      mediaUrl, // Standardizing on mediaUrl for the database
       ctaText,
       ctaLink,
       order: request.body.order || 0
     });
     
-    // Emit socket event to instantly refresh the public homepage
     if (request.server.io) {
       request.server.io.emit('slides_refresh');
     }
@@ -112,7 +123,6 @@ async function updateSlide(request, reply) {
   try {
     const { id } = request.params;
     
-    // Allow partial updates (e.g., just updating the title from the admin panel)
     const updateData = {};
     if (request.body.title !== undefined) updateData.title = request.body.title;
     if (request.body.caption !== undefined) updateData.caption = request.body.caption;
@@ -125,7 +135,6 @@ async function updateSlide(request, reply) {
     
     await CMS.updateSlide(id, updateData);
     
-    // Emit socket event for real-time update
     if (request.server.io) {
       request.server.io.emit('slides_refresh');
     }
@@ -145,7 +154,6 @@ async function deleteSlide(request, reply) {
     const { id } = request.params;
     await CMS.deleteSlide(id);
     
-    // Emit socket event to remove it from the homepage instantly
     if (request.server.io) {
       request.server.io.emit('slides_refresh');
     }
