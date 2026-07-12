@@ -524,18 +524,26 @@
 
     async function deployMediaSlideshowEngine() {
         try {
-            // FIX APPLIED HERE: Changed from /api/slides to /api/cms/slides
             const res = await fetch('/api/cms/slides');
             const dataResult = await res.json();
             
-            const slidesArray = dataResult.slides || dataResult.data; 
+            // FIX: Gracefully handle both plain arrays AND nested objects
+            let slidesArray = [];
+            if (Array.isArray(dataResult)) {
+                slidesArray = dataResult;
+            } else if (dataResult && typeof dataResult === 'object') {
+                slidesArray = dataResult.slides || dataResult.data || [];
+            }
             
-            if(dataResult.success && slidesArray && slidesArray.length > 0) {
+            // FIX: Remove the strict requirement for 'dataResult.success'
+            if(slidesArray && slidesArray.length > 0) {
                 applicationSlides = slidesArray;
                 compileSlideshowMarkup();
+            } else {
+                console.warn("[NATER-PAY] No slides found in the database payload.");
             }
         } catch (err) {
-            console.warn("Slideshow streaming channel detached. Using local fallback frame template.");
+            console.error("[NATER-PAY] Slideshow streaming channel detached:", err);
         }
     }
 
@@ -550,14 +558,18 @@
             const viewportStateClass = pointer === 0 ? 'active' : '';
             const actionHyperlink = slide.link || slide.ctaLink || '#authTitle'; 
             const actionLabel = slide.ctaText || 'EXPLORE NOW';
-            const imgUrl = slide.imageUrl || slide.mediaUrl || '';
+            
+            // FIX: Added broader fallbacks for image URL property names (image, image_url, etc.)
+            const imgUrl = slide.imageUrl || slide.mediaUrl || slide.image || slide.image_url || slide.url || '';
+            const title = slide.title || slide.heading || 'PROMO';
+            const caption = slide.caption || slide.description || slide.text || '';
             
             frameBuffer += `
                 <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
-                    <img src="${imgUrl}" class="slide-media-layer" alt="${slide.title || 'Slide'}">
+                    <img src="${imgUrl}" class="slide-media-layer" alt="${title}">
                     <div class="slide-text-overlay">
-                        <h3>${slide.title || 'PROMO'}</h3>
-                        <p>${slide.caption || 'Welcome to the NATER-PAY ecosystem.'}</p>
+                        <h3>${title}</h3>
+                        <p>${caption}</p>
                         <a href="${actionHyperlink}" class="btn btn-sm btn-outline-warning px-3 rounded-pill fw-bold" style="font-size:0.75rem; letter-spacing:1px;">${actionLabel}</a>
                     </div>
                 </div>
