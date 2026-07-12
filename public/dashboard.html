@@ -28,7 +28,7 @@
             display: flex; justify-content: space-between; align-items: center; 
             z-index: 1000; backdrop-filter: blur(15px);
             box-shadow: 0 4px 30px rgba(0,0,0,0.8); 
-            gap: clamp(25px, 6vw, 50px);
+            gap: clamp(15px, 4vw, 50px);
             flex-wrap: nowrap;
         }
 
@@ -99,12 +99,34 @@
         .service-link.loading { border-color: #2eb82e; background: rgba(46, 184, 46, 0.1); transform: scale(0.95); box-shadow: inset 0 0 15px rgba(46, 184, 46, 0.2); }
         .service-link.loading i { color: #2eb82e; text-shadow: 0 0 15px rgba(46, 184, 46, 0.6); }
 
+        /* --- HIGH PRIORITY REFRACTIVE ANIMATION --- */
+        .high-priority-glow {
+            position: relative;
+            overflow: hidden;
+            border: 1.5px solid var(--gold) !important;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3) !important;
+        }
+        .high-priority-glow::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+            transform: skewX(-25deg);
+            animation: refractive-shine 3.5s infinite;
+            z-index: 1; pointer-events: none;
+        }
+        .high-priority-glow > * { position: relative; z-index: 2; }
+        @keyframes refractive-shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+
         @keyframes pulse-border {
             0%, 100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.15), inset 0 0 5px rgba(255, 215, 0, 0.1); border-color: rgba(255, 215, 0, 0.3); }
             50% { box-shadow: 0 0 35px rgba(255, 215, 0, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.15); border-color: #ffffff; }
         }
 
-        .transaction-box { background: var(--card-bg); border-radius: 25px; padding: 25px; border: 1px solid #333; margin-top: 50px; margin-bottom: 50px; overflow: hidden;}
+        .transaction-box { background: var(--card-bg); border-radius: 25px; padding: 25px; border: 1px solid #333; margin-top: 50px; margin-bottom: 50px; }
+        
+        /* FIXED HEIGHT FOR TRANSACTIONS */
+        #txBody { max-height: 380px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; }
+        #txBody::-webkit-scrollbar { width: 5px; }
+        #txBody::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
         
         .transaction-row {
             display: flex; justify-content: space-between; align-items: center; 
@@ -135,11 +157,23 @@
         
         footer { background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%; margin-top: 60px; position: relative; z-index: 5; }
         .footer-compliance-tag { color: #ffffff !important; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
+
+        /* OPAY-STYLE FLOATING NOTIFICATION CARD */
+        #opayNotifCard {
+            display: none; position: fixed; bottom: 30px; right: 20px; z-index: 9999; 
+            width: 340px; background: rgba(15, 15, 15, 0.98); border: 1.5px solid var(--gold); 
+            border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.9); 
+            backdrop-filter: blur(15px); animation: slideUpNotif 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes slideUpNotif { from { transform: translateY(150px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body>
 
 <canvas id="starCanvas"></canvas>
+
+<div id="opayNotifCard">
+    </div>
 
 <div class="offcanvas offcanvas-start custom-terminal-sidebar" tabindex="-1" id="terminalHubSidebar" aria-labelledby="terminalHubSidebarLabel">
     <div class="offcanvas-header border-bottom border-secondary border-opacity-25 py-4 px-4">
@@ -172,21 +206,12 @@
     </div>
     
     <div class="d-flex align-items-center gap-2 gap-sm-3 ms-auto">
-        <div class="dropdown">
-            <button class="btn btn-dark position-relative rounded-circle d-flex align-items-center justify-content-center" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="width: 42px; height: 42px; border: 1px solid rgba(212,175,55,0.4); background: rgba(0,0,0,0.8);">
-                <i class="fas fa-bell text-warning"></i>
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="unreadBadge" style="display: none; font-size: 0.6rem; transform: translate(-30%, -20%) !important;">
-                    0
-                </span>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" aria-labelledby="notificationDropdown" style="width: 300px; max-height: 400px; overflow-y: auto; border: 1px solid var(--gold);" id="notificationList">
-                <li><h6 class="dropdown-header text-gold fw-bold">Recent Announcements</h6></li>
-                <li><hr class="dropdown-divider"></li>
-                <div id="notificationItems">
-                    <li class="text-center p-3 opacity-50 small">Loading alerts...</li>
-                </div>
-            </ul>
-        </div>
+        <button class="btn btn-dark position-relative rounded-circle d-flex align-items-center justify-content-center" type="button" onclick="showNextNotification()" style="width: 42px; height: 42px; border: 1px solid rgba(212,175,55,0.4); background: rgba(0,0,0,0.8);">
+            <i class="fas fa-bell text-warning"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="unreadBadge" style="display: none; font-size: 0.6rem; transform: translate(-30%, -20%) !important;">
+                0
+            </span>
+        </button>
 
         <div class="gateway-btn-wrapper dropdown m-0">
             <button class="btn btn-warning text-dark rounded-pill fw-bold dropdown-toggle" type="button" id="gatewayMenuDropdownLinkBtn" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid var(--gold); box-shadow: 0 4px 15px rgba(255,215,0,0.4);">
@@ -246,7 +271,7 @@
                 <div id="walletBalance" class="amount-text">₦0.00</div>
             </div>
             <div class="col-md-6 d-flex flex-wrap gap-2">
-                <button class="btn btn-warning fw-bold py-3 rounded-pill flex-grow-1" onclick="location.href='fund.html'" style="box-shadow: 0 0 20px rgba(255,215,0,0.4);">
+                <button class="btn btn-warning fw-bold py-3 rounded-pill flex-grow-1 high-priority-glow" onclick="location.href='fund.html'">
                     <i class="fas fa-wallet me-1"></i> ADD FUND
                 </button>
                 <button class="btn btn-outline-warning fw-bold py-3 rounded-pill flex-grow-1" onclick="location.href='withdraw.html'">
@@ -267,7 +292,7 @@
     <h5 class="ecosystem-section-title"><i class="fas fa-plug"></i> Bills & Utilities</h5>
     <div class="row g-2" id="gridUtilities">
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="data.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-wifi"></i><span>Buy Data</span></a>
+            <a href="data.html" class="service-link high-priority-glow" onclick="triggerLoad(this)"><i class="fas fa-wifi"></i><span>Buy Data</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="airtime.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-phone"></i><span>Airtime</span></a>
@@ -286,7 +311,7 @@
     <h5 class="ecosystem-section-title"><i class="fas fa-store"></i> Merchant & Business</h5>
     <div class="row g-2" id="gridBusiness">
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="pos.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-cash-register"></i><span>POS Terminal</span></a>
+            <a href="pos.html" class="service-link high-priority-glow" onclick="triggerLoad(this)"><i class="fas fa-cash-register"></i><span>POS Terminal</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="bulksms.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-paper-plane"></i><span>Bulk SMS</span></a>
@@ -333,7 +358,7 @@
     <h5 class="ecosystem-section-title"><i class="fas fa-user-shield"></i> Security & Profile</h5>
     <div class="row g-2" id="gridSecurity">
         <div class="col-4 col-md-3 service-wrapper-node">
-            <a href="kyc.html" class="service-link border-warning" onclick="triggerLoad(this)"><i class="fas fa-id-badge text-warning"></i><span>Identity KYC</span></a>
+            <a href="kyc.html" class="service-link high-priority-glow" onclick="triggerLoad(this)"><i class="fas fa-id-badge text-warning"></i><span>Identity KYC</span></a>
         </div>
         <div class="col-4 col-md-3 service-wrapper-node">
             <a href="security.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-lock"></i><span>Vault Security</span></a>
@@ -367,6 +392,7 @@
 <script>
     let stars = [];
     let socketConnectionLink = null;
+    let unreadNotifications = [];
 
     function triggerLoad(element) {
         element.classList.add('loading');
@@ -397,7 +423,7 @@
         requestAnimationFrame(animate);
     }
 
-    // REAL-TIME NOTIFICATION FETCH ENGINE
+    // --- OPAY-STYLE NOTIFICATION ENGINE ---
     async function loadNotifications() {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
@@ -406,32 +432,17 @@
             const res = await fetch('/api/notifications', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
 
-            if (data.success) {
+            if (data.success && data.notifications) {
+                unreadNotifications = data.notifications.filter(n => !n.isRead);
                 const badge = document.getElementById('unreadBadge');
-                const list = document.getElementById('notificationItems');
                 
-                if (data.unreadCount > 0) {
+                if (unreadNotifications.length > 0) {
                     badge.style.display = 'block';
-                    badge.innerText = data.unreadCount;
+                    badge.innerText = unreadNotifications.length;
+                    showNextNotification(); // Automatically pop up the first unread
                 } else {
                     badge.style.display = 'none';
-                }
-
-                if (data.notifications && data.notifications.length > 0) {
-                    list.innerHTML = data.notifications.map(notif => `
-                        <li>
-                            <a class="dropdown-item px-3 py-2 ${notif.isRead ? 'opacity-75' : 'bg-dark'}" href="#" onclick="markRead('${notif._id}'); return false;" style="white-space: normal; border-bottom: 1px solid #333;">
-                                <div class="d-flex justify-content-between">
-                                    <strong class="text-warning" style="font-size: 0.85rem;">${notif.title}</strong>
-                                    ${!notif.isRead ? '<span class="badge bg-danger ms-2" style="font-size: 0.5rem;">NEW</span>' : ''}
-                                </div>
-                                <div class="small text-white mt-1" style="font-size: 0.75rem;">${notif.message}</div>
-                                <div class="text-muted mt-1" style="font-size: 0.65rem;">${new Date(notif.createdAt).toLocaleDateString()}</div>
-                            </a>
-                        </li>
-                    `).join('');
-                } else {
-                    list.innerHTML = '<li class="text-center p-3 opacity-50 small">No recent announcements.</li>';
+                    document.getElementById('opayNotifCard').style.display = 'none';
                 }
             }
         } catch (e) {
@@ -439,13 +450,59 @@
         }
     }
 
-    async function markRead(id) {
+    function showNextNotification() {
+        if (unreadNotifications.length === 0) {
+            document.getElementById('opayNotifCard').style.display = 'none';
+            return;
+        }
+
+        const notif = unreadNotifications[0];
+        const cardContainer = document.getElementById('opayNotifCard');
+        
+        cardContainer.innerHTML = `
+            <div style="padding: 18px;">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="text-gold fw-bold mb-0" style="font-size: 0.95rem; text-transform: uppercase;"><i class="fas fa-bullhorn me-2"></i>${notif.title}</h6>
+                    <button onclick="closeNotificationCard()" style="background:none; border:none; color:#888; font-size:1.2rem; padding:0; line-height:1; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'"><i class="fas fa-times-circle"></i></button>
+                </div>
+                <p class="text-white mb-3 mt-2" style="font-size: 0.85rem; line-height: 1.5; font-weight: 500;">${notif.message}</p>
+                <div class="d-flex justify-content-between align-items-center pt-2" style="border-top: 1px solid #333;">
+                    <small class="text-muted" style="font-size: 0.7rem;">${new Date(notif.createdAt).toLocaleDateString()}</small>
+                    <button class="btn btn-sm btn-warning fw-bold px-4 rounded-pill" onclick="markReadAndNext('${notif._id}')" style="font-size: 0.75rem; letter-spacing: 1px;">MARK READ</button>
+                </div>
+            </div>
+        `;
+        cardContainer.style.display = 'block';
+    }
+
+    function closeNotificationCard() {
+        document.getElementById('opayNotifCard').style.display = 'none';
+    }
+
+    async function markReadAndNext(id) {
         const authToken = localStorage.getItem("naterpay_token");
+        
+        // Hide card instantly so it feels fast
+        document.getElementById('opayNotifCard').style.display = 'none';
+
+        // Tell database
         await fetch(`/api/notifications/${id}/read`, { 
             method: 'PUT', headers: { 'Authorization': `Bearer ${authToken}` } 
         });
-        loadNotifications(); 
+
+        // Filter it out locally
+        unreadNotifications = unreadNotifications.filter(n => n._id !== id);
+        const badge = document.getElementById('unreadBadge');
+        
+        // Update badge or show next
+        if (unreadNotifications.length > 0) {
+            badge.innerText = unreadNotifications.length;
+            setTimeout(showNextNotification, 400); // Slight delay for smooth transition
+        } else {
+            badge.style.display = 'none';
+        }
     }
+    // --- END NOTIFICATION ENGINE ---
 
     async function checkPendingFunding() {
         const pendingRef = localStorage.getItem('pending_funding_ref');
@@ -643,10 +700,6 @@
 
             socketConnectionLink.on('notification', (payload) => {
                 loadNotifications();
-                Swal.fire({
-                    icon: payload.type === 'error' ? 'error' : (payload.type === 'success' ? 'success' : 'info'),
-                    title: payload.title, text: payload.message, background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d4af37'
-                });
             });
 
         } catch(err) { console.warn("Realtime WebSocket channel unavailable."); }
