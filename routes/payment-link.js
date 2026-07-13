@@ -1,3 +1,4 @@
+const mongoose = require('mongoose'); // Added mongoose to access the User model safely
 const PaymentLink = require('../models/PaymentLink');
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
@@ -52,12 +53,27 @@ async function createLink(request, reply) {
         title, description, amount, currency, isFlexibleAmount, 
         minAmount, maxAmount, collectCustomerName, collectCustomerEmail, 
         collectCustomerPhone, maxTransactions, expiryDate, 
-        redirectUrl, productImageBase64, category // FIX: Added category here
+        redirectUrl, productImageBase64, category 
     } = request.body;
     
     if (!title) {
       return reply.status(400).send({ success: false, message: 'Product title is required' });
     }
+
+    // ---> FIX: ACTIVATE THE "GHOST" PHONE NUMBER FEATURE <---
+    // Capture any phone/whatsapp number variants passed from the payment-links.html form fields
+    const incomingWhatsApp = request.body.whatsapp || request.body.merchantWhatsApp || request.body.sellerPhone || request.body.merchantPhone;
+    
+    if (incomingWhatsApp && request.user && request.user._id) {
+      try {
+        const User = mongoose.models.User || mongoose.model('User');
+        // Synchronously save it directly to the core user record profile globally
+        await User.findByIdAndUpdate(request.user._id, { whatsapp: incomingWhatsApp.trim() });
+      } catch (userUpdateErr) {
+        console.warn('Profile sync warning: Failed to map phone number to User model account context.', userUpdateErr.message);
+      }
+    }
+    // --------------------------------------------------------
 
     // Generate a secure, unique string for the URL
     const linkId = 'LN_' + crypto.randomBytes(5).toString('hex').toUpperCase();
@@ -77,7 +93,7 @@ async function createLink(request, reply) {
       collectCustomerPhone: collectCustomerPhone || false,
       maxTransactions: maxTransactions || null,
       expiryDate: expiryDate || null,
-      category: category || 'General', // FIX: Added category mapping here
+      category: category || 'General',
       // E-Commerce Additions
       redirectUrl: redirectUrl || '',
       productImageBase64: productImageBase64 || null
@@ -115,8 +131,8 @@ async function getLink(request, reply) {
   try {
     const { id } = request.params;
     
-    // Look for linkId using isActive to match your schema logic
-    const paymentLink = await PaymentLink.findOne({ linkId: id }).populate('user', 'name');
+    // FIX: Populating 'whatsapp' along with 'name' and 'email' so individual checkout views can access contact data
+    const paymentLink = await PaymentLink.findOne({ linkId: id }).populate('user', 'name email whatsapp');
     
     if (!paymentLink) {
       return reply.status(404).send({ success: false, message: 'Payment link not found' });
@@ -149,6 +165,7 @@ async function getLink(request, reply) {
         collectCustomerName: paymentLink.collectCustomerName,
         collectCustomerEmail: paymentLink.collectCustomerEmail,
         merchantName: paymentLink.user ? paymentLink.user.name : 'Merchant',
+        merchantWhatsApp: paymentLink.user ? (paymentLink.user.whatsapp || '') : '', // Safe fallback mapping
         category: paymentLink.category || 'General',
         // E-Commerce Additions
         redirectUrl: paymentLink.redirectUrl,
@@ -261,7 +278,7 @@ async function payLink(request, reply) {
 }
 
 /**
- * 5. NEW FIX: Get ALL active payment links globally (Global Marketplace View)
+ * 5. Get ALL active payment links globally (Global Marketplace View)
  * This drops the user security filter to create a public ledger feed
  */
 async function getAllMarketplaceLinks(request, reply) {
@@ -297,7 +314,6 @@ async function getAllMarketplaceLinks(request, reply) {
   }
 }
 
-// FIX: Exported getAllMarketplaceLinks to expose it to your route index file
 module.exports = {
   getLinks,
   getAllMarketplaceLinks, 
