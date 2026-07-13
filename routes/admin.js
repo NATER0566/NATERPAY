@@ -4,6 +4,7 @@ const Wallet = require('../models/Wallet');
 const KYC = require('../models/KYC');
 const SupportTicket = require('../models/SupportTicket');
 const Notification = require('../models/Notification');
+const PaymentLink = require('../models/PaymentLink'); // Added to manage the marketplace listings
 const { generateTransactionReference } = require('../utils/auth');
 const axios = require('axios'); 
 
@@ -88,9 +89,6 @@ async function getAnalytics(request, reply) {
 // REAL WITHDRAWAL MANAGEMENT 
 // ============================================================================
 
-/** 
- * Fetch all pending withdrawals with real user and bank data 
- */
 async function getPendingWithdrawals(request, reply) {
     try {
         const pendingWithdrawals = await Transaction.find({ type: 'withdrawal', status: 'pending' })
@@ -104,9 +102,6 @@ async function getPendingWithdrawals(request, reply) {
     }
 }
 
-/** 
- * Process a real withdrawal (Approve or Reject)
- */
 async function processWithdrawal(request, reply) {
     try {
         const { id, action } = request.params; 
@@ -117,7 +112,6 @@ async function processWithdrawal(request, reply) {
         }
 
         if (action === 'approve') {
-            // Money was already deducted on request. Marking as success means you paid them.
             transaction.status = 'success';
             await transaction.save();
 
@@ -129,7 +123,6 @@ async function processWithdrawal(request, reply) {
             return reply.send({ success: true, message: 'Withdrawal approved and marked as success.' });
 
         } else if (action === 'reject') {
-            // Refund the money back to the user since you are not paying them
             const wallet = await Wallet.findOne({ user: transaction.user._id });
             if (!wallet) return reply.status(404).send({ success: false, message: 'User wallet not found for refund.' });
 
@@ -183,9 +176,6 @@ async function getPendingKYC(request, reply) {
     }
 }
 
-/** 
- * Ping Paystack API to fetch REAL details of the provided BVN
- */
 async function verifyRealWorldKYC(request, reply) {
     try {
         const { kycId } = request.params;
@@ -194,7 +184,6 @@ async function verifyRealWorldKYC(request, reply) {
         if (!kycRecord) return reply.status(404).send({ success: false, message: 'KYC record not found' });
         if (!kycRecord.bvn) return reply.status(400).send({ success: false, message: 'No BVN provided by user to verify.' });
 
-        // Ping Paystack's Real BVN Resolution API using your environment variable
         const paystackResponse = await axios.get(`https://api.paystack.co/bank/resolve_bvn/${kycRecord.bvn}`, {
             headers: { 
                 Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` 
@@ -203,7 +192,6 @@ async function verifyRealWorldKYC(request, reply) {
 
         const paystackData = paystackResponse.data.data;
 
-        // Return Paystack's data back to your React/Frontend admin dashboard
         reply.send({ 
             success: true, 
             message: 'Paystack verification complete',
@@ -218,8 +206,6 @@ async function verifyRealWorldKYC(request, reply) {
 
     } catch (error) {
         console.error('Paystack API Error:', error.response?.data || error.message);
-        
-        // Handle Paystack's specific error messages gracefully
         const errorMessage = error.response?.data?.message || 'Failed to communicate with Paystack API.';
         reply.status(400).send({ success: false, message: errorMessage });
     }
@@ -236,7 +222,7 @@ async function approveKYC(request, reply) {
 
         const user = await User.findById(kyc.user);
         if (user) {
-            user.kycLevel = 2; // Elevate user's privileges 
+            user.kycLevel = 2; 
             await user.save();
             if (request.server && request.server.io) {
                 request.server.io.to(`user:${user._id}`).emit('notification', { title: 'KYC Approved', message: 'Your account is now fully verified!' });
@@ -268,6 +254,51 @@ async function rejectKYC(request, reply) {
         reply.send({ success: true, message: 'KYC rejected' });
     } catch (error) {
         reply.status(500).send({ success: false, message: 'Server error during KYC rejection' });
+    }
+}
+
+// ============================================================================
+// MARKETPLACE MODERATION ENGINES (FIXED & ADDED)
+// ============================================================================
+
+async function updateProduct(request, reply) {
+    try {
+        const { id } = request.params;
+        const { title, amount, category, description } = request.body;
+
+        const product = await PaymentLink.findById(id);
+        if (!product) {
+            return reply.status(404).send({ success: false, message: 'Product item not found' });
+        }
+
+        if (title) product.title = title;
+        if (category) product.category = category;
+        if (description) product.description = description;
+        if (amount !== undefined && !product.isFlexibleAmount) {
+            product.amount = String(amount);
+        }
+
+        await product.save();
+        reply.send({ success: true, message: 'Product listing modified successfully', product });
+    } catch (error) {
+        console.error('Admin update product listing error:', error);
+        reply.status(500).send({ success: false, message: 'Failed to update marketplace item' });
+    }
+}
+
+async function deleteProduct(request, reply) {
+    try {
+        const { id } = request.params;
+        const product = await PaymentLink.findByIdAndDelete(id);
+        
+        if (!product) {
+            return reply.status(404).send({ success: false, message: 'Listing already purged or not found' });
+        }
+
+        reply.send({ success: true, message: 'Product completely purged from global ledger' });
+    } catch (error) {
+        console.error('Admin delete product execution error:', error);
+        reply.status(500).send({ success: false, message: 'Failed to delete product from ledger' });
     }
 }
 
@@ -383,5 +414,6 @@ module.exports = {
   getSupportTickets, assignTicket, resolveTicket,
   updateUserBalance, verifyTransaction, sendPushNotification,
   getPendingWithdrawals, processWithdrawal, 
-  getPendingKYC, verifyRealWorldKYC, approveKYC, rejectKYC
+  getPendingKYC, verifyRealWorldKYC, approveKYC, rejectKYC,
+  updateProduct, deleteProduct
 };
