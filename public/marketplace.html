@@ -212,8 +212,8 @@
     // Fetch Live Products (Real-Time Function)
     async function fetchLiveProducts() {
         try {
-            // FIX: Retrieve token from localStorage to satisfy backend auth requirement
-            const token = localStorage.getItem('token'); 
+            // FIX: Using correct key matching the login system 'naterpay_token'
+            const token = localStorage.getItem('naterpay_token'); 
             const headers = { 'Content-Type': 'application/json' };
             
             if (token) {
