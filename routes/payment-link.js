@@ -52,7 +52,7 @@ async function createLink(request, reply) {
         title, description, amount, currency, isFlexibleAmount, 
         minAmount, maxAmount, collectCustomerName, collectCustomerEmail, 
         collectCustomerPhone, maxTransactions, expiryDate, 
-        redirectUrl, productImageBase64, category // 👈 Added category here
+        redirectUrl, productImageBase64, category // FIX: Added category here
     } = request.body;
     
     if (!title) {
@@ -77,7 +77,7 @@ async function createLink(request, reply) {
       collectCustomerPhone: collectCustomerPhone || false,
       maxTransactions: maxTransactions || null,
       expiryDate: expiryDate || null,
-      category: category || 'General', // 👈 Added category mapping here
+      category: category || 'General', // FIX: Added category mapping here
       // E-Commerce Additions
       redirectUrl: redirectUrl || '',
       productImageBase64: productImageBase64 || null
@@ -261,7 +261,7 @@ async function payLink(request, reply) {
 }
 
 /**
- * 5. Get ALL active payment links globally (Global Marketplace View)
+ * 5. NEW FIX: Get ALL active payment links globally (Global Marketplace View)
  * This drops the user security filter to create a public ledger feed
  */
 async function getAllMarketplaceLinks(request, reply) {
@@ -297,9 +297,10 @@ async function getAllMarketplaceLinks(request, reply) {
   }
 }
 
+// FIX: Exported getAllMarketplaceLinks to expose it to your route index file
 module.exports = {
   getLinks,
-  getAllMarketplaceLinks, // 👈 Exported to expose it to your route index file
+  getAllMarketplaceLinks, 
   createLink,
   getLink,
   payLink
