@@ -126,6 +126,9 @@ async function registerRoutes() {
   // Using :id instead of :linkId to perfectly match the backend controller math
   fastify.get('/api/payment-links/:id', paymentLinkRoutes.getLink);
   fastify.post('/api/payment-links/:id/pay', paymentLinkRoutes.payLink);
+  
+  // NEW: Global Marketplace route (No auth required so buyers can browse)
+  fastify.get('/api/marketplace/all', paymentLinkRoutes.getAllMarketplaceLinks);
   // ==================================================
   
   const invoiceRoutes = require('./routes/invoice');
