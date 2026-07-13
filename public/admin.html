@@ -16,7 +16,6 @@
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
         
-        /* Fixed Header styling for mobile responsiveness */
         header { 
             position: sticky; top: 0; width: 100%; padding: 12px 20px; 
             background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold); 
@@ -43,7 +42,6 @@
         
         .status-pill { padding: 5px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; display: inline-block; white-space: nowrap; }
         
-        /* Tab Navigation Responsiveness */
         .tab-nav { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; justify-content: flex-start; }
         .admin-tab { 
             background: rgba(30,30,30,0.95); border: 1px solid #555; color: #ffffff; 
@@ -62,11 +60,9 @@
         .kyc-doc-img { max-width: 100px; border-radius: 8px; border: 2px solid #444; cursor: pointer; transition: 0.3s; object-fit: cover; aspect-ratio: 4/3; }
         .kyc-doc-img:hover { border-color: var(--gold); transform: scale(1.05); }
 
-        /* Action Buttons alignment */
         .action-btns { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
         .action-btns .btn { flex: 1 1 auto; padding: 6px 10px; font-size: 0.8rem; }
         
-        /* Marketplace Specific */
         .product-img-thumb { width: 45px; height: 45px; border-radius: 8px; object-fit: cover; border: 1px solid #444; background: #000; display: flex; align-items: center; justify-content: center;}
 
         @media (max-width: 768px) {
@@ -245,7 +241,6 @@
 </div>
 
 <script>
-    // --- UI INITS ---
     function initStars() { 
         const c = document.getElementById('starCanvas'); 
         c.width = window.innerWidth; 
@@ -280,16 +275,13 @@
         if(t==='marketplace') fetchMarketplace();
     }
 
-    // Secure Data Parser for Mongoose Decimal128
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
 
-    // --- MASTER DATA LOAD ---
     async function loadAdminEcosystem() {
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
 
         try {
-            // Stats
             const statRes = await fetch('/api/admin/analytics', { headers: { 'Authorization': `Bearer ${token}` } });
             const stats = await statRes.json();
             if(stats.success) {
@@ -298,7 +290,6 @@
                 document.getElementById('statVault').innerText = '₦' + parseNum(stats.summary?.totalVaultBalance).toLocaleString();
             }
 
-            // Ledger
             const userRes = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
             const usersData = await userRes.json();
             document.getElementById('usersTable').innerHTML = usersData.users.map(u => `
@@ -319,7 +310,6 @@
                 </tr>
             `).join('');
 
-            // Transactions
             const txRes = await fetch('/api/admin/transactions', { headers: { 'Authorization': `Bearer ${token}` } });
             const txData = await txRes.json();
             
@@ -363,10 +353,8 @@
         } catch (e) { console.error("Admin load error", e); }
     }
 
-    // --- MARKETPLACE MODERATION LOGIC ---
     async function fetchMarketplace() {
         try {
-            // Using standard payment-links endpoint (the marketplace fetches from this too)
             const res = await fetch('/api/payment-links', { 
                 headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } 
             });
@@ -383,7 +371,6 @@
             tbody.innerHTML = products.map(p => {
                 const priceDisplay = p.isFlexibleAmount ? 'Flexible' : `₦${Number(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
                 
-                // Build Image Thumb
                 let imgHtml = '';
                 if(p.productImageBase64) {
                     imgHtml = `<img src="${p.productImageBase64}" class="product-img-thumb me-3">`;
@@ -392,8 +379,6 @@
                 }
 
                 const txCount = p.transactionCount || 0;
-                
-                // Safe JSON serialization for Edit button
                 const encodedProduct = encodeURIComponent(JSON.stringify(p));
 
                 return `
@@ -463,7 +448,6 @@
         if (formValues) {
             Swal.fire({title:'Saving Modifications...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try {
-                // Ensure your backend has this route set up: PUT /api/admin/products/:id
                 const res = await fetch(`/api/admin/products/${productId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
@@ -471,8 +455,8 @@
                 });
                 
                 const data = await res.json();
-                if(data.success !== false) {
-                    Swal.fire({title: 'Updated!', text: 'Product details saved.', icon: 'success', background: '#0a0a0a', color: '#fff'});
+                if(data.success === true) {
+                    await Swal.fire({title: 'Updated!', text: 'Product details saved.', icon: 'success', background: '#0a0a0a', color: '#fff'});
                     fetchMarketplace();
                 } else {
                     Swal.fire('Failed', data.message || 'Could not update product.', 'error');
@@ -493,15 +477,14 @@
             
             Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try {
-                // Ensure your backend has this route set up: DELETE /api/admin/products/:id
                 const res = await fetch(`/api/admin/products/${productId}`, { 
                     method: 'DELETE', 
                     headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } 
                 });
                 const data = await res.json();
                 
-                if(data.success !== false) { 
-                    Swal.fire({title: 'Deleted!', text: 'Product successfully removed from ledger.', icon: 'success', background: '#0a0a0a', color: '#fff'}); 
+                if(data.success === true) { 
+                    await Swal.fire({title: 'Deleted!', text: 'Product successfully removed from ledger.', icon: 'success', background: '#0a0a0a', color: '#fff'}); 
                     fetchMarketplace(); 
                 } else {
                     Swal.fire('Action Failed', data.message || 'Database refused deletion.', 'error');
@@ -512,8 +495,6 @@
         }
     }
 
-
-    // --- BULLETPROOF LEDGER MODIFICATION ---
     async function modifyLedger(id, name, type) {
         const { value: vals } = await Swal.fire({
             title: type.toUpperCase() + ' WALLET', text: `Target: ${name}`,
@@ -534,7 +515,6 @@
                     body: JSON.stringify({ action: type, amount: Number(vals[0]), reason: vals[1] || 'Manual Adjustment' })
                 });
                 
-                // Bulletproof JSON parsing logic to prevent frontend crash on weird backend responses
                 const textResponse = await res.text();
                 let data;
                 try { data = JSON.parse(textResponse); } catch(e) { data = { success: false, message: "Backend crash after execution." }; }
@@ -554,7 +534,6 @@
         }
     }
 
-    // --- REAL WITHDRAWALS ENGINE ---
     async function fetchWithdrawals() {
         try {
             const res = await fetch('/api/admin/withdrawals/pending', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
@@ -564,7 +543,6 @@
             const wTable = document.getElementById('withdrawalsTable');
             const stat = document.getElementById('statWithdrawals');
 
-            // Using data.pendingWithdrawals from the new backend
             const withdrawals = data.pendingWithdrawals || [];
 
             if(data.success && withdrawals.length > 0) {
@@ -576,7 +554,6 @@
                     const date = new Date(w.createdAt || w.date).toLocaleString();
                     const amt = parseNum(w.amount);
                     
-                    // Fallback logic to safely pull bank data regardless of how the database saves it
                     const bankName = w.bankName || w.metadata?.bankName || w.metadata?.bankAccount?.bankName || 'N/A';
                     const accNo = w.accountNumber || w.metadata?.accountNumber || w.metadata?.bankAccount?.accountNumber || 'N/A';
                     const accName = w.accountName || w.metadata?.accountName || w.metadata?.bankAccount?.accountName || 'N/A';
@@ -631,7 +608,6 @@
         }
     }
 
-    // --- REAL KYC APPROVAL ENGINE (PAYSTACK INTEGRATION) ---
     async function fetchKYC() {
         try {
             const res = await fetch('/api/admin/kyc/pending', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
@@ -640,7 +616,6 @@
             const badge = document.getElementById('kycBadge');
             const kycTable = document.getElementById('kycTable');
 
-            // Fixed Mismatch: Using data.kycRequests to match the new backend
             const pendingList = data.kycRequests || data.pendingKYC || [];
 
             if(data.success && pendingList.length > 0) {
@@ -678,7 +653,6 @@
         } catch(e) { console.error("KYC load error", e); }
     }
 
-    // New Function to Ping your Paystack Backend Route
     async function verifyPaystackBVN(kycId) {
         Swal.fire({title: 'Connecting to Paystack...', text: 'Resolving BVN details...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
         try {
@@ -688,7 +662,6 @@
             const data = await res.json();
             
             if(data.success) {
-                // Show Paystack Data side-by-side with User Data
                 Swal.fire({
                     title: 'Paystack BVN Match',
                     html: `
@@ -722,7 +695,6 @@
         }
     }
 
-    // --- NOTIFICATIONS ---
     async function fetchNotifications() {
         try {
             const res = await fetch('/api/admin/notifications', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
