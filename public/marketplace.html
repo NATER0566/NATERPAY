@@ -122,6 +122,7 @@
             background-size: cover; 
             background-position: center; background-repeat: no-repeat;
             border-bottom: 2px solid #222; position: relative;
+            cursor: zoom-in; /* Let buyer know they can click to view */
         }
         
         .store-icon-fallback { 
@@ -153,7 +154,6 @@
         .creator-info-box i { width: 15px; text-align: center; }
         .creator-name i { color: var(--gold); }
         .creator-email i { color: #888; }
-        .creator-whatsapp i { color: var(--green); font-size: 1rem;}
         
         .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; margin-bottom: 12px; color: #fff; line-height: 1.3; }
         
@@ -194,6 +194,9 @@
         .btn-buy:hover { background: var(--gold); color: #000; border-color: var(--gold); box-shadow: 0 10px 25px var(--gold-glow); }
 
         .loader-container { grid-column: 1 / -1; text-align: center; padding: 80px 0; border: 2px dashed #333; border-radius: 20px; background: #0a0a0a;}
+        
+        /* Remove transparent background on modal to prevent bleeding */
+        .modal-content { background: #111; border: 1px solid var(--gold); }
     </style>
 </head>
 <body>
@@ -239,6 +242,23 @@
     </div>
 </div>
 
+<!-- IMAGE VIEWER MODAL (Allows buyers to see full images) -->
+<div class="modal fade" id="imageViewerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header border-bottom-0 pb-0">
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center pt-0 pb-4">
+        <img id="fullSizeImage" src="" alt="Full Product Image" class="img-fluid rounded" style="max-height: 80vh; object-fit: contain; width: 100%;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS needed for the Modal to work -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
     let globalMarketData = [];
 
@@ -257,15 +277,17 @@
         animate();
     }
 
+    // Function to open the Image Modal
+    function viewFullImage(base64String) {
+        document.getElementById('fullSizeImage').src = base64String;
+        const modal = new bootstrap.Modal(document.getElementById('imageViewerModal'));
+        modal.show();
+    }
+
     // Fetch All Global Products
     async function fetchLiveProducts() {
         try {
-            // NOTE: We do NOT send the Authorization Bearer token here anymore. 
-            // Sending it makes the backend think you only want your own products.
-            // Ensure your backend endpoint "/api/marketplace/all" is public!
             const headers = { 'Content-Type': 'application/json' };
-
-            // Change this endpoint to whatever your backend uses to fetch ALL products globally
             const res = await fetch('/api/marketplace/all', {
                 method: 'GET',
                 headers: headers
@@ -308,21 +330,17 @@
                 ? 'Flexible' 
                 : `₦${Number(product.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
             
-            // Extract Data, providing fallbacks if missing from DB
             const categoryDisplay = product.category || 'General';
             const merchantName = product.merchantName || product.creatorName || 'Verified Merchant';
-            
-            // FIXED: Scan deep within nested database payloads (merchantSupport object)
             const email = product.email || product.creatorEmail || (product.merchantSupport && product.merchantSupport.email) || 'Not Provided';
-            const whatsapp = product.whatsapp || product.creatorWhatsapp || (product.merchantSupport && product.merchantSupport.phone) || 'Not Provided';
-            
             const shortDesc = product.description || 'Secure NATERPAY Checkout';
             const salesCount = product.transactionCount || 0;
             
             let mediaHeaderHTML = '';
             if (product.productImageBase64) {
+                // ADDED ONCLICK EVENT TO VIEW FULL IMAGE
                 mediaHeaderHTML = `
-                    <div class="product-image-header" style="background-image: url('${product.productImageBase64}');">
+                    <div class="product-image-header" onclick="viewFullImage('${product.productImageBase64}')" style="background-image: url('${product.productImageBase64}');">
                         <div class="badge-category"><i class="fas fa-tag"></i> ${categoryDisplay}</div>
                         <div class="badge-verified"><i class="fas fa-shield-check"></i> VERIFIED</div>
                     </div>`;
@@ -346,7 +364,7 @@
                     <div class="creator-info-box">
                         <div class="creator-name" title="Creator Name"><i class="fas fa-user-circle"></i> ${merchantName}</div>
                         <div class="creator-email" title="Creator Email"><i class="fas fa-envelope"></i> ${email}</div>
-                        <div class="creator-whatsapp" title="Creator WhatsApp"><i class="fab fa-whatsapp"></i> ${whatsapp}</div>
+                        <!-- Removed WhatsApp field here -->
                     </div>
 
                     <div class="product-desc">${shortDesc}</div>
@@ -400,13 +418,10 @@
     window.onload = () => { 
         initStars(); 
         fetchLiveProducts(); 
-        
-        // Auto-refresh market data every 10 seconds
         setInterval(fetchLiveProducts, 10000); 
     };
     
     window.onresize = initStars;
 </script>
-
 </body>
 </html>
