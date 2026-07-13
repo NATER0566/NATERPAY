@@ -60,7 +60,7 @@
 
         /* HERO & SEARCH */
         .marketplace-hero {
-            padding: 50px 5% 30px;
+            padding: 50px 5% 40px;
             text-align: center;
             width: 100%;
             max-width: 900px;
@@ -81,20 +81,23 @@
             font-size: 1.1rem; font-weight: 700; outline: none; font-family: 'Montserrat', sans-serif;
         }
 
-        /* CATEGORIES - HORIZONTAL SCROLL FIXED */
-        .category-wrapper { width: 100%; padding: 0 5%; margin-bottom: 30px; }
-        .category-scroll {
-            display: flex; gap: 12px; overflow-x: auto; padding-bottom: 15px;
-            scrollbar-width: none; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+        /* TRUST BANNER - REPLACING CATEGORIES */
+        .feature-banner-wrapper { width: 100%; padding: 0 5%; margin-bottom: 40px; }
+        .feature-banner {
+            display: flex; justify-content: center; gap: 30px; flex-wrap: wrap;
+            background: rgba(10, 10, 10, 0.6); border: 1px solid #333; border-radius: 15px;
+            padding: 25px; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        .category-scroll::-webkit-scrollbar { display: none; }
-        .cat-pill {
-            background: #111; border: 2px solid #333; color: #aaa;
-            padding: 12px 25px; border-radius: 50px; font-weight: 800; font-size: 0.9rem;
-            white-space: nowrap; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px;
+        .feature-item {
+            display: flex; align-items: center; gap: 10px; color: #fff;
+            font-weight: 800; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px;
         }
-        .cat-pill:hover { border-color: #666; color: #fff; }
-        .cat-pill.active { background: var(--gold); color: #000; border-color: var(--gold); box-shadow: 0 5px 15px var(--gold-glow); }
+        .feature-item i { color: var(--gold); font-size: 1.4rem; text-shadow: 0 0 10px var(--gold-glow); }
+
+        @media (max-width: 768px) {
+            .feature-banner { gap: 15px; padding: 15px; }
+            .feature-item { font-size: 0.75rem; width: 45%; justify-content: center; }
+        }
 
         /* PRODUCT GRID - FULL SCREEN WIDTH */
         .main-content { flex: 1; padding: 0 5%; width: 100%; margin: 0 auto 60px; }
@@ -185,18 +188,17 @@
     
     <div class="search-container">
         <i class="fas fa-search"></i>
-        <input type="text" id="searchInput" placeholder="Search products, categories, or descriptions..." oninput="filterProducts()">
+        <input type="text" id="searchInput" placeholder="Search products or descriptions..." oninput="filterProducts()">
     </div>
 </div>
 
-<div class="category-wrapper">
-    <div class="category-scroll" id="categoryContainer">
-        <div class="cat-pill active" onclick="filterCategory('All', this)"><i class="fas fa-border-all"></i> All Products</div>
-        <div class="cat-pill" onclick="filterCategory('Digital Products', this)"><i class="fas fa-cloud-download-alt"></i> Digital Products</div>
-        <div class="cat-pill" onclick="filterCategory('Physical Goods', this)"><i class="fas fa-box"></i> Physical Goods</div>
-        <div class="cat-pill" onclick="filterCategory('Software & Apps', this)"><i class="fas fa-laptop-code"></i> Software & Apps</div>
-        <div class="cat-pill" onclick="filterCategory('Professional Services', this)"><i class="fas fa-handshake"></i> Professional Services</div>
-        <div class="cat-pill" onclick="filterCategory('Event Tickets', this)"><i class="fas fa-ticket-alt"></i> Event Tickets</div>
+<!-- BEAUTIFUL NEW BANNER TO REPLACE CATEGORIES -->
+<div class="feature-banner-wrapper">
+    <div class="feature-banner">
+        <div class="feature-item"><i class="fas fa-shield-check"></i> Secure Escrow</div>
+        <div class="feature-item"><i class="fas fa-bolt"></i> Instant Access</div>
+        <div class="feature-item"><i class="fas fa-user-check"></i> Verified Sellers</div>
+        <div class="feature-item"><i class="fas fa-globe"></i> Global Ledger</div>
     </div>
 </div>
 
@@ -212,7 +214,6 @@
 
 <script>
     let globalMarketData = [];
-    let currentCategory = 'All';
 
     // Canvas Background
     function initStars() {
@@ -276,7 +277,7 @@
         grid.innerHTML = '';
 
         if (products.length === 0) {
-            showEmptyState("No products match your search or category.");
+            showEmptyState("No products match your search.");
             return;
         }
 
@@ -285,6 +286,7 @@
                 ? 'Flexible' 
                 : `₦${Number(product.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
             
+            // We still show the category badge visually, we just don't use it for filtering
             const categoryDisplay = product.category || 'Product';
             
             let mediaHeaderHTML = '';
@@ -340,7 +342,7 @@
             <div class="loader-container">
                 <i class="fas fa-search-minus fa-4x mb-4 text-secondary"></i>
                 <h4 class="text-white fw-bold fs-3 mb-2" style="font-family:'Cinzel';">${message}</h4>
-                <p class="text-secondary fw-bold">Try adjusting your filters or search terms.</p>
+                <p class="text-secondary fw-bold">Try adjusting your search terms.</p>
             </div>
         `;
     }
@@ -352,38 +354,13 @@
             const titleStr = (product.title || "").toLowerCase();
             const descStr = (product.description || "").toLowerCase();
             
-            // Fix HTML encoding like &amp; just in case
-            const rawCat = (product.category || "").replace(/&amp;/g, '&');
-            const catStr = rawCat.toLowerCase();
-
-            // Match query in title, description, OR category
-            const matchesSearch = query === "" || 
-                                  titleStr.includes(query) || 
-                                  descStr.includes(query) || 
-                                  catStr.includes(query);
-            
-            // BULLETPROOF NORMALIZATION: 
-            // Removes all spaces and non-alphabet characters to ensure perfect matching
-            // Example: "Software & Apps" becomes "softwareandapps"
-            const normalize = (str) => str.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]/g, '');
-            
-            const matchesCategory = currentCategory === 'All' || 
-                                    normalize(rawCat) === normalize(currentCategory);
-            
-            return matchesSearch && matchesCategory;
+            // Clean, simple match based ONLY on the search bar
+            return query === "" || 
+                   titleStr.includes(query) || 
+                   descStr.includes(query);
         });
 
         renderGrid(filtered);
-    }
-
-    function filterCategory(category, element) {
-        // Update active class visually
-        document.querySelectorAll('.cat-pill').forEach(pill => pill.classList.remove('active'));
-        if(element) element.classList.add('active');
-        
-        // Update state and filter
-        currentCategory = category;
-        filterProducts();
     }
 
     window.onload = () => { 
