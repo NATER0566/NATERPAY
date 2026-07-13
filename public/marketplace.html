@@ -116,7 +116,7 @@
 
         .product-image-header {
             width: 100%; height: 200px; background-color: #050505;
-            background-size: contain; /* FIX: Changed from cover to contain to fit entire image */
+            background-size: contain; 
             background-position: center; background-repeat: no-repeat;
             border-bottom: 2px solid #222; position: relative;
         }
@@ -229,7 +229,7 @@
         animate();
     }
 
-    // Fetch Live Products (Real-Time Function)
+    // Fetch Live Products
     async function fetchLiveProducts() {
         try {
             const token = localStorage.getItem('naterpay_token'); 
@@ -251,7 +251,6 @@
             if(!res.ok) throw new Error("Could not connect to live ledger.");
 
             const data = await res.json();
-            
             const newMarketData = data.links ? data.links : (Array.isArray(data) ? data : []);
 
             if (newMarketData.length > 0) {
@@ -350,19 +349,26 @@
         const query = document.getElementById('searchInput').value.toLowerCase().trim();
         
         const filtered = globalMarketData.filter(product => {
-            // Safely handle text conversions to avoid undefined errors
             const titleStr = (product.title || "").toLowerCase();
             const descStr = (product.description || "").toLowerCase();
-            const catStr = (product.category || "").toLowerCase();
+            
+            // Fix HTML encoding like &amp; just in case
+            const rawCat = (product.category || "").replace(/&amp;/g, '&');
+            const catStr = rawCat.toLowerCase();
 
             // Match query in title, description, OR category
-            const matchesSearch = titleStr.includes(query) || 
+            const matchesSearch = query === "" || 
+                                  titleStr.includes(query) || 
                                   descStr.includes(query) || 
                                   catStr.includes(query);
             
-            // FIX: Robust exact category check (case-insensitive and trimmed spaces)
+            // BULLETPROOF NORMALIZATION: 
+            // Removes all spaces and non-alphabet characters to ensure perfect matching
+            // Example: "Software & Apps" becomes "softwareandapps"
+            const normalize = (str) => str.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]/g, '');
+            
             const matchesCategory = currentCategory === 'All' || 
-                                    catStr.trim() === currentCategory.toLowerCase().trim();
+                                    normalize(rawCat) === normalize(currentCategory);
             
             return matchesSearch && matchesCategory;
         });
