@@ -116,7 +116,8 @@
 
         .product-image-header {
             width: 100%; height: 200px; background-color: #050505;
-            background-size: cover; background-position: center; background-repeat: no-repeat;
+            background-size: contain; /* FIX: Changed from cover to contain to fit entire image */
+            background-position: center; background-repeat: no-repeat;
             border-bottom: 2px solid #222; position: relative;
         }
         
@@ -184,12 +185,11 @@
     
     <div class="search-container">
         <i class="fas fa-search"></i>
-        <input type="text" id="searchInput" placeholder="Search products, descriptions, or sellers..." oninput="filterProducts()">
+        <input type="text" id="searchInput" placeholder="Search products, categories, or descriptions..." oninput="filterProducts()">
     </div>
 </div>
 
 <div class="category-wrapper">
-    <!-- EXACT CATEGORIES FROM PAYMENT LINK PAGE -->
     <div class="category-scroll" id="categoryContainer">
         <div class="cat-pill active" onclick="filterCategory('All', this)"><i class="fas fa-border-all"></i> All Products</div>
         <div class="cat-pill" onclick="filterCategory('Digital Products', this)"><i class="fas fa-cloud-download-alt"></i> Digital Products</div>
@@ -239,8 +239,6 @@
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            // In a real production scenario, this endpoint should return public market data, 
-            // or the backend handles filtering user links vs marketplace links.
             const res = await fetch('/api/payment-links', {
                 method: 'GET',
                 headers: headers
@@ -349,15 +347,22 @@
     }
 
     function filterProducts() {
-        const query = document.getElementById('searchInput').value.toLowerCase();
+        const query = document.getElementById('searchInput').value.toLowerCase().trim();
         
         const filtered = globalMarketData.filter(product => {
-            // Check if title OR description matches search
-            const matchesSearch = product.title.toLowerCase().includes(query) || 
-                                  (product.description && product.description.toLowerCase().includes(query));
+            // Safely handle text conversions to avoid undefined errors
+            const titleStr = (product.title || "").toLowerCase();
+            const descStr = (product.description || "").toLowerCase();
+            const catStr = (product.category || "").toLowerCase();
+
+            // Match query in title, description, OR category
+            const matchesSearch = titleStr.includes(query) || 
+                                  descStr.includes(query) || 
+                                  catStr.includes(query);
             
-            // Check if category matches exactly
-            const matchesCategory = currentCategory === 'All' || product.category === currentCategory;
+            // FIX: Robust exact category check (case-insensitive and trimmed spaces)
+            const matchesCategory = currentCategory === 'All' || 
+                                    catStr.trim() === currentCategory.toLowerCase().trim();
             
             return matchesSearch && matchesCategory;
         });
