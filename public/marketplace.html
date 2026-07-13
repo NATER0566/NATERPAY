@@ -81,7 +81,7 @@
             font-size: 1.1rem; font-weight: 700; outline: none; font-family: 'Montserrat', sans-serif;
         }
 
-        /* TRUST BANNER - REPLACING CATEGORIES */
+        /* TRUST BANNER */
         .feature-banner-wrapper { width: 100%; padding: 0 5%; margin-bottom: 40px; }
         .feature-banner {
             display: flex; justify-content: center; gap: 30px; flex-wrap: wrap;
@@ -99,7 +99,7 @@
             .feature-item { font-size: 0.75rem; width: 45%; justify-content: center; }
         }
 
-        /* PRODUCT GRID - FULL SCREEN WIDTH */
+        /* PRODUCT GRID */
         .main-content { flex: 1; padding: 0 5%; width: 100%; margin: 0 auto 60px; }
         .products-grid {
             display: grid; 
@@ -119,7 +119,7 @@
 
         .product-image-header {
             width: 100%; height: 200px; background-color: #050505;
-            background-size: contain; 
+            background-size: cover; 
             background-position: center; background-repeat: no-repeat;
             border-bottom: 2px solid #222; position: relative;
         }
@@ -143,8 +143,17 @@
 
         .product-details { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; }
         
-        .merchant-name { font-size: 0.85rem; color: #888; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; text-transform: uppercase;}
-        .merchant-name i { color: var(--gold); }
+        /* Creator Details Box */
+        .creator-info-box {
+            background: #0a0a0a; border: 1px solid #333; border-radius: 12px;
+            padding: 12px; margin-bottom: 15px;
+        }
+        .creator-info-box div { margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #ccc; display: flex; align-items: center; gap: 8px;}
+        .creator-info-box div:last-child { margin-bottom: 0; }
+        .creator-info-box i { width: 15px; text-align: center; }
+        .creator-name i { color: var(--gold); }
+        .creator-email i { color: #888; }
+        .creator-whatsapp i { color: var(--green); font-size: 1rem;}
         
         .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; margin-bottom: 12px; color: #fff; line-height: 1.3; }
         .product-desc { color: #aaa; font-size: 0.9rem; font-weight: 600; margin-bottom: 20px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;}
@@ -188,11 +197,10 @@
     
     <div class="search-container">
         <i class="fas fa-search"></i>
-        <input type="text" id="searchInput" placeholder="Search products or descriptions..." oninput="filterProducts()">
+        <input type="text" id="searchInput" placeholder="Search products, descriptions, or categories..." oninput="filterProducts()">
     </div>
 </div>
 
-<!-- BEAUTIFUL NEW BANNER TO REPLACE CATEGORIES -->
 <div class="feature-banner-wrapper">
     <div class="feature-banner">
         <div class="feature-item"><i class="fas fa-shield-check"></i> Secure Escrow</div>
@@ -207,7 +215,7 @@
         <div class="loader-container" id="loadingState">
             <i class="fas fa-circle-notch fa-spin fa-3x text-warning mb-3"></i>
             <h5 class="fw-bold text-white fs-3" style="font-family: 'Cinzel';">Syncing Global Ledger...</h5>
-            <p class="text-secondary fw-bold">Retrieving verified merchant listings.</p>
+            <p class="text-secondary fw-bold">Retrieving all global merchant listings.</p>
         </div>
     </div>
 </div>
@@ -230,26 +238,21 @@
         animate();
     }
 
-    // Fetch Live Products
+    // Fetch All Global Products
     async function fetchLiveProducts() {
         try {
-            const token = localStorage.getItem('naterpay_token'); 
+            // NOTE: We do NOT send the Authorization Bearer token here anymore. 
+            // Sending it makes the backend think you only want your own products.
+            // Ensure your backend endpoint "/api/marketplace/all" is public!
             const headers = { 'Content-Type': 'application/json' };
-            
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
 
-            const res = await fetch('/api/payment-links', {
+            // Change this endpoint to whatever your backend uses to fetch ALL products globally
+            const res = await fetch('/api/marketplace/all', {
                 method: 'GET',
                 headers: headers
             }); 
             
-            if (res.status === 401 || res.status === 403) {
-                throw new Error("Authentication failed. Please log in to view the marketplace.");
-            }
-
-            if(!res.ok) throw new Error("Could not connect to live ledger.");
+            if(!res.ok) throw new Error("Could not connect to the global ledger. Ensure backend route /api/marketplace/all exists.");
 
             const data = await res.json();
             const newMarketData = data.links ? data.links : (Array.isArray(data) ? data : []);
@@ -261,7 +264,7 @@
                 }
             } else {
                 if (globalMarketData.length === 0) {
-                    showEmptyState("No live products found in the database yet.");
+                    showEmptyState("No live products found on the global network yet.");
                 }
             }
         } catch (error) {
@@ -286,8 +289,13 @@
                 ? 'Flexible' 
                 : `₦${Number(product.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
             
-            // We still show the category badge visually, we just don't use it for filtering
-            const categoryDisplay = product.category || 'Product';
+            // Extract Data, providing fallbacks if missing from DB
+            const categoryDisplay = product.category || 'General';
+            const merchantName = product.merchantName || product.creatorName || 'Verified Merchant';
+            const email = product.email || product.creatorEmail || 'Not Provided';
+            const whatsapp = product.whatsapp || product.creatorWhatsapp || 'Not Provided';
+            const shortDesc = product.description || 'Secure NATERPAY Checkout';
+            const salesCount = product.transactionCount || 0;
             
             let mediaHeaderHTML = '';
             if (product.productImageBase64) {
@@ -305,17 +313,20 @@
                     </div>`;
             }
 
-            const merchantName = product.merchantName || 'Verified Merchant';
-            const shortDesc = product.description || 'Secure NATERPAY Checkout';
-            const salesCount = product.transactionCount || 0;
-
             const card = document.createElement('div');
             card.className = 'product-card';
             card.innerHTML = `
                 ${mediaHeaderHTML}
                 <div class="product-details">
-                    <div class="merchant-name"><i class="fas fa-store"></i> ${merchantName}</div>
+                    
                     <h3 class="product-title">${product.title}</h3>
+                    
+                    <div class="creator-info-box">
+                        <div class="creator-name" title="Creator Name"><i class="fas fa-user-circle"></i> ${merchantName}</div>
+                        <div class="creator-email" title="Creator Email"><i class="fas fa-envelope"></i> ${email}</div>
+                        <div class="creator-whatsapp" title="Creator WhatsApp"><i class="fab fa-whatsapp"></i> ${whatsapp}</div>
+                    </div>
+
                     <div class="product-desc">${shortDesc}</div>
                     
                     <div class="card-footer-info">
@@ -340,7 +351,7 @@
     function showEmptyState(message) {
         document.getElementById('marketGrid').innerHTML = `
             <div class="loader-container">
-                <i class="fas fa-search-minus fa-4x mb-4 text-secondary"></i>
+                <i class="fas fa-globe fa-4x mb-4 text-secondary"></i>
                 <h4 class="text-white fw-bold fs-3 mb-2" style="font-family:'Cinzel';">${message}</h4>
                 <p class="text-secondary fw-bold">Try adjusting your search terms.</p>
             </div>
@@ -353,11 +364,12 @@
         const filtered = globalMarketData.filter(product => {
             const titleStr = (product.title || "").toLowerCase();
             const descStr = (product.description || "").toLowerCase();
+            const catStr = (product.category || "").toLowerCase();
             
-            // Clean, simple match based ONLY on the search bar
             return query === "" || 
                    titleStr.includes(query) || 
-                   descStr.includes(query);
+                   descStr.includes(query) ||
+                   catStr.includes(query);
         });
 
         renderGrid(filtered);
