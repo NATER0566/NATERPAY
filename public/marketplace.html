@@ -14,10 +14,13 @@
             --gold: #FFD700; 
             --gold-glow: rgba(255, 215, 0, 0.4); 
             --bg: #030303; 
-            --card-bg: rgba(15, 15, 15, 0.85); 
+            --card-bg: rgba(12, 12, 12, 0.85); 
             --green: #00ff88;
+            --nater-red: #d32f2f;
         }
         
+        * { box-sizing: border-box; }
+
         body { 
             background: var(--bg); 
             color: white; 
@@ -39,111 +42,126 @@
             pointer-events: none; 
         }
 
-        /* HEADER & RESPONSIVENESS FIX */
+        /* SYNCED HEADER EXACTLY LIKE DASHBOARD */
         header {
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
-            background: rgba(0, 0, 0, 0.95); border-bottom: 2px solid var(--gold);
-            display: flex; justify-content: space-between; align-items: center; 
-            flex-wrap: wrap; gap: 15px; 
-            z-index: 1000; backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.95); border-bottom: 3px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(10px);
         }
         .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;}
-        .site-part-1 { color: var(--gold); font-size: 1.6rem; text-shadow: 0 0 10px var(--gold-glow); } 
-        .site-part-2 { color: #fff; font-size: 1.1rem; letter-spacing: 3px; }
+        .site-part-1 { color: var(--gold); font-size: 1.8rem; text-shadow: 0 0 10px var(--gold-glow); } 
+        .site-part-2 { color: var(--nater-red); font-size: 1.3rem; letter-spacing: 3px; }
 
         @media (max-width: 480px) {
-            .site-part-1 { font-size: 1.3rem; }
-            .site-part-2 { font-size: 0.9rem; letter-spacing: 2px; }
-            .header-actions .btn { font-size: 0.75rem !important; padding: 8px 16px !important; }
+            .site-part-1 { font-size: 1.4rem; }
+            .site-part-2 { font-size: 1rem; }
+            header .btn { font-size: 0.85rem !important; padding: 8px 15px !important; }
         }
 
         /* HERO & SEARCH */
         .marketplace-hero {
-            padding: 60px 20px 40px;
+            padding: 50px 5% 30px;
             text-align: center;
-            max-width: 800px;
+            width: 100%;
+            max-width: 900px;
             margin: 0 auto;
         }
-        .hero-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; font-size: 2.8rem; text-shadow: 0 0 20px var(--gold-glow); margin-bottom: 15px; }
-        .hero-subtitle { color: #aaa; font-weight: 500; font-size: 1.1rem; margin-bottom: 30px; }
+        .hero-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; font-size: clamp(2rem, 5vw, 3rem); text-shadow: 0 0 20px var(--gold-glow); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;}
+        .hero-subtitle { color: #ccc; font-weight: 600; font-size: clamp(0.9rem, 2vw, 1.1rem); margin-bottom: 30px; }
 
         .search-container {
-            background: #111; border: 1.5px solid #333; border-radius: 50px; 
-            padding: 10px 25px; display: flex; align-items: center; transition: 0.3s;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: #111; border: 2px solid #333; border-radius: 50px; 
+            padding: 12px 25px; display: flex; align-items: center; transition: 0.3s;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%;
         }
-        .search-container:focus-within { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); }
-        .search-container i { color: var(--gold); font-size: 1.2rem; margin-right: 15px; }
+        .search-container:focus-within { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); background: #151515;}
+        .search-container i { color: var(--gold); font-size: 1.3rem; margin-right: 15px; }
         .search-container input {
             background: transparent; border: none; color: white; width: 100%; 
-            font-size: 1.1rem; font-weight: 600; outline: none; font-family: 'Montserrat', sans-serif;
+            font-size: 1.1rem; font-weight: 700; outline: none; font-family: 'Montserrat', sans-serif;
         }
 
-        /* CATEGORIES */
+        /* CATEGORIES - HORIZONTAL SCROLL FIXED */
+        .category-wrapper { width: 100%; padding: 0 5%; margin-bottom: 30px; }
         .category-scroll {
-            display: flex; gap: 15px; overflow-x: auto; padding: 20px 5%; margin-bottom: 30px;
-            scrollbar-width: none; 
+            display: flex; gap: 12px; overflow-x: auto; padding-bottom: 15px;
+            scrollbar-width: none; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
         }
         .category-scroll::-webkit-scrollbar { display: none; }
         .cat-pill {
-            background: var(--card-bg); border: 1px solid #333; color: #fff;
-            padding: 10px 25px; border-radius: 50px; font-weight: 700; font-size: 0.9rem;
+            background: #111; border: 2px solid #333; color: #aaa;
+            padding: 12px 25px; border-radius: 50px; font-weight: 800; font-size: 0.9rem;
             white-space: nowrap; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px;
         }
-        .cat-pill:hover, .cat-pill.active { background: var(--gold); color: #000; border-color: var(--gold); }
+        .cat-pill:hover { border-color: #666; color: #fff; }
+        .cat-pill.active { background: var(--gold); color: #000; border-color: var(--gold); box-shadow: 0 5px 15px var(--gold-glow); }
 
-        /* PRODUCT GRID */
-        .main-content { flex: 1; padding: 0 5%; max-width: 1600px; margin: 0 auto 60px; width: 100%; }
+        /* PRODUCT GRID - FULL SCREEN WIDTH */
+        .main-content { flex: 1; padding: 0 5%; width: 100%; margin: 0 auto 60px; }
         .products-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px;
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); 
+            gap: 25px;
             min-height: 400px;
         }
 
+        /* ATTRACTIVE PORTABLE CARDS */
         .product-card {
-            background: var(--card-bg); border: 1px solid #222; border-radius: 20px;
-            overflow: hidden; transition: 0.4s; position: relative; display: flex; flex-direction: column;
-            backdrop-filter: blur(15px); height: 100%; text-align: center;
+            background: var(--card-bg); border: 2px solid #222; border-radius: 20px;
+            overflow: hidden; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative; display: flex; flex-direction: column;
+            backdrop-filter: blur(15px); height: 100%; text-align: left;
         }
-        .product-card:hover { border-color: var(--gold); transform: translateY(-8px); box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
+        .product-card:hover { border-color: var(--gold); transform: translateY(-10px); box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
 
         .product-image-header {
-            width: 100%; height: 220px; background-color: #0a0a0a;
+            width: 100%; height: 200px; background-color: #050505;
             background-size: cover; background-position: center; background-repeat: no-repeat;
-            border-bottom: 1px solid #222; position: relative;
+            border-bottom: 2px solid #222; position: relative;
         }
         
         .store-icon-fallback { 
-            background: #0a0a0a; width: 100%; height: 220px; 
+            background: #050505; width: 100%; height: 200px; 
             display: flex; align-items: center; justify-content: center; font-size: 4rem; 
-            color: #333; border-bottom: 1px solid #222; position: relative;
+            color: #222; border-bottom: 2px solid #222; position: relative;
         }
 
+        /* Card Badges */
         .badge-verified {
-            position: absolute; top: 15px; right: 15px; background: rgba(0, 0, 0, 0.8);
-            border: 1px solid var(--gold); color: var(--gold); padding: 5px 12px;
-            border-radius: 50px; font-size: 0.7rem; font-weight: 900; letter-spacing: 1px; backdrop-filter: blur(5px);
+            position: absolute; top: 15px; right: 15px; background: rgba(0, 0, 0, 0.9);
+            border: 1px solid var(--green); color: var(--green); padding: 6px 12px;
+            border-radius: 50px; font-size: 0.75rem; font-weight: 900; letter-spacing: 1px;
+        }
+        .badge-category {
+            position: absolute; top: 15px; left: 15px; background: rgba(255, 215, 0, 0.9);
+            color: #000; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 900; 
         }
 
         .product-details { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; }
         
-        .merchant-name { font-size: 0.8rem; color: #888; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 5px;}
-        .merchant-name i { color: var(--green); }
+        .merchant-name { font-size: 0.85rem; color: #888; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; text-transform: uppercase;}
+        .merchant-name i { color: var(--gold); }
         
-        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.3rem; margin-bottom: 10px; color: #fff; line-height: 1.3; }
-        .product-desc { color: #aaa; font-size: 0.85rem; font-weight: 500; margin-bottom: 20px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;}
+        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; margin-bottom: 12px; color: #fff; line-height: 1.3; }
+        .product-desc { color: #aaa; font-size: 0.9rem; font-weight: 600; margin-bottom: 20px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;}
 
-        .price-row { display: flex; flex-direction: column; align-items: center; margin-top: auto; margin-bottom: 20px;}
-        .product-price { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px var(--gold-glow); }
-        .sales-stats { font-size: 0.75rem; color: #555; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;}
+        .card-footer-info { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; margin-bottom: 20px; padding-top: 15px; border-top: 1px solid #333;}
+        
+        .price-col { display: flex; flex-direction: column; }
+        .price-label { font-size: 0.7rem; color: #666; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;}
+        .product-price { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; font-weight: 900; }
+        
+        .sales-col { text-align: right; }
+        .sales-stats { font-size: 0.85rem; color: #fff; font-weight: 800; background: #222; padding: 5px 10px; border-radius: 8px;}
 
         .btn-buy {
-            background: #111; color: var(--gold); font-weight: 900; border-radius: 12px;
-            padding: 15px; width: 100%; border: 1px solid var(--gold); font-size: 1rem;
-            letter-spacing: 1.5px; text-transform: uppercase; transition: 0.3s; text-align: center; text-decoration: none; display: block;
+            background: #1a1a1a; color: #fff; font-weight: 900; border-radius: 12px;
+            padding: 16px; width: 100%; border: 2px solid #444; font-size: 1.05rem;
+            letter-spacing: 1px; text-transform: uppercase; transition: 0.3s; text-align: center; text-decoration: none; display: flex; justify-content: center; align-items: center; gap: 10px;
         }
-        .btn-buy:hover { background: var(--gold); color: #000; box-shadow: 0 5px 20px var(--gold-glow); }
+        .btn-buy:hover { background: var(--gold); color: #000; border-color: var(--gold); box-shadow: 0 10px 25px var(--gold-glow); }
 
-        .loader-container { grid-column: 1 / -1; text-align: center; padding: 100px 0; }
+        .loader-container { grid-column: 1 / -1; text-align: center; padding: 80px 0; border: 2px dashed #333; border-radius: 20px; background: #0a0a0a;}
     </style>
 </head>
 <body>
@@ -155,37 +173,39 @@
         <span class="site-part-1">NATER</span>
         <span class="site-part-2">MARKET</span>
     </div>
-    <div class="header-actions">
-        <a href="dashboard.html" class="btn btn-outline-light rounded-pill px-4 fw-bold" style="font-size: 0.9rem; white-space: nowrap;">
-            <i class="fas fa-arrow-left me-2"></i> Return to Dashboard
-        </a>
-    </div>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 py-2 fw-bold" style="font-size: 1.1rem; border-width: 2px;">
+        <i class="fas fa-arrow-left me-2"></i> Dashboard
+    </a>
 </header>
 
 <div class="marketplace-hero">
-    <h1 class="hero-title">Discover Premium Goods</h1>
-    <p class="hero-subtitle">Securely buy and sell genuine products within the NATER PAY ecosystem.</p>
+    <h1 class="hero-title">Global Marketplace</h1>
+    <p class="hero-subtitle">Discover, buy, and instantly access verified products securely hosted on the NATER-PAY network.</p>
     
     <div class="search-container">
         <i class="fas fa-search"></i>
-        <input type="text" id="searchInput" placeholder="Search for phones, courses, electronics..." oninput="filterProducts()">
+        <input type="text" id="searchInput" placeholder="Search products, descriptions, or sellers..." oninput="filterProducts()">
     </div>
 </div>
 
-<div class="category-scroll" id="categoryContainer">
-    <div class="cat-pill active" onclick="filterCategory('All')"><i class="fas fa-globe"></i> All Items</div>
-    <div class="cat-pill" onclick="filterCategory('Digital')"><i class="fas fa-laptop-code"></i> Digital Products</div>
-    <div class="cat-pill" onclick="filterCategory('Electronics')"><i class="fas fa-mobile-alt"></i> Electronics</div>
-    <div class="cat-pill" onclick="filterCategory('Services')"><i class="fas fa-briefcase"></i> Services</div>
-    <div class="cat-pill" onclick="filterCategory('Fashion')"><i class="fas fa-tshirt"></i> Fashion</div>
+<div class="category-wrapper">
+    <!-- EXACT CATEGORIES FROM PAYMENT LINK PAGE -->
+    <div class="category-scroll" id="categoryContainer">
+        <div class="cat-pill active" onclick="filterCategory('All', this)"><i class="fas fa-border-all"></i> All Products</div>
+        <div class="cat-pill" onclick="filterCategory('Digital Products', this)"><i class="fas fa-cloud-download-alt"></i> Digital Products</div>
+        <div class="cat-pill" onclick="filterCategory('Physical Goods', this)"><i class="fas fa-box"></i> Physical Goods</div>
+        <div class="cat-pill" onclick="filterCategory('Software & Apps', this)"><i class="fas fa-laptop-code"></i> Software & Apps</div>
+        <div class="cat-pill" onclick="filterCategory('Professional Services', this)"><i class="fas fa-handshake"></i> Professional Services</div>
+        <div class="cat-pill" onclick="filterCategory('Event Tickets', this)"><i class="fas fa-ticket-alt"></i> Event Tickets</div>
+    </div>
 </div>
 
 <div class="main-content">
     <div class="products-grid" id="marketGrid">
         <div class="loader-container" id="loadingState">
-            <i class="fas fa-circle-notch fa-spin fa-3x text-warning mb-3 mt-4"></i>
-            <h5 class="fw-bold text-white">Syncing Live Ledger...</h5>
-            <p class="text-secondary">Retrieving verified merchant listings.</p>
+            <i class="fas fa-circle-notch fa-spin fa-3x text-warning mb-3"></i>
+            <h5 class="fw-bold text-white fs-3" style="font-family: 'Cinzel';">Syncing Global Ledger...</h5>
+            <p class="text-secondary fw-bold">Retrieving verified merchant listings.</p>
         </div>
     </div>
 </div>
@@ -212,7 +232,6 @@
     // Fetch Live Products (Real-Time Function)
     async function fetchLiveProducts() {
         try {
-            // FIX: Using correct key matching the login system 'naterpay_token'
             const token = localStorage.getItem('naterpay_token'); 
             const headers = { 'Content-Type': 'application/json' };
             
@@ -220,13 +239,15 @@
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
+            // In a real production scenario, this endpoint should return public market data, 
+            // or the backend handles filtering user links vs marketplace links.
             const res = await fetch('/api/payment-links', {
                 method: 'GET',
                 headers: headers
             }); 
             
             if (res.status === 401 || res.status === 403) {
-                throw new Error("Authentication failed. Please ensure you are logged in.");
+                throw new Error("Authentication failed. Please log in to view the marketplace.");
             }
 
             if(!res.ok) throw new Error("Could not connect to live ledger.");
@@ -248,7 +269,7 @@
         } catch (error) {
             console.error("Marketplace fetch error:", error);
             if (globalMarketData.length === 0) {
-                showEmptyState(error.message || "Awaiting secure API connection. Ensure you are logged in.");
+                showEmptyState(error.message || "Awaiting secure API connection.");
             }
         }
     }
@@ -258,7 +279,7 @@
         grid.innerHTML = '';
 
         if (products.length === 0) {
-            showEmptyState("No products match your search.");
+            showEmptyState("No products match your search or category.");
             return;
         }
 
@@ -267,39 +288,49 @@
                 ? 'Flexible' 
                 : `₦${Number(product.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
             
+            const categoryDisplay = product.category || 'Product';
+            
             let mediaHeaderHTML = '';
             if (product.productImageBase64) {
                 mediaHeaderHTML = `
                     <div class="product-image-header" style="background-image: url('${product.productImageBase64}');">
-                        <div class="badge-verified"><i class="fas fa-shield-alt me-1"></i> VERIFIED</div>
+                        <div class="badge-category"><i class="fas fa-tag"></i> ${categoryDisplay}</div>
+                        <div class="badge-verified"><i class="fas fa-shield-check"></i> VERIFIED</div>
                     </div>`;
             } else {
                 mediaHeaderHTML = `
                     <div class="store-icon-fallback">
                         <i class="fas fa-box-open"></i>
-                        <div class="badge-verified"><i class="fas fa-shield-alt me-1"></i> VERIFIED</div>
+                        <div class="badge-category"><i class="fas fa-tag"></i> ${categoryDisplay}</div>
+                        <div class="badge-verified"><i class="fas fa-shield-check"></i> VERIFIED</div>
                     </div>`;
             }
 
             const merchantName = product.merchantName || 'Verified Merchant';
             const shortDesc = product.description || 'Secure NATERPAY Checkout';
+            const salesCount = product.transactionCount || 0;
 
             const card = document.createElement('div');
             card.className = 'product-card';
             card.innerHTML = `
                 ${mediaHeaderHTML}
                 <div class="product-details">
-                    <div class="merchant-name"><i class="fas fa-check-circle"></i> ${merchantName}</div>
+                    <div class="merchant-name"><i class="fas fa-store"></i> ${merchantName}</div>
                     <h3 class="product-title">${product.title}</h3>
                     <div class="product-desc">${shortDesc}</div>
                     
-                    <div class="price-row">
-                        <div class="product-price">${displayPrice}</div>
-                        <div class="sales-stats">Live on Ledger</div>
+                    <div class="card-footer-info">
+                        <div class="price-col">
+                            <span class="price-label">Price</span>
+                            <span class="product-price">${displayPrice}</span>
+                        </div>
+                        <div class="sales-col">
+                            <span class="sales-stats"><i class="fas fa-chart-line text-success"></i> ${salesCount} Sold</span>
+                        </div>
                     </div>
                     
                     <a href="/pay.html?id=${product.linkId || product._id}" class="btn-buy">
-                        <i class="fas fa-shopping-cart me-2"></i> Checkout
+                        Get Secure Access <i class="fas fa-arrow-right"></i>
                     </a>
                 </div>
             `;
@@ -310,8 +341,9 @@
     function showEmptyState(message) {
         document.getElementById('marketGrid').innerHTML = `
             <div class="loader-container">
-                <i class="fas fa-store-slash fa-4x mb-4 text-secondary"></i>
-                <h4 class="text-white fw-bold">${message}</h4>
+                <i class="fas fa-search-minus fa-4x mb-4 text-secondary"></i>
+                <h4 class="text-white fw-bold fs-3 mb-2" style="font-family:'Cinzel';">${message}</h4>
+                <p class="text-secondary fw-bold">Try adjusting your filters or search terms.</p>
             </div>
         `;
     }
@@ -320,25 +352,35 @@
         const query = document.getElementById('searchInput').value.toLowerCase();
         
         const filtered = globalMarketData.filter(product => {
-            return product.title.toLowerCase().includes(query); 
+            // Check if title OR description matches search
+            const matchesSearch = product.title.toLowerCase().includes(query) || 
+                                  (product.description && product.description.toLowerCase().includes(query));
+            
+            // Check if category matches exactly
+            const matchesCategory = currentCategory === 'All' || product.category === currentCategory;
+            
+            return matchesSearch && matchesCategory;
         });
 
         renderGrid(filtered);
     }
 
-    function filterCategory(category) {
+    function filterCategory(category, element) {
+        // Update active class visually
         document.querySelectorAll('.cat-pill').forEach(pill => pill.classList.remove('active'));
-        event.currentTarget.classList.add('active');
+        if(element) element.classList.add('active');
+        
+        // Update state and filter
         currentCategory = category;
-        document.getElementById('searchInput').value = '';
-        renderGrid(globalMarketData);
+        filterProducts();
     }
 
     window.onload = () => { 
         initStars(); 
         fetchLiveProducts(); 
         
-        setInterval(fetchLiveProducts, 5000); 
+        // Auto-refresh market data every 10 seconds
+        setInterval(fetchLiveProducts, 10000); 
     };
     
     window.onresize = initStars;
