@@ -20,12 +20,12 @@
             --card-bg: rgba(12, 12, 12, 0.95); 
             --nater-red: #d32f2f;
             --success: #00ff88;
+            --border-color: #333;
         }
         body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
-        /* EXACT HEADER RESTORATION */
         header {
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
             background: rgba(0, 0, 0, 0.95); border-bottom: 2px solid var(--gold);
@@ -40,29 +40,16 @@
         .header-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; margin-bottom: 10px; font-size: 2.5rem; text-shadow: 0 0 15px var(--gold-glow); letter-spacing: 1px;}
         .header-subtitle { color: #aaa; font-weight: 500; margin-bottom: 30px; font-size: 1.1rem; letter-spacing: 0.5px; }
 
-        /* LIVE PRODUCER AUTH BUTTON & STATS */
         .merchant-dashboard-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 40px;
-            flex-wrap: wrap;
-            gap: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 40px; flex-wrap: wrap; gap: 20px;
         }
 
         .auth-producer-btn {
-            background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
-            border: 1px solid #333;
-            border-left: 4px solid var(--success);
-            padding: 15px 25px;
-            border-radius: 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 15px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            cursor: default;
-            position: relative;
-            overflow: hidden;
+            background: linear-gradient(145deg, #1a1a1a, #0a0a0a); border: 1px solid #333;
+            border-left: 4px solid var(--success); padding: 15px 25px; border-radius: 12px;
+            display: inline-flex; align-items: center; gap: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            position: relative; overflow: hidden;
         }
         .auth-producer-btn::after {
             content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
@@ -83,29 +70,25 @@
         .metric-value { font-size: 1.6rem; font-weight: 900; font-family: 'Cinzel', serif; color: #fff; }
         .metric-value.gold { color: var(--gold); }
 
-        /* HIGH-END STUDIO LAYOUT */
-        .studio-grid {
-            display: grid;
-            grid-template-columns: 1fr 2.2fr;
-            gap: 35px;
-            margin-bottom: 60px;
-        }
+        .studio-grid { display: grid; grid-template-columns: 1fr 2.2fr; gap: 35px; margin-bottom: 60px; }
         @media (max-width: 992px) { .studio-grid { grid-template-columns: 1fr; } }
 
         .panel {
             background: var(--card-bg); border: 1px solid #222; border-radius: 20px;
             padding: 35px; backdrop-filter: blur(15px); box-shadow: 0 15px 50px rgba(0,0,0,0.8);
         }
-        .panel-header { font-family: 'Cinzel', serif; font-weight: 800; color: #fff; font-size: 1.3rem; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px; display: flex; align-items: center; gap: 12px; }
+        .panel-header { font-family: 'Cinzel', serif; font-weight: 800; color: #fff; font-size: 1.3rem; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px; display: flex; align-items: center; gap: 12px; margin-top: 30px; }
+        .panel-header:first-child { margin-top: 0; }
         .panel-header i { color: var(--gold); }
 
-        /* Professional Inputs */
         .input-group-custom { margin-bottom: 25px; }
         .input-group-custom label { display: flex; justify-content: space-between; font-size: 0.85rem; color: #bbb; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
         .input-group-custom label .req { color: var(--nater-red); font-size: 0.7rem; }
+        .input-group-custom label .opt { color: #666; font-size: 0.7rem; }
         
         .input-wrapper { background: #0a0a0a; border: 1.5px solid #333; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 15px; transition: 0.3s; position: relative; }
         .input-wrapper:focus-within { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); background: #111; }
+        .input-wrapper.error { border-color: var(--nater-red); box-shadow: 0 0 15px rgba(211, 47, 47, 0.4); }
         .input-wrapper i { color: #555; font-size: 1.2rem; }
         .input-wrapper:focus-within i { color: var(--gold); }
         .input-wrapper input, .input-wrapper textarea, .input-wrapper select {
@@ -115,11 +98,19 @@
         .input-wrapper select option { background: #111; color: #fff; padding: 10px; }
         .input-wrapper textarea { resize: vertical; min-height: 120px; padding: 5px 0; line-height: 1.6; }
         .helper-text { font-size: 0.75rem; color: #777; font-weight: 600; margin-top: 8px; display: block; }
-
-        /* Detailed Category Select */
         .select-icon { position: absolute; right: 20px; color: var(--gold); pointer-events: none; }
 
-        /* Premium Image Upload */
+        /* Custom Toggles for Advanced Options */
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; background: #0a0a0a; border: 1px solid var(--border-color); padding: 15px 20px; border-radius: 12px; margin-bottom: 15px; transition: 0.3s; }
+        .toggle-row:hover { border-color: #555; }
+        .toggle-info { display: flex; flex-direction: column; }
+        .toggle-title { font-size: 0.95rem; font-weight: 700; color: #fff; }
+        .toggle-desc { font-size: 0.75rem; color: #888; font-weight: 500; margin-top: 4px; }
+        
+        .form-check-input { width: 45px !important; height: 24px !important; background-color: #333; border-color: #222; cursor: pointer; }
+        .form-check-input:checked { background-color: var(--gold); border-color: var(--gold); }
+        .form-check-input:focus { box-shadow: none; }
+
         .image-upload-wrapper { border: 2px dashed #444; border-radius: 15px; padding: 40px 20px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; background: #080808; height: 100%; min-height: 350px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .image-upload-wrapper:hover { border-color: var(--gold); background: #111; }
         .image-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
@@ -137,6 +128,7 @@
 
         .form-row { display: flex; gap: 25px; }
         .form-row .input-group-custom { flex: 1; }
+        @media (max-width: 768px) { .form-row { flex-direction: column; gap: 0; } }
 
         /* Links Grid Display */
         .section-title { font-family: 'Cinzel', serif; font-size: 1.8rem; font-weight: 900; margin-bottom: 30px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #333; padding-bottom: 15px; text-transform: uppercase; }
@@ -163,7 +155,6 @@
         .act-btn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
         .act-btn.qr-btn:hover { background: #fff; color: #000; border-color: #fff; }
 
-        /* QR Modal */
         #qrModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(15px); }
         .qr-content { background: var(--card-bg); padding: 40px; border-radius: 25px; border: 1px solid #333; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.9); max-width: 90%; }
         #qrDisplay { background: #fff; padding: 25px; border-radius: 15px; display: inline-block; margin-bottom: 25px; border: 6px solid #000; }
@@ -242,13 +233,15 @@
 
         <!-- Column 2: Data Details -->
         <div class="panel">
+            
+            <!-- SECTION: TAXONOMY -->
             <div class="panel-header">
                 <i class="fas fa-cube"></i> Product Taxonomy & Metadata
             </div>
             
             <div class="input-group-custom">
                 <label>Official Product Title <span class="req">REQUIRED</span></label>
-                <div class="input-wrapper">
+                <div class="input-wrapper" id="wrap-title">
                     <i class="fas fa-heading"></i>
                     <input type="text" id="linkTitle" placeholder="e.g. Full-Stack Web Development Masterclass 2026">
                 </div>
@@ -261,48 +254,111 @@
                         <i class="fas fa-tags"></i>
                         <select id="linkCategory">
                             <option value="Digital Products">Digital Products & Downloads</option>
-                            <option value="E-books & PDFs">E-books, PDFs & Literature</option>
-                            <option value="Video Courses">Video Courses & Tutorials</option>
+                            <option value="Physical Goods">General Physical Goods</option>
                             <option value="Software & Apps">Software, SaaS & Apps</option>
                             <option value="Professional Services">Professional Services & Consulting</option>
-                            <option value="Graphics & Design">Graphics, Design & Assets</option>
                             <option value="Event Tickets">Event Tickets & Webinars</option>
-                            <option value="Fashion & Apparel">Fashion & Apparel</option>
-                            <option value="Electronics">Electronics & Gadgets</option>
-                            <option value="Health & Beauty">Health & Beauty</option>
-                            <option value="General Merchandise">General Physical Goods</option>
                         </select>
                         <i class="fas fa-chevron-down select-icon"></i>
                     </div>
                 </div>
                 <div class="input-group-custom">
-                    <label>Base Price (NGN) <span class="req">OPTIONAL</span></label>
+                    <label>Base Price (NGN) <span class="opt">OPTIONAL</span></label>
                     <div class="input-wrapper">
                         <i class="fas fa-money-bill-wave"></i>
-                        <input type="number" id="linkAmount" placeholder="Leave blank for 'Any Amount'">
+                        <input type="number" id="linkAmount" min="0" placeholder="Leave blank for 'Any Amount'">
                     </div>
                 </div>
             </div>
 
             <div class="input-group-custom">
                 <label>Comprehensive Description <span class="req">REQUIRED</span></label>
-                <div class="input-wrapper" style="align-items: flex-start;">
+                <div class="input-wrapper" style="align-items: flex-start;" id="wrap-desc">
                     <i class="fas fa-align-left mt-2"></i>
-                    <textarea id="linkDescription" placeholder="Detail the value proposition, exact features, requirements, and what the customer will receive post-purchase. This displays on the public storefront..."></textarea>
+                    <textarea id="linkDescription" placeholder="Detail the value proposition, exact features, requirements, and what the customer will receive post-purchase..."></textarea>
                 </div>
             </div>
 
-            <div class="panel-header mt-5">
-                <i class="fas fa-truck-loading"></i> Fulfillment & Delivery Routing
+            <!-- SECTION: MERCHANT TRUST & SUPPORT (NEW) -->
+            <div class="panel-header">
+                <i class="fas fa-shield-alt"></i> Merchant Trust & Accountability
+            </div>
+            <div class="helper-text mb-4 mt-neg-2">Providing valid contact details builds buyer trust and drastically reduces chargebacks on the global marketplace.</div>
+
+            <div class="form-row">
+                <div class="input-group-custom">
+                    <label>Support Email <span class="req">REQUIRED</span></label>
+                    <div class="input-wrapper" id="wrap-email">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="supportEmail" placeholder="support@yourbrand.com">
+                    </div>
+                </div>
+                <div class="input-group-custom">
+                    <label>Support Phone / WhatsApp <span class="opt">RECOMMENDED</span></label>
+                    <div class="input-wrapper">
+                        <i class="fab fa-whatsapp"></i>
+                        <input type="tel" id="supportPhone" placeholder="+234 800 000 0000">
+                    </div>
+                </div>
             </div>
 
             <div class="input-group-custom">
-                <label>Post-Purchase Redirect URL <span class="req">RECOMMENDED</span></label>
+                <label>Refund Policy <span class="req">REQUIRED</span></label>
                 <div class="input-wrapper">
-                    <i class="fas fa-link"></i>
-                    <input type="url" id="linkRedirect" placeholder="e.g. https://drive.google.com/access-folder">
+                    <i class="fas fa-undo-alt"></i>
+                    <select id="refundPolicy">
+                        <option value="no_refunds">Strict: No Refunds Permitted</option>
+                        <option value="7_days">Flexible: 7-Day Money-Back Guarantee</option>
+                        <option value="30_days">Extended: 30-Day Money-Back Guarantee</option>
+                        <option value="replacement_only">Physical: Defective Replacement Only</option>
+                    </select>
+                    <i class="fas fa-chevron-down select-icon"></i>
                 </div>
-                <span class="helper-text">Automated delivery mechanism. Customers are routed to this secure URL immediately upon successful blockchain payment verification.</span>
+            </div>
+
+            <!-- SECTION: ADVANCED COMMERCE & ROUTING -->
+            <div class="panel-header">
+                <i class="fas fa-cogs"></i> Advanced Routing & Availability
+            </div>
+
+            <div class="form-row">
+                <div class="input-group-custom">
+                    <label>Stock / Inventory Limit <span class="opt">OPTIONAL</span></label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-boxes"></i>
+                        <input type="number" id="stockLimit" min="1" placeholder="Leave blank for infinite stock">
+                    </div>
+                    <span class="helper-text">Create scarcity. The link automatically disables once limit is reached.</span>
+                </div>
+            </div>
+
+            <div class="toggle-row">
+                <div class="toggle-info">
+                    <span class="toggle-title">Collect Customer Phone Number</span>
+                    <span class="toggle-desc">Require buyers to enter their phone number during checkout.</span>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="reqPhone">
+                </div>
+            </div>
+
+            <div class="toggle-row">
+                <div class="toggle-info">
+                    <span class="toggle-title">Collect Shipping Address</span>
+                    <span class="toggle-desc">Mandatory for physical goods. Captures full destination routing data.</span>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="reqAddress">
+                </div>
+            </div>
+
+            <div class="input-group-custom mt-4">
+                <label>Post-Purchase Redirect URL <span class="opt">OPTIONAL</span></label>
+                <div class="input-wrapper" id="wrap-url">
+                    <i class="fas fa-link"></i>
+                    <input type="url" id="linkRedirect" placeholder="https://drive.google.com/access-folder">
+                </div>
+                <span class="helper-text">Automated delivery mechanism. Customers are routed here upon blockchain verification.</span>
             </div>
             
             <button class="btn-create" onclick="createPaymentLink()">
@@ -344,7 +400,6 @@
         animate();
     }
 
-    // Auto-detect Producer Identity for the Live Badge
     function setupMerchantProfile() {
         const token = localStorage.getItem("naterpay_token");
         if(token) {
@@ -357,8 +412,12 @@
                 const payload = JSON.parse(jsonPayload);
                 
                 producerName = payload.name || payload.username || payload.email.split('@')[0] || "Verified Merchant";
-                producerLevel = payload.level || "Premium Merchant"; // Dynamically adjust if you have levels in JWT
+                producerLevel = payload.level || "Premium Merchant"; 
 
+                // Pre-fill support email if available
+                if (payload.email) {
+                    document.getElementById('supportEmail').value = payload.email;
+                }
             } catch (e) {
                 console.log("Token parse error, using defaults.");
             }
@@ -391,19 +450,48 @@
         reader.readAsDataURL(file);
     }
     
+    // UI Utility to reset error borders
+    function resetErrors() {
+        document.querySelectorAll('.input-wrapper').forEach(el => el.classList.remove('error'));
+    }
+
+    // Advanced Regex for URL and Email validation
+    function isValidURL(string) {
+        if(!string) return true; // Optional field
+        try { new URL(string); return true; } catch (_) { return false; }
+    }
+    function isValidEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
     async function createPaymentLink() {
+        resetErrors();
+
         const title = document.getElementById('linkTitle').value.trim();
         const category = document.getElementById('linkCategory').value;
         const description = document.getElementById('linkDescription').value.trim();
-        const redirectUrl = document.getElementById('linkRedirect').value.trim();
         const rawAmount = document.getElementById('linkAmount').value;
         
-        if (!title) {
-            Swal.fire({ icon: 'error', title: 'Missing Identity', text: 'Official Product Title is required.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
-            return;
-        }
-        if (!description) {
-            Swal.fire({ icon: 'error', title: 'Missing Details', text: 'A comprehensive description is required for the storefront.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+        // New Trust & Support Fields
+        const supportEmail = document.getElementById('supportEmail').value.trim();
+        const supportPhone = document.getElementById('supportPhone').value.trim();
+        const refundPolicy = document.getElementById('refundPolicy').value;
+        
+        // New Advanced Controls
+        const stockLimit = document.getElementById('stockLimit').value;
+        const reqPhone = document.getElementById('reqPhone').checked;
+        const reqAddress = document.getElementById('reqAddress').checked;
+        const redirectUrl = document.getElementById('linkRedirect').value.trim();
+        
+        // Strict Validation Checks
+        let hasError = false;
+        if (!title) { document.getElementById('wrap-title').classList.add('error'); hasError = true; }
+        if (!description) { document.getElementById('wrap-desc').classList.add('error'); hasError = true; }
+        if (!supportEmail || !isValidEmail(supportEmail)) { document.getElementById('wrap-email').classList.add('error'); hasError = true; }
+        if (redirectUrl && !isValidURL(redirectUrl)) { document.getElementById('wrap-url').classList.add('error'); hasError = true; }
+
+        if (hasError) {
+            Swal.fire({ icon: 'error', title: 'Validation Failed', text: 'Please correct the highlighted fields ensuring proper formats (like valid emails/URLs).', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             return;
         }
         
@@ -414,18 +502,30 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            Swal.fire({ title: 'Deploying to Ledger...', text: 'Encrypting payload and assigning to marketplace category...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+            Swal.fire({ title: 'Deploying to Ledger...', text: 'Securing payload and provisioning marketplace routes...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
             
+            // Comprehensive Enterprise Payload
             const payload = {
                 title: title, 
-                category: category,  // Included precisely for the Marketplace
+                category: category, 
                 description: description, 
-                redirectUrl: redirectUrl, 
                 amount: amount, 
                 currency: 'NGN', 
                 isFlexibleAmount: isFlexibleAmount,
                 productImageBase64: base64ProductImage,
-                merchantName: producerName
+                merchantName: producerName,
+                // New Fields Sent to Backend
+                merchantSupport: {
+                    email: supportEmail,
+                    phone: supportPhone,
+                    policy: refundPolicy
+                },
+                settings: {
+                    stockLimit: stockLimit ? parseInt(stockLimit) : null,
+                    requirePhone: reqPhone,
+                    requireAddress: reqAddress,
+                    redirectUrl: redirectUrl
+                }
             };
 
             const res = await fetch('/api/payment-links', {
@@ -436,14 +536,16 @@
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Deployment Complete', html: `<p style="color:#aaa;">Product is officially live on the global marketplace.</p>`, confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'success', title: 'Deployment Complete', html: `<p style="color:#aaa;">Product is officially live on the global marketplace with full enterprise protections.</p>`, confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
                 
-                // Reset Form
+                // Reset Core Form (keep email populated for ease of use)
                 document.getElementById('linkTitle').value = '';
                 document.getElementById('linkDescription').value = '';
                 document.getElementById('linkRedirect').value = '';
                 document.getElementById('linkAmount').value = '';
-                document.getElementById('linkCategory').value = 'Digital Products';
+                document.getElementById('stockLimit').value = '';
+                document.getElementById('reqPhone').checked = false;
+                document.getElementById('reqAddress').checked = false;
                 document.getElementById('productImageInput').value = '';
                 document.getElementById('imagePreview').style.display = 'none';
                 document.getElementById('uploadPlaceholder').style.display = 'block';
@@ -480,6 +582,12 @@
                         const count = Number(link.transactionCount || 0);
                         const linkCategory = link.category || 'Digital Product';
                         
+                        // Extract embedded stock limits if returned by backend
+                        let stockDisplay = '';
+                        if(link.settings && link.settings.stockLimit) {
+                            stockDisplay = `<div class="stat-line"><span class="text-secondary">STOCK LIMIT</span> <span class="val text-white">${link.settings.stockLimit}</span></div>`;
+                        }
+
                         totalRev += collected;
                         totalTx += count;
 
@@ -503,6 +611,7 @@
                                 <div class="link-stats">
                                     <div class="stat-line"><span class="text-secondary">LIST PRICE</span> <span class="val text-white">${displayAmount}</span></div>
                                     <div class="stat-line"><span class="text-secondary">GLOBAL SALES</span> <span class="val text-white">${count}</span></div>
+                                    ${stockDisplay}
                                     <div class="stat-line mt-2 pt-2 border-top border-dark"><span class="text-secondary">GROSS REVENUE</span> <span class="val text-success">₦${collected.toLocaleString()}</span></div>
                                 </div>
                                 
