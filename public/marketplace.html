@@ -8,7 +8,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root { 
@@ -26,6 +25,8 @@
             margin: 0; 
             min-height: 100vh; 
             overflow-x: hidden; 
+            display: flex;
+            flex-direction: column;
         }
         
         #starCanvas { 
@@ -47,8 +48,6 @@
         .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;}
         .site-part-1 { color: var(--gold); font-size: 1.6rem; text-shadow: 0 0 10px var(--gold-glow); } 
         .site-part-2 { color: #fff; font-size: 1.1rem; letter-spacing: 3px; }
-
-        .header-actions { display: flex; gap: 15px; align-items: center; }
 
         /* HERO & SEARCH */
         .marketplace-hero {
@@ -75,7 +74,7 @@
         /* CATEGORIES */
         .category-scroll {
             display: flex; gap: 15px; overflow-x: auto; padding: 20px 5%; margin-bottom: 30px;
-            scrollbar-width: none; /* Firefox */
+            scrollbar-width: none; 
         }
         .category-scroll::-webkit-scrollbar { display: none; }
         .cat-pill {
@@ -86,15 +85,16 @@
         .cat-pill:hover, .cat-pill.active { background: var(--gold); color: #000; border-color: var(--gold); }
 
         /* PRODUCT GRID */
-        .container-fluid { padding: 0 5%; max-width: 1600px; margin-bottom: 60px; }
+        .main-content { flex: 1; padding: 0 5%; max-width: 1600px; margin: 0 auto 60px; width: 100%; }
         .products-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px;
+            min-height: 400px; /* Ensures page stays relatively long even when loading */
         }
 
         .product-card {
             background: var(--card-bg); border: 1px solid #222; border-radius: 20px;
             overflow: hidden; transition: 0.4s; position: relative; display: flex; flex-direction: column;
-            backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px); height: 100%;
         }
         .product-card:hover { border-color: var(--gold); transform: translateY(-8px); box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
 
@@ -109,7 +109,7 @@
         }
 
         .product-details { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; }
-        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.2rem; margin-bottom: 10px; color: #fff; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.2rem; margin-bottom: 10px; color: #fff; line-height: 1.3; }
         
         .merchant-name { font-size: 0.8rem; color: #888; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 5px;}
         .merchant-name i { color: var(--green); }
@@ -138,7 +138,10 @@
         <span class="site-part-2">MARKET</span>
     </div>
     <div class="header-actions">
-        <a href="dashboard.html" class="btn btn-outline-light rounded-pill px-4 fw-bold" style="font-size: 0.9rem;">Sell an Item</a>
+        <!-- Changed to Return to Dashboard -->
+        <a href="dashboard.html" class="btn btn-outline-light rounded-pill px-4 fw-bold" style="font-size: 0.9rem;">
+            <i class="fas fa-arrow-left me-2"></i> Return to Dashboard
+        </a>
     </div>
 </header>
 
@@ -160,9 +163,9 @@
     <div class="cat-pill" onclick="filterCategory('Fashion')"><i class="fas fa-tshirt"></i> Fashion</div>
 </div>
 
-<div class="container-fluid">
+<div class="main-content">
     <div class="products-grid" id="marketGrid">
-        <div class="loader-container">
+        <div class="loader-container" id="loadingState">
             <i class="fas fa-circle-notch fa-spin fa-3x text-warning mb-3"></i>
             <h5 class="text-white fw-bold">Syncing Live Ledger...</h5>
             <p class="text-secondary">Retrieving verified merchant listings.</p>
@@ -189,33 +192,40 @@
         animate();
     }
 
-    // Fetch Live Products from the Payment Links Engine
-    async function loadMarketplace() {
-        const grid = document.getElementById('marketGrid');
-        
+    // Fetch Live Products (Real-Time Function)
+    async function fetchLiveProducts() {
         try {
-            // Note: Since this is a public marketplace, we hit a public route that returns all active links.
-            // If your backend requires a specific public route, adjust this URL (e.g., /api/payment-links/public).
-            const res = await fetch('/api/payment-links/public'); 
+            // Adjusting endpoint: Attempting standard route first.
+            // If your backend serves public links on a different route, change this URL.
+            const res = await fetch('/api/payment-links', {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+                // Notice: Not passing auth token here so the backend must allow public access to this route!
+            }); 
             
-            // Fallback for demonstration if endpoint is secured/not ready
-            if(res.status === 404 || res.status === 401) {
-                throw new Error("Endpoint requires Auth or not found. Simulating data load...");
-            }
+            if(!res.ok) throw new Error("Could not connect to live ledger.");
 
             const data = await res.json();
             
-            if (data.success && data.links && data.links.length > 0) {
-                globalMarketData = data.links;
-                renderGrid(globalMarketData);
+            // Extract the links whether the backend wraps them in { success: true, links: [] } or just returns an array []
+            const newMarketData = data.links ? data.links : (Array.isArray(data) ? data : []);
+
+            if (newMarketData.length > 0) {
+                // Only re-render if data has changed to prevent UI flashing
+                if (JSON.stringify(globalMarketData) !== JSON.stringify(newMarketData)) {
+                    globalMarketData = newMarketData;
+                    filterProducts(); // Re-apply current search/filters
+                }
             } else {
-                showEmptyState("No products available on the marketplace yet.");
+                if (globalMarketData.length === 0) {
+                    showEmptyState("No live products found in the database yet.");
+                }
             }
         } catch (error) {
-            console.warn(error.message);
-            // Fallback/Simulation Logic: If backend isn't publicly exposed yet, we show a clean empty state.
-            // For a live connection, ensure your backend allows GET /api/payment-links without Auth.
-            showEmptyState("Failed to connect to marketplace ledger. Ensure public backend routes are active.");
+            console.error("Marketplace fetch error:", error);
+            if (globalMarketData.length === 0) {
+                showEmptyState("Awaiting public API connection. Ensure your backend allows public GET requests to /api/payment-links.");
+            }
         }
     }
 
@@ -230,9 +240,7 @@
 
         products.forEach(product => {
             const displayPrice = product.isFlexibleAmount ? 'Flexible' : `₦${Number(product.amount).toLocaleString()}`;
-            const soldCount = product.transactionCount ? `${product.transactionCount} Sold` : 'New Listing';
             
-            // Image handling (Live Base64 from database or fallback)
             const imgHTML = product.productImageBase64 
                 ? `<img src="${product.productImageBase64}" class="product-img" alt="${product.title}">` 
                 : `<div class="fallback-img"><i class="fas fa-box-open"></i></div>`;
@@ -245,15 +253,15 @@
                     <div class="badge-verified"><i class="fas fa-shield-alt me-1"></i> VERIFIED</div>
                 </div>
                 <div class="product-details">
-                    <div class="merchant-name"><i class="fas fa-check-circle"></i> ${product.merchantName || 'Trusted Seller'}</div>
+                    <div class="merchant-name"><i class="fas fa-check-circle"></i> NATER Verified Merchant</div>
                     <h3 class="product-title">${product.title}</h3>
                     
                     <div class="price-row">
                         <div class="product-price">${displayPrice}</div>
-                        <div class="sales-stats">${soldCount}</div>
+                        <div class="sales-stats">Live</div>
                     </div>
                     
-                    <a href="/pay.html?id=${product.linkId}" class="btn-buy">
+                    <a href="/pay.html?id=${product.linkId || product._id}" class="btn-buy">
                         <i class="fas fa-shopping-cart me-2"></i> Checkout
                     </a>
                 </div>
@@ -271,13 +279,11 @@
         `;
     }
 
-    // Search and Filter Logic
     function filterProducts() {
         const query = document.getElementById('searchInput').value.toLowerCase();
         
         const filtered = globalMarketData.filter(product => {
-            const matchesSearch = product.title.toLowerCase().includes(query) || (product.description && product.description.toLowerCase().includes(query));
-            // Add category logic here once categories are saved in the DB schema
+            const matchesSearch = product.title.toLowerCase().includes(query);
             return matchesSearch; 
         });
 
@@ -285,22 +291,22 @@
     }
 
     function filterCategory(category) {
-        // UI Update
         document.querySelectorAll('.cat-pill').forEach(pill => pill.classList.remove('active'));
         event.currentTarget.classList.add('active');
         currentCategory = category;
-
-        // Note: The provided payment link schema doesn't have a 'category' field yet. 
-        // For a full implementation, you'd filter: globalMarketData.filter(p => p.category === category)
-        // For now, it acts as a UI placeholder that resets the search.
         document.getElementById('searchInput').value = '';
         renderGrid(globalMarketData);
     }
 
+    // Initialization
     window.onload = () => { 
         initStars(); 
-        loadMarketplace(); 
+        fetchLiveProducts(); // Initial fetch
+        
+        // Polling: Automatically fetch new data every 5 seconds for a "Real-Time" feel
+        setInterval(fetchLiveProducts, 5000); 
     };
+    
     window.onresize = initStars;
 </script>
 
