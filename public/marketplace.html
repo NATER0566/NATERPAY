@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Global Marketplace</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root { 
+            --gold: #FFD700; 
+            --gold-glow: rgba(255, 215, 0, 0.4); 
+            --bg: #030303; 
+            --card-bg: rgba(15, 15, 15, 0.85); 
+            --green: #00ff88;
+        }
+        
+        body { 
+            background: var(--bg); 
+            color: white; 
+            font-family: 'Montserrat', sans-serif; 
+            margin: 0; 
+            min-height: 100vh; 
+            overflow-x: hidden; 
+        }
+        
+        #starCanvas { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: -2; 
+            pointer-events: none; 
+        }
+
+        /* HEADER */
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.95); border-bottom: 2px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(10px);
+        }
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;}
+        .site-part-1 { color: var(--gold); font-size: 1.6rem; text-shadow: 0 0 10px var(--gold-glow); } 
+        .site-part-2 { color: #fff; font-size: 1.1rem; letter-spacing: 3px; }
+
+        .header-actions { display: flex; gap: 15px; align-items: center; }
+
+        /* HERO & SEARCH */
+        .marketplace-hero {
+            padding: 60px 20px 40px;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .hero-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; font-size: 2.8rem; text-shadow: 0 0 20px var(--gold-glow); margin-bottom: 15px; }
+        .hero-subtitle { color: #aaa; font-weight: 500; font-size: 1.1rem; margin-bottom: 30px; }
+
+        .search-container {
+            background: #111; border: 1.5px solid #333; border-radius: 50px; 
+            padding: 10px 25px; display: flex; align-items: center; transition: 0.3s;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .search-container:focus-within { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); }
+        .search-container i { color: var(--gold); font-size: 1.2rem; margin-right: 15px; }
+        .search-container input {
+            background: transparent; border: none; color: white; width: 100%; 
+            font-size: 1.1rem; font-weight: 600; outline: none; font-family: 'Montserrat', sans-serif;
+        }
+
+        /* CATEGORIES */
+        .category-scroll {
+            display: flex; gap: 15px; overflow-x: auto; padding: 20px 5%; margin-bottom: 30px;
+            scrollbar-width: none; /* Firefox */
+        }
+        .category-scroll::-webkit-scrollbar { display: none; }
+        .cat-pill {
+            background: var(--card-bg); border: 1px solid #333; color: #fff;
+            padding: 10px 25px; border-radius: 50px; font-weight: 700; font-size: 0.9rem;
+            white-space: nowrap; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px;
+        }
+        .cat-pill:hover, .cat-pill.active { background: var(--gold); color: #000; border-color: var(--gold); }
+
+        /* PRODUCT GRID */
+        .container-fluid { padding: 0 5%; max-width: 1600px; margin-bottom: 60px; }
+        .products-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px;
+        }
+
+        .product-card {
+            background: var(--card-bg); border: 1px solid #222; border-radius: 20px;
+            overflow: hidden; transition: 0.4s; position: relative; display: flex; flex-direction: column;
+            backdrop-filter: blur(15px);
+        }
+        .product-card:hover { border-color: var(--gold); transform: translateY(-8px); box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
+
+        .product-img-wrapper { position: relative; width: 100%; height: 220px; background: #0a0a0a; border-bottom: 1px solid #222; }
+        .product-img { width: 100%; height: 100%; object-fit: cover; }
+        .fallback-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: #333; }
+        
+        .badge-verified {
+            position: absolute; top: 15px; right: 15px; background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--gold); color: var(--gold); padding: 5px 12px;
+            border-radius: 50px; font-size: 0.7rem; font-weight: 900; letter-spacing: 1px; backdrop-filter: blur(5px);
+        }
+
+        .product-details { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; }
+        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.2rem; margin-bottom: 10px; color: #fff; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        .merchant-name { font-size: 0.8rem; color: #888; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 5px;}
+        .merchant-name i { color: var(--green); }
+
+        .price-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; margin-bottom: 20px;}
+        .product-price { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; font-weight: 900; }
+        .sales-stats { font-size: 0.8rem; color: #555; font-weight: 700; }
+
+        .btn-buy {
+            background: #111; color: var(--gold); font-weight: 900; border-radius: 12px;
+            padding: 15px; width: 100%; border: 1px solid var(--gold); font-size: 1rem;
+            letter-spacing: 1.5px; text-transform: uppercase; transition: 0.3s; text-align: center; text-decoration: none; display: block;
+        }
+        .btn-buy:hover { background: var(--gold); color: #000; box-shadow: 0 5px 20px var(--gold-glow); }
+
+        .loader-container { grid-column: 1 / -1; text-align: center; padding: 100px 0; }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">MARKET</span>
+    </div>
+    <div class="header-actions">
+        <a href="dashboard.html" class="btn btn-outline-light rounded-pill px-4 fw-bold" style="font-size: 0.9rem;">Sell an Item</a>
+    </div>
+</header>
+
+<div class="marketplace-hero">
+    <h1 class="hero-title">Discover Premium Goods</h1>
+    <p class="hero-subtitle">Securely buy and sell genuine products within the NATER PAY ecosystem.</p>
+    
+    <div class="search-container">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Search for phones, courses, electronics..." oninput="filterProducts()">
+    </div>
+</div>
+
+<div class="category-scroll" id="categoryContainer">
+    <div class="cat-pill active" onclick="filterCategory('All')"><i class="fas fa-globe"></i> All Items</div>
+    <div class="cat-pill" onclick="filterCategory('Digital')"><i class="fas fa-laptop-code"></i> Digital Products</div>
+    <div class="cat-pill" onclick="filterCategory('Electronics')"><i class="fas fa-mobile-alt"></i> Electronics</div>
+    <div class="cat-pill" onclick="filterCategory('Services')"><i class="fas fa-briefcase"></i> Services</div>
+    <div class="cat-pill" onclick="filterCategory('Fashion')"><i class="fas fa-tshirt"></i> Fashion</div>
+</div>
+
+<div class="container-fluid">
+    <div class="products-grid" id="marketGrid">
+        <div class="loader-container">
+            <i class="fas fa-circle-notch fa-spin fa-3x text-warning mb-3"></i>
+            <h5 class="text-white fw-bold">Syncing Live Ledger...</h5>
+            <p class="text-secondary">Retrieving verified merchant listings.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    let globalMarketData = [];
+    let currentCategory = 'All';
+
+    // Canvas Background
+    function initStars() {
+        const c = document.getElementById('starCanvas');
+        c.width = window.innerWidth; c.height = window.innerHeight;
+        const ctx = c.getContext('2d');
+        const stars = [];
+        for(let i = 0; i < 100; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        function animate() {
+            ctx.clearRect(0, 0, c.width, c.height);
+            stars.forEach(s => { ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5; });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+
+    // Fetch Live Products from the Payment Links Engine
+    async function loadMarketplace() {
+        const grid = document.getElementById('marketGrid');
+        
+        try {
+            // Note: Since this is a public marketplace, we hit a public route that returns all active links.
+            // If your backend requires a specific public route, adjust this URL (e.g., /api/payment-links/public).
+            const res = await fetch('/api/payment-links/public'); 
+            
+            // Fallback for demonstration if endpoint is secured/not ready
+            if(res.status === 404 || res.status === 401) {
+                throw new Error("Endpoint requires Auth or not found. Simulating data load...");
+            }
+
+            const data = await res.json();
+            
+            if (data.success && data.links && data.links.length > 0) {
+                globalMarketData = data.links;
+                renderGrid(globalMarketData);
+            } else {
+                showEmptyState("No products available on the marketplace yet.");
+            }
+        } catch (error) {
+            console.warn(error.message);
+            // Fallback/Simulation Logic: If backend isn't publicly exposed yet, we show a clean empty state.
+            // For a live connection, ensure your backend allows GET /api/payment-links without Auth.
+            showEmptyState("Failed to connect to marketplace ledger. Ensure public backend routes are active.");
+        }
+    }
+
+    function renderGrid(products) {
+        const grid = document.getElementById('marketGrid');
+        grid.innerHTML = '';
+
+        if (products.length === 0) {
+            showEmptyState("No products match your search.");
+            return;
+        }
+
+        products.forEach(product => {
+            const displayPrice = product.isFlexibleAmount ? 'Flexible' : `₦${Number(product.amount).toLocaleString()}`;
+            const soldCount = product.transactionCount ? `${product.transactionCount} Sold` : 'New Listing';
+            
+            // Image handling (Live Base64 from database or fallback)
+            const imgHTML = product.productImageBase64 
+                ? `<img src="${product.productImageBase64}" class="product-img" alt="${product.title}">` 
+                : `<div class="fallback-img"><i class="fas fa-box-open"></i></div>`;
+
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.innerHTML = `
+                <div class="product-img-wrapper">
+                    ${imgHTML}
+                    <div class="badge-verified"><i class="fas fa-shield-alt me-1"></i> VERIFIED</div>
+                </div>
+                <div class="product-details">
+                    <div class="merchant-name"><i class="fas fa-check-circle"></i> ${product.merchantName || 'Trusted Seller'}</div>
+                    <h3 class="product-title">${product.title}</h3>
+                    
+                    <div class="price-row">
+                        <div class="product-price">${displayPrice}</div>
+                        <div class="sales-stats">${soldCount}</div>
+                    </div>
+                    
+                    <a href="/pay.html?id=${product.linkId}" class="btn-buy">
+                        <i class="fas fa-shopping-cart me-2"></i> Checkout
+                    </a>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function showEmptyState(message) {
+        document.getElementById('marketGrid').innerHTML = `
+            <div class="loader-container">
+                <i class="fas fa-store-slash fa-4x mb-4 text-secondary"></i>
+                <h4 class="text-white fw-bold">${message}</h4>
+            </div>
+        `;
+    }
+
+    // Search and Filter Logic
+    function filterProducts() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        
+        const filtered = globalMarketData.filter(product => {
+            const matchesSearch = product.title.toLowerCase().includes(query) || (product.description && product.description.toLowerCase().includes(query));
+            // Add category logic here once categories are saved in the DB schema
+            return matchesSearch; 
+        });
+
+        renderGrid(filtered);
+    }
+
+    function filterCategory(category) {
+        // UI Update
+        document.querySelectorAll('.cat-pill').forEach(pill => pill.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        currentCategory = category;
+
+        // Note: The provided payment link schema doesn't have a 'category' field yet. 
+        // For a full implementation, you'd filter: globalMarketData.filter(p => p.category === category)
+        // For now, it acts as a UI placeholder that resets the search.
+        document.getElementById('searchInput').value = '';
+        renderGrid(globalMarketData);
+    }
+
+    window.onload = () => { 
+        initStars(); 
+        loadMarketplace(); 
+    };
+    window.onresize = initStars;
+</script>
+
+</body>
+</html>
