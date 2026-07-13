@@ -295,34 +295,11 @@
             </div>
             <div class="helper-text mb-4 mt-neg-2">Buyers feel safer when they know how to contact you if they have a problem.</div>
 
-            <div class="form-row">
-                <div class="input-group-custom">
-                    <label>Your Email Address <span class="req">REQUIRED</span></label>
-                    <div class="input-wrapper" id="wrap-email">
-                        <i class="fas fa-envelope"></i>
-                        <input type="email" id="supportEmail" placeholder="yourname@gmail.com">
-                    </div>
-                </div>
-                <div class="input-group-custom">
-                    <label>Your Phone or WhatsApp <span class="opt">RECOMMENDED</span></label>
-                    <div class="input-wrapper">
-                        <i class="fab fa-whatsapp"></i>
-                        <input type="tel" id="supportPhone" placeholder="0800 000 0000">
-                    </div>
-                </div>
-            </div>
-
             <div class="input-group-custom">
-                <label>Do you offer refunds? <span class="req">REQUIRED</span></label>
-                <div class="input-wrapper">
-                    <i class="fas fa-undo"></i>
-                    <select id="refundPolicy">
-                        <option value="no_refunds">No - I do not allow refunds</option>
-                        <option value="7_days">Yes - Buyers can refund within 7 Days</option>
-                        <option value="30_days">Yes - Buyers can refund within 30 Days</option>
-                        <option value="replacement_only">I will only replace damaged physical items</option>
-                    </select>
-                    <i class="fas fa-chevron-down select-icon"></i>
+                <label>Your Email Address <span class="req">REQUIRED</span></label>
+                <div class="input-wrapper" id="wrap-email">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="supportEmail" placeholder="yourname@gmail.com">
                 </div>
             </div>
 
@@ -347,16 +324,6 @@
                 </div>
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="reqPhone">
-                </div>
-            </div>
-
-            <div class="toggle-row">
-                <div class="toggle-info">
-                    <span class="toggle-title">Ask buyers for their Delivery Address</span>
-                    <span class="toggle-desc">Turn this on if you are selling a physical item and need to know where to ship it.</span>
-                </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="reqAddress">
                 </div>
             </div>
 
@@ -475,12 +442,8 @@
         const rawAmount = document.getElementById('linkAmount').value;
         
         const supportEmail = document.getElementById('supportEmail').value.trim();
-        const supportPhone = document.getElementById('supportPhone').value.trim();
-        const refundPolicy = document.getElementById('refundPolicy').value;
-        
         const stockLimit = document.getElementById('stockLimit').value;
         const reqPhone = document.getElementById('reqPhone').checked;
-        const reqAddress = document.getElementById('reqAddress').checked;
         const redirectUrl = document.getElementById('linkRedirect').value.trim();
         
         let hasError = false;
@@ -503,6 +466,7 @@
         try {
             Swal.fire({ title: 'Creating Link...', text: 'Please wait while we set up your product...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
             
+            // FIXED: Flat payload matching your backend route exactly
             const payload = {
                 title: title, 
                 category: category, 
@@ -511,18 +475,9 @@
                 currency: 'NGN', 
                 isFlexibleAmount: isFlexibleAmount,
                 productImageBase64: base64ProductImage,
-                merchantName: producerName,
-                merchantSupport: {
-                    email: supportEmail,
-                    phone: supportPhone,
-                    policy: refundPolicy
-                },
-                settings: {
-                    stockLimit: stockLimit ? parseInt(stockLimit) : null,
-                    requirePhone: reqPhone,
-                    requireAddress: reqAddress,
-                    redirectUrl: redirectUrl
-                }
+                redirectUrl: redirectUrl,
+                maxTransactions: stockLimit ? parseInt(stockLimit) : null,
+                collectCustomerPhone: reqPhone
             };
 
             const res = await fetch('/api/payment-links', {
@@ -541,7 +496,6 @@
                 document.getElementById('linkAmount').value = '';
                 document.getElementById('stockLimit').value = '';
                 document.getElementById('reqPhone').checked = false;
-                document.getElementById('reqAddress').checked = false;
                 document.getElementById('productImageInput').value = '';
                 document.getElementById('imagePreview').style.display = 'none';
                 document.getElementById('uploadPlaceholder').style.display = 'block';
@@ -578,9 +532,10 @@
                         const count = Number(link.transactionCount || 0);
                         const linkCategory = link.category || 'Product';
                         
+                        // FIXED: Adjusted stock limit display to use correct property
                         let stockDisplay = '';
-                        if(link.settings && link.settings.stockLimit) {
-                            stockDisplay = `<div class="stat-line"><span class="text-secondary">COPIES LEFT</span> <span class="val text-white">${link.settings.stockLimit}</span></div>`;
+                        if(link.maxTransactions) {
+                            stockDisplay = `<div class="stat-line"><span class="text-secondary">COPIES LEFT</span> <span class="val text-white">${link.maxTransactions - count}</span></div>`;
                         }
 
                         totalRev += collected;
