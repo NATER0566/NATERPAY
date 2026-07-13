@@ -19,6 +19,12 @@ const paymentLinkSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+
+  // ---> NEW CATEGORY FIELD ADDED HERE <---
+  category: {
+    type: String,
+    default: 'Digital Products'
+  },
   
   description: {
     type: String,
@@ -52,7 +58,7 @@ const paymentLinkSchema = new mongoose.Schema({
     default: null
   },
 
-  // ---> NEW E-COMMERCE FIELDS INTEGRATED HERE <---
+  // ---> E-COMMERCE FIELDS <---
   redirectUrl: {
     type: String,
     default: ''
@@ -62,7 +68,6 @@ const paymentLinkSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  // ------------------------------------------------
   
   // Customer details collection settings
   collectCustomerName: {
