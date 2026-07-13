@@ -6,16 +6,17 @@
     <title>NATER-PAY | Global Marketplace</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@500;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <style>
         :root { 
             --gold: #FFD700; 
-            --gold-glow: rgba(255, 215, 0, 0.4); 
+            --gold-glow: rgba(255, 215, 0, 0.6); 
+            --gold-subtle: rgba(255, 215, 0, 0.15);
             --bg: #030303; 
-            --card-bg: rgba(12, 12, 12, 0.85); 
-            --green: #00ff88;
+            --card-bg: linear-gradient(145deg, rgba(18,18,18,0.95), rgba(5,5,5,0.98)); 
+            --green: #00e676;
             --nater-red: #d32f2f;
         }
         
@@ -47,156 +48,212 @@
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
             background: rgba(0, 0, 0, 0.95); border-bottom: 3px solid var(--gold);
             display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(10px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.8);
         }
         .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;}
-        .site-part-1 { color: var(--gold); font-size: 1.8rem; text-shadow: 0 0 10px var(--gold-glow); } 
-        .site-part-2 { color: var(--nater-red); font-size: 1.3rem; letter-spacing: 3px; }
+        .site-part-1 { color: var(--gold); font-size: 2rem; text-shadow: 0 0 15px var(--gold-glow); } 
+        .site-part-2 { color: var(--nater-red); font-size: 1.4rem; letter-spacing: 3px; }
 
         @media (max-width: 480px) {
-            .site-part-1 { font-size: 1.4rem; }
-            .site-part-2 { font-size: 1rem; }
-            header .btn { font-size: 0.85rem !important; padding: 8px 15px !important; }
+            .site-part-1 { font-size: 1.5rem; }
+            .site-part-2 { font-size: 1.1rem; }
+            header .btn { font-size: 0.9rem !important; padding: 10px 18px !important; }
         }
 
         /* HERO & SEARCH */
         .marketplace-hero {
-            padding: 50px 5% 40px;
+            padding: 60px 5% 50px;
             text-align: center;
             width: 100%;
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
         }
-        .hero-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; font-size: clamp(2rem, 5vw, 3rem); text-shadow: 0 0 20px var(--gold-glow); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;}
-        .hero-subtitle { color: #ccc; font-weight: 600; font-size: clamp(0.9rem, 2vw, 1.1rem); margin-bottom: 30px; }
+        .hero-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; font-size: clamp(2.5rem, 6vw, 4rem); text-shadow: 0 0 30px var(--gold-glow); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px;}
+        .hero-subtitle { color: #fff; font-weight: 800; font-size: clamp(1rem, 2.5vw, 1.3rem); margin-bottom: 40px; text-shadow: 0 2px 10px rgba(0,0,0,0.8);}
 
         .search-container {
-            background: #111; border: 2px solid #333; border-radius: 50px; 
-            padding: 12px 25px; display: flex; align-items: center; transition: 0.3s;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%;
+            background: rgba(15, 15, 15, 0.9); border: 3px solid #444; border-radius: 50px; 
+            padding: 15px 30px; display: flex; align-items: center; transition: 0.4s ease;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.7); width: 100%; max-width: 800px; margin: 0 auto;
         }
-        .search-container:focus-within { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); background: #151515;}
-        .search-container i { color: var(--gold); font-size: 1.3rem; margin-right: 15px; }
+        .search-container:focus-within { border-color: var(--gold); box-shadow: 0 0 30px var(--gold-glow); background: #1a1a1a; transform: scale(1.02);}
+        .search-container i { color: var(--gold); font-size: 1.6rem; margin-right: 20px; }
         .search-container input {
             background: transparent; border: none; color: white; width: 100%; 
-            font-size: 1.1rem; font-weight: 700; outline: none; font-family: 'Montserrat', sans-serif;
+            font-size: 1.3rem; font-weight: 800; outline: none; font-family: 'Montserrat', sans-serif;
         }
+        .search-container input::placeholder { color: #888; font-weight: 600; }
 
         /* TRUST BANNER */
-        .feature-banner-wrapper { width: 100%; padding: 0 5%; margin-bottom: 40px; }
+        .feature-banner-wrapper { width: 100%; padding: 0 5%; margin-bottom: 50px; }
         .feature-banner {
-            display: flex; justify-content: center; gap: 30px; flex-wrap: wrap;
-            background: rgba(10, 10, 10, 0.6); border: 1px solid #333; border-radius: 15px;
-            padding: 25px; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;
+            background: rgba(10, 10, 10, 0.7); border: 2px solid #333; border-radius: 20px;
+            padding: 30px; backdrop-filter: blur(15px); box-shadow: 0 15px 40px rgba(0,0,0,0.5);
         }
         .feature-item {
-            display: flex; align-items: center; gap: 10px; color: #fff;
-            font-weight: 800; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px;
+            display: flex; align-items: center; gap: 12px; color: #fff;
+            font-weight: 900; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1.5px;
         }
-        .feature-item i { color: var(--gold); font-size: 1.4rem; text-shadow: 0 0 10px var(--gold-glow); }
+        .feature-item i { color: var(--gold); font-size: 1.8rem; text-shadow: 0 0 15px var(--gold-glow); }
 
         @media (max-width: 768px) {
-            .feature-banner { gap: 15px; padding: 15px; }
-            .feature-item { font-size: 0.75rem; width: 45%; justify-content: center; }
+            .feature-banner { gap: 20px; padding: 20px; }
+            .feature-item { font-size: 0.85rem; width: 45%; justify-content: center; }
         }
 
-        /* PRODUCT GRID */
-        .main-content { flex: 1; padding: 0 5%; width: 100%; margin: 0 auto 60px; }
+        /* PRODUCT GRID - MASSIVE FULL-SCREEN CARDS */
+        .main-content { flex: 1; padding: 0 5%; width: 100%; max-width: 1600px; margin: 0 auto 80px; }
         .products-grid {
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); 
-            gap: 25px;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); 
+            gap: 40px;
             min-height: 400px;
         }
 
-        /* ATTRACTIVE PORTABLE CARDS */
-        .product-card {
-            background: var(--card-bg); border: 2px solid #222; border-radius: 20px;
-            overflow: hidden; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            position: relative; display: flex; flex-direction: column;
-            backdrop-filter: blur(15px); height: 100%; text-align: left;
+        /* SUPER BEAUTIFUL ANIMATING CARDS */
+        @keyframes floatCard {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0); }
         }
-        .product-card:hover { border-color: var(--gold); transform: translateY(-10px); box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
 
+        .product-card {
+            background: var(--card-bg); border: 2px solid #333; border-radius: 30px;
+            overflow: hidden; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative; display: flex; flex-direction: column;
+            backdrop-filter: blur(20px); height: 100%; text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            animation: floatCard 6s infinite ease-in-out;
+        }
+        /* Stagger animation delays so they don't all float exactly at the same time */
+        .product-card:nth-child(even) { animation-delay: 3s; }
+        
+        .product-card:hover { 
+            border-color: var(--gold); 
+            transform: translateY(-20px) scale(1.03); 
+            box-shadow: 0 30px 60px rgba(0,0,0,0.9), 0 0 40px var(--gold-subtle) inset; 
+            animation-play-state: paused;
+            z-index: 10;
+        }
+
+        /* CLICK TO VIEW IMAGE - FULL DISPLAY */
         .product-image-header {
-            width: 100%; height: 200px; background-color: #050505;
-            background-size: cover; 
-            background-position: center; background-repeat: no-repeat;
-            border-bottom: 2px solid #222; position: relative;
-            cursor: zoom-in; /* Let buyer know they can click to view */
+            width: 100%; height: 320px; background-color: #050505;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            border-bottom: 3px solid #222; position: relative; cursor: pointer;
+            overflow: hidden;
         }
         
         .store-icon-fallback { 
-            background: #050505; width: 100%; height: 200px; 
-            display: flex; align-items: center; justify-content: center; font-size: 4rem; 
-            color: #222; border-bottom: 2px solid #222; position: relative;
+            background: #050505; width: 100%; height: 320px; 
+            display: flex; align-items: center; justify-content: center; font-size: 7rem; 
+            color: #222; border-bottom: 3px solid #222; position: relative; cursor: pointer;
         }
+
+        /* Hover Overlay for Images */
+        .image-overlay {
+            position: absolute; inset: 0; background: rgba(0, 0, 0, 0.75);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.4s ease; backdrop-filter: blur(3px);
+        }
+        .product-image-header:hover .image-overlay, .store-icon-fallback:hover .image-overlay {
+            opacity: 1;
+        }
+        .image-overlay i { font-size: 3rem; color: var(--gold); margin-bottom: 10px; text-shadow: 0 0 20px var(--gold-glow); }
+        .image-overlay span { color: #fff; font-size: 1.3rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px;}
 
         /* Card Badges */
         .badge-verified {
-            position: absolute; top: 15px; right: 15px; background: rgba(0, 0, 0, 0.9);
-            border: 1px solid var(--green); color: var(--green); padding: 6px 12px;
-            border-radius: 50px; font-size: 0.75rem; font-weight: 900; letter-spacing: 1px;
+            position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.95);
+            border: 2px solid var(--green); color: var(--green); padding: 8px 16px;
+            border-radius: 50px; font-size: 0.85rem; font-weight: 900; letter-spacing: 1.5px; z-index: 2;
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.4);
         }
         .badge-category {
-            position: absolute; top: 15px; left: 15px; background: rgba(255, 215, 0, 0.9);
-            color: #000; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 900; 
+            position: absolute; top: 20px; left: 20px; background: rgba(255, 215, 0, 0.95);
+            color: #000; padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 900; z-index: 2;
+            text-transform: uppercase; letter-spacing: 1px;
         }
 
-        .product-details { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; }
+        /* CENTERED DETAILS AREA */
+        .product-details { padding: 35px 25px; flex-grow: 1; display: flex; flex-direction: column; align-items: center; }
         
-        /* Creator Details Box */
+        /* BOLD PRODUCT TITLE */
+        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 2rem; margin-bottom: 20px; color: #fff; line-height: 1.2; text-shadow: 0 2px 5px rgba(0,0,0,0.5);}
+        
+        /* PRODUCT OWNER DETAILS BOX */
         .creator-info-box {
-            background: #0a0a0a; border: 1px solid #333; border-radius: 12px;
-            padding: 12px; margin-bottom: 15px;
+            background: rgba(0,0,0,0.6); border: 1px solid #444; border-radius: 15px;
+            padding: 15px 20px; margin-bottom: 25px; width: 100%;
+            display: flex; flex-direction: column; align-items: center;
         }
-        .creator-info-box div { margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #ccc; display: flex; align-items: center; gap: 8px;}
-        .creator-info-box div:last-child { margin-bottom: 0; }
-        .creator-info-box i { width: 15px; text-align: center; }
-        .creator-name i { color: var(--gold); }
-        .creator-email i { color: #888; }
+        .owner-header { color: var(--gold); font-size: 1.1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .owner-sub { color: #888; font-size: 0.85rem; font-weight: 700; margin-bottom: 15px; font-style: italic; }
         
-        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; margin-bottom: 12px; color: #fff; line-height: 1.3; }
+        .creator-info-box div.contact-row { 
+            margin-bottom: 8px; font-size: 1.05rem; font-weight: 800; color: #eee; 
+            display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+        }
+        .creator-info-box div.contact-row:last-child { margin-bottom: 0; }
+        .creator-info-box i { width: 20px; text-align: center; font-size: 1.2rem; }
+        .creator-name i { color: #fff; }
+        .creator-email i { color: var(--gold); }
         
-        /* DEDICATED FULL DISPLAY BOX FOR PRODUCT DESCRIPTION */
+        /* BOLD PRODUCT DESCRIPTION */
         .product-desc { 
-            color: #bbb; 
-            font-size: 0.9rem; 
-            font-weight: 600; 
-            margin-bottom: 20px; 
-            line-height: 1.5; 
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #222;
-            padding: 12px;
-            border-radius: 10px;
-            max-height: 130px;
-            overflow-y: auto;
-            word-wrap: break-word;
+            color: #ddd; font-size: 1.1rem; font-weight: 700; margin-bottom: 30px; 
+            line-height: 1.6; background: rgba(0, 0, 0, 0.5); border: 1px solid #333;
+            padding: 20px; border-radius: 15px; max-height: 160px; overflow-y: auto;
+            word-wrap: break-word; width: 100%; box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
         }
-        .product-desc::-webkit-scrollbar { width: 5px; }
+        .product-desc::-webkit-scrollbar { width: 6px; }
         .product-desc::-webkit-scrollbar-track { background: transparent; }
-        .product-desc::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .product-desc::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; }
         .product-desc::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 
-        .card-footer-info { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; margin-bottom: 20px; padding-top: 15px; border-top: 1px solid #333;}
-        
-        .price-col { display: flex; flex-direction: column; }
-        .price-label { font-size: 0.7rem; color: #666; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;}
-        .product-price { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; font-weight: 900; }
-        
-        .sales-col { text-align: right; }
-        .sales-stats { font-size: 0.85rem; color: #fff; font-weight: 800; background: #222; padding: 5px 10px; border-radius: 8px;}
-
-        .btn-buy {
-            background: #1a1a1a; color: #fff; font-weight: 900; border-radius: 12px;
-            padding: 16px; width: 100%; border: 2px solid #444; font-size: 1.05rem;
-            letter-spacing: 1px; text-transform: uppercase; transition: 0.3s; text-align: center; text-decoration: none; display: flex; justify-content: center; align-items: center; gap: 10px;
+        /* FOOTER STATS CENTERED */
+        .card-footer-info { 
+            display: flex; flex-direction: column; align-items: center; 
+            margin-top: auto; margin-bottom: 25px; padding-top: 25px; 
+            border-top: 2px solid #333; width: 100%; gap: 15px;
         }
-        .btn-buy:hover { background: var(--gold); color: #000; border-color: var(--gold); box-shadow: 0 10px 25px var(--gold-glow); }
-
-        .loader-container { grid-column: 1 / -1; text-align: center; padding: 80px 0; border: 2px dashed #333; border-radius: 20px; background: #0a0a0a;}
         
-        /* Remove transparent background on modal to prevent bleeding */
-        .modal-content { background: #111; border: 1px solid var(--gold); }
+        .price-label { font-size: 0.9rem; color: #888; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px;}
+        .product-price { font-family: 'Cinzel', serif; color: var(--gold); font-size: 2.5rem; font-weight: 900; text-shadow: 0 0 15px var(--gold-glow);}
+        
+        .sales-stats { font-size: 1rem; color: #fff; font-weight: 900; background: #222; padding: 8px 20px; border-radius: 50px; border: 1px solid #444;}
+
+        /* MASSIVE BUY BUTTON */
+        .btn-buy {
+            background: linear-gradient(90deg, #111, #222); color: #fff; font-weight: 900; border-radius: 50px;
+            padding: 20px; width: 100%; border: 2px solid var(--gold); font-size: 1.2rem;
+            letter-spacing: 2px; text-transform: uppercase; transition: all 0.4s; 
+            text-align: center; text-decoration: none; display: flex; justify-content: center; align-items: center; gap: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        .btn-buy i { font-size: 1.4rem; transition: transform 0.3s; }
+        .btn-buy:hover { 
+            background: var(--gold); color: #000; 
+            box-shadow: 0 15px 35px var(--gold-glow); 
+            transform: translateY(-5px);
+        }
+        .btn-buy:hover i { transform: translateX(8px); }
+
+        .loader-container { grid-column: 1 / -1; text-align: center; padding: 100px 0; border: 3px dashed #444; border-radius: 30px; background: rgba(10,10,10,0.8);}
+        
+        /* UNRESTRICTED IMAGE MODAL (SHOWS 100% OF IMAGE) */
+        .modal-dialog { max-width: 95vw; margin: 1.75rem auto; }
+        .modal-content { background: rgba(5,5,5,0.95); border: 2px solid var(--gold); box-shadow: 0 0 50px var(--gold-glow); border-radius: 20px;}
+        .modal-header { border-bottom: none; }
+        
+        /* Ensure Object-Fit Contain so NO part of the image is ever cut off */
+        #fullSizeImage {
+            width: 100%; 
+            max-height: 85vh; 
+            object-fit: contain; /* PERFECT RATIO, NO CUT OFFS */
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body>
@@ -235,22 +292,23 @@
 <div class="main-content">
     <div class="products-grid" id="marketGrid">
         <div class="loader-container" id="loadingState">
-            <i class="fas fa-circle-notch fa-spin fa-3x text-warning mb-3"></i>
-            <h5 class="fw-bold text-white fs-3" style="font-family: 'Cinzel';">Syncing Global Ledger...</h5>
-            <p class="text-secondary fw-bold">Retrieving all global merchant listings.</p>
+            <i class="fas fa-circle-notch fa-spin fa-4x text-warning mb-4"></i>
+            <h5 class="fw-bold text-white fs-2 mb-3" style="font-family: 'Cinzel';">Syncing Global Ledger...</h5>
+            <p class="text-secondary fw-bold fs-5">Retrieving all global merchant listings.</p>
         </div>
     </div>
 </div>
 
-<!-- IMAGE VIEWER MODAL (Allows buyers to see full images) -->
+<!-- FULL SCREEN UNRESTRICTED IMAGE VIEWER MODAL -->
 <div class="modal fade" id="imageViewerModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      <div class="modal-header border-bottom-0 pb-0">
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-header pb-0">
+        <h5 class="modal-title text-warning fw-bold fs-4 ms-2" style="font-family: 'Cinzel';"><i class="fas fa-image"></i> Product Image Preview</h5>
+        <button type="button" class="btn-close btn-close-white fs-4" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body text-center pt-0 pb-4">
-        <img id="fullSizeImage" src="" alt="Full Product Image" class="img-fluid rounded" style="max-height: 80vh; object-fit: contain; width: 100%;">
+      <div class="modal-body text-center p-4">
+        <img id="fullSizeImage" src="" alt="Full Product Image">
       </div>
     </div>
   </div>
@@ -268,16 +326,16 @@
         c.width = window.innerWidth; c.height = window.innerHeight;
         const ctx = c.getContext('2d');
         const stars = [];
-        for(let i = 0; i < 100; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        for(let i = 0; i < 150; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2.5 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
         function animate() {
             ctx.clearRect(0, 0, c.width, c.height);
-            stars.forEach(s => { ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5; });
+            stars.forEach(s => { ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 10; ctx.shadowColor = "white"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5; });
             requestAnimationFrame(animate);
         }
         animate();
     }
 
-    // Function to open the Image Modal
+    // Function to open the Unrestricted Image Modal
     function viewFullImage(base64String) {
         document.getElementById('fullSizeImage').src = base64String;
         const modal = new bootstrap.Modal(document.getElementById('imageViewerModal'));
@@ -288,12 +346,9 @@
     async function fetchLiveProducts() {
         try {
             const headers = { 'Content-Type': 'application/json' };
-            const res = await fetch('/api/marketplace/all', {
-                method: 'GET',
-                headers: headers
-            }); 
+            const res = await fetch('/api/marketplace/all', { method: 'GET', headers: headers }); 
             
-            if(!res.ok) throw new Error("Could not connect to the global ledger. Ensure backend route /api/marketplace/all exists.");
+            if(!res.ok) throw new Error("Could not connect to the global ledger.");
 
             const data = await res.json();
             const newMarketData = data.links ? data.links : (Array.isArray(data) ? data : []);
@@ -338,15 +393,19 @@
             
             let mediaHeaderHTML = '';
             if (product.productImageBase64) {
-                // ADDED ONCLICK EVENT TO VIEW FULL IMAGE
+                // ADDED HOVER OVERLAY TELLING USER TO CLICK
                 mediaHeaderHTML = `
                     <div class="product-image-header" onclick="viewFullImage('${product.productImageBase64}')" style="background-image: url('${product.productImageBase64}');">
                         <div class="badge-category"><i class="fas fa-tag"></i> ${categoryDisplay}</div>
                         <div class="badge-verified"><i class="fas fa-shield-check"></i> VERIFIED</div>
+                        <div class="image-overlay">
+                            <i class="fas fa-search-plus"></i>
+                            <span>Click to view full image</span>
+                        </div>
                     </div>`;
             } else {
                 mediaHeaderHTML = `
-                    <div class="store-icon-fallback">
+                    <div class="store-icon-fallback" title="No image uploaded">
                         <i class="fas fa-box-open"></i>
                         <div class="badge-category"><i class="fas fa-tag"></i> ${categoryDisplay}</div>
                         <div class="badge-verified"><i class="fas fa-shield-check"></i> VERIFIED</div>
@@ -361,21 +420,24 @@
                     
                     <h3 class="product-title">${product.title}</h3>
                     
+                    <!-- NEW EXPLICIT PRODUCT OWNER DETAILS AREA -->
                     <div class="creator-info-box">
-                        <div class="creator-name" title="Creator Name"><i class="fas fa-user-circle"></i> ${merchantName}</div>
-                        <div class="creator-email" title="Creator Email"><i class="fas fa-envelope"></i> ${email}</div>
-                        <!-- Removed WhatsApp field here -->
+                        <div class="owner-header"><i class="fas fa-crown"></i> Product Owner Details</div>
+                        <div class="owner-sub">Contact him/her through the email if needed</div>
+                        
+                        <div class="contact-row creator-name"><i class="fas fa-user-circle"></i> ${merchantName}</div>
+                        <div class="contact-row creator-email"><i class="fas fa-envelope"></i> ${email}</div>
                     </div>
 
                     <div class="product-desc">${shortDesc}</div>
                     
                     <div class="card-footer-info">
-                        <div class="price-col">
-                            <span class="price-label">Price</span>
-                            <span class="product-price">${displayPrice}</span>
+                        <div class="price-col text-center">
+                            <div class="price-label">Secure Access Price</div>
+                            <div class="product-price">${displayPrice}</div>
                         </div>
                         <div class="sales-col">
-                            <span class="sales-stats"><i class="fas fa-chart-line text-success"></i> ${salesCount} Sold</span>
+                            <span class="sales-stats"><i class="fas fa-chart-line text-success me-2"></i> ${salesCount} Successfully Sold</span>
                         </div>
                     </div>
                     
@@ -391,9 +453,9 @@
     function showEmptyState(message) {
         document.getElementById('marketGrid').innerHTML = `
             <div class="loader-container">
-                <i class="fas fa-globe fa-4x mb-4 text-secondary"></i>
-                <h4 class="text-white fw-bold fs-3 mb-2" style="font-family:'Cinzel';">${message}</h4>
-                <p class="text-secondary fw-bold">Try adjusting your search terms.</p>
+                <i class="fas fa-globe fa-5x mb-4 text-secondary"></i>
+                <h4 class="text-white fw-bold fs-2 mb-3" style="font-family:'Cinzel';">${message}</h4>
+                <p class="text-secondary fw-bold fs-5">Try adjusting your search terms.</p>
             </div>
         `;
     }
