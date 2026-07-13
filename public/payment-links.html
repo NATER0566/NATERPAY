@@ -52,7 +52,7 @@
             background: linear-gradient(145deg, #1a1a1a, #0a0a0a); border: 2px solid #444;
             border-left: 6px solid var(--success); padding: 15px 25px; border-radius: 12px;
             display: inline-flex; align-items: center; gap: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            flex: 1; min-width: 300px;
+            flex: 1; min-width: min(100%, 300px); /* FIXED: prevents overflow */
         }
         
         .auth-icon { font-size: 2rem; color: var(--success); }
@@ -61,8 +61,8 @@
         .auth-name { font-size: 1.3rem; font-weight: 900; color: #fff; display: flex; align-items: center; gap: 8px;}
         
         /* Adjusted Top Metrics to fit screen and wrap properly */
-        .top-metrics { display: flex; gap: 15px; flex: 2; min-width: 300px; flex-wrap: wrap; }
-        .metric-box { background: #111; border: 2px solid #333; padding: 20px; border-radius: 12px; text-align: right; flex: 1; min-width: 150px; }
+        .top-metrics { display: flex; gap: 15px; flex: 2; min-width: min(100%, 300px); flex-wrap: wrap; }
+        .metric-box { background: #111; border: 2px solid #333; padding: 20px; border-radius: 12px; text-align: right; flex: 1; min-width: min(100%, 150px); }
         .metric-label { font-size: 0.9rem; color: #ccc; text-transform: uppercase; font-weight: 900; display: block; margin-bottom: 5px;}
         .metric-value { font-size: 1.8rem; font-weight: 900; font-family: 'Cinzel', serif; color: #fff; }
         .metric-value.gold { color: var(--gold); }
@@ -124,10 +124,25 @@
         .form-row { display: flex; gap: 25px; flex-wrap: wrap; }
         .form-row .input-group-custom { flex: 1; min-width: 250px; }
 
-        .section-title { font-family: 'Cinzel', serif; font-size: 2.2rem; font-weight: 900; margin-bottom: 30px; display: flex; align-items: center; gap: 15px; border-bottom: 3px solid #333; padding-bottom: 15px; text-transform: uppercase; }
+        /* FIXED: Added flex-wrap and responsive font-size to prevent text crashing/overlapping */
+        .section-title { 
+            font-family: 'Cinzel', serif; 
+            font-size: clamp(1.6rem, 6vw, 2.2rem); 
+            font-weight: 900; 
+            margin-bottom: 30px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            align-items: center; 
+            gap: 12px; 
+            border-bottom: 3px solid #333; 
+            padding-bottom: 15px; 
+            text-transform: uppercase; 
+            line-height: 1.3;
+        }
         .section-title span { color: var(--gold); }
         
-        .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 25px; width: 100%; }
+        /* FIXED: Changed to min(100%, 360px) to stop product cards from busting the mobile width limit */
+        .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 25px; width: 100%; }
         .link-item { background: #0a0a0a; border: 2px solid #333; border-radius: 20px; overflow: hidden; transition: 0.3s; display: flex; flex-direction: column; }
         .link-item:hover { border-color: var(--gold); box-shadow: 0 15px 40px rgba(0,0,0,0.8); transform: translateY(-5px); }
         
