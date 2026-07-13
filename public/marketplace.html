@@ -44,7 +44,7 @@
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
             background: rgba(0, 0, 0, 0.95); border-bottom: 2px solid var(--gold);
             display: flex; justify-content: space-between; align-items: center; 
-            flex-wrap: wrap; gap: 15px; /* Fixes overflow by allowing wrap */
+            flex-wrap: wrap; gap: 15px; 
             z-index: 1000; backdrop-filter: blur(10px);
         }
         .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;}
@@ -106,7 +106,6 @@
         }
         .product-card:hover { border-color: var(--gold); transform: translateY(-8px); box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
 
-        /* Match pay.html exact Image logic */
         .product-image-header {
             width: 100%; height: 220px; background-color: #0a0a0a;
             background-size: cover; background-position: center; background-repeat: no-repeat;
@@ -127,7 +126,6 @@
 
         .product-details { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; }
         
-        /* Match pay.html text styles */
         .merchant-name { font-size: 0.8rem; color: #888; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 5px;}
         .merchant-name i { color: var(--green); }
         
@@ -214,11 +212,23 @@
     // Fetch Live Products (Real-Time Function)
     async function fetchLiveProducts() {
         try {
+            // FIX: Retrieve token from localStorage to satisfy backend auth requirement
+            const token = localStorage.getItem('token'); 
+            const headers = { 'Content-Type': 'application/json' };
+            
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const res = await fetch('/api/payment-links', {
                 method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
+                headers: headers
             }); 
             
+            if (res.status === 401 || res.status === 403) {
+                throw new Error("Authentication failed. Please ensure you are logged in.");
+            }
+
             if(!res.ok) throw new Error("Could not connect to live ledger.");
 
             const data = await res.json();
@@ -238,7 +248,7 @@
         } catch (error) {
             console.error("Marketplace fetch error:", error);
             if (globalMarketData.length === 0) {
-                showEmptyState("Awaiting public API connection. Ensure your backend allows public GET requests to /api/payment-links.");
+                showEmptyState(error.message || "Awaiting secure API connection. Ensure you are logged in.");
             }
         }
     }
@@ -253,12 +263,10 @@
         }
 
         products.forEach(product => {
-            // Amount formatting identical to pay.html
             const displayPrice = product.isFlexibleAmount 
                 ? 'Flexible' 
                 : `₦${Number(product.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
             
-            // Image handling identical to pay.html
             let mediaHeaderHTML = '';
             if (product.productImageBase64) {
                 mediaHeaderHTML = `
@@ -273,7 +281,6 @@
                     </div>`;
             }
 
-            // Merchant Name mapping identical to pay.html
             const merchantName = product.merchantName || 'Verified Merchant';
             const shortDesc = product.description || 'Secure NATERPAY Checkout';
 
