@@ -39,15 +39,23 @@
             pointer-events: none; 
         }
 
-        /* HEADER */
+        /* HEADER & RESPONSIVENESS FIX */
         header {
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
             background: rgba(0, 0, 0, 0.95); border-bottom: 2px solid var(--gold);
-            display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(10px);
+            display: flex; justify-content: space-between; align-items: center; 
+            flex-wrap: wrap; gap: 15px; /* Fixes overflow by allowing wrap */
+            z-index: 1000; backdrop-filter: blur(10px);
         }
         .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;}
         .site-part-1 { color: var(--gold); font-size: 1.6rem; text-shadow: 0 0 10px var(--gold-glow); } 
         .site-part-2 { color: #fff; font-size: 1.1rem; letter-spacing: 3px; }
+
+        @media (max-width: 480px) {
+            .site-part-1 { font-size: 1.3rem; }
+            .site-part-2 { font-size: 0.9rem; letter-spacing: 2px; }
+            .header-actions .btn { font-size: 0.75rem !important; padding: 8px 16px !important; }
+        }
 
         /* HERO & SEARCH */
         .marketplace-hero {
@@ -87,21 +95,30 @@
         /* PRODUCT GRID */
         .main-content { flex: 1; padding: 0 5%; max-width: 1600px; margin: 0 auto 60px; width: 100%; }
         .products-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px;
-            min-height: 400px; /* Ensures page stays relatively long even when loading */
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px;
+            min-height: 400px;
         }
 
         .product-card {
             background: var(--card-bg); border: 1px solid #222; border-radius: 20px;
             overflow: hidden; transition: 0.4s; position: relative; display: flex; flex-direction: column;
-            backdrop-filter: blur(15px); height: 100%;
+            backdrop-filter: blur(15px); height: 100%; text-align: center;
         }
         .product-card:hover { border-color: var(--gold); transform: translateY(-8px); box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
 
-        .product-img-wrapper { position: relative; width: 100%; height: 220px; background: #0a0a0a; border-bottom: 1px solid #222; }
-        .product-img { width: 100%; height: 100%; object-fit: cover; }
-        .fallback-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: #333; }
+        /* Match pay.html exact Image logic */
+        .product-image-header {
+            width: 100%; height: 220px; background-color: #0a0a0a;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            border-bottom: 1px solid #222; position: relative;
+        }
         
+        .store-icon-fallback { 
+            background: #0a0a0a; width: 100%; height: 220px; 
+            display: flex; align-items: center; justify-content: center; font-size: 4rem; 
+            color: #333; border-bottom: 1px solid #222; position: relative;
+        }
+
         .badge-verified {
             position: absolute; top: 15px; right: 15px; background: rgba(0, 0, 0, 0.8);
             border: 1px solid var(--gold); color: var(--gold); padding: 5px 12px;
@@ -109,14 +126,17 @@
         }
 
         .product-details { padding: 25px; flex-grow: 1; display: flex; flex-direction: column; }
-        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.2rem; margin-bottom: 10px; color: #fff; line-height: 1.3; }
         
-        .merchant-name { font-size: 0.8rem; color: #888; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 5px;}
+        /* Match pay.html text styles */
+        .merchant-name { font-size: 0.8rem; color: #888; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 5px;}
         .merchant-name i { color: var(--green); }
+        
+        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.3rem; margin-bottom: 10px; color: #fff; line-height: 1.3; }
+        .product-desc { color: #aaa; font-size: 0.85rem; font-weight: 500; margin-bottom: 20px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;}
 
-        .price-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; margin-bottom: 20px;}
-        .product-price { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.6rem; font-weight: 900; }
-        .sales-stats { font-size: 0.8rem; color: #555; font-weight: 700; }
+        .price-row { display: flex; flex-direction: column; align-items: center; margin-top: auto; margin-bottom: 20px;}
+        .product-price { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px var(--gold-glow); }
+        .sales-stats { font-size: 0.75rem; color: #555; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;}
 
         .btn-buy {
             background: #111; color: var(--gold); font-weight: 900; border-radius: 12px;
@@ -138,8 +158,7 @@
         <span class="site-part-2">MARKET</span>
     </div>
     <div class="header-actions">
-        <!-- Changed to Return to Dashboard -->
-        <a href="dashboard.html" class="btn btn-outline-light rounded-pill px-4 fw-bold" style="font-size: 0.9rem;">
+        <a href="dashboard.html" class="btn btn-outline-light rounded-pill px-4 fw-bold" style="font-size: 0.9rem; white-space: nowrap;">
             <i class="fas fa-arrow-left me-2"></i> Return to Dashboard
         </a>
     </div>
@@ -166,8 +185,8 @@
 <div class="main-content">
     <div class="products-grid" id="marketGrid">
         <div class="loader-container" id="loadingState">
-            <i class="fas fa-circle-notch fa-spin fa-3x text-warning mb-3"></i>
-            <h5 class="text-white fw-bold">Syncing Live Ledger...</h5>
+            <i class="fas fa-circle-notch fa-spin fa-3x text-warning mb-3 mt-4"></i>
+            <h5 class="fw-bold text-white">Syncing Live Ledger...</h5>
             <p class="text-secondary">Retrieving verified merchant listings.</p>
         </div>
     </div>
@@ -195,26 +214,21 @@
     // Fetch Live Products (Real-Time Function)
     async function fetchLiveProducts() {
         try {
-            // Adjusting endpoint: Attempting standard route first.
-            // If your backend serves public links on a different route, change this URL.
             const res = await fetch('/api/payment-links', {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
-                // Notice: Not passing auth token here so the backend must allow public access to this route!
             }); 
             
             if(!res.ok) throw new Error("Could not connect to live ledger.");
 
             const data = await res.json();
             
-            // Extract the links whether the backend wraps them in { success: true, links: [] } or just returns an array []
             const newMarketData = data.links ? data.links : (Array.isArray(data) ? data : []);
 
             if (newMarketData.length > 0) {
-                // Only re-render if data has changed to prevent UI flashing
                 if (JSON.stringify(globalMarketData) !== JSON.stringify(newMarketData)) {
                     globalMarketData = newMarketData;
-                    filterProducts(); // Re-apply current search/filters
+                    filterProducts(); 
                 }
             } else {
                 if (globalMarketData.length === 0) {
@@ -239,26 +253,42 @@
         }
 
         products.forEach(product => {
-            const displayPrice = product.isFlexibleAmount ? 'Flexible' : `₦${Number(product.amount).toLocaleString()}`;
+            // Amount formatting identical to pay.html
+            const displayPrice = product.isFlexibleAmount 
+                ? 'Flexible' 
+                : `₦${Number(product.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
             
-            const imgHTML = product.productImageBase64 
-                ? `<img src="${product.productImageBase64}" class="product-img" alt="${product.title}">` 
-                : `<div class="fallback-img"><i class="fas fa-box-open"></i></div>`;
+            // Image handling identical to pay.html
+            let mediaHeaderHTML = '';
+            if (product.productImageBase64) {
+                mediaHeaderHTML = `
+                    <div class="product-image-header" style="background-image: url('${product.productImageBase64}');">
+                        <div class="badge-verified"><i class="fas fa-shield-alt me-1"></i> VERIFIED</div>
+                    </div>`;
+            } else {
+                mediaHeaderHTML = `
+                    <div class="store-icon-fallback">
+                        <i class="fas fa-box-open"></i>
+                        <div class="badge-verified"><i class="fas fa-shield-alt me-1"></i> VERIFIED</div>
+                    </div>`;
+            }
+
+            // Merchant Name mapping identical to pay.html
+            const merchantName = product.merchantName || 'Verified Merchant';
+            const shortDesc = product.description || 'Secure NATERPAY Checkout';
 
             const card = document.createElement('div');
             card.className = 'product-card';
             card.innerHTML = `
-                <div class="product-img-wrapper">
-                    ${imgHTML}
-                    <div class="badge-verified"><i class="fas fa-shield-alt me-1"></i> VERIFIED</div>
-                </div>
+                ${mediaHeaderHTML}
                 <div class="product-details">
-                    <div class="merchant-name"><i class="fas fa-check-circle"></i> NATER Verified Merchant</div>
+                    <div class="merchant-name"><i class="fas fa-check-circle"></i> ${merchantName}</div>
                     <h3 class="product-title">${product.title}</h3>
+                    <div class="product-desc">${shortDesc}</div>
                     
                     <div class="price-row">
                         <div class="product-price">${displayPrice}</div>
-                        <div class="sales-stats">Live</div>
+                        <div class="sales-stats">Live on Ledger</div>
                     </div>
                     
                     <a href="/pay.html?id=${product.linkId || product._id}" class="btn-buy">
@@ -283,8 +313,7 @@
         const query = document.getElementById('searchInput').value.toLowerCase();
         
         const filtered = globalMarketData.filter(product => {
-            const matchesSearch = product.title.toLowerCase().includes(query);
-            return matchesSearch; 
+            return product.title.toLowerCase().includes(query); 
         });
 
         renderGrid(filtered);
@@ -298,12 +327,10 @@
         renderGrid(globalMarketData);
     }
 
-    // Initialization
     window.onload = () => { 
         initStars(); 
-        fetchLiveProducts(); // Initial fetch
+        fetchLiveProducts(); 
         
-        // Polling: Automatically fetch new data every 5 seconds for a "Real-Time" feel
         setInterval(fetchLiveProducts, 5000); 
     };
     
