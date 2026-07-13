@@ -65,6 +65,9 @@
         /* Action Buttons alignment */
         .action-btns { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
         .action-btns .btn { flex: 1 1 auto; padding: 6px 10px; font-size: 0.8rem; }
+        
+        /* Marketplace Specific */
+        .product-img-thumb { width: 45px; height: 45px; border-radius: 8px; object-fit: cover; border: 1px solid #444; background: #000; display: flex; align-items: center; justify-content: center;}
 
         @media (max-width: 768px) {
             .stat-number { font-size: 1.5rem; }
@@ -96,6 +99,7 @@
         <button class="admin-tab" onclick="showTab('kyc')"><i class="fas fa-id-card me-2"></i>KYC <span id="kycBadge" class="badge bg-danger ms-1 d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('transactions')"><i class="fas fa-server me-2"></i>Audit Log</button>
         <button class="admin-tab" onclick="showTab('ecosystem')"><i class="fas fa-link me-2"></i>Links</button>
+        <button class="admin-tab" onclick="showTab('marketplace')"><i class="fas fa-store me-2"></i>Marketplace</button>
         <button class="admin-tab" onclick="showTab('notifications')"><i class="fas fa-bell me-2"></i>Announce</button>
     </div>
     
@@ -184,6 +188,27 @@
         </div>
     </div>
 
+    <!-- MARKETPLACE TAB -->
+    <div id="tab-marketplace" class="tab-content" style="display: none;">
+        <div class="admin-card">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h5 class="text-gold fw-bold m-0">MARKETPLACE MODERATION</h5>
+                    <p class="text-muted small mb-0">View, Edit, or Remove live products from the global ledger.</p>
+                </div>
+                <button class="btn btn-sm btn-outline-light" onclick="fetchMarketplace()"><i class="fas fa-sync-alt me-1"></i> Sync Store</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark align-middle">
+                    <thead><tr><th>PRODUCT</th><th>MERCHANT INFO</th><th>PRICE</th><th>SALES</th><th class="text-end">ACTIONS</th></tr></thead>
+                    <tbody id="marketplaceTable">
+                        <tr><td colspan="5" class="text-center opacity-50 py-4">Loading marketplace products...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- NOTIFICATIONS TAB -->
     <div id="tab-notifications" class="tab-content" style="display: none;">
         <div class="row">
@@ -252,6 +277,7 @@
         if(t==='notifications') fetchNotifications(); 
         if(t==='kyc') fetchKYC();
         if(t==='withdrawals') fetchWithdrawals();
+        if(t==='marketplace') fetchMarketplace();
     }
 
     // Secure Data Parser for Mongoose Decimal128
@@ -336,6 +362,156 @@
             fetchWithdrawals();
         } catch (e) { console.error("Admin load error", e); }
     }
+
+    // --- MARKETPLACE MODERATION LOGIC ---
+    async function fetchMarketplace() {
+        try {
+            // Using standard payment-links endpoint (the marketplace fetches from this too)
+            const res = await fetch('/api/payment-links', { 
+                headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } 
+            });
+            const data = await res.json();
+            const products = data.links ? data.links : (Array.isArray(data) ? data : []);
+
+            const tbody = document.getElementById('marketplaceTable');
+            
+            if (products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No products found in the marketplace.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = products.map(p => {
+                const priceDisplay = p.isFlexibleAmount ? 'Flexible' : `₦${Number(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                
+                // Build Image Thumb
+                let imgHtml = '';
+                if(p.productImageBase64) {
+                    imgHtml = `<img src="${p.productImageBase64}" class="product-img-thumb me-3">`;
+                } else {
+                    imgHtml = `<div class="product-img-thumb me-3"><i class="fas fa-box text-secondary fs-5"></i></div>`;
+                }
+
+                const txCount = p.transactionCount || 0;
+                
+                // Safe JSON serialization for Edit button
+                const encodedProduct = encodeURIComponent(JSON.stringify(p));
+
+                return `
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                ${imgHtml}
+                                <div>
+                                    <div class="fw-bold">${p.title}</div>
+                                    <span class="status-pill bg-dark border mt-1">${p.category || 'Product'}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-white fw-bold"><i class="fas fa-store text-gold me-1"></i> ${p.merchantName || 'Merchant'}</div>
+                            <small class="text-secondary">${p._id || p.linkId}</small>
+                        </td>
+                        <td class="text-warning fw-bold fs-5">${priceDisplay}</td>
+                        <td><span class="badge bg-secondary">${txCount} Sales</span></td>
+                        <td class="text-end">
+                            <div class="action-btns">
+                                <button class="btn btn-primary" onclick="editProduct('${encodedProduct}')" title="Edit Listing"><i class="fas fa-edit"></i> Edit</button>
+                                <button class="btn btn-danger" onclick="deleteProduct('${p._id || p.linkId}')" title="Remove Listing"><i class="fas fa-trash"></i> Drop</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (error) {
+            console.error("Marketplace fetch error:", error);
+            document.getElementById('marketplaceTable').innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Connection failed. Could not load marketplace.</td></tr>';
+        }
+    }
+
+    async function editProduct(encodedData) {
+        const product = JSON.parse(decodeURIComponent(encodedData));
+        const productId = product._id || product.linkId;
+        
+        const { value: formValues } = await Swal.fire({
+            title: 'Edit Product details',
+            html: `
+                <div style="text-align: left;">
+                    <label class="high-vis-label mt-2">Title</label>
+                    <input id="swal-title" class="swal2-input bg-dark text-white w-100 m-0" value="${product.title || ''}">
+                    
+                    <label class="high-vis-label mt-3">Price (₦)</label>
+                    <input id="swal-price" type="number" class="swal2-input bg-dark text-white w-100 m-0" value="${product.amount || ''}" ${product.isFlexibleAmount ? 'disabled placeholder="Flexible"' : ''}>
+                    
+                    <label class="high-vis-label mt-3">Category</label>
+                    <input id="swal-category" class="swal2-input bg-dark text-white w-100 m-0" value="${product.category || ''}">
+                    
+                    <label class="high-vis-label mt-3">Description</label>
+                    <textarea id="swal-desc" class="swal2-textarea bg-dark text-white w-100 m-0" rows="3">${product.description || ''}</textarea>
+                </div>
+            `,
+            background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Save Changes',
+            preConfirm: () => {
+                return {
+                    title: document.getElementById('swal-title').value,
+                    amount: document.getElementById('swal-price').value,
+                    category: document.getElementById('swal-category').value,
+                    description: document.getElementById('swal-desc').value
+                }
+            }
+        });
+
+        if (formValues) {
+            Swal.fire({title:'Saving Modifications...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try {
+                // Ensure your backend has this route set up: PUT /api/admin/products/:id
+                const res = await fetch(`/api/admin/products/${productId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                    body: JSON.stringify(formValues)
+                });
+                
+                const data = await res.json();
+                if(data.success !== false) {
+                    Swal.fire({title: 'Updated!', text: 'Product details saved.', icon: 'success', background: '#0a0a0a', color: '#fff'});
+                    fetchMarketplace();
+                } else {
+                    Swal.fire('Failed', data.message || 'Could not update product.', 'error');
+                }
+            } catch(e) {
+                Swal.fire('Error', 'Server communication failed.', 'error');
+            }
+        }
+    }
+
+    async function deleteProduct(productId) {
+        if((await Swal.fire({
+            title: 'Wipe Product?', 
+            text: "This will permanently remove the product from the NATER-PAY global marketplace.", 
+            icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', 
+            background: '#0a0a0a', color: '#fff', confirmButtonText: 'Yes, Delete it'
+        })).isConfirmed) {
+            
+            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try {
+                // Ensure your backend has this route set up: DELETE /api/admin/products/:id
+                const res = await fetch(`/api/admin/products/${productId}`, { 
+                    method: 'DELETE', 
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } 
+                });
+                const data = await res.json();
+                
+                if(data.success !== false) { 
+                    Swal.fire({title: 'Deleted!', text: 'Product successfully removed from ledger.', icon: 'success', background: '#0a0a0a', color: '#fff'}); 
+                    fetchMarketplace(); 
+                } else {
+                    Swal.fire('Action Failed', data.message || 'Database refused deletion.', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Network Error', 'Could not reach server to delete product.', 'error');
+            }
+        }
+    }
+
 
     // --- BULLETPROOF LEDGER MODIFICATION ---
     async function modifyLedger(id, name, type) {
