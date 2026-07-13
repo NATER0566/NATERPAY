@@ -31,6 +31,7 @@ async function getLinks(request, reply) {
         totalCollected: link.totalCollected ? link.totalCollected.toString() : '0',
         expiryDate: link.expiryDate,
         createdAt: link.createdAt,
+        category: link.category || 'General',
         // E-Commerce Additions
         redirectUrl: link.redirectUrl,
         productImageBase64: link.productImageBase64
@@ -51,7 +52,7 @@ async function createLink(request, reply) {
         title, description, amount, currency, isFlexibleAmount, 
         minAmount, maxAmount, collectCustomerName, collectCustomerEmail, 
         collectCustomerPhone, maxTransactions, expiryDate, 
-        redirectUrl, productImageBase64 
+        redirectUrl, productImageBase64, category // 👈 Added category here
     } = request.body;
     
     if (!title) {
@@ -76,6 +77,7 @@ async function createLink(request, reply) {
       collectCustomerPhone: collectCustomerPhone || false,
       maxTransactions: maxTransactions || null,
       expiryDate: expiryDate || null,
+      category: category || 'General', // 👈 Added category mapping here
       // E-Commerce Additions
       redirectUrl: redirectUrl || '',
       productImageBase64: productImageBase64 || null
@@ -147,6 +149,7 @@ async function getLink(request, reply) {
         collectCustomerName: paymentLink.collectCustomerName,
         collectCustomerEmail: paymentLink.collectCustomerEmail,
         merchantName: paymentLink.user ? paymentLink.user.name : 'Merchant',
+        category: paymentLink.category || 'General',
         // E-Commerce Additions
         redirectUrl: paymentLink.redirectUrl,
         productImageBase64: paymentLink.productImageBase64
@@ -257,8 +260,46 @@ async function payLink(request, reply) {
   }
 }
 
+/**
+ * 5. Get ALL active payment links globally (Global Marketplace View)
+ * This drops the user security filter to create a public ledger feed
+ */
+async function getAllMarketplaceLinks(request, reply) {
+  try {
+    // Queries everything active across all users and extracts their dynamic profile attributes
+    const links = await PaymentLink.find({ isActive: true })
+      .populate('user', 'name email whatsapp')
+      .sort({ createdAt: -1 });
+    
+    reply.send({
+      success: true,
+      links: links.map(link => ({
+        _id: link._id,
+        linkId: link.linkId,
+        title: link.title,
+        description: link.description,
+        amount: link.amount ? link.amount.toString() : '0',
+        currency: link.currency || 'NGN',
+        isFlexibleAmount: link.isFlexibleAmount,
+        transactionCount: link.transactionCount || 0,
+        category: link.category || 'General',
+        productImageBase64: link.productImageBase64,
+        
+        // Dynamic map of the user relations gathered from the schema join
+        merchantName: link.user ? link.user.name : 'Verified Merchant',
+        email: link.user ? link.user.email : 'Not Provided',
+        whatsapp: link.user ? link.user.whatsapp : 'Not Provided'
+      }))
+    });
+  } catch (error) {
+    console.error('Get global marketplace links error:', error);
+    reply.status(500).send({ success: false, message: 'Failed to sync the global marketplace ledger' });
+  }
+}
+
 module.exports = {
   getLinks,
+  getAllMarketplaceLinks, // 👈 Exported to expose it to your route index file
   createLink,
   getLink,
   payLink
