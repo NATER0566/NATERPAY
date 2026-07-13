@@ -103,7 +103,7 @@
         .main-content { flex: 1; padding: 0 5%; width: 100%; margin: 0 auto 60px; }
         .products-grid {
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); 
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); 
             gap: 25px;
             min-height: 400px;
         }
@@ -156,7 +156,26 @@
         .creator-whatsapp i { color: var(--green); font-size: 1rem;}
         
         .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; margin-bottom: 12px; color: #fff; line-height: 1.3; }
-        .product-desc { color: #aaa; font-size: 0.9rem; font-weight: 600; margin-bottom: 20px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;}
+        
+        /* DEDICATED FULL DISPLAY BOX FOR PRODUCT DESCRIPTION */
+        .product-desc { 
+            color: #bbb; 
+            font-size: 0.9rem; 
+            font-weight: 600; 
+            margin-bottom: 20px; 
+            line-height: 1.5; 
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #222;
+            padding: 12px;
+            border-radius: 10px;
+            max-height: 130px;
+            overflow-y: auto;
+            word-wrap: break-word;
+        }
+        .product-desc::-webkit-scrollbar { width: 5px; }
+        .product-desc::-webkit-scrollbar-track { background: transparent; }
+        .product-desc::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .product-desc::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 
         .card-footer-info { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; margin-bottom: 20px; padding-top: 15px; border-top: 1px solid #333;}
         
@@ -292,8 +311,11 @@
             // Extract Data, providing fallbacks if missing from DB
             const categoryDisplay = product.category || 'General';
             const merchantName = product.merchantName || product.creatorName || 'Verified Merchant';
-            const email = product.email || product.creatorEmail || 'Not Provided';
-            const whatsapp = product.whatsapp || product.creatorWhatsapp || 'Not Provided';
+            
+            // FIXED: Scan deep within nested database payloads (merchantSupport object)
+            const email = product.email || product.creatorEmail || (product.merchantSupport && product.merchantSupport.email) || 'Not Provided';
+            const whatsapp = product.whatsapp || product.creatorWhatsapp || (product.merchantSupport && product.merchantSupport.phone) || 'Not Provided';
+            
             const shortDesc = product.description || 'Secure NATERPAY Checkout';
             const salesCount = product.transactionCount || 0;
             
