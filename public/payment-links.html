@@ -163,7 +163,7 @@
         .act-btn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
         .act-btn.qr-btn:hover { background: #fff; color: #000; border-color: #fff; }
 
-        #qrModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; }
+        #qrModal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; overflow-y: auto;}
         .qr-content { background: var(--card-bg); padding: 50px; border-radius: 25px; border: 2px solid #444; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,1); max-width: 90%; }
         #qrDisplay { background: #fff; padding: 25px; border-radius: 15px; display: inline-block; margin-bottom: 25px; border: 8px solid #000; }
     </style>
@@ -466,7 +466,6 @@
         try {
             Swal.fire({ title: 'Creating Link...', text: 'Please wait while we set up your product...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
             
-            // FIXED: Flat payload matching your backend route exactly
             const payload = {
                 title: title, 
                 category: category, 
@@ -532,7 +531,6 @@
                         const count = Number(link.transactionCount || 0);
                         const linkCategory = link.category || 'Product';
                         
-                        // FIXED: Adjusted stock limit display to use correct property
                         let stockDisplay = '';
                         if(link.maxTransactions) {
                             stockDisplay = `<div class="stat-line"><span class="text-secondary">COPIES LEFT</span> <span class="val text-white">${link.maxTransactions - count}</span></div>`;
@@ -607,21 +605,39 @@
         const display = document.getElementById('qrDisplay');
         display.innerHTML = ''; 
         
-        currentQrCode = new QRCode(display, {
-            text: linkUrl, width: 300, height: 300,
-            colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H
-        });
-
+        // FIX: Display the modal FIRST so the container has actual dimensions on the screen.
         document.getElementById('qrModal').style.display = 'flex';
+        
+        // Wait 50 milliseconds for the browser to register the modal's size, THEN generate the QR code.
+        setTimeout(() => {
+            currentQrCode = new QRCode(display, {
+                text: linkUrl, 
+                width: 300, 
+                height: 300,
+                colorDark : "#000000", 
+                colorLight : "#ffffff", 
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }, 50);
     }
 
     function downloadQR() {
-        const img = document.querySelector('#qrDisplay img');
-        if(!img) return;
+        // FIX: Target the raw <canvas> element instead of the image source to prevent 0-byte corrupt downloads.
+        const canvas = document.querySelector('#qrDisplay canvas');
+        
+        if(!canvas) {
+            Swal.fire({ icon: 'error', title: 'Wait a moment', text: 'QR code is not ready yet.', background: '#111', color: '#fff' });
+            return;
+        }
+
         const link = document.createElement('a');
-        link.href = img.src;
+        link.href = canvas.toDataURL("image/png");
         link.download = 'My_Payment_QRCode.png';
+        
+        // Required to make downloads work on certain mobile browsers (like Firefox for Android)
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     }
     
     window.onload = () => { 
