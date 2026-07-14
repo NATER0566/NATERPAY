@@ -4,7 +4,8 @@ const Wallet = require('../models/Wallet');
 const KYC = require('../models/KYC');
 const SupportTicket = require('../models/SupportTicket');
 const Notification = require('../models/Notification');
-const PaymentLink = require('../models/PaymentLink'); // Added to manage the marketplace listings
+const PaymentLink = require('../models/PaymentLink'); 
+const Advertisement = require('../models/Advertisement'); // <-- Added for Adverts
 const { generateTransactionReference } = require('../utils/auth');
 const axios = require('axios'); 
 
@@ -16,7 +17,7 @@ async function getUsers(request, reply) {
   try {
     const { page = 1, limit = 50, search, role, status } = request.query;
     const query = {};
-    if (search) query.$or = [{ name: { $regex: search, $options: 'i' } }, { email: { $regex: search, $options: 'i' } }, { phoneNumber: { $regex: search, $options: 'i' } }];
+    if (search) query.$or = [{ name: { $regex: search,$options: 'i' } }, { email: { $regex: search,$options: 'i' } }, { phoneNumber: { $regex: search,$options: 'i' } }];
     if (role) query.role = role;
     if (status === 'active') query.isActive = true;
     if (status === 'inactive') query.isActive = false;
@@ -303,6 +304,68 @@ async function deleteProduct(request, reply) {
 }
 
 // ============================================================================
+// ADVERTS MODERATION ENGINE
+// ============================================================================
+
+async function getPendingAds(request, reply) {
+    try {
+        // Fetch all ads so Admin can see pending, approved, and rejected
+        const ads = await Advertisement.find({})
+            .populate('ownerId', 'name email')
+            .sort({ status: -1, createdAt: -1 }); // Sorts 'pending' to the top
+            
+        reply.send({ success: true, ads });
+    } catch (error) {
+        console.error('Admin Fetch Ads Error:', error);
+        reply.status(500).send({ success: false, message: 'Failed to fetch adverts' });
+    }
+}
+
+async function approveAd(request, reply) {
+    try {
+        const { id } = request.params;
+        const ad = await Advertisement.findById(id);
+        if (!ad) return reply.status(404).send({ success: false, message: 'Advert not found' });
+        
+        ad.status = 'approved';
+        await ad.save();
+
+        if (request.server && request.server.io) {
+            request.server.io.to(`user:${ad.ownerId}`).emit('notification', { 
+                title: 'Advert Approved!', 
+                type: 'success',
+                message: `Your advert "${ad.title}" is now LIVE on the global marketplace.` 
+            });
+        }
+        reply.send({ success: true, message: 'Advert approved and is now live.' });
+    } catch (error) {
+        reply.status(500).send({ success: false, message: 'Failed to approve advert' });
+    }
+}
+
+async function rejectAd(request, reply) {
+    try {
+        const { id } = request.params;
+        const ad = await Advertisement.findById(id);
+        if (!ad) return reply.status(404).send({ success: false, message: 'Advert not found' });
+        
+        ad.status = 'rejected';
+        await ad.save();
+
+        if (request.server && request.server.io) {
+            request.server.io.to(`user:${ad.ownerId}`).emit('notification', { 
+                title: 'Advert Rejected', 
+                type: 'error',
+                message: `Your advert "${ad.title}" was rejected due to policy violations.` 
+            });
+        }
+        reply.send({ success: true, message: 'Advert rejected.' });
+    } catch (error) {
+        reply.status(500).send({ success: false, message: 'Failed to reject advert' });
+    }
+}
+
+// ============================================================================
 // ADMIN UTILITIES (FIXED BALANCE & TRANSACTION ENGINES)
 // ============================================================================
 
@@ -448,5 +511,6 @@ module.exports = {
   updateUserBalance, verifyTransaction, sendPushNotification,
   getPendingWithdrawals, processWithdrawal, 
   getPendingKYC, verifyRealWorldKYC, approveKYC, rejectKYC,
-  updateProduct, deleteProduct
+  updateProduct, deleteProduct,
+  getPendingAds, approveAd, rejectAd // Export the Adverts functions!
 };
