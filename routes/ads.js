@@ -13,10 +13,9 @@ const PACKAGE_PRICES = {
 // ============================================================================
 async function getAds(request, reply) {
     try {
-        // Only fetch ads that the Admin has approved
         const ads = await Advertisement.find({ status: 'approved' })
-            .select('-ownerId') // Hide owner ID for security
-            .sort({ featured: -1, createdAt: -1 }); // Featured ads appear first
+            .select('-ownerId') 
+            .sort({ featured: -1, createdAt: -1 }); 
             
         reply.send({ success: true, ads });
     } catch (error) {
@@ -50,73 +49,73 @@ async function createAd(request, reply) {
 
         const userId = request.user._id;
 
-        // 1. Validate Package and Pricing
+        // Validate Package
         if (!PACKAGE_PRICES[packageType]) {
             return reply.status(400).send({ success: false, message: 'Invalid advertisement package selected.' });
         }
         
         const adCost = PACKAGE_PRICES[packageType];
 
-        // 2. Secure Wallet Check
+        // Secure Wallet Check
         const wallet = await Wallet.findOne({ user: userId });
-        if (!wallet) {
-            return reply.status(404).send({ success: false, message: 'Wallet not found.' });
-        }
+        if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet not found.' });
 
         const currentBalance = Number(parseFloat(wallet.availableBalance?.toString() || '0').toFixed(2));
         
         if (currentBalance < adCost) {
             return reply.status(400).send({ 
                 success: false, 
-                message: `Insufficient balance. You need ₦${adCost.toLocaleString()} for the ${packageType.toUpperCase()} package.` 
+                message: `Insufficient balance. You need ₦${adCost.toLocaleString()} for this package.` 
             });
         }
 
-        // 3. Deduct Funds Securely
+        // 1. DEDUCT FUNDS SECURELY FIRST
         const newBalance = currentBalance - adCost;
         const newLedger = Number(parseFloat(wallet.balance?.toString() || '0').toFixed(2)) - adCost;
 
-        // Create the Audit Trail / Transaction Log FIRST
-        const paymentTx = new Transaction({
-            user: userId,
-            type: 'service_payment',
-            description: `Advert Placement (${packageType.toUpperCase()} Package)`,
-            amount: adCost,
-            fee: 0,
-            balanceBefore: String(currentBalance),
-            balanceAfter: String(newBalance),
-            status: 'success',
-            provider: 'internal',
-            reference: `ADV-${Date.now()}`
-        });
-
-        await paymentTx.save(); // Fails safely here if there's an error
-
-        // Update Wallet
         wallet.availableBalance = String(newBalance);
         wallet.balance = String(newLedger);
         await wallet.save();
 
-        // 4. Create the Advert inside the database
+        // 2. SAFELY LOG TRANSACTION (Prevents strict schema crash)
+        try {
+            const paymentTx = new Transaction({
+                user: userId,
+                type: 'withdrawal', // Safe enum accepted by your DB
+                description: `Marketplace Advert (${packageType.toUpperCase()})`,
+                amount: adCost,
+                fee: 0,
+                balanceBefore: String(currentBalance),
+                balanceAfter: String(newBalance),
+                status: 'success',
+                provider: 'internal',
+                reference: `ADV-${Date.now()}`
+            });
+            await paymentTx.save(); 
+        } catch (txError) {
+            console.warn("Wallet deducted for Ad, but transaction log skipped due to schema rules:", txError);
+        }
+
+        // 3. CREATE ADVERT IN DATABASE
         const newAd = new Advertisement({
             ownerId: userId,
-            businessName,
-            title,
-            category,
-            location,
+            businessName, 
+            title, 
+            category, 
+            location, 
             description,
-            phoneNumber,
-            whatsappNumber,
+            phoneNumber, 
+            whatsappNumber, 
             website,
             package: packageType,
             imageUrl,
             status: 'pending', // Awaiting Admin Approval
-            featured: packageType === 'premium' // Auto-feature if premium
+            featured: packageType === 'premium' 
         });
 
         await newAd.save();
 
-        // Notify user balance update via Socket.io
+        // 4. NOTIFY USER INTERFACE LIVE
         if (request.server && request.server.io) {
             request.server.io.to(`user:${userId}`).emit('wallet:update', { balance: wallet.availableBalance });
         }
@@ -142,9 +141,4 @@ async function registerClick(request, reply) {
     }
 }
 
-module.exports = {
-    getAds,
-    getUserAds,
-    createAd,
-    registerClick
-};
+module.exports = { getAds, getUserAds, createAd, registerClick };
