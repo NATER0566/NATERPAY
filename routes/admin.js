@@ -162,7 +162,7 @@ async function processWithdrawal(request, reply) {
 }
 
 // ============================================================================
-// REAL-WORLD PAYSTACK KYC VERIFICATION
+// DUAL-GATEWAY KYC VERIFICATION ENGINE
 // ============================================================================
 
 async function getPendingKYC(request, reply) {
@@ -188,13 +188,16 @@ async function verifyRealWorldKYC(request, reply) {
         if (!bvn) return reply.status(400).send({ success: false, message: 'No BVN provided by user to verify.' });
 
         try {
+            // ==========================================
+            // ATTEMPT 1: PAYSTACK (Primary API)
+            // ==========================================
             const paystackResponse = await axios.get(`https://api.paystack.co/bank/resolve_bvn/${bvn}`, {
                 headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
             });
 
             const paystackData = paystackResponse.data.data;
 
-            reply.send({ 
+            return reply.send({ 
                 success: true, 
                 message: 'Paystack verification complete',
                 systemName: kycRecord.user.name, 
@@ -206,12 +209,54 @@ async function verifyRealWorldKYC(request, reply) {
                 }
             });
         } catch (paystackError) {
-            // THE FIX: Graceful fallback if NIBSS/Paystack is down
-            const apiErrorMsg = paystackError.response?.data?.message || '';
-            if (apiErrorMsg.includes('Service Unavailable') || apiErrorMsg.includes('not supported')) {
+            console.warn("Paystack offline or failed. Initiating Monnify Fallback...");
+
+            // ==========================================
+            // ATTEMPT 2: MONNIFY FALLBACK ENGINE
+            // ==========================================
+            try {
+                const baseUrl = process.env.MONNIFY_URL || 'https://sandbox.monnify.com';
+                const encodedKeys = Buffer.from(`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`).toString('base64');
+                
+                // Authenticate with Monnify
+                const authResponse = await axios.post(`${baseUrl}/api/v1/auth/login`, {}, { 
+                    headers: { Authorization: `Basic ${encodedKeys}` } 
+                });
+                const accessToken = authResponse.data.responseBody.accessToken;
+
+                // Monnify Matching Check
+                const monnifyResponse = await axios.post(`${baseUrl}/api/v1/vas/bvn-details-match`, {
+                    bvn: bvn,
+                    name: kycRecord.user.name,
+                    dateOfBirth: "01-Jan-1990", // Dummy required field
+                    mobileNo: "08000000000"     // Dummy required field
+                }, {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                });
+
+                const matchData = monnifyResponse.data.responseBody.name;
+                const isMatch = matchData.matchStatus === 'FULL_MATCH' || matchData.matchStatus === 'PARTIAL_MATCH';
+
                 return reply.send({
                     success: true,
-                    message: 'Note: Paystack NIBSS is currently offline. Manual verification required.',
+                    message: 'Verified via Monnify API (Fallback)',
+                    systemName: kycRecord.user.name,
+                    paystackDetails: {
+                        firstName: isMatch ? "NAME MATCH: YES" : "NAME MATCH: NO",
+                        lastName: `Accuracy Score: ${matchData.matchPercentage}%`,
+                        dob: "Hidden (Monnify Privacy Policy)",
+                        phone: "Hidden (Monnify Privacy Policy)"
+                    }
+                });
+
+            } catch (monnifyError) {
+                // ==========================================
+                // BOTH FAILED: NIBSS IS COMPLETELY OFFLINE
+                // ==========================================
+                console.error("Monnify Fallback also failed:", monnifyError.response?.data || monnifyError.message);
+                return reply.send({
+                    success: true,
+                    message: 'Note: NIBSS is currently offline. Both APIs failed. Manual verification required.',
                     systemName: kycRecord.user.name,
                     paystackDetails: {
                         firstName: "NIBSS OFFLINE",
@@ -221,11 +266,10 @@ async function verifyRealWorldKYC(request, reply) {
                     }
                 });
             }
-            throw paystackError; // Rethrow normal errors like invalid BVN
         }
     } catch (error) {
-        console.error('Paystack API Error:', error.response?.data || error.message);
-        reply.status(400).send({ success: false, message: error.response?.data?.message || 'Failed to communicate with Paystack API.' });
+        console.error('System API Error:', error.message);
+        reply.status(500).send({ success: false, message: 'Server error during verification.' });
     }
 }
 
@@ -266,7 +310,6 @@ async function rejectKYC(request, reply) {
     try {
         const { kycId } = request.params;
         
-        // THE FIX: Safely check if request.body exists before looking for 'reason' to prevent Node.js crash
         const reason = request.body && request.body.reason ? request.body.reason : 'Your provided details could not be verified.';
         
         const kyc = await KYC.findById(kycId);
