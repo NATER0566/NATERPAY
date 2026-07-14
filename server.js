@@ -163,6 +163,11 @@ async function registerRoutes() {
   fastify.post('/api/admin/transactions/verify', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.verifyTransaction);
   fastify.post('/api/admin/notifications/send', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.sendPushNotification);
   
+  // === ADDED MARKETPLACE ADMIN ROUTES TO FIX THE 404 ERROR ===
+  fastify.put('/api/admin/products/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.updateProduct);
+  fastify.delete('/api/admin/products/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.deleteProduct);
+  // ===========================================================
+  
   const cmsRoutes = require('./routes/cms');
   fastify.get('/api/cms/homepage-data', cmsRoutes.getHomepageData);
   fastify.get('/api/slides', cmsRoutes.getSlides);
