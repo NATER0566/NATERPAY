@@ -290,8 +290,8 @@
                     </td>
                     <td class="text-end">
                         <div class="action-btns">
-                            <button class="btn btn-success fw-bold" onclick="modifyLedger('${u._id}', '${u.name}', 'credit')" title="Add Money"><i class="fas fa-plus"></i></button>
-                            <button class="btn btn-danger fw-bold" onclick="modifyLedger('${u._id}', '${u.name}', 'debit')" title="Deduct Money"><i class="fas fa-minus"></i></button>
+                            <button class="btn btn-success fw-bold" onclick="modifyUserBalance('${u._id}', 'credit', null, '${u.name}')" title="Add Money"><i class="fas fa-plus"></i></button>
+                            <button class="btn btn-danger fw-bold" onclick="modifyUserBalance('${u._id}', 'debit', null, '${u.name}')" title="Deduct Money"><i class="fas fa-minus"></i></button>
                         </div>
                     </td>
                 </tr>
@@ -312,7 +312,7 @@
                         <td class="fw-bold text-gold fs-5">₦${amt.toLocaleString()}</td>
                         <td><span class="status-pill ${tx.status==='success'?'bg-success':(tx.status==='failed'?'bg-danger':'bg-warning text-dark')}">${tx.status}</span></td>
                         <td class="text-end">
-                            ${tx.status !== 'success' ? `<button class="btn btn-sm btn-gold rounded-pill fw-bold" onclick="forceVerifyPayment('${tx._id}')">Force Clear</button>` : `<span class="badge bg-dark border border-success text-success"><i class="fas fa-check"></i></span>`}
+                            ${tx.status !== 'success' ? `<button class="btn btn-sm btn-gold rounded-pill fw-bold" onclick="forceVerifyTransaction('${tx._id}')">Force Clear</button>` : `<span class="badge bg-dark border border-success text-success"><i class="fas fa-check"></i></span>`}
                         </td>
                     </tr>
                 `;
@@ -481,33 +481,103 @@
         }
     }
 
-    // OTHER ADMIN FUNCTIONS
-    async function modifyLedger(id, name, type) {
-        const { value: vals } = await Swal.fire({
-            title: type.toUpperCase() + ' WALLET', text: `Target: ${name}`,
-            html: `<input id="swal-amt" type="number" class="swal2-input bg-dark text-white" placeholder="Amount (₦)"><input id="swal-rsn" type="text" class="swal2-input bg-dark text-white" placeholder="Audit Reason">`,
-            background: '#0a0a0a', color: '#fff', showCancelButton: true,
-            preConfirm: () => {
-                const amt = document.getElementById('swal-amt').value;
-                if(!amt || isNaN(amt) || Number(amt) <= 0) { Swal.showValidationMessage('Enter a valid amount'); return false; }
-                return [amt, document.getElementById('swal-rsn').value];
+    // ----------------------------------------------------
+    // UPDATED PAYLOAD FUNCTIONS AS REQUESTED
+    // ----------------------------------------------------
+    
+    async function modifyUserBalance(userId, actionType, amountVal, reasonText) {
+        // If amount and reason are not passed directly, prompt the admin via SweetAlert2
+        if (!amountVal || !reasonText) {
+            const { value: formValues } = await Swal.fire({
+                title: actionType.toUpperCase() + ' WALLET', 
+                text: `Target: ${reasonText || userId}`, // reasonText temporarily holds username from table click
+                html: `
+                    <input id="swal-amt" type="number" class="swal2-input bg-dark text-white" placeholder="Amount (₦)">
+                    <input id="swal-rsn" type="text" class="swal2-input bg-dark text-white" placeholder="Audit Reason">
+                `,
+                background: '#0a0a0a', color: '#fff', showCancelButton: true,
+                preConfirm: () => {
+                    const amt = document.getElementById('swal-amt').value;
+                    if(!amt || isNaN(amt) || Number(amt) <= 0) { Swal.showValidationMessage('Enter a valid amount'); return false; }
+                    return [amt, document.getElementById('swal-rsn').value];
+                }
+            });
+            if (formValues && formValues[0]) {
+                amountVal = Number(formValues[0]);
+                reasonText = formValues[1] || 'Manual Adjustment';
+            } else {
+                return; // Admin cancelled
             }
-        });
-        if(vals && vals[0]) {
-            Swal.fire({title:'Processing...', allowOutsideClick: false, didOpen:()=>Swal.showLoading()});
-            try {
-                const res = await fetch(`/api/admin/users/${id}/balance`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
-                    body: JSON.stringify({ action: type, amount: Number(vals[0]), reason: vals[1] || 'Manual Adjustment' })
-                });
-                const textResponse = await res.text();
-                let data;
-                try { data = JSON.parse(textResponse); } catch(e) { data = { success: false, message: "Backend crash after execution." }; }
-                if(res.ok && data.success) { Swal.fire('Success', 'Ledger successfully updated.', 'success').then(() => loadAdminEcosystem()); 
-                } else { Swal.fire({icon: 'warning', title: 'Network Warning', text: data.message, background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem()); }
-            } catch (error) { Swal.fire('Network Error', 'Forcing data refresh.', 'warning').then(() => loadAdminEcosystem()); }
+        }
+
+        Swal.fire({title:'Processing...', allowOutsideClick: false, didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+        
+        try {
+            const response = await fetch(`/api/admin/users/${userId}/balance`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` 
+                },
+                body: JSON.stringify({
+                    action: actionType, 
+                    amount: amountVal,
+                    reason: reasonText
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                Swal.fire({title: 'Success', text: 'Ledger successfully updated.', icon: 'success', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
+            } else {
+                Swal.fire({icon: 'warning', title: 'Action Failed', text: data.message || 'Could not modify balance.', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
+            }
+        } catch (error) {
+            Swal.fire({title: 'Network Error', text: 'Could not communicate with the server.', icon: 'error', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
         }
     }
+
+    async function forceVerifyTransaction(txId) {
+        const { isConfirmed } = await Swal.fire({
+            title: `Force Clear Verification?`, 
+            text: `Are you sure you want to force the backend to verify this transaction?`, 
+            icon: 'warning',
+            showCancelButton: true, 
+            confirmButtonColor: '#d32f2f',
+            confirmButtonText: 'Yes, Force It',
+            background: '#0a0a0a', 
+            color: '#fff'
+        });
+
+        if (isConfirmed) {
+            Swal.fire({title:'Verifying...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try {
+                const response = await fetch('/api/admin/transactions/verify', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` 
+                    },
+                    body: JSON.stringify({
+                        transactionId: txId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    Swal.fire({title: 'Verified!', text: data.message || 'Transaction cleared successfully', icon: 'success', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
+                } else {
+                    Swal.fire({title: 'Failed', text: data.message || 'Verification failed on backend', icon: 'error', background: '#0a0a0a', color: '#fff'});
+                }
+            } catch (err) {
+                Swal.fire({title: 'Error', text: 'Server communication failed.', icon: 'error', background: '#0a0a0a', color: '#fff'});
+            }
+        }
+    }
+
+    // ----------------------------------------------------
 
     async function fetchWithdrawals() {
         try {
