@@ -15,7 +15,8 @@
             --gold-glow: rgba(255, 215, 0, 0.6); 
             --gold-subtle: rgba(255, 215, 0, 0.15);
             --bg: #030303; 
-            --card-bg: linear-gradient(145deg, rgba(18,18,18,0.95), rgba(5,5,5,0.98)); 
+            /* Changed to match the exact background color of payment link cards */
+            --card-bg: #0a0a0a; 
             --green: #00e676;
             --nater-red: #d32f2f;
         }
@@ -31,6 +32,8 @@
             overflow-x: hidden; 
             display: flex;
             flex-direction: column;
+            /* Making the base body font weight bolder to match the dashboard */
+            font-weight: 700;
         }
         
         #starCanvas { 
@@ -102,12 +105,14 @@
             .feature-item { font-size: 0.75rem; width: 45%; justify-content: center; }
         }
 
-        /* PRODUCT GRID */
+        /* PRODUCT GRID - UPDATED TO EXACT SIZES OF PAYMENT-LINK.HTML */
         .main-content { flex: 1; padding: 0 5%; width: 100%; max-width: 1400px; margin: 0 auto 60px; }
         .products-grid {
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); 
+            /* Changed to auto-fill and 360px exactly like the links-grid */
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); 
             gap: 25px;
+            width: 100%;
             min-height: 400px;
         }
 
@@ -122,7 +127,7 @@
             background: var(--card-bg); border: 2px solid #333; border-radius: 20px;
             overflow: hidden; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
             position: relative; display: flex; flex-direction: column;
-            backdrop-filter: blur(20px); height: 100%; text-align: center;
+            height: 100%; text-align: center;
             box-shadow: 0 10px 25px rgba(0,0,0,0.8);
             animation: floatCard 6s infinite ease-in-out;
         }
@@ -136,18 +141,18 @@
             z-index: 10;
         }
 
-        /* COMPACT IMAGE CONTAINER */
+        /* COMPACT IMAGE CONTAINER - HEIGHT ADJUSTED TO 180PX EXACTLY LIKE LINK-BANNER */
         .product-image-header {
-            width: 100%; height: 220px; background-color: #050505;
+            width: 100%; height: 180px; background-color: #111;
             background-size: cover; background-position: center; background-repeat: no-repeat;
-            border-bottom: 2px solid #222; position: relative; cursor: pointer;
-            overflow: hidden;
+            border-bottom: 2px solid #333; position: relative; cursor: pointer;
+            overflow: hidden; display: flex; align-items: center; justify-content: center;
         }
         
         .store-icon-fallback { 
-            background: #050505; width: 100%; height: 220px; 
-            display: flex; align-items: center; justify-content: center; font-size: 5rem; 
-            color: #222; border-bottom: 2px solid #222; position: relative; cursor: pointer;
+            background: #111; width: 100%; height: 180px; 
+            display: flex; align-items: center; justify-content: center; font-size: 3.5rem; 
+            color: #333; border-bottom: 2px solid #333; position: relative; cursor: pointer;
         }
 
         /* PERSISTENT CLICK TEXT PROMPT (NO HOVER NEEDED) */
@@ -171,52 +176,52 @@
             white-space: nowrap;
         }
 
-        /* COMPACT & ANTI-COLLISION BADGES */
+        /* COMPACT & ANTI-COLLISION BADGES - MATCHING LINK-ITEM STYLE */
         .badge-category {
-            position: absolute; top: 10px; left: 10px; background: rgba(255, 215, 0, 0.95);
-            color: #000; padding: 5px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 900; z-index: 2;
+            position: absolute; top: 15px; left: 15px; background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #555; color: #fff; padding: 8px 16px; border-radius: 50px; 
+            font-size: 0.85rem; font-weight: 900; z-index: 2;
             text-transform: uppercase; letter-spacing: 0.5px;
             max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         
         .badge-verified {
-            position: absolute; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.95);
-            border: 1.5px solid var(--green); color: var(--green); padding: 5px 10px;
-            border-radius: 50px; font-size: 0.75rem; font-weight: 900; letter-spacing: 0.5px; z-index: 2;
-            box-shadow: 0 0 10px rgba(0, 230, 118, 0.3);
+            position: absolute; top: 15px; right: 15px; background: #000;
+            border: 2px solid var(--green); color: var(--green); padding: 8px 16px;
+            border-radius: 50px; font-size: 0.85rem; font-weight: 900; letter-spacing: 0.5px; z-index: 2;
             max-width: 45%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
-        /* CENTERED DETAILS AREA */
-        .product-details { padding: 20px 15px; flex-grow: 1; display: flex; flex-direction: column; align-items: center; }
+        /* CENTERED DETAILS AREA - PADDING INCREASED TO 30PX EXACTLY LIKE LINK-CONTENT */
+        .product-details { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; align-items: center; }
         
-        /* BOLD PRODUCT TITLE */
-        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; margin-bottom: 15px; color: #fff; line-height: 1.25; text-shadow: 0 2px 5px rgba(0,0,0,0.5);}
+        /* BOLD PRODUCT TITLE - SIZED EXACTLY LIKE LINK-TITLE */
+        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.5rem; margin-bottom: 20px; color: #fff; line-height: 1.3; text-shadow: 0 2px 5px rgba(0,0,0,0.5);}
         
         /* COMPACT PRODUCT OWNER DETAILS BOX */
         .creator-info-box {
-            background: rgba(0,0,0,0.6); border: 1px solid #333; border-radius: 12px;
-            padding: 12px 15px; margin-bottom: 20px; width: 100%;
+            background: rgba(0,0,0,0.6); border: 2px solid #333; border-radius: 12px;
+            padding: 15px; margin-bottom: 25px; width: 100%;
             display: flex; flex-direction: column; align-items: center;
         }
-        .owner-header { color: var(--gold); font-size: 0.9rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
-        .owner-sub { color: #888; font-size: 0.75rem; font-weight: 700; margin-bottom: 10px; font-style: italic; }
+        .owner-header { color: var(--gold); font-size: 1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .owner-sub { color: #888; font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; font-style: italic; }
         
         .creator-info-box div.contact-row { 
-            margin-bottom: 5px; font-size: 0.9rem; font-weight: 800; color: #eee; 
+            margin-bottom: 5px; font-size: 1rem; font-weight: 900; color: #eee; 
             display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
             word-break: break-all;
         }
         .creator-info-box div.contact-row:last-child { margin-bottom: 0; }
-        .creator-info-box i { width: 18px; text-align: center; font-size: 1rem; }
+        .creator-info-box i { width: 18px; text-align: center; font-size: 1.1rem; }
         .creator-name i { color: #fff; }
         .creator-email i { color: var(--gold); }
         
-        /* COMPACT PRODUCT DESCRIPTION */
+        /* COMPACT PRODUCT DESCRIPTION - BOLDER */
         .product-desc { 
-            color: #ddd; font-size: 0.9rem; font-weight: 700; margin-bottom: 20px; 
-            line-height: 1.5; background: rgba(0, 0, 0, 0.5); border: 1px solid #333;
-            padding: 15px; border-radius: 12px; max-height: 100px; overflow-y: auto;
+            color: #ddd; font-size: 1rem; font-weight: 800; margin-bottom: 25px; 
+            line-height: 1.6; background: rgba(0, 0, 0, 0.5); border: 2px solid #333;
+            padding: 18px; border-radius: 12px; max-height: 120px; overflow-y: auto;
             word-wrap: break-word; width: 100%; box-shadow: inset 0 3px 10px rgba(0,0,0,0.5);
         }
         .product-desc::-webkit-scrollbar { width: 4px; }
@@ -227,24 +232,24 @@
         /* FOOTER STATS CENTERED */
         .card-footer-info { 
             display: flex; flex-direction: column; align-items: center; 
-            margin-top: auto; margin-bottom: 20px; padding-top: 20px; 
-            border-top: 2px solid #333; width: 100%; gap: 10px;
+            margin-top: auto; margin-bottom: 25px; padding-top: 25px; 
+            border-top: 2px solid #333; width: 100%; gap: 15px;
         }
         
-        .price-label { font-size: 0.8rem; color: #888; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px;}
-        .product-price { font-family: 'Cinzel', serif; color: var(--gold); font-size: 1.8rem; font-weight: 900; text-shadow: 0 0 10px var(--gold-glow);}
+        .price-label { font-size: 0.9rem; color: #888; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px;}
+        .product-price { font-family: 'Cinzel', serif; color: var(--gold); font-size: 2rem; font-weight: 900; text-shadow: 0 0 10px var(--gold-glow);}
         
-        .sales-stats { font-size: 0.85rem; color: #fff; font-weight: 900; background: #222; padding: 6px 15px; border-radius: 50px; border: 1px solid #444;}
+        .sales-stats { font-size: 0.95rem; color: #fff; font-weight: 900; background: #222; padding: 10px 20px; border-radius: 50px; border: 2px solid #444;}
 
-        /* COMPACT BUY BUTTON */
+        /* COMPACT BUY BUTTON - BOLDER AND MATCHING ACT-BTN SIZE */
         .btn-buy {
-            background: linear-gradient(90deg, #111, #222); color: #fff; font-weight: 900; border-radius: 50px;
-            padding: 14px 20px; width: 100%; border: 2px solid var(--gold); font-size: 1rem;
+            background: linear-gradient(90deg, #111, #222); color: #fff; font-weight: 900; border-radius: 12px;
+            padding: 18px; width: 100%; border: 2px solid var(--gold); font-size: 1.1rem;
             letter-spacing: 1.5px; text-transform: uppercase; transition: all 0.4s; 
             text-align: center; text-decoration: none; display: flex; justify-content: center; align-items: center; gap: 10px;
             box-shadow: 0 8px 15px rgba(0,0,0,0.5);
         }
-        .btn-buy i { font-size: 1.2rem; transition: transform 0.3s; }
+        .btn-buy i { font-size: 1.3rem; transition: transform 0.3s; }
         .btn-buy:hover { 
             background: var(--gold); color: #000; 
             box-shadow: 0 10px 25px var(--gold-glow); 
@@ -325,13 +330,11 @@
   </div>
 </div>
 
-<!-- Bootstrap JS needed for the Modal to work -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     let globalMarketData = [];
 
-    // Canvas Background
     function initStars() {
         const c = document.getElementById('starCanvas');
         c.width = window.innerWidth; c.height = window.innerHeight;
@@ -346,14 +349,12 @@
         animate();
     }
 
-    // Function to open the Unrestricted Image Modal
     function viewFullImage(base64String) {
         document.getElementById('fullSizeImage').src = base64String;
         const modal = new bootstrap.Modal(document.getElementById('imageViewerModal'));
         modal.show();
     }
 
-    // Fetch All Global Products
     async function fetchLiveProducts() {
         try {
             const headers = { 'Content-Type': 'application/json' };
@@ -406,16 +407,16 @@
             if (product.productImageBase64) {
                 mediaHeaderHTML = `
                     <div class="product-image-header" onclick="viewFullImage('${product.productImageBase64}')" style="background-image: url('${product.productImageBase64}');">
-                        <div class="badge-category"><i class="fas fa-tag"></i> ${categoryDisplay}</div>
-                        <div class="badge-verified"><i class="fas fa-shield-check"></i> VERIFIED</div>
+                        <div class="badge-category"><i class="fas fa-tag me-1"></i> ${categoryDisplay}</div>
+                        <div class="badge-verified"><i class="fas fa-circle text-success me-1"></i> VERIFIED</div>
                         <div class="click-to-view"><i class="fas fa-search-plus"></i> Click image to view</div>
                     </div>`;
             } else {
                 mediaHeaderHTML = `
                     <div class="store-icon-fallback" title="No image uploaded">
-                        <i class="fas fa-box-open"></i>
-                        <div class="badge-category"><i class="fas fa-tag"></i> ${categoryDisplay}</div>
-                        <div class="badge-verified"><i class="fas fa-shield-check"></i> VERIFIED</div>
+                        <i class="fas fa-box-open text-secondary"></i>
+                        <div class="badge-category"><i class="fas fa-tag me-1"></i> ${categoryDisplay}</div>
+                        <div class="badge-verified"><i class="fas fa-circle text-success me-1"></i> VERIFIED</div>
                     </div>`;
             }
 
@@ -442,7 +443,7 @@
                             <div class="price-label">Secure Access Price</div>
                             <div class="product-price">${displayPrice}</div>
                         </div>
-                        <div class="sales-col">
+                        <div class="sales-col mt-2">
                             <span class="sales-stats"><i class="fas fa-chart-line text-success me-2"></i> ${salesCount} Successfully Sold</span>
                         </div>
                     </div>
