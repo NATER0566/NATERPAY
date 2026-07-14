@@ -115,14 +115,15 @@
         </div>
     </div>
 
+    <!-- WITHDRAWALS TAB -->
     <div id="tab-withdrawals" class="tab-content" style="display: none;">
         <div class="admin-card">
             <h5 class="mb-3 text-gold fw-bold">PENDING WITHDRAWAL REQUESTS</h5>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>DATE & USER</th><th>AMOUNT</th><th>BANK NAME</th><th>ACCOUNT NO & NAME</th><th class="text-end">ACTION</th></tr></thead>
+                    <thead><tr><th>DATE & USER</th><th>AMOUNT</th><th>DESTINATION DETAILS</th><th class="text-end">ACTION</th></tr></thead>
                     <tbody id="withdrawalsTable">
-                        <tr><td colspan="5" class="text-center opacity-50 py-4">Loading pending withdrawals...</td></tr>
+                        <tr><td colspan="4" class="text-center opacity-50 py-4">Loading pending withdrawals...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -163,11 +164,12 @@
         </div>
     </div>
     
+    <!-- AUDIT LOG / TRANSACTIONS TAB -->
     <div id="tab-transactions" class="tab-content" style="display: none;">
         <div class="admin-card">
             <h5 class="mb-3 text-gold fw-bold">LIVE TRANSACTION AUDIT</h5>
             <div class="table-responsive">
-                <table class="table table-dark">
+                <table class="table table-dark align-middle">
                     <thead><tr><th>DATE & REF</th><th>TYPE</th><th>AMOUNT</th><th>STATUS</th><th class="text-end">ACTION</th></tr></thead>
                     <tbody id="transactionsTable"></tbody>
                 </table>
@@ -272,6 +274,47 @@
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
     window.globalSystemUsers = [];
 
+    // ==========================================
+    // THE NEW "VIEW DOSSIER" FUNCTION (FOR ALL TRANSACTIONS & WITHDRAWALS)
+    // ==========================================
+    function viewTxDossier(encodedData) {
+        try {
+            const tx = JSON.parse(decodeURIComponent(encodedData));
+            
+            // Format Metadata into readable code
+            let metaHtml = '';
+            if (tx.metadata) {
+                metaHtml = `
+                    <h6 class="text-gold mt-3 mb-1"><i class="fas fa-database me-1"></i> Raw Database Payload</h6>
+                    <div class="p-2 bg-black rounded border border-secondary" style="font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; color: #00ff88;">
+                        ${JSON.stringify(tx.metadata, null, 2)}
+                    </div>`;
+            }
+
+            Swal.fire({
+                title: 'Transaction Dossier',
+                html: `
+                    <div class="text-start mt-2" style="font-size: 0.9rem;">
+                        <p class="mb-1"><strong class="text-gold">Sys ID:</strong> ${tx._id}</p>
+                        <p class="mb-1"><strong class="text-gold">Type:</strong> <span class="text-uppercase badge bg-secondary">${tx.type}</span></p>
+                        <p class="mb-1"><strong class="text-gold">Amount:</strong> <span class="text-warning fw-bold fs-5">₦${parseNum(tx.amount).toLocaleString()}</span></p>
+                        <p class="mb-1"><strong class="text-gold">User:</strong> ${tx.userEmail || tx.user?.email || 'Unknown'}</p>
+                        <p class="mb-1"><strong class="text-gold">Status:</strong> <span class="text-uppercase">${tx.status}</span></p>
+                        <div class="p-2 mt-2 bg-dark rounded border border-secondary">
+                            <strong class="text-gold d-block mb-1">Description:</strong>
+                            <span class="text-white">${tx.description || 'System Record'}</span>
+                        </div>
+                        <p class="mt-2 mb-1"><strong class="text-gold">Date:</strong> ${new Date(tx.createdAt || tx.date).toLocaleString()}</p>
+                        ${metaHtml}
+                    </div>
+                `,
+                background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444'
+            });
+        } catch (e) {
+            Swal.fire('Error', 'Could not parse transaction data', 'error');
+        }
+    }
+
     async function loadAdminEcosystem() {
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
@@ -315,6 +358,7 @@
             txData.transactions.forEach(tx => {
                 const date = new Date(tx.createdAt || tx.date).toLocaleDateString();
                 const amt = parseNum(tx.amount);
+                const encodedTx = encodeURIComponent(JSON.stringify(tx));
                 
                 txHtml += `
                     <tr>
@@ -323,7 +367,10 @@
                         <td class="fw-bold text-gold fs-5">₦${amt.toLocaleString()}</td>
                         <td><span class="status-pill ${tx.status==='success'?'bg-success':(tx.status==='failed'?'bg-danger':'bg-warning text-dark')}">${tx.status}</span></td>
                         <td class="text-end">
-                            ${tx.status !== 'success' ? `<button class="btn btn-sm btn-gold rounded-pill fw-bold" onclick="forceVerifyTransaction('${tx._id}')">Force Clear</button>` : `<span class="badge bg-dark border border-success text-success"><i class="fas fa-check"></i></span>`}
+                            <div class="action-btns justify-content-end">
+                                <button class="btn btn-sm btn-info text-white rounded" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button>
+                                ${tx.status !== 'success' ? `<button class="btn btn-sm btn-gold rounded fw-bold" onclick="forceVerifyTransaction('${tx._id}')">Clear</button>` : ``}
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -349,6 +396,93 @@
     }
 
     // ==========================================
+    // BULLETPROOF WITHDRAWALS FETCH
+    // ==========================================
+    async function fetchWithdrawals() {
+        try {
+            const res = await fetch('/api/admin/withdrawals/pending', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
+            const data = await res.json();
+            const badge = document.getElementById('withdrawBadge'); 
+            const wTable = document.getElementById('withdrawalsTable'); 
+            const stat = document.getElementById('statWithdrawals');
+            
+            const withdrawals = data.pendingWithdrawals || [];
+            
+            if(data.success && withdrawals.length > 0) {
+                stat.innerText = withdrawals.length; 
+                badge.innerText = withdrawals.length; 
+                badge.classList.remove('d-none');
+                
+                wTable.innerHTML = withdrawals.map(w => { 
+                    const date = new Date(w.createdAt || w.date).toLocaleString(); 
+                    
+                    // AGGRESSIVE DATA EXTRACTION
+                    let bankName = 'Unknown Bank';
+                    let accNo = 'Unknown Account';
+                    let accName = 'Unknown Name';
+
+                    // Method 1: Check standard fields
+                    if (w.bankName) bankName = w.bankName;
+                    if (w.accountNumber) accNo = w.accountNumber;
+                    if (w.accountName) accName = w.accountName;
+
+                    // Method 2: Check nested metadata Map/Object
+                    if (w.metadata && w.metadata.bankAccount) {
+                        bankName = w.metadata.bankAccount.bankName || bankName;
+                        accNo = w.metadata.bankAccount.accountNumber || accNo;
+                        accName = w.metadata.bankAccount.accountName || accName;
+                    }
+
+                    // Method 3: Force extraction from description (e.g. "Withdrawal to ACCESS BANK - 1234567890")
+                    if (bankName === 'Unknown Bank' && w.description && w.description.includes(' - ')) {
+                        const cleanDesc = w.description.replace('Withdrawal to ', '');
+                        const parts = cleanDesc.split(' - ');
+                        bankName = parts[0] || bankName;
+                        accNo = parts[1] || accNo;
+                    }
+
+                    const encodedTx = encodeURIComponent(JSON.stringify(w));
+
+                    return `
+                        <tr>
+                            <td>
+                                <div class="fw-bold">${w.user?.name || 'Unknown User'}</div>
+                                <small class="text-secondary">${date}</small>
+                            </td>
+                            <td class="text-warning fw-bold fs-5">₦${parseNum(w.amount).toLocaleString()}</td>
+                            <td>
+                                <div class="text-white fw-bold"><i class="fas fa-university text-gold me-1"></i> ${bankName}</div>
+                                <div class="text-white">${accNo} <span class="text-gold small ms-1">(${accName})</span></div>
+                            </td>
+                            <td class="text-end">
+                                <div class="action-btns justify-content-end">
+                                    <button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button>
+                                    <button class="btn btn-success fw-bold" onclick="processWithdrawal('${w._id}', 'approve')" title="Approve & Settle"><i class="fas fa-check"></i></button>
+                                    <button class="btn btn-danger fw-bold" onclick="processWithdrawal('${w._id}', 'reject')" title="Reject & Refund"><i class="fas fa-times"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `; 
+                }).join('');
+            } else { 
+                stat.innerText = '0'; 
+                badge.classList.add('d-none'); 
+                wTable.innerHTML = '<tr><td colspan="4" class="text-center opacity-50 py-4">No pending withdrawals.</td></tr>'; 
+            }
+        } catch(e) { console.error("Withdrawal fetch failed", e); }
+    }
+
+    async function processWithdrawal(txId, action) {
+        if((await Swal.fire({title: `Confirm Action`, showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
+            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try {
+                const res = await fetch(`/api/admin/withdrawals/${txId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
+                if((await res.json()).success) { Swal.fire('Success', '', 'success'); loadAdminEcosystem(); } else Swal.fire('Failed', 'Operation failed', 'error');
+            } catch (err) { Swal.fire('Error', 'Server communication failed.', 'error'); }
+        }
+    }
+
+    // ==========================================
     // ADVERTS MODERATION ENGINE
     // ==========================================
     async function fetchAdverts() {
@@ -360,12 +494,8 @@
             const pendingAds = ads.filter(a => a.status === 'pending');
             const badge = document.getElementById('advertsBadge');
             
-            if (pendingAds.length > 0) {
-                badge.innerText = pendingAds.length;
-                badge.classList.remove('d-none');
-            } else {
-                badge.classList.add('d-none');
-            }
+            if (pendingAds.length > 0) { badge.innerText = pendingAds.length; badge.classList.remove('d-none'); } 
+            else { badge.classList.add('d-none'); }
 
             const tbody = document.getElementById('advertsTable');
             if(ads.length === 0) {
@@ -437,20 +567,15 @@
             try {
                 const res = await fetch(`/api/admin/ads/${adId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
                 const data = await res.json();
-                if(data.success) { 
-                    Swal.fire('Success', `Advert ${action}d successfully.`, 'success'); 
-                    fetchAdverts(); 
-                } else {
-                    Swal.fire('Failed', data.message || 'Operation failed', 'error');
-                }
+                if(data.success) { Swal.fire('Success', `Advert ${action}d successfully.`, 'success'); fetchAdverts(); } 
+                else { Swal.fire('Failed', data.message || 'Operation failed', 'error'); }
             } catch (err) { Swal.fire('Error', 'Server communication failed.', 'error'); }
         }
     }
 
     // ==========================================
-    // OTHER ECOSYSTEM FUNCTIONS
+    // MARKETPLACE & OTHER FUNCTIONS
     // ==========================================
-
     async function fetchMarketplace() {
         try {
             const res = await fetch('/api/payment-links', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
@@ -481,16 +606,13 @@
     function viewProductDetails(encodedData) {
         const p = JSON.parse(decodeURIComponent(encodedData));
         const imageBlock = p.productImageBase64 ? `<div class="mb-3 text-center"><img src="${p.productImageBase64}" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 2px solid var(--gold);"></div>` : `<div class="mb-3 text-center py-4 bg-dark rounded border"><i class="fas fa-box fa-3x text-secondary"></i><p class="mt-2 text-muted small">No Image Uploaded</p></div>`;
-
         Swal.fire({ title: 'Full Product Dossier', html: `<div class="text-start mt-3" style="font-size: 0.95rem; line-height: 1.6;">${imageBlock}<h5 class="text-gold fw-bold mb-3 border-bottom pb-2"><i class="fas fa-info-circle"></i> Item Data</h5><p class="mb-1"><strong>Title:</strong> ${p.title}</p><p class="mb-1"><strong>Category:</strong> ${p.category || 'N/A'}</p><p class="mb-1"><strong>Price:</strong> <span class="text-warning fw-bold">₦${p.amount}</span></p><p class="mb-3"><strong>Description:</strong> <br><span class="text-white bg-black p-2 rounded d-block mt-1">${p.description || 'No description provided.'}</span></p><h5 class="text-danger fw-bold mb-3 border-bottom pb-2 mt-4"><i class="fas fa-user-shield"></i> Owner Information</h5><p class="mb-1"><strong>Merchant Name:</strong> ${p.displayMerchantName}</p><p class="mb-1"><strong>Registered Email:</strong> ${p.displayEmail}</p></div>`, background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Dossier', confirmButtonColor: '#444' });
     }
 
     async function editProduct(encodedData) {
         const product = JSON.parse(decodeURIComponent(encodedData));
         const productId = product._id || product.linkId;
-        
         const { value: formValues } = await Swal.fire({ title: 'Edit Product details', html: `<div style="text-align: left;"><label class="high-vis-label mt-2">Title</label><input id="swal-title" class="swal2-input bg-dark text-white w-100 m-0" value="${product.title || ''}"><label class="high-vis-label mt-3">Price (₦)</label><input id="swal-price" type="number" class="swal2-input bg-dark text-white w-100 m-0" value="${product.amount || ''}" ${product.isFlexibleAmount ? 'disabled' : ''}><label class="high-vis-label mt-3">Category</label><input id="swal-category" class="swal2-input bg-dark text-white w-100 m-0" value="${product.category || ''}"><label class="high-vis-label mt-3">Description</label><textarea id="swal-desc" class="swal2-textarea bg-dark text-white w-100 m-0" rows="3">${product.description || ''}</textarea></div>`, background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Save Changes', preConfirm: () => ({ title: document.getElementById('swal-title').value, amount: document.getElementById('swal-price').value, category: document.getElementById('swal-category').value, description: document.getElementById('swal-desc').value }) });
-
         if (formValues) {
             Swal.fire({title:'Saving Modifications...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try {
@@ -533,29 +655,6 @@
                 if (response.ok && (await response.json()).success) Swal.fire({title: 'Verified!', icon: 'success', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
                 else Swal.fire({title: 'Failed', icon: 'error', background: '#0a0a0a', color: '#fff'});
             } catch (err) { Swal.fire({title: 'Error', icon: 'error', background: '#0a0a0a', color: '#fff'}); }
-        }
-    }
-
-    async function fetchWithdrawals() {
-        try {
-            const res = await fetch('/api/admin/withdrawals/pending', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
-            const data = await res.json();
-            const badge = document.getElementById('withdrawBadge'); const wTable = document.getElementById('withdrawalsTable'); const stat = document.getElementById('statWithdrawals');
-            const withdrawals = data.pendingWithdrawals || [];
-            if(data.success && withdrawals.length > 0) {
-                stat.innerText = withdrawals.length; badge.innerText = withdrawals.length; badge.classList.remove('d-none');
-                wTable.innerHTML = withdrawals.map(w => { const date = new Date(w.createdAt || w.date).toLocaleString(); const bankName = w.bankName || w.metadata?.bankName || w.metadata?.bankAccount?.bankName || 'N/A'; const accNo = w.accountNumber || w.metadata?.accountNumber || w.metadata?.bankAccount?.accountNumber || 'N/A'; const accName = w.accountName || w.metadata?.accountName || w.metadata?.bankAccount?.accountName || 'N/A'; return `<tr><td><div class="fw-bold">${w.user?.name || 'Unknown User'}</div><small class="text-secondary">${date}</small></td><td class="text-warning fw-bold fs-5">₦${parseNum(w.amount).toLocaleString()}</td><td class="text-white fw-bold">${bankName}</td><td><div class="text-white">${accNo}</div><small class="text-gold">${accName}</small></td><td class="text-end"><div class="action-btns"><button class="btn btn-success fw-bold" onclick="processWithdrawal('${w._id}', 'approve')"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="processWithdrawal('${w._id}', 'reject')"><i class="fas fa-times"></i></button></div></td></tr>`; }).join('');
-            } else { stat.innerText = '0'; badge.classList.add('d-none'); wTable.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No pending withdrawals.</td></tr>'; }
-        } catch(e) {}
-    }
-
-    async function processWithdrawal(txId, action) {
-        if((await Swal.fire({title: `Confirm Action`, showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
-            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-            try {
-                const res = await fetch(`/api/admin/withdrawals/${txId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
-                if((await res.json()).success) { Swal.fire('Success', '', 'success'); loadAdminEcosystem(); } else Swal.fire('Failed', 'Operation failed', 'error');
-            } catch (err) { Swal.fire('Error', 'Server communication failed.', 'error'); }
         }
     }
 
