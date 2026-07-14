@@ -79,10 +79,10 @@
     <div class="transaction-card">
         <div class="d-flex flex-wrap gap-2 mb-4">
             <button class="filter-btn active" onclick="filterTransactions('all', event)">All</button>
-            <button class="filter-btn" onclick="filterTransactions('funding', event)">Deposits</button>
+            <button class="filter-btn" onclick="filterTransactions('funding', event)">Deposits / Credits</button>
             <button class="filter-btn" onclick="filterTransactions('airtime', event)">Airtime</button>
             <button class="filter-btn" onclick="filterTransactions('data', event)">Data</button>
-            <button class="filter-btn" onclick="filterTransactions('withdrawal', event)">Withdrawal</button>
+            <button class="filter-btn" onclick="filterTransactions('withdrawal', event)">Withdrawals / Debits</button>
             <button class="filter-btn" onclick="filterTransactions('transfer', event)">Transfer</button>
             <button class="filter-btn" onclick="filterTransactions('invoice', event)">Invoices</button>
         </div>
@@ -138,7 +138,6 @@
         animate();
     }
     
-    // THE FIX: Properly parsing the Decimal128 objects coming from MongoDB
     function parseDecimal(value) {
         if (!value) return 0;
         if (value.$numberDecimal) return Number(value.$numberDecimal);
@@ -156,8 +155,17 @@
 
         try {
             const queryParams = new URLSearchParams();
-            if (currentFilter !== 'all') queryParams.append('type', currentFilter);
-            queryParams.append('limit', '50'); // Pull top 50 recent transactions
+            if (currentFilter !== 'all') {
+                // THE FIX: Allow the filter to pull multiple types so Admin adjustments show up
+                if (currentFilter === 'funding') {
+                    queryParams.append('type', 'funding');
+                } else if (currentFilter === 'withdrawal') {
+                    queryParams.append('type', 'withdrawal');
+                } else {
+                    queryParams.append('type', currentFilter);
+                }
+            }
+            queryParams.append('limit', '100'); // Pull more transactions to ensure Admin ones are found
             
             const res = await fetch(`/api/transactions?${queryParams}`, {
                 headers: { 'Authorization': `Bearer ${authToken}` }
@@ -169,17 +177,27 @@
                 
                 if (data.transactions && data.transactions.length > 0) {
                     data.transactions.forEach(tx => {
-                        const dateObj = new Date(tx.createdAt || tx.date); // Fallback to createdAt if date is missing
+                        const dateObj = new Date(tx.createdAt || tx.date); 
                         const dateString = dateObj.toLocaleDateString() + ' <br><small class="opacity-50">' + dateObj.toLocaleTimeString() + '</small>';
                         
                         const statusClass = tx.status === 'success' ? 'status-success' : (tx.status === 'pending' ? 'status-pending' : 'status-failed');
                         
-                        // Parse amounts securely
                         const rawAmount = parseDecimal(tx.amount);
                         const rawBalance = parseDecimal(tx.balanceAfter);
                         
-                        // UI Logic: Credits show as Green, Debits show as White
-                        const isCredit = ['funding', 'credit', 'invoice', 'referral_bonus'].includes(tx.type.toLowerCase());
+                        // THE FIX: Correctly identify Admin adjustments as credits or debits
+                        let isCredit = false;
+                        const txType = (tx.type || '').toLowerCase();
+                        const desc = (tx.description || '').toLowerCase();
+
+                        if (['funding', 'credit', 'invoice', 'referral_bonus'].includes(txType)) {
+                            isCredit = true;
+                        } else if (txType === 'transfer' && (desc.includes('received') || desc.includes('from'))) {
+                            isCredit = true;
+                        } else if (desc.includes('admin credit')) {
+                            isCredit = true; // Catch Admin Credits explicitly
+                        }
+
                         const amountHTML = isCredit ? `<span class="amount-credit">+ ₦${rawAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>` : `<span class="amount-debit">- ₦${rawAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>`;
 
                         tbody.innerHTML += `
