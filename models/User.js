@@ -100,9 +100,13 @@ const userSchema = new mongoose.Schema({
     index: true
   },
   referredBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String, // THE FIX: Stores the referral code of the person who invited them
+    default: null,
     index: true
+  },
+  referralBonusPaid: {
+    type: Boolean, // THE FIX: Stays false until they make their first transaction
+    default: false 
   },
   referralCount: {
     type: Number,
@@ -192,7 +196,6 @@ const userSchema = new mongoose.Schema({
 // Indexes
 userSchema.index({ email: 1, phoneNumber: 1 });
 userSchema.index({ referralCode: 1 });
-userSchema.index({ referredBy: 1 });
 userSchema.index({ role: 1, isActive: 1 });
 userSchema.index({ createdAt: -1 });
 
@@ -318,8 +321,12 @@ userSchema.statics.findByReferralCode = function(code) {
   return this.findOne({ referralCode: code.toUpperCase() });
 };
 
-userSchema.statics.getReferralTree = function(userId) {
-  return this.find({ referredBy: userId })
+// THE FIX: Adjusted to query by the string referralCode instead of the ObjectId
+userSchema.statics.getReferralTree = async function(userId) {
+  const user = await this.findById(userId);
+  if (!user) return [];
+  
+  return this.find({ referredBy: user.referralCode })
     .select('name email phoneNumber referralCount createdAt')
     .sort({ createdAt: -1 });
 };
