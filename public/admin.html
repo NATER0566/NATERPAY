@@ -381,9 +381,9 @@
 
                 const txCount = p.transactionCount || 0;
                 
-                // FIX: Better checks for nested User data structures (Populated documents)
-                const mName = p.merchantName || p.user?.name || p.userId?.name || p.creator?.name || 'Unknown Merchant';
-                const mEmail = p.email || p.creatorEmail || p.user?.email || p.userId?.email || p.creator?.email || 'No Email';
+                // UPDATED: Correct checks for creatorName and merchantSupport.email
+                const mName = p.merchantName || p.creatorName || p.user?.name || p.userId?.name || p.creator?.name || 'Verified Merchant';
+                const mEmail = p.email || p.creatorEmail || (p.merchantSupport && p.merchantSupport.email) || p.user?.email || p.userId?.email || p.creator?.email || 'No Email';
                 
                 // Assign mapped names back into the object before encoding so viewProductDetails can read them
                 p.displayMerchantName = mName;
