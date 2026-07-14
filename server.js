@@ -160,8 +160,13 @@ async function registerRoutes() {
   fastify.get('/api/admin/transactions', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getTransactions);
   fastify.get('/api/admin/analytics', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getAnalytics);
   fastify.get('/api/admin/kyc/pending', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingKYC);
-  fastify.put('/api/admin/kyc/:id/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.approveKYC);
-  fastify.put('/api/admin/kyc/:id/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.rejectKYC);
+  
+  // === UPGRADED KYC ADMIN ROUTES ===
+  fastify.get('/api/admin/kyc/:kycId/verify', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.verifyRealWorldKYC);
+  fastify.put('/api/admin/kyc/:kycId/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.approveKYC);
+  fastify.put('/api/admin/kyc/:kycId/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.rejectKYC);
+  // =================================
+
   fastify.get('/api/admin/support/tickets', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getSupportTickets);
   fastify.put('/api/admin/support/tickets/:id/assign', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.assignTicket);
   fastify.put('/api/admin/support/tickets/:id/resolve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.resolveTicket);
