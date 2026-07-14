@@ -174,6 +174,12 @@ async function registerRoutes() {
   fastify.put('/api/admin/products/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.updateProduct);
   fastify.delete('/api/admin/products/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.deleteProduct);
   // ===========================================================
+
+  // === ADVERTS MODERATION ADMIN ROUTES ===
+  fastify.get('/api/admin/ads', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingAds);
+  fastify.put('/api/admin/ads/:id/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.approveAd);
+  fastify.put('/api/admin/ads/:id/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.rejectAd);
+  // =======================================
   
   const cmsRoutes = require('./routes/cms');
   fastify.get('/api/cms/homepage-data', cmsRoutes.getHomepageData);
