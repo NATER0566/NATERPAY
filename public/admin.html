@@ -546,10 +546,30 @@
     }
 
     async function processKYC(kycId, action) {
-        if((await Swal.fire({title:`Confirm?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
-            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading()});
-            const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
-            if((await res.json()).success) { Swal.fire('Success', '', 'success'); loadAdminEcosystem(); }
+        const actionWord = action === 'approve' ? 'Approve' : 'Reject';
+        if((await Swal.fire({title:`Confirm ${actionWord}?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
+            // Start the loading spinner
+            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
+            
+            try {
+                const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { 
+                    method: 'PUT', 
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } 
+                });
+                
+                const data = await res.json();
+                
+                // Stop spinning and show either Success or Error
+                if (data.success) { 
+                    Swal.fire({icon: 'success', title: 'Success', text: data.message || 'KYC updated successfully.', background: '#0a0a0a', color: '#fff'});
+                    fetchKYC(); // Refresh the table
+                } else {
+                    Swal.fire({icon: 'error', title: 'Action Failed', text: data.message || 'Could not process KYC.', background: '#0a0a0a', color: '#fff'});
+                }
+            } catch (err) {
+                // Failsafe for network disconnections
+                Swal.fire({icon: 'error', title: 'Network Error', text: 'Server communication failed.', background: '#0a0a0a', color: '#fff'});
+            }
         }
     }
 
@@ -661,13 +681,3 @@
 </script>
 </body>
 </html>
-this is code now tell me are we missing something to make all this run fully functionality also tell me how any of the code you will fix be running to make sure we don't have problem 
-
-and make sure any of this logic does not affect my the already systems functionality of any data of any field 
-
-
-let build the remaining functionality to make sure we make thing clean and easy and the code have functionality all and fully details 
-
-make everything to align completely 
-
-make sure those things align  so the users data that was to submit will display completely with the documents and image provide all and also display details as to the real image uploaded and let them be full  in any way that no error will occur
