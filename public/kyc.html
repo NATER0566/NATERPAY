@@ -49,6 +49,7 @@
         .badge-active { background: rgba(212,175,55,0.2); color: var(--gold); border: 1px solid var(--gold); }
         .badge-completed { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff88; }
         .badge-pending { background: rgba(255, 170, 0, 0.2); color: #ffaa00; border: 1px solid #ffaa00; }
+        .badge-rejected { background: rgba(211, 47, 47, 0.2); color: var(--red); border: 1px solid var(--red); }
 
         .input-group-custom { background: rgba(0,0,0,0.6); border: 1.5px solid #444; border-radius: 12px; padding: 15px; margin-bottom: 15px; transition: 0.3s; }
         .input-group-custom:focus-within { border-color: var(--gold); }
@@ -89,13 +90,13 @@
         <div id="tier1Form">
             <div class="input-group-custom">
                 <label>BANK VERIFICATION NUMBER (BVN)</label>
-                <input type="text" id="bvnInput" placeholder="Enter 11-digit BVN" maxlength="11">
+                <input type="text" id="bvnInput" placeholder="Enter exactly 11-digit BVN" maxlength="11">
             </div>
             <div class="input-group-custom">
                 <label>NATIONAL IDENTITY NUMBER (NIN)</label>
-                <input type="text" id="ninInput" placeholder="Enter 11-digit NIN" maxlength="11">
+                <input type="text" id="ninInput" placeholder="Enter exactly 11-digit NIN" maxlength="11">
             </div>
-            <button class="btn-submit" onclick="submitTier1()"><i class="fas fa-check-circle me-2"></i> VERIFY TIER 1</button>
+            <button class="btn-submit" onclick="submitTier1()"><i class="fas fa-check-circle me-2"></i> SUBMIT FOR REVIEW</button>
         </div>
     </div>
 
@@ -166,7 +167,7 @@
     </div>
     
     <div class="text-center text-muted small mt-4 fw-bold">
-        <p><i class="fas fa-shield-alt text-success me-1"></i> Data is heavily encrypted and stored securely.</p>
+        <p><i class="fas fa-shield-alt text-success me-1"></i> Global verification check enforced before approval.</p>
     </div>
 </div>
 
@@ -192,7 +193,6 @@
         }
     }
 
-    // Convert file to Base64 for secure JSON transmission
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -202,6 +202,7 @@
         });
     }
 
+    // THE UPGRADED KYC STATE MACHINE
     async function checkKYCStatus() {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) { window.location.href = '/index.html'; return; }
@@ -218,40 +219,47 @@
                 const t2 = document.getElementById('tier2Card'); const b2 = document.getElementById('tier2Badge'); const f2 = document.getElementById('tier2Form');
                 const t3 = document.getElementById('tier3Card'); const b3 = document.getElementById('tier3Badge'); const f3 = document.getElementById('tier3Form');
 
-                // Reset
+                // Reset all to locked first
                 [t1, t2, t3].forEach(t => t.className = 'tier-card locked');
 
                 // Logic to unlock specific tiers based on backend status
-                if (kycLevel === 0) {
-                    t1.className = 'tier-card active';
-                    b1.className = 'tier-badge badge-active'; b1.innerText = 'ACTION REQUIRED';
+                if (kycLevel === 0 || !status) {
+                    t1.className = 'tier-card active'; b1.className = 'tier-badge badge-active'; b1.innerText = 'ACTION REQUIRED';
                 } 
                 else if (kycLevel === 1) {
-                    t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
-                    if(status === 'pending') {
-                        t2.className = 'tier-card'; b2.className = 'tier-badge badge-pending'; b2.innerText = 'REVIEW PENDING'; f2.style.display = 'none';
-                    } else {
+                    if (status === 'pending') {
+                        t1.className = 'tier-card'; b1.className = 'tier-badge badge-pending'; b1.innerText = 'REVIEW PENDING'; f1.style.display = 'none';
+                    } else if (status === 'rejected') {
+                        t1.className = 'tier-card active'; b1.className = 'tier-badge badge-rejected'; b1.innerText = 'REJECTED - TRY AGAIN';
+                    } else if (status === 'approved') {
+                        t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
                         t2.className = 'tier-card active'; b2.className = 'tier-badge badge-active'; b2.innerText = 'ACTION REQUIRED';
                     }
                 }
                 else if (kycLevel === 2) {
                     t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
-                    t2.className = 'tier-card completed'; b2.className = 'tier-badge badge-completed'; b2.innerText = 'COMPLETED'; f2.style.display = 'none';
-                    if(status === 'pending') {
-                        t3.className = 'tier-card'; b3.className = 'tier-badge badge-pending'; b3.innerText = 'REVIEW PENDING'; f3.style.display = 'none';
-                    } else {
+                    if (status === 'pending') {
+                        t2.className = 'tier-card'; b2.className = 'tier-badge badge-pending'; b2.innerText = 'REVIEW PENDING'; f2.style.display = 'none';
+                    } else if (status === 'rejected') {
+                        t2.className = 'tier-card active'; b2.className = 'tier-badge badge-rejected'; b2.innerText = 'REJECTED - TRY AGAIN';
+                    } else if (status === 'approved') {
+                        t2.className = 'tier-card completed'; b2.className = 'tier-badge badge-completed'; b2.innerText = 'COMPLETED'; f2.style.display = 'none';
                         t3.className = 'tier-card active'; b3.className = 'tier-badge badge-active'; b3.innerText = 'ACTION REQUIRED';
                     }
                 }
                 else if (kycLevel === 3) {
                     t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
                     t2.className = 'tier-card completed'; b2.className = 'tier-badge badge-completed'; b2.innerText = 'COMPLETED'; f2.style.display = 'none';
-                    t3.className = 'tier-card completed'; b3.className = 'tier-badge badge-completed'; b3.innerText = 'MAX TIER REACHED'; f3.style.display = 'none';
+                    if (status === 'pending') {
+                        t3.className = 'tier-card'; b3.className = 'tier-badge badge-pending'; b3.innerText = 'REVIEW PENDING'; f3.style.display = 'none';
+                    } else if (status === 'rejected') {
+                        t3.className = 'tier-card active'; b3.className = 'tier-badge badge-rejected'; b3.innerText = 'REJECTED - TRY AGAIN';
+                    } else if (status === 'approved') {
+                        t3.className = 'tier-card completed'; b3.className = 'tier-badge badge-completed'; b3.innerText = 'MAX TIER REACHED'; f3.style.display = 'none';
+                    }
                 }
             }
-        } catch (e) {
-            console.error('KYC Load Error:', e);
-        }
+        } catch (e) { console.error('KYC Load Error:', e); }
     }
 
     async function submitTier1() {
@@ -263,7 +271,7 @@
             return;
         }
 
-        executeApiCall('/api/kyc/level1', { bvn, nin }, 'Submitting Basic Details...');
+        executeApiCall('/api/kyc/level1', { bvn, nin }, 'Uploading for Admin Verification...');
     }
 
     async function submitTier2() {
@@ -283,7 +291,7 @@
             const idImageBase64 = await fileToBase64(idFile);
             const selfieImageBase64 = await fileToBase64(selfieFile);
             
-            executeApiCall('/api/kyc/level2', { idType, idNumber, idImage: idImageBase64, selfieImage: selfieImageBase64 }, 'Uploading Securely...');
+            executeApiCall('/api/kyc/level2', { idType, idNumber, idImage: idImageBase64, selfieImage: selfieImageBase64 }, 'Uploading for Admin Review...');
         } catch (e) {
             Swal.fire({ icon: 'error', title: 'File Error', text: 'Failed to process images.', background: '#111', color: '#fff' });
         }
@@ -314,11 +322,11 @@
             });
 
             const data = await res.json();
-            if (data.success) {
+            if (res.ok && data.success) {
                 Swal.fire({ icon: 'success', title: 'Submitted', text: data.message || 'Details submitted successfully.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
-                .then(() => checkKYCStatus()); // Reload the UI to lock the tier
+                .then(() => checkKYCStatus()); 
             } else {
-                Swal.fire({ icon: 'error', title: 'Failed', text: data.message, background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'error', title: 'Validation Failed', text: data.message, background: '#111', color: '#fff' });
             }
         } catch (e) {
             Swal.fire({ icon: 'error', title: 'Network Error', text: 'Connection failed.', background: '#111', color: '#fff' });
