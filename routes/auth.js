@@ -32,10 +32,15 @@ async function register(request, reply) {
 
     const newReferralCode = 'NP' + crypto.randomBytes(3).toString('hex').toUpperCase();
     
+    // THE FIX: We ONLY link the referrer here. No money is paid yet.
     const user = new User({
-      name, email: email.toLowerCase(), phoneNumber, password,
-      referredBy: referrer ? referrer._id : null,
-      referralCode: newReferralCode
+      name, 
+      email: email.toLowerCase(), 
+      phoneNumber, 
+      password,
+      referredBy: referrer ? referrer.referralCode : null, // Store the code, not the ID, for easier tracking
+      referralCode: newReferralCode,
+      referralBonusPaid: false // Ensure the flag is set so the engine knows to watch them
     });
     
     await user.save();
@@ -71,43 +76,9 @@ async function verifyOTP(request, reply) {
     
     await user.consumeOTP();
     
-    // THE FIX: Wrapped the referral bonus in a safety shield so it NEVER crashes the OTP success
-    try {
-        if (user.referredBy) {
-          const referrer = await User.findById(user.referredBy);
-          if (referrer) {
-            const bonusAmount = config.business?.defaultReferralBonus || 500;
-            referrer.referralCount += 1;
-            referrer.referralBonus = (parseFloat(referrer.referralBonus?.toString() || '0') + bonusAmount).toString();
-            await referrer.save();
-            
-            const Wallet = require('../models/Wallet');
-            const referrerWallet = await Wallet.findOne({ user: referrer._id });
-
-            if (referrerWallet) {
-                referrerWallet.availableBalance = String(parseFloat(referrerWallet.availableBalance || '0') + bonusAmount);
-                referrerWallet.balance = String(parseFloat(referrerWallet.balance || '0') + bonusAmount);
-                await referrerWallet.save();
-
-                const Transaction = require('../models/Transaction');
-                await new Transaction({
-                    user: referrer._id, type: 'funding', description: `Referral bonus for inviting ${user.name}`,
-                    amount: bonusAmount, fee: 0, balanceBefore: String(parseFloat(referrerWallet.availableBalance) - bonusAmount),
-                    balanceAfter: referrerWallet.availableBalance, status: 'success', provider: 'internal', reference: `REF-${Date.now()}`
-                }).save();
-
-                if (request.server && request.server.io) {
-                    request.server.io.to(`user:${referrer._id}`).emit('wallet:update', { balance: referrerWallet.availableBalance });
-                    request.server.io.to(`user:${referrer._id}`).emit('notification', { type: 'success', title: 'New Referral Bonus!', message: `You earned ₦${bonusAmount} for inviting ${user.name}` });
-                }
-            }
-          }
-        }
-    } catch (bonusError) {
-        console.warn('Referral bonus error caught and ignored:', bonusError);
-    }
+    // THE FIX: The instant-payment logic has been completely removed.
+    // The user is now verified. The Transaction Engine will pay the bonus later.
     
-    // Will ALWAYS return success now!
     reply.send({ success: true, message: 'Account verified successfully' });
     
   } catch (error) {
