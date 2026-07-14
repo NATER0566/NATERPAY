@@ -163,23 +163,31 @@
         .act-btn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
         .act-btn.qr-btn:hover { background: #fff; color: #000; border-color: #fff; }
 
-        #qrModal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; overflow-y: auto;}
-        .qr-content { background: var(--card-bg); padding: 50px; border-radius: 25px; border: 2px solid #444; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,1); max-width: 90%; }
-        #qrDisplay { background: #fff; padding: 25px; border-radius: 15px; display: inline-block; margin-bottom: 25px; border: 8px solid #000; }
+        /* FIXED: Updated Modal CSS to restrict size and add padding for mobile screens */
+        #qrModal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; overflow-y: auto; padding: 20px;}
+        .qr-content { background: var(--card-bg); padding: 30px 15px; border-radius: 25px; border: 2px solid #444; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,1); width: 100%; max-width: 400px; }
+        #qrDisplay { background: #fff; padding: 15px; border-radius: 15px; display: inline-block; margin-bottom: 25px; border: 5px solid #000; max-width: 100%; box-sizing: border-box;}
+        /* Ensures the generated QR Code shrinks visually on small devices */
+        #qrDisplay canvas, #qrDisplay img { max-width: 100% !important; height: auto !important; }
     </style>
 </head>
 <body>
 
 <canvas id="starCanvas"></canvas>
 
+<!-- FIXED: Updated Modal HTML layout for smaller buttons that wrap properly -->
 <div id="qrModal">
     <div class="qr-content">
-        <h3 class="fw-bold mb-4 text-warning" id="qrTitle" style="font-family: 'Cinzel'; font-weight: 900; font-size: 2rem;">Your Payment QR Code</h3>
-        <p class="fw-bold mb-4">Buyers can scan this image to pay you instantly.</p>
+        <h3 class="fw-bold mb-3 text-warning" id="qrTitle" style="font-family: 'Cinzel'; font-weight: 900; font-size: 1.5rem;">Your Payment QR Code</h3>
+        <p class="fw-bold mb-4" style="font-size: 0.9rem;">Buyers can scan this image to pay you instantly.</p>
         <div id="qrDisplay"></div>
-        <div class="d-flex gap-3 justify-content-center">
-            <button class="btn btn-warning fw-bold px-5 py-3 rounded-pill" style="font-size: 1.2rem;" onclick="downloadQR()"><i class="fas fa-download me-2"></i> Download Image</button>
-            <button class="btn btn-outline-light fw-bold px-5 py-3 rounded-pill" style="font-size: 1.2rem;" onclick="document.getElementById('qrModal').style.display='none'">Close</button>
+        <div class="d-flex flex-wrap gap-2 justify-content-center">
+            <button class="btn btn-warning fw-bold px-3 py-2 rounded-pill" style="flex: 1; min-width: 140px;" onclick="downloadQR()">
+                <i class="fas fa-download me-2"></i> Download
+            </button>
+            <button class="btn btn-outline-light fw-bold px-3 py-2 rounded-pill" style="flex: 1; min-width: 120px;" onclick="document.getElementById('qrModal').style.display='none'">
+                Close
+            </button>
         </div>
     </div>
 </div>
@@ -621,20 +629,30 @@
         }, 50);
     }
 
+    // FIXED: Creating a new canvas on-the-fly to force a solid white background before downloading.
     function downloadQR() {
-        // FIX: Target the raw <canvas> element instead of the image source to prevent 0-byte corrupt downloads.
-        const canvas = document.querySelector('#qrDisplay canvas');
+        const originalCanvas = document.querySelector('#qrDisplay canvas');
         
-        if(!canvas) {
+        if(!originalCanvas) {
             Swal.fire({ icon: 'error', title: 'Wait a moment', text: 'QR code is not ready yet.', background: '#111', color: '#fff' });
             return;
         }
 
+        const padding = 20; 
+        const newCanvas = document.createElement('canvas');
+        newCanvas.width = originalCanvas.width + (padding * 2);
+        newCanvas.height = originalCanvas.height + (padding * 2);
+        
+        const ctx = newCanvas.getContext('2d');
+        
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+        ctx.drawImage(originalCanvas, padding, padding);
+
         const link = document.createElement('a');
-        link.href = canvas.toDataURL("image/png");
+        link.href = newCanvas.toDataURL("image/png");
         link.download = 'My_Payment_QRCode.png';
         
-        // Required to make downloads work on certain mobile browsers (like Firefox for Android)
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
