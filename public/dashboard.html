@@ -99,7 +99,6 @@
         .service-link.loading { border-color: #2eb82e; background: rgba(46, 184, 46, 0.1); transform: scale(0.95); box-shadow: inset 0 0 15px rgba(46, 184, 46, 0.2); }
         .service-link.loading i.main-icon { color: #2eb82e; text-shadow: 0 0 15px rgba(46, 184, 46, 0.6); }
 
-        /* --- HIGH PRIORITY REFRACTIVE ANIMATION --- */
         @keyframes pumping {
             0% { transform: scale(1); }
             50% { transform: scale(1.05); }
@@ -148,7 +147,6 @@
 
         .transaction-box { background: var(--card-bg); border-radius: 25px; padding: 25px; border: 1px solid #333; margin-top: 50px; margin-bottom: 50px; }
         
-        /* FIXED HEIGHT FOR TRANSACTIONS */
         #txBody { max-height: 380px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; }
         #txBody::-webkit-scrollbar { width: 5px; }
         #txBody::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
@@ -183,7 +181,6 @@
         footer { background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%; margin-top: 60px; position: relative; z-index: 5; }
         .footer-compliance-tag { color: #ffffff !important; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
 
-        /* OPAY-STYLE FLOATING NOTIFICATION CARD */
         #opayNotifCard {
             display: none; position: fixed; bottom: 30px; right: 20px; z-index: 9999; 
             width: 340px; background: rgba(15, 15, 15, 0.98); border: 1.5px solid var(--gold); 
@@ -230,7 +227,6 @@
     </div>
     
     <div class="d-flex align-items-center gap-2 gap-sm-3 ms-auto">
-        <!-- Bell icon previously here was removed to keep gateway pristine -->
         <div class="gateway-btn-wrapper dropdown m-0">
             <button class="btn btn-warning text-dark rounded-pill fw-bold dropdown-toggle" type="button" id="gatewayMenuDropdownLinkBtn" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid var(--gold); box-shadow: 0 4px 15px rgba(255,215,0,0.4);">
                 <i class="fas fa-terminal me-sm-1" style="font-size: 1.1rem;"></i>
@@ -385,7 +381,6 @@
 
     <h5 class="ecosystem-section-title"><i class="fas fa-user-shield"></i> Security & Profile</h5>
     <div class="row g-2" id="gridSecurity">
-        <!-- Notification Moved Here -->
         <div class="col-4 col-md-3 service-wrapper-node">
             <a href="#" class="service-link" onclick="showNextNotification(); return false;" style="position: relative;">
                 <span class="position-absolute badge rounded-pill bg-danger" id="unreadBadge" style="display: none; top: 15px; right: 15px; font-size: 0.65rem; z-index: 5;">0</span>
@@ -461,7 +456,6 @@
         requestAnimationFrame(animate);
     }
 
-    // --- OPAY-STYLE NOTIFICATION ENGINE ---
     async function loadNotifications() {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
@@ -477,7 +471,7 @@
                 if (unreadNotifications.length > 0) {
                     badge.style.display = 'block';
                     badge.innerText = unreadNotifications.length;
-                    showNextNotification(); // Automatically pop up the first unread
+                    showNextNotification(); 
                 } else {
                     badge.style.display = 'none';
                     document.getElementById('opayNotifCard').style.display = 'none';
@@ -519,28 +513,22 @@
 
     async function markReadAndNext(id) {
         const authToken = localStorage.getItem("naterpay_token");
-        
-        // Hide card instantly so it feels fast
         document.getElementById('opayNotifCard').style.display = 'none';
 
-        // Tell database
         await fetch(`/api/notifications/${id}/read`, { 
             method: 'PUT', headers: { 'Authorization': `Bearer ${authToken}` } 
         });
 
-        // Filter it out locally
         unreadNotifications = unreadNotifications.filter(n => n._id !== id);
         const badge = document.getElementById('unreadBadge');
         
-        // Update badge or show next
         if (unreadNotifications.length > 0) {
             badge.innerText = unreadNotifications.length;
-            setTimeout(showNextNotification, 400); // Slight delay for smooth transition
+            setTimeout(showNextNotification, 400); 
         } else {
             badge.style.display = 'none';
         }
     }
-    // --- END NOTIFICATION ENGINE ---
 
     async function checkPendingFunding() {
         const pendingRef = localStorage.getItem('pending_funding_ref');
@@ -583,22 +571,41 @@
             if(data.success) {
                 document.getElementById('profileBadgeName').innerText = data.userFullName || "Verified Terminal Operator";
                 
-                const kycLevel = data.kycLevel || 0;
-                const kycBadge = document.getElementById('kycStatusBadge'); 
+                // THE NEW KYC ENGINE FETCH
+                try {
+                    const kycRes = await fetch('/api/kyc', { headers: { 'Authorization': `Bearer ${authToken}` } });
+                    const kycData = await kycRes.json();
+                    const kycBadge = document.getElementById('kycStatusBadge'); 
 
-                if (kycLevel === 0) {
-                    kycBadge.innerText = 'UNVERIFIED';
-                    kycBadge.className = 'badge bg-danger text-white fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge'; 
-                } else if (kycLevel === 1) {
-                    kycBadge.innerText = 'TIER 1 ACTIVE';
-                    kycBadge.className = 'badge bg-warning text-dark fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge'; 
-                } else if (kycLevel === 2) {
-                    kycBadge.innerText = 'TIER 2 ACTIVE';
-                    kycBadge.className = 'badge bg-success text-white fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge'; 
-                } else if (kycLevel === 3) {
-                    kycBadge.innerText = 'MAX TIER (PRO)';
-                    kycBadge.className = 'badge text-dark fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge';
-                    kycBadge.style.backgroundColor = '#d4af37'; 
+                    if (kycData.success && kycData.kyc) {
+                        const level = kycData.kyc.currentLevel;
+                        const status = kycData.kyc.status;
+
+                        if (level === 0 || !status) {
+                            kycBadge.innerText = 'UNVERIFIED';
+                            kycBadge.className = 'badge bg-danger text-white fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge'; 
+                        } else if (status === 'under_review' || status === 'pending') {
+                            kycBadge.innerText = 'KYC PENDING';
+                            kycBadge.className = 'badge bg-warning text-dark fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge'; 
+                        } else if (status === 'rejected') {
+                            kycBadge.innerText = 'KYC REJECTED';
+                            kycBadge.className = 'badge bg-danger text-white fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge';
+                        } else if (status === 'approved') {
+                            if (level === 1) {
+                                kycBadge.innerText = 'TIER 1 ACTIVE';
+                                kycBadge.className = 'badge bg-success text-white fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge'; 
+                            } else if (level === 2) {
+                                kycBadge.innerText = 'TIER 2 ACTIVE';
+                                kycBadge.className = 'badge bg-primary text-white fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge'; 
+                            } else if (level === 3) {
+                                kycBadge.innerText = 'MAX TIER (PRO)';
+                                kycBadge.className = 'badge text-dark fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge';
+                                kycBadge.style.backgroundColor = '#d4af37'; 
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn("KYC badge sync failed.");
                 }
 
                 const role = (data.userRole || 'user').toLowerCase();
