@@ -132,12 +132,15 @@
 
     <div id="tab-kyc" class="tab-content" style="display: none;">
         <div class="admin-card">
-            <h5 class="mb-3 text-gold fw-bold">PENDING IDENTITY VERIFICATIONS</h5>
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <h5 class="text-gold fw-bold m-0">PENDING IDENTITY VERIFICATIONS</h5>
+                <button class="btn btn-sm btn-outline-light" onclick="fetchKYC()"><i class="fas fa-sync-alt me-1"></i> Sync KYC</button>
+            </div>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>USER</th><th>TIER REQUEST</th><th>DOCUMENTS</th><th class="text-end">ACTION</th></tr></thead>
+                    <thead><tr><th>USER</th><th>TIER REQUEST</th><th>SUMMARY</th><th class="text-end">ACTION</th></tr></thead>
                     <tbody id="kycTable">
-                        <tr><td colspan="4" class="text-center opacity-50 py-4">No pending KYC applications.</td></tr>
+                        <tr><td colspan="4" class="text-center opacity-50 py-4">Loading KYC applications...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -255,42 +258,35 @@
         if(t==='kyc') fetchKYC();
         if(t==='marketplace') fetchMarketplace();
         if(t==='adverts') fetchAdverts();
-        if(t==='transactions') loadAdminEcosystem(); // Refresh Audit Log
+        if(t==='transactions') loadAdminEcosystem();
     }
 
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
     window.globalSystemUsers = [];
 
     // ==========================================
-    // THE NEW "VIEW DOSSIER" FUNCTION (EXTRACTS BANK DETAILS PERFECTLY)
+    // TRANSACTION DOSSIER
     // ==========================================
     function viewTxDossier(encodedData) {
         try {
             const tx = JSON.parse(decodeURIComponent(encodedData));
-            
-            // Format Metadata into readable code
             let metaHtml = '';
             if (tx.metadata) {
-                metaHtml = `
-                    <h6 class="text-gold mt-3 mb-1"><i class="fas fa-database me-1"></i> Raw Metadata Payload</h6>
+                metaHtml = `<h6 class="text-gold mt-3 mb-1"><i class="fas fa-database me-1"></i> Raw Metadata Payload</h6>
                     <div class="p-2 bg-black rounded border border-secondary" style="font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; color: #00ff88;">
                         ${JSON.stringify(tx.metadata, null, 2)}
                     </div>`;
             }
 
-            // SMART BANK DETAIL EXTRACTION FOR WITHDRAWALS
             let bankDetailsHtml = '';
             if (tx.type === 'withdrawal') {
                 let bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
                 let bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || 'Unknown Account';
                 let bUser = tx.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
                 
-                // Fallback: Parse from description if variables are missing
                 if (bName === 'Unknown Bank' && tx.description && tx.description.includes(' - ')) {
                     const cleanDesc = tx.description.replace('Withdrawal to ', '').replace('Transfer to ', '');
-                    const parts = cleanDesc.split(' - ');
-                    bName = parts[0] || bName;
-                    bAcc = parts[1] || bAcc;
+                    const parts = cleanDesc.split(' - '); bName = parts[0] || bName; bAcc = parts[1] || bAcc;
                 }
 
                 bankDetailsHtml = `
@@ -299,36 +295,28 @@
                         <p class="mb-1 text-white"><strong class="text-secondary">Bank:</strong> ${bName}</p>
                         <p class="mb-1 text-white"><strong class="text-secondary">Account No:</strong> <span class="text-warning fs-6 fw-bold" style="letter-spacing: 1px;">${bAcc}</span></p>
                         <p class="mb-0 text-white"><strong class="text-secondary">Account Name:</strong> ${bUser}</p>
-                    </div>
-                `;
+                    </div>`;
             }
 
             Swal.fire({
                 title: 'Transaction Dossier',
-                html: `
-                    <div class="text-start mt-2" style="font-size: 0.9rem;">
+                html: `<div class="text-start mt-2" style="font-size: 0.9rem;">
                         <p class="mb-1"><strong class="text-gold">Sys ID:</strong> <span class="text-secondary" style="font-size: 0.8rem;">${tx._id}</span></p>
                         <p class="mb-1"><strong class="text-gold">Type:</strong> <span class="text-uppercase badge bg-secondary">${tx.type.replace('_', ' ')}</span></p>
                         <p class="mb-1"><strong class="text-gold">Amount:</strong> <span class="text-warning fw-bold fs-5">₦${parseNum(tx.amount).toLocaleString()}</span></p>
                         <p class="mb-1"><strong class="text-gold">User:</strong> ${tx.userEmail || tx.user?.email || 'Unknown User'}</p>
                         <p class="mb-1"><strong class="text-gold">Status:</strong> <span class="text-uppercase fw-bold">${tx.status}</span></p>
                         <p class="mt-2 mb-1"><strong class="text-gold">Date:</strong> ${new Date(tx.createdAt || tx.date).toLocaleString()}</p>
-                        
                         ${bankDetailsHtml}
-
                         <div class="p-2 mt-2 bg-dark rounded border border-secondary">
                             <strong class="text-gold d-block mb-1">Description log:</strong>
                             <span class="text-white">${tx.description || 'System Record'}</span>
                         </div>
-                        
                         ${metaHtml}
-                    </div>
-                `,
+                    </div>`,
                 background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444'
             });
-        } catch (e) {
-            Swal.fire('Error', 'Could not parse transaction data', 'error');
-        }
+        } catch (e) { Swal.fire('Error', 'Could not parse transaction data', 'error'); }
     }
 
     async function loadAdminEcosystem() {
@@ -363,7 +351,6 @@
                 </tr>
             `).join('');
 
-            // --- UNIFIED AUDIT LOG ---
             const txRes = await fetch('/api/admin/transactions?limit=100', { headers: { 'Authorization': `Bearer ${token}` } });
             const txData = await txRes.json();
             let txHtml = ''; let ecoHtml = '';
@@ -375,7 +362,6 @@
                 
                 let actionBtns = `<button class="btn btn-sm btn-info text-white rounded" onclick="viewTxDossier('${encodedTx}')" title="View Full Data / Bank Details"><i class="fas fa-eye"></i></button>`;
 
-                // Smart Action Buttons based on Status and Type
                 if (tx.status === 'pending') {
                     if (tx.type === 'withdrawal') {
                         actionBtns += `
@@ -420,10 +406,6 @@
         } catch (e) { console.error("Admin load error", e); }
     }
 
-    // ==========================================
-    // ACTION HANDLERS
-    // ==========================================
-
     async function processWithdrawal(txId, action) {
         const actionWord = action === 'approve' ? 'Approve & Settle' : 'Reject & Refund';
         if((await Swal.fire({title: `Confirm Action`, text: `Are you sure you want to ${actionWord} this withdrawal?`, showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
@@ -453,7 +435,6 @@
             const { value: formValues } = await Swal.fire({ title: actionType.toUpperCase() + ' WALLET', text: `Target: ${reasonText || userId}`, html: `<input id="swal-amt" type="number" class="swal2-input bg-dark text-white" placeholder="Amount (₦)"><input id="swal-rsn" type="text" class="swal2-input bg-dark text-white" placeholder="Audit Reason">`, background: '#0a0a0a', color: '#fff', showCancelButton: true, preConfirm: () => { const amt = document.getElementById('swal-amt').value; if(!amt || isNaN(amt) || Number(amt) <= 0) { Swal.showValidationMessage('Enter a valid amount'); return false; } return [amt, document.getElementById('swal-rsn').value]; } });
             if (formValues && formValues[0]) { amountVal = Number(formValues[0]); reasonText = formValues[1] || 'Manual Adjustment'; } else return;
         }
-
         Swal.fire({title:'Processing...', allowOutsideClick: false, didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
         try {
             const response = await fetch(`/api/admin/users/${userId}/balance`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ action: actionType, amount: amountVal, reason: reasonText }) });
@@ -464,7 +445,117 @@
     }
 
     // ==========================================
-    // OTHER MODERATION ENGINES
+    // UPGRADED KYC ENGINE WITH DOSSIER POPUP
+    // ==========================================
+    async function fetchKYC() {
+        try {
+            const res = await fetch('/api/admin/kyc/pending', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
+            const data = await res.json();
+            const badge = document.getElementById('kycBadge'); const kycTable = document.getElementById('kycTable');
+            const pendingList = data.kycRequests || data.pendingKYC || [];
+            if(data.success && pendingList.length > 0) {
+                badge.innerText = pendingList.length; badge.classList.remove('d-none');
+                
+                kycTable.innerHTML = pendingList.map(k => {
+                    // SECURE DATA EXTRACTION FIX
+                    const d = k.data || {};
+                    const encodedKyc = encodeURIComponent(JSON.stringify(k));
+
+                    let summaryHtml = '';
+                    if (k.currentLevel === 1) summaryHtml = `<span class="text-gold fw-bold"><i class="fas fa-fingerprint me-1"></i> Identity DB Check</span>`;
+                    else if (k.currentLevel === 2) summaryHtml = `<span class="text-info fw-bold"><i class="fas fa-passport me-1"></i> ID & Selfie Review</span>`;
+                    else if (k.currentLevel === 3) summaryHtml = `<span class="text-success fw-bold"><i class="fas fa-home me-1"></i> Address Verification</span>`;
+
+                    return `
+                        <tr>
+                            <td><div class="fw-bold">${k.user?.name || 'Unknown'}</div><small>${k.user?.email || ''}</small></td>
+                            <td><span class="status-pill bg-warning text-dark">TIER ${k.currentLevel || 1}</span></td>
+                            <td>${summaryHtml}</td>
+                            <td class="text-end">
+                                <div class="action-btns justify-content-end">
+                                    <button class="btn btn-info text-white fw-bold" onclick="viewKycDossier('${encodedKyc}')" title="View Full Documents"><i class="fas fa-eye"></i></button>
+                                    <button class="btn btn-success fw-bold" onclick="processKYC('${k._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button>
+                                    <button class="btn btn-danger fw-bold" onclick="processKYC('${k._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } else { badge.classList.add('d-none'); kycTable.innerHTML = '<tr><td colspan="4" class="text-center opacity-50 py-4">No pending KYC applications.</td></tr>'; }
+        } catch(e) { console.error("KYC fetch error", e); }
+    }
+
+    function viewKycDossier(encodedData) {
+        try {
+            const k = JSON.parse(decodeURIComponent(encodedData));
+            const d = k.data || {};
+            
+            let bvnSection = '';
+            if (d.bvn || d.nin) {
+                bvnSection = `
+                    <h6 class="text-gold mt-3 border-bottom border-secondary pb-1"><i class="fas fa-fingerprint"></i> Identity Numbers</h6>
+                    ${d.bvn ? `<p class="mb-1 text-white"><strong class="text-secondary">BVN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">${d.bvn}</span></p>` : ''}
+                    ${d.nin ? `<p class="mb-1 text-white"><strong class="text-secondary">NIN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">${d.nin}</span></p>` : ''}
+                    ${d.bvn ? `<button class="btn btn-sm btn-outline-info w-100 mt-3 py-2 fw-bold" onclick="verifyPaystackBVN('${k._id}')"><i class="fas fa-shield-alt"></i> VERIFY VIA PAYSTACK API</button>` : ''}
+                `;
+            }
+
+            let docSection = '';
+            if (d.idImage || d.selfieImage) {
+                docSection = `
+                    <h6 class="text-gold mt-4 border-bottom border-secondary pb-1"><i class="fas fa-passport"></i> Uploaded Documents</h6>
+                    <p class="mb-1 text-white"><strong class="text-secondary">Type:</strong> <span class="text-uppercase fw-bold">${(d.idType || '').replace('_', ' ')}</span></p>
+                    <p class="mb-3 text-white"><strong class="text-secondary">Doc Number:</strong> ${d.idNumber || 'N/A'}</p>
+                    <div class="row g-3">
+                        ${d.idImage ? `<div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="text-gold d-block mb-2 fw-bold">ID Card Image</small><img src="${d.idImage}" class="img-fluid rounded" style="max-height: 200px; cursor: pointer;" onclick="window.open('${d.idImage}')"></div></div>` : ''}
+                        ${d.selfieImage ? `<div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="text-gold d-block mb-2 fw-bold">User Selfie</small><img src="${d.selfieImage}" class="img-fluid rounded" style="max-height: 200px; cursor: pointer;" onclick="window.open('${d.selfieImage}')"></div></div>` : ''}
+                    </div>
+                `;
+            }
+
+            let addressSection = '';
+            if (d.address) {
+                addressSection = `
+                    <h6 class="text-gold mt-4 border-bottom border-secondary pb-1"><i class="fas fa-home"></i> Address Proof</h6>
+                    <p class="mb-1 text-white"><strong class="text-secondary">Street:</strong> ${d.address}</p>
+                    <p class="mb-1 text-white"><strong class="text-secondary">City:</strong> ${d.city}</p>
+                    <p class="mb-1 text-white"><strong class="text-secondary">State:</strong> ${d.state}</p>
+                `;
+            }
+
+            Swal.fire({
+                title: `Tier ${k.currentLevel} KYC Dossier`,
+                html: `
+                    <div class="text-start mt-2" style="font-size: 0.9rem;">
+                        <div class="p-3 bg-dark rounded border border-secondary mb-3">
+                            <h5 class="mb-1 text-white">${k.user?.name}</h5>
+                            <span class="text-muted">${k.user?.email}</span>
+                        </div>
+                        ${bvnSection}
+                        ${docSection}
+                        ${addressSection}
+                    </div>
+                `,
+                background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444', width: '600px'
+            });
+        } catch(e) { console.error(e); Swal.fire('Error', 'Failed to load KYC data', 'error'); }
+    }
+
+    async function verifyPaystackBVN(kycId) {
+        Swal.fire({title: 'Connecting...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+        try { const res = await fetch(`/api/admin/kyc/${kycId}/verify`, { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); const data = await res.json(); if(data.success) { Swal.fire({title: 'Paystack Match', html: `<div style="text-align: left; font-size: 0.9rem;"><p><strong class="text-gold">System Name:</strong> ${data.systemName}</p><hr style="border-color: #444;"><p><strong>First Name:</strong> ${data.paystackDetails.firstName}</p><p><strong>Last Name:</strong> ${data.paystackDetails.lastName}</p><p><strong>Phone:</strong> ${data.paystackDetails.phone}</p></div>`, icon: 'info', background: '#0a0a0a', color: '#fff'}); } else Swal.fire('Error', data.message, 'error'); } catch(e) { Swal.fire('Error', 'Failed to reach server.', 'error'); }
+    }
+
+    async function processKYC(kycId, action) {
+        if((await Swal.fire({title:`Confirm?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
+            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading()});
+            const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
+            if((await res.json()).success) { Swal.fire('Success', '', 'success'); fetchKYC(); }
+        }
+    }
+
+    // ==========================================
+    // ADVERTS MODERATION
     // ==========================================
     async function fetchAdverts() {
         try {
@@ -503,6 +594,9 @@
         }
     }
 
+    // ==========================================
+    // MARKETPLACE & OTHER FUNCTIONS
+    // ==========================================
     async function fetchMarketplace() {
         try {
             const res = await fetch('/api/payment-links', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
@@ -552,32 +646,6 @@
         }
     }
 
-    async function fetchKYC() {
-        try {
-            const res = await fetch('/api/admin/kyc/pending', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
-            const data = await res.json();
-            const badge = document.getElementById('kycBadge'); const kycTable = document.getElementById('kycTable');
-            const pendingList = data.kycRequests || data.pendingKYC || [];
-            if(data.success && pendingList.length > 0) {
-                badge.innerText = pendingList.length; badge.classList.remove('d-none');
-                kycTable.innerHTML = pendingList.map(k => `<tr><td><div class="fw-bold">${k.user?.name || 'Unknown'}</div><small>${k.user?.email || ''}</small></td><td><span class="status-pill bg-warning text-dark">TIER ${k.currentLevel || 1}</span></td><td>${k.bvn ? `<div class="mt-2 p-2 border border-secondary rounded bg-black"><span class="text-gold fw-bold">BVN:</span> ${k.bvn} <br><button class="btn btn-sm btn-outline-info mt-2 w-100" onclick="verifyPaystackBVN('${k._id}')"><i class="fas fa-shield-alt"></i> Verify via Paystack</button></div>` : '<div class="mt-2 text-danger small">No BVN</div>'}</td><td class="text-end"><div class="action-btns"><button class="btn btn-success fw-bold" onclick="processKYC('${k._id}', 'approve')"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="processKYC('${k._id}', 'reject')"><i class="fas fa-times"></i></button></div></td></tr>`).join('');
-            } else { badge.classList.add('d-none'); kycTable.innerHTML = '<tr><td colspan="4" class="text-center opacity-50 py-4">No pending KYC applications.</td></tr>'; }
-        } catch(e) {}
-    }
-
-    async function verifyPaystackBVN(kycId) {
-        Swal.fire({title: 'Connecting...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-        try { const res = await fetch(`/api/admin/kyc/${kycId}/verify`, { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); const data = await res.json(); if(data.success) { Swal.fire({title: 'Paystack Match', html: `<div style="text-align: left; font-size: 0.9rem;"><p><strong class="text-gold">System Name:</strong> ${data.systemName}</p><hr style="border-color: #444;"><p><strong>First Name:</strong> ${data.paystackDetails.firstName}</p><p><strong>Last Name:</strong> ${data.paystackDetails.lastName}</p><p><strong>Phone:</strong> ${data.paystackDetails.phone}</p></div>`, icon: 'info', background: '#0a0a0a', color: '#fff'}); } else Swal.fire('Error', data.message, 'error'); } catch(e) { Swal.fire('Error', 'Failed to reach server.', 'error'); }
-    }
-
-    async function processKYC(kycId, action) {
-        if((await Swal.fire({title:`Confirm?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
-            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading()});
-            const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
-            if((await res.json()).success) { Swal.fire('Success', '', 'success'); loadAdminEcosystem(); }
-        }
-    }
-
     async function fetchNotifications() {
         try { const res = await fetch('/api/admin/notifications', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); document.getElementById('notificationsTable').innerHTML = ((await res.json()).notifications || []).map(n => `<tr><td>${new Date(n.createdAt).toLocaleDateString()}</td><td><div class="fw-bold">${n.title}</div><small class="text-secondary">${n.message}</small></td><td><span class="status-pill bg-dark border">${n.target || 'ALL USERS'}</span></td></tr>`).join('') || '<tr><td colspan="3" class="text-center opacity-50 py-4">No active announcements.</td></tr>'; } catch(e) {}
     }
@@ -594,3 +662,13 @@
 </script>
 </body>
 </html>
+this is code now tell me are we missing something to make all this run fully functionality also tell me how any of the code you will fix be running to make sure we don't have problem 
+
+and make sure any of this logic does not affect my the already systems functionality of any data of any field 
+
+
+let build the remaining functionality to make sure we make thing clean and easy and the code have functionality all and fully details 
+
+make everything to align completely 
+
+make sure those things align  so the users data that was to submit will display completely with the documents and image provide all and also display details as to the real image uploaded and let them be full  in any way that no error will occur
