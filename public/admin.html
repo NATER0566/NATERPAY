@@ -258,7 +258,7 @@
         if(t==='kyc') fetchKYC();
         if(t==='marketplace') fetchMarketplace();
         if(t==='adverts') fetchAdverts();
-        if(t==='transactions') loadAdminEcosystem();
+        if(t==='transactions') loadAdminEcosystem(); // Refresh Audit Log
     }
 
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
@@ -445,7 +445,7 @@
     }
 
     // ==========================================
-    // UPGRADED KYC ENGINE WITH DOSSIER POPUP
+    // UPGRADED KYC ENGINE WITH STRICT SCHEMA MAPPING
     // ==========================================
     async function fetchKYC() {
         try {
@@ -457,10 +457,7 @@
                 badge.innerText = pendingList.length; badge.classList.remove('d-none');
                 
                 kycTable.innerHTML = pendingList.map(k => {
-                    // SECURE DATA EXTRACTION FIX
-                    const d = k.data || {};
                     const encodedKyc = encodeURIComponent(JSON.stringify(k));
-
                     let summaryHtml = '';
                     if (k.currentLevel === 1) summaryHtml = `<span class="text-gold fw-bold"><i class="fas fa-fingerprint me-1"></i> Identity DB Check</span>`;
                     else if (k.currentLevel === 2) summaryHtml = `<span class="text-info fw-bold"><i class="fas fa-passport me-1"></i> ID & Selfie Review</span>`;
@@ -488,38 +485,40 @@
     function viewKycDossier(encodedData) {
         try {
             const k = JSON.parse(decodeURIComponent(encodedData));
-            const d = k.data || {};
             
             let bvnSection = '';
-            if (d.bvn || d.nin) {
+            // THE FIX: Reading strictly from k.level1 mapping
+            if (k.level1 && (k.level1.bvn || k.level1.nin)) {
                 bvnSection = `
                     <h6 class="text-gold mt-3 border-bottom border-secondary pb-1"><i class="fas fa-fingerprint"></i> Identity Numbers</h6>
-                    ${d.bvn ? `<p class="mb-1 text-white"><strong class="text-secondary">BVN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">${d.bvn}</span></p>` : ''}
-                    ${d.nin ? `<p class="mb-1 text-white"><strong class="text-secondary">NIN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">${d.nin}</span></p>` : ''}
-                    ${d.bvn ? `<button class="btn btn-sm btn-outline-info w-100 mt-3 py-2 fw-bold" onclick="verifyPaystackBVN('${k._id}')"><i class="fas fa-shield-alt"></i> VERIFY VIA PAYSTACK API</button>` : ''}
+                    ${k.level1.bvn ? `<p class="mb-1 text-white"><strong class="text-secondary">BVN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">${k.level1.bvn}</span></p>` : ''}
+                    ${k.level1.nin ? `<p class="mb-1 text-white"><strong class="text-secondary">NIN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">${k.level1.nin}</span></p>` : ''}
+                    ${k.level1.bvn ? `<button class="btn btn-sm btn-outline-info w-100 mt-3 py-2 fw-bold" onclick="verifyPaystackBVN('${k._id}')"><i class="fas fa-shield-alt"></i> VERIFY VIA PAYSTACK API</button>` : ''}
                 `;
             }
 
             let docSection = '';
-            if (d.idImage || d.selfieImage) {
+            // THE FIX: Reading strictly from k.level2 mapping
+            if (k.level2 && (k.level2.idImage || k.level2.selfieImage)) {
                 docSection = `
                     <h6 class="text-gold mt-4 border-bottom border-secondary pb-1"><i class="fas fa-passport"></i> Uploaded Documents</h6>
-                    <p class="mb-1 text-white"><strong class="text-secondary">Type:</strong> <span class="text-uppercase fw-bold">${(d.idType || '').replace('_', ' ')}</span></p>
-                    <p class="mb-3 text-white"><strong class="text-secondary">Doc Number:</strong> ${d.idNumber || 'N/A'}</p>
+                    <p class="mb-1 text-white"><strong class="text-secondary">Type:</strong> <span class="text-uppercase fw-bold">${(k.level2.idType || '').replace('_', ' ')}</span></p>
+                    <p class="mb-3 text-white"><strong class="text-secondary">Doc Number:</strong> ${k.level2.idNumber || 'N/A'}</p>
                     <div class="row g-3">
-                        ${d.idImage ? `<div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="text-gold d-block mb-2 fw-bold">ID Card Image</small><img src="${d.idImage}" class="img-fluid rounded" style="max-height: 200px; cursor: pointer;" onclick="window.open('${d.idImage}')"></div></div>` : ''}
-                        ${d.selfieImage ? `<div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="text-gold d-block mb-2 fw-bold">User Selfie</small><img src="${d.selfieImage}" class="img-fluid rounded" style="max-height: 200px; cursor: pointer;" onclick="window.open('${d.selfieImage}')"></div></div>` : ''}
+                        ${k.level2.idImage ? `<div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="text-gold d-block mb-2 fw-bold">ID Card Image</small><img src="${k.level2.idImage}" class="img-fluid rounded" style="max-height: 200px; cursor: pointer;" onclick="window.open('${k.level2.idImage}')"></div></div>` : ''}
+                        ${k.level2.selfieImage ? `<div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="text-gold d-block mb-2 fw-bold">User Selfie</small><img src="${k.level2.selfieImage}" class="img-fluid rounded" style="max-height: 200px; cursor: pointer;" onclick="window.open('${k.level2.selfieImage}')"></div></div>` : ''}
                     </div>
                 `;
             }
 
             let addressSection = '';
-            if (d.address) {
+            // THE FIX: Reading strictly from k.level3 mapping
+            if (k.level3 && k.level3.address) {
                 addressSection = `
                     <h6 class="text-gold mt-4 border-bottom border-secondary pb-1"><i class="fas fa-home"></i> Address Proof</h6>
-                    <p class="mb-1 text-white"><strong class="text-secondary">Street:</strong> ${d.address}</p>
-                    <p class="mb-1 text-white"><strong class="text-secondary">City:</strong> ${d.city}</p>
-                    <p class="mb-1 text-white"><strong class="text-secondary">State:</strong> ${d.state}</p>
+                    <p class="mb-1 text-white"><strong class="text-secondary">Street:</strong> ${k.level3.address}</p>
+                    <p class="mb-1 text-white"><strong class="text-secondary">City:</strong> ${k.level3.city}</p>
+                    <p class="mb-1 text-white"><strong class="text-secondary">State:</strong> ${k.level3.state}</p>
                 `;
             }
 
@@ -550,7 +549,7 @@
         if((await Swal.fire({title:`Confirm?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
             Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading()});
             const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
-            if((await res.json()).success) { Swal.fire('Success', '', 'success'); fetchKYC(); }
+            if((await res.json()).success) { Swal.fire('Success', '', 'success'); loadAdminEcosystem(); }
         }
     }
 
@@ -662,3 +661,13 @@
 </script>
 </body>
 </html>
+this is code now tell me are we missing something to make all this run fully functionality also tell me how any of the code you will fix be running to make sure we don't have problem 
+
+and make sure any of this logic does not affect my the already systems functionality of any data of any field 
+
+
+let build the remaining functionality to make sure we make thing clean and easy and the code have functionality all and fully details 
+
+make everything to align completely 
+
+make sure those things align  so the users data that was to submit will display completely with the documents and image provide all and also display details as to the real image uploaded and let them be full  in any way that no error will occur
