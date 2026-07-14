@@ -183,12 +183,13 @@ async function verifyRealWorldKYC(request, reply) {
         const kycRecord = await KYC.findById(kycId).populate('user', 'name');
         
         if (!kycRecord) return reply.status(404).send({ success: false, message: 'KYC record not found' });
-        if (!kycRecord.bvn) return reply.status(400).send({ success: false, message: 'No BVN provided by user to verify.' });
+        
+        // THE FIX: Pulling from level1 securely
+        const bvn = kycRecord.level1?.bvn;
+        if (!bvn) return reply.status(400).send({ success: false, message: 'No BVN provided by user to verify.' });
 
-        const paystackResponse = await axios.get(`https://api.paystack.co/bank/resolve_bvn/${kycRecord.bvn}`, {
-            headers: { 
-                Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` 
-            }
+        const paystackResponse = await axios.get(`https://api.paystack.co/bank/resolve_bvn/${bvn}`, {
+            headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
         });
 
         const paystackData = paystackResponse.data.data;
@@ -204,11 +205,9 @@ async function verifyRealWorldKYC(request, reply) {
                 phone: paystackData.mobile
             }
         });
-
     } catch (error) {
         console.error('Paystack API Error:', error.response?.data || error.message);
-        const errorMessage = error.response?.data?.message || 'Failed to communicate with Paystack API.';
-        reply.status(400).send({ success: false, message: errorMessage });
+        reply.status(400).send({ success: false, message: error.response?.data?.message || 'Failed to communicate with Paystack API.' });
     }
 }
 
@@ -218,20 +217,30 @@ async function approveKYC(request, reply) {
         const kyc = await KYC.findById(kycId);
         if (!kyc) return reply.status(404).send({ success: false, message: 'KYC not found' });
 
-        kyc.status = 'approved';
-        await kyc.save();
-
         const user = await User.findById(kyc.user);
-        if (user) {
-            user.kycLevel = 2; 
-            await user.save();
-            if (request.server && request.server.io) {
-                request.server.io.to(`user:${user._id}`).emit('notification', { title: 'KYC Approved', message: 'Your account is now fully verified!' });
-            }
+        if (!user) return reply.status(404).send({ success: false, message: 'User not found' });
+        
+        // THE FIX: Safely utilize the schema methods to complete the specific level
+        if (kyc.currentLevel === 1) {
+            await kyc.approveLevel1(request.user._id);
+            user.kycLevel = 1;
+        } else if (kyc.currentLevel === 2) {
+            await kyc.approveLevel2(request.user._id);
+            user.kycLevel = 2;
+        } else if (kyc.currentLevel === 3) {
+            await kyc.approveLevel3(request.user._id);
+            user.kycLevel = 3;
+        }
+        
+        await user.save();
+
+        if (request.server && request.server.io) {
+            request.server.io.to(`user:${user._id}`).emit('notification', { title: 'KYC Approved', message: `Your Tier ${kyc.currentLevel} verification is approved!` });
         }
         
         reply.send({ success: true, message: 'KYC approved successfully' });
     } catch (error) {
+        console.error(error);
         reply.status(500).send({ success: false, message: 'Server error during KYC approval' });
     }
 }
@@ -244,9 +253,8 @@ async function rejectKYC(request, reply) {
         const kyc = await KYC.findById(kycId);
         if (!kyc) return reply.status(404).send({ success: false, message: 'KYC not found' });
 
-        kyc.status = 'rejected';
-        kyc.rejectionReason = reason || 'Your provided details could not be verified.';
-        await kyc.save();
+        // THE FIX: Schema method correctly flags the entire entity as rejected
+        await kyc.reject(reason || 'Your provided details could not be verified.');
 
         if (request.server && request.server.io) {
             request.server.io.to(`user:${kyc.user}`).emit('notification', { title: 'KYC Rejected', message: `Reason: ${kyc.rejectionReason}` });
@@ -254,6 +262,7 @@ async function rejectKYC(request, reply) {
 
         reply.send({ success: true, message: 'KYC rejected' });
     } catch (error) {
+        console.error(error);
         reply.status(500).send({ success: false, message: 'Server error during KYC rejection' });
     }
 }
