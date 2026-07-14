@@ -11,11 +11,20 @@ try { Notification = require('../models/Notification'); } catch(e) {}
 try { generateIdempotencyKey = require('../utils/auth').generateIdempotencyKey; } catch(e) {}
 
 /**
- * 1. Get user's payment links (Dashboard View)
+ * 1. Get user's payment links (Dashboard View / Admin View)
  */
 async function getLinks(request, reply) {
   try {
-    const links = await PaymentLink.find({ user: request.user._id }).sort({ createdAt: -1 });
+    // THE FIX: Smart Query. If the user is an admin, fetch ALL links. Otherwise, fetch only their own.
+    let query = {};
+    if (request.user && request.user.role !== 'admin' && request.user.role !== 'superadmin') {
+        query.user = request.user._id;
+    }
+
+    // THE FIX: Added .populate('user') to get the merchant's name and email for the Admin Panel
+    const links = await PaymentLink.find(query)
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 });
     
     reply.send({
       success: true,
@@ -33,9 +42,13 @@ async function getLinks(request, reply) {
         expiryDate: link.expiryDate,
         createdAt: link.createdAt,
         category: link.category || 'General',
-        // E-Commerce Additions
         redirectUrl: link.redirectUrl,
-        productImageBase64: link.productImageBase64
+        productImageBase64: link.productImageBase64,
+        
+        // Expose populated user details for the Admin Marketplace Table
+        merchantName: link.user ? link.user.name : 'Verified Merchant',
+        userEmail: link.user ? link.user.email : 'Unknown',
+        user: link.user ? link.user._id : null
       }))
     });
   } catch (error) {
