@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -202,7 +203,6 @@
         });
     }
 
-    // THE UPGRADED KYC STATE MACHINE
     async function checkKYCStatus() {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) { window.location.href = '/index.html'; return; }
@@ -219,15 +219,14 @@
                 const t2 = document.getElementById('tier2Card'); const b2 = document.getElementById('tier2Badge'); const f2 = document.getElementById('tier2Form');
                 const t3 = document.getElementById('tier3Card'); const b3 = document.getElementById('tier3Badge'); const f3 = document.getElementById('tier3Form');
 
-                // Reset all to locked first
                 [t1, t2, t3].forEach(t => t.className = 'tier-card locked');
 
-                // Logic to unlock specific tiers based on backend status
                 if (kycLevel === 0 || !status) {
                     t1.className = 'tier-card active'; b1.className = 'tier-badge badge-active'; b1.innerText = 'ACTION REQUIRED';
                 } 
                 else if (kycLevel === 1) {
-                    if (status === 'pending') {
+                    // THE FIX: Looking for 'under_review' instead of 'pending'
+                    if (status === 'under_review') {
                         t1.className = 'tier-card'; b1.className = 'tier-badge badge-pending'; b1.innerText = 'REVIEW PENDING'; f1.style.display = 'none';
                     } else if (status === 'rejected') {
                         t1.className = 'tier-card active'; b1.className = 'tier-badge badge-rejected'; b1.innerText = 'REJECTED - TRY AGAIN';
@@ -238,7 +237,7 @@
                 }
                 else if (kycLevel === 2) {
                     t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
-                    if (status === 'pending') {
+                    if (status === 'under_review') {
                         t2.className = 'tier-card'; b2.className = 'tier-badge badge-pending'; b2.innerText = 'REVIEW PENDING'; f2.style.display = 'none';
                     } else if (status === 'rejected') {
                         t2.className = 'tier-card active'; b2.className = 'tier-badge badge-rejected'; b2.innerText = 'REJECTED - TRY AGAIN';
@@ -250,7 +249,7 @@
                 else if (kycLevel === 3) {
                     t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
                     t2.className = 'tier-card completed'; b2.className = 'tier-badge badge-completed'; b2.innerText = 'COMPLETED'; f2.style.display = 'none';
-                    if (status === 'pending') {
+                    if (status === 'under_review') {
                         t3.className = 'tier-card'; b3.className = 'tier-badge badge-pending'; b3.innerText = 'REVIEW PENDING'; f3.style.display = 'none';
                     } else if (status === 'rejected') {
                         t3.className = 'tier-card active'; b3.className = 'tier-badge badge-rejected'; b3.innerText = 'REJECTED - TRY AGAIN';
@@ -266,11 +265,7 @@
         const bvn = document.getElementById('bvnInput').value;
         const nin = document.getElementById('ninInput').value;
 
-        if (!bvn && !nin) {
-            Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please provide either BVN or NIN.', background: '#111', color: '#fff' });
-            return;
-        }
-
+        if (!bvn && !nin) { Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please provide either BVN or NIN.', background: '#111', color: '#fff' }); return; }
         executeApiCall('/api/kyc/level1', { bvn, nin }, 'Uploading for Admin Verification...');
     }
 
@@ -280,21 +275,15 @@
         const idFile = document.getElementById('idImage').files[0];
         const selfieFile = document.getElementById('selfieImage').files[0];
 
-        if (!idNumber || !idFile || !selfieFile) {
-            Swal.fire({ icon: 'error', title: 'Incomplete', text: 'Please provide Document Number, ID Image, and Selfie.', background: '#111', color: '#fff' });
-            return;
-        }
+        if (!idNumber || !idFile || !selfieFile) { Swal.fire({ icon: 'error', title: 'Incomplete', text: 'Please provide Document Number, ID Image, and Selfie.', background: '#111', color: '#fff' }); return; }
 
         Swal.fire({ title: 'Encrypting Images...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
 
         try {
             const idImageBase64 = await fileToBase64(idFile);
             const selfieImageBase64 = await fileToBase64(selfieFile);
-            
             executeApiCall('/api/kyc/level2', { idType, idNumber, idImage: idImageBase64, selfieImage: selfieImageBase64 }, 'Uploading for Admin Review...');
-        } catch (e) {
-            Swal.fire({ icon: 'error', title: 'File Error', text: 'Failed to process images.', background: '#111', color: '#fff' });
-        }
+        } catch (e) { Swal.fire({ icon: 'error', title: 'File Error', text: 'Failed to process images.', background: '#111', color: '#fff' }); }
     }
 
     async function submitTier3() {
@@ -302,11 +291,7 @@
         const city = document.getElementById('cityInput').value;
         const state = document.getElementById('stateInput').value;
 
-        if (!address || !city || !state) {
-            Swal.fire({ icon: 'error', title: 'Incomplete', text: 'Please fill out your full address details.', background: '#111', color: '#fff' });
-            return;
-        }
-
+        if (!address || !city || !state) { Swal.fire({ icon: 'error', title: 'Incomplete', text: 'Please fill out your full address details.', background: '#111', color: '#fff' }); return; }
         executeApiCall('/api/kyc/level3', { address, city, state }, 'Submitting Address...');
     }
 
