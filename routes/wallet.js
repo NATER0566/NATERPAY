@@ -192,12 +192,28 @@ async function withdraw(request, reply) {
     const safeBankName = String(bankAccount?.bankName || 'Bank').toUpperCase();
     const safeAccountNo = String(bankAccount?.accountNumber || 'Unknown');
 
+    // THE FIX: Save bank details exactly where the Admin Panel looks for them
     const transaction = new Transaction({
-      user: request.user._id, type: 'withdrawal', description: `Transfer to ${safeBankName} - ${safeAccountNo}`,
-      amount: withdrawAmount, fee: transferFee, balanceBefore: String(currentAvail), balanceAfter: String(wallet.availableBalance || 0),
-      status: 'pending', provider: 'internal', idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `wth_${Date.now()}`, 
-      metadata: { bankAccount }, ipAddress: request.ip, userAgent: request.headers['user-agent']
+      user: request.user._id, 
+      type: 'withdrawal', 
+      description: `Withdrawal to ${safeBankName} - ${safeAccountNo}`,
+      amount: withdrawAmount, 
+      fee: transferFee, 
+      balanceBefore: String(currentAvail), 
+      balanceAfter: String(wallet.availableBalance || 0),
+      status: 'pending', 
+      provider: 'internal', 
+      idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `wth_${Date.now()}`, 
+      ipAddress: request.ip, 
+      userAgent: request.headers['user-agent'],
+      
+      // Flat bank details explicitly added for Admin Panel visibility
+      bankName: bankAccount?.bankName || safeBankName,
+      accountNumber: bankAccount?.accountNumber || safeAccountNo,
+      accountName: bankAccount?.accountName || 'Unknown',
+      metadata: { bankAccount }
     });
+    
     await transaction.save();
     
     if (request.server && request.server.io) {
@@ -422,5 +438,5 @@ module.exports = {
   transfer,
   setPin,
   resolveBankAccount,
-  handlePaystackWebhook // Exported so server.js can route it
+  handlePaystackWebhook
 };
