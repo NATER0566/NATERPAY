@@ -380,7 +380,15 @@
                 }
 
                 const txCount = p.transactionCount || 0;
-                // Encode whole product safely to pass to functions
+                
+                // FIX: Better checks for nested User data structures (Populated documents)
+                const mName = p.merchantName || p.user?.name || p.userId?.name || p.creator?.name || 'Unknown Merchant';
+                const mEmail = p.email || p.creatorEmail || p.user?.email || p.userId?.email || p.creator?.email || 'No Email';
+                
+                // Assign mapped names back into the object before encoding so viewProductDetails can read them
+                p.displayMerchantName = mName;
+                p.displayEmail = mEmail;
+                
                 const encodedProduct = encodeURIComponent(JSON.stringify(p));
 
                 return `
@@ -395,8 +403,8 @@
                             </div>
                         </td>
                         <td>
-                            <div class="text-white fw-bold"><i class="fas fa-store text-gold me-1"></i> ${p.merchantName || 'Merchant'}</div>
-                            <small class="text-secondary">${p.email || p.creatorEmail || 'No Email'}</small>
+                            <div class="text-white fw-bold"><i class="fas fa-store text-gold me-1"></i> ${mName}</div>
+                            <small class="text-secondary">${mEmail}</small>
                         </td>
                         <td class="text-warning fw-bold fs-5">${priceDisplay}</td>
                         <td><span class="badge bg-secondary">${txCount} Sales</span></td>
@@ -438,8 +446,8 @@
                     <p class="mb-3"><strong class="text-secondary">Description:</strong> <br><span class="text-white bg-black p-2 rounded d-block mt-1" style="max-height: 100px; overflow-y:auto;">${product.description || 'No description provided.'}</span></p>
                     
                     <h5 class="text-danger fw-bold mb-3 border-bottom pb-2 border-secondary mt-4"><i class="fas fa-user-shield"></i> Owner Information</h5>
-                    <p class="mb-1"><strong class="text-secondary">Merchant Name:</strong> <span class="text-white">${product.merchantName || 'N/A'}</span></p>
-                    <p class="mb-1"><strong class="text-secondary">Registered Email:</strong> <span class="text-white">${product.email || product.creatorEmail || 'N/A'}</span></p>
+                    <p class="mb-1"><strong class="text-secondary">Merchant Name:</strong> <span class="text-white">${product.displayMerchantName || 'N/A'}</span></p>
+                    <p class="mb-1"><strong class="text-secondary">Registered Email:</strong> <span class="text-white">${product.displayEmail || 'N/A'}</span></p>
                     <p class="mb-1"><strong class="text-secondary">Creation Date:</strong> <span class="text-white">${new Date(product.createdAt || Date.now()).toLocaleString()}</span></p>
                 </div>
             `,
@@ -485,14 +493,15 @@
         if (formValues) {
             Swal.fire({title:'Saving Modifications...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try {
-                const res = await fetch(`/api/admin/products/${productId}`, {
+                // FIX: Calling the standard /api/payment-links route instead of non-existent /api/admin/products
+                const res = await fetch(`/api/payment-links/${productId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
                     body: JSON.stringify(formValues)
                 });
                 
                 const data = await res.json();
-                if(data.success === true) {
+                if(res.ok || data.success === true) {
                     await Swal.fire({title: 'Updated!', text: 'Product details saved.', icon: 'success', background: '#0a0a0a', color: '#fff'});
                     fetchMarketplace();
                 } else {
@@ -514,13 +523,14 @@
             
             Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try {
-                const res = await fetch(`/api/admin/products/${productId}`, { 
+                // FIX: Calling the standard /api/payment-links route instead of non-existent /api/admin/products
+                const res = await fetch(`/api/payment-links/${productId}`, { 
                     method: 'DELETE', 
                     headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } 
                 });
                 const data = await res.json();
                 
-                if(data.success === true) { 
+                if(res.ok || data.success === true) { 
                     await Swal.fire({title: 'Deleted!', text: 'Product successfully removed from ledger.', icon: 'success', background: '#0a0a0a', color: '#fff'}); 
                     fetchMarketplace(); 
                 } else {
