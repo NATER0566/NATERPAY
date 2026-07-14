@@ -148,16 +148,16 @@
             z-index: 10;
         }
 
-        /* COMPACT IMAGE CONTAINER */
+        /* COMPACT IMAGE CONTAINER - Increased Height */
         .product-image-header {
-            width: 100%; height: 180px; background-color: #111;
+            width: 100%; height: 250px; background-color: #111;
             background-size: cover; background-position: center; background-repeat: no-repeat;
             border-bottom: 2px solid #333; position: relative; cursor: pointer;
             overflow: hidden; display: flex; align-items: center; justify-content: center;
         }
         
         .store-icon-fallback { 
-            background: #111; width: 100%; height: 180px; 
+            background: #111; width: 100%; height: 250px; 
             display: flex; align-items: center; justify-content: center; font-size: 3.5rem; 
             color: #333; border-bottom: 2px solid #333; position: relative; cursor: pointer;
         }
@@ -183,7 +183,7 @@
             white-space: nowrap;
         }
 
-        /* BADGES - Removed all truncation features so they show fully */
+        /* BADGES */
         .badge-category {
             position: absolute; top: 15px; left: 15px; background: rgba(0, 0, 0, 0.9);
             border: 2px solid #555; color: #fff; padding: 8px 16px; border-radius: 50px; 
@@ -195,6 +195,13 @@
             position: absolute; top: 15px; right: 15px; background: #000;
             border: 2px solid var(--green); color: var(--green); padding: 8px 16px;
             border-radius: 50px; font-size: 0.85rem; font-weight: 900; letter-spacing: 0.5px; z-index: 2;
+        }
+
+        /* Prevents text crashing on mobile screens by stepping the Verified badge down */
+        @media (max-width: 600px) {
+            .badge-verified {
+                top: 60px; /* Steps the badge safely below the category badge */
+            }
         }
 
         /* CENTERED DETAILS AREA */
@@ -210,7 +217,7 @@
             display: flex; flex-direction: column; align-items: center;
         }
         .owner-header { color: var(--gold); font-size: 1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-        .owner-sub { color: #888; font-size: 0.85rem; font-weight: 900; margin-bottom: 12px; font-style: italic; } /* Increased boldness */
+        .owner-sub { color: #888; font-size: 0.85rem; font-weight: 900; margin-bottom: 12px; font-style: italic; } 
         
         .creator-info-box div.contact-row { 
             margin-bottom: 5px; font-size: 1rem; font-weight: 900; color: #eee; 
@@ -222,7 +229,7 @@
         .creator-name i { color: #fff; }
         .creator-email i { color: var(--gold); }
         
-        /* COMPACT PRODUCT DESCRIPTION - Increased boldness */
+        /* COMPACT PRODUCT DESCRIPTION */
         .product-desc { 
             color: #ddd; font-size: 1rem; font-weight: 900; margin-bottom: 25px; 
             line-height: 1.6; background: rgba(0, 0, 0, 0.5); border: 2px solid #333;
