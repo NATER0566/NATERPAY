@@ -90,7 +90,7 @@ async function fundWallet(request, reply) {
 }
 
 /**
- * 3. Verify Wallet Funding (Frontend Fallback)
+ * 3. Verify Wallet Funding (STRICT & REAL-TIME ENGINE)
  */
 async function verifyFunding(request, reply) {
   try {
@@ -99,43 +99,89 @@ async function verifyFunding(request, reply) {
     
     const transaction = await Transaction.findOne({ providerReference: reference });
     if (!transaction) return reply.status(404).send({ success: false, message: 'Transaction not found' });
+    
+    // If already processed via Webhook or previous check, stop here.
     if (transaction.status === 'success') return reply.send({ success: true, message: 'Wallet already credited' });
+    if (transaction.status === 'failed') return reply.status(400).send({ success: false, message: 'Transaction was cancelled or declined.' });
 
-    let isSuccessful = false;
+    let gatewayStatus = 'pending';
+    let actualAmountPaid = 0;
+
+    // 1. Query the Gateways
     if (transaction.provider === 'paystack') {
-      const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } });
-      if (response.data.data.status === 'success') isSuccessful = true;
-    } else if (transaction.provider === 'monnify') {
+      const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, { 
+          headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } 
+      });
+      gatewayStatus = response.data.data.status; // Paystack returns 'success', 'abandoned', or 'failed'
+      actualAmountPaid = response.data.data.amount / 100; // Convert Kobo to Naira
+    } 
+    else if (transaction.provider === 'monnify') {
       const baseUrl = process.env.MONNIFY_URL || 'https://sandbox.monnify.com';
       const encodedKeys = Buffer.from(`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`).toString('base64');
       const authResponse = await axios.post(`${baseUrl}/api/v1/auth/login`, {}, { headers: { Authorization: `Basic ${encodedKeys}` } });
       const accessToken = authResponse.data.responseBody.accessToken;
-      const response = await axios.get(`${baseUrl}/api/v1/merchant/transactions/query?paymentReference=${reference}`, { headers: { Authorization: `Bearer ${accessToken}` } });
-      if (response.data.responseBody.paymentStatus === 'PAID') isSuccessful = true;
+      
+      const response = await axios.get(`${baseUrl}/api/v1/merchant/transactions/query?paymentReference=${reference}`, { 
+          headers: { Authorization: `Bearer ${accessToken}` } 
+      });
+      
+      const monnifyStatus = response.data.responseBody.paymentStatus;
+      if (monnifyStatus === 'PAID') gatewayStatus = 'success';
+      else if (monnifyStatus === 'FAILED' || monnifyStatus === 'CANCELLED' || monnifyStatus === 'EXPIRED') gatewayStatus = 'failed';
+      
+      actualAmountPaid = response.data.responseBody.amountPaid;
     }
 
-    if (!isSuccessful) return reply.status(400).send({ success: false, message: 'Payment not successful at gateway' });
+    // ==========================================
+    // STRICT CONDITION: USER CANCELLED OR FAILED
+    // ==========================================
+    if (gatewayStatus === 'abandoned' || gatewayStatus === 'failed') {
+        transaction.status = 'failed';
+        transaction.metadata = transaction.metadata || {};
+        transaction.metadata.reason = 'User abandoned checkout or bank declined.';
+        await transaction.save();
+        
+        return reply.status(400).send({ success: false, message: 'Payment was cancelled or declined. Marked as failed in ledger.' });
+    }
 
+    // ==========================================
+    // STRICT CONDITION: STILL PENDING
+    // ==========================================
+    if (gatewayStatus !== 'success') {
+        return reply.status(400).send({ success: false, message: 'Payment is still pending at the gateway. Awaiting settlement.' });
+    }
+
+    // ==========================================
+    // STRICT CONDITION: SUCCESS (AUTOMATIC SETTLEMENT)
+    // ==========================================
     const wallet = await Wallet.findOne({ user: transaction.user });
     
-    // CRASH-PROOF MATH
-    wallet.availableBalance = String(parseFloat(wallet.availableBalance || 0) + transaction.amount);
-    wallet.balance = String(parseFloat(wallet.balance || 0) + transaction.amount);
+    // Protect against partial payments by using the exact amount the gateway reports
+    const creditAmount = actualAmountPaid > 0 ? actualAmountPaid : transaction.amount;
+
+    // Crash-Proof Math
+    wallet.availableBalance = String(parseFloat(wallet.availableBalance || 0) + creditAmount);
+    wallet.balance = String(parseFloat(wallet.balance || 0) + creditAmount);
     await wallet.save();
     
     transaction.status = 'success';
+    transaction.amount = creditAmount; 
     transaction.balanceAfter = String(wallet.availableBalance || 0);
     await transaction.save();
     
+    // Real-Time Notifications
     if (Notification && typeof Notification.create === 'function') {
-        await Notification.create({ user: transaction.user, title: 'Wallet Funded', message: `Your wallet was credited with ₦${transaction.amount.toLocaleString()}`, type: 'transaction', priority: 'high' }).catch(() => {});
+        await Notification.create({ user: transaction.user, title: 'Wallet Funded', message: `Your wallet was credited with ₦${creditAmount.toLocaleString()}`, type: 'transaction', priority: 'high' }).catch(() => {});
     }
-    if (request.server && request.server.io) request.server.io.to(`user:${transaction.user}`).emit('wallet:update', { balance: String(wallet.availableBalance || 0) });
+    if (request.server && request.server.io) {
+        request.server.io.to(`user:${transaction.user}`).emit('wallet:update', { balance: String(wallet.availableBalance || 0) });
+    }
     
     reply.send({ success: true, message: 'Payment verified and wallet credited!' });
+
   } catch (error) {
     console.error('Verify Funding Error:', error.message);
-    reply.status(500).send({ success: false, message: 'Failed to verify payment' });
+    reply.status(500).send({ success: false, message: 'Failed to verify payment. Network error.' });
   }
 }
 
@@ -192,7 +238,7 @@ async function withdraw(request, reply) {
     const safeBankName = String(bankAccount?.bankName || 'Bank').toUpperCase();
     const safeAccountNo = String(bankAccount?.accountNumber || 'Unknown');
 
-    // THE FIX: Save bank details exactly where the Admin Panel looks for them
+    // Save bank details explicitly for the Admin Panel
     const transaction = new Transaction({
       user: request.user._id, 
       type: 'withdrawal', 
