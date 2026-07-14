@@ -190,7 +190,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
                     <h5 class="text-gold fw-bold m-0">MARKETPLACE MODERATION</h5>
-                    <p class="text-muted small mb-0">View, Edit, or Remove live products from the global ledger.</p>
+                    <p class="text-muted small mb-0">View complete details, Edit, or Remove live products from the global ledger.</p>
                 </div>
                 <button class="btn btn-sm btn-outline-light" onclick="fetchMarketplace()"><i class="fas fa-sync-alt me-1"></i> Sync Store</button>
             </div>
@@ -353,6 +353,7 @@
         } catch (e) { console.error("Admin load error", e); }
     }
 
+    // MARKETPLACE FUNCTIONS
     async function fetchMarketplace() {
         try {
             const res = await fetch('/api/payment-links', { 
@@ -379,6 +380,7 @@
                 }
 
                 const txCount = p.transactionCount || 0;
+                // Encode whole product safely to pass to functions
                 const encodedProduct = encodeURIComponent(JSON.stringify(p));
 
                 return `
@@ -387,19 +389,20 @@
                             <div class="d-flex align-items-center">
                                 ${imgHtml}
                                 <div>
-                                    <div class="fw-bold">${p.title}</div>
+                                    <div class="fw-bold text-truncate" style="max-width: 200px;">${p.title}</div>
                                     <span class="status-pill bg-dark border mt-1">${p.category || 'Product'}</span>
                                 </div>
                             </div>
                         </td>
                         <td>
                             <div class="text-white fw-bold"><i class="fas fa-store text-gold me-1"></i> ${p.merchantName || 'Merchant'}</div>
-                            <small class="text-secondary">${p._id || p.linkId}</small>
+                            <small class="text-secondary">${p.email || p.creatorEmail || 'No Email'}</small>
                         </td>
                         <td class="text-warning fw-bold fs-5">${priceDisplay}</td>
                         <td><span class="badge bg-secondary">${txCount} Sales</span></td>
                         <td class="text-end">
                             <div class="action-btns">
+                                <button class="btn btn-info text-white" onclick="viewProductDetails('${encodedProduct}')" title="View Info"><i class="fas fa-eye"></i> Info</button>
                                 <button class="btn btn-primary" onclick="editProduct('${encodedProduct}')" title="Edit Listing"><i class="fas fa-edit"></i> Edit</button>
                                 <button class="btn btn-danger" onclick="deleteProduct('${p._id || p.linkId}')" title="Remove Listing"><i class="fas fa-trash"></i> Drop</button>
                             </div>
@@ -411,6 +414,40 @@
             console.error("Marketplace fetch error:", error);
             document.getElementById('marketplaceTable').innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Connection failed. Could not load marketplace.</td></tr>';
         }
+    }
+
+    function viewProductDetails(encodedData) {
+        const product = JSON.parse(decodeURIComponent(encodedData));
+        const hasImage = product.productImageBase64 ? true : false;
+        
+        let imageBlock = hasImage 
+            ? `<div class="mb-3 text-center"><img src="${product.productImageBase64}" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 2px solid var(--gold);" alt="Product Image"></div>` 
+            : `<div class="mb-3 text-center py-4 bg-dark rounded border"><i class="fas fa-box fa-3x text-secondary"></i><p class="mt-2 text-muted small">No Image Uploaded</p></div>`;
+
+        Swal.fire({
+            title: 'Full Product Dossier',
+            html: `
+                <div class="text-start mt-3" style="font-size: 0.95rem; line-height: 1.6;">
+                    ${imageBlock}
+                    <h5 class="text-gold fw-bold mb-3 border-bottom pb-2 border-secondary"><i class="fas fa-info-circle"></i> Item Data</h5>
+                    <p class="mb-1"><strong class="text-secondary">Title:</strong> <span class="text-white">${product.title}</span></p>
+                    <p class="mb-1"><strong class="text-secondary">Product ID:</strong> <span class="text-white">${product._id || product.linkId}</span></p>
+                    <p class="mb-1"><strong class="text-secondary">Category:</strong> <span class="text-white">${product.category || 'N/A'}</span></p>
+                    <p class="mb-1"><strong class="text-secondary">Price:</strong> <span class="text-warning fw-bold">₦${product.amount} ${product.isFlexibleAmount ? '(Flexible)' : ''}</span></p>
+                    <p class="mb-1"><strong class="text-secondary">Total Sales:</strong> <span class="text-white">${product.transactionCount || 0}</span></p>
+                    <p class="mb-3"><strong class="text-secondary">Description:</strong> <br><span class="text-white bg-black p-2 rounded d-block mt-1" style="max-height: 100px; overflow-y:auto;">${product.description || 'No description provided.'}</span></p>
+                    
+                    <h5 class="text-danger fw-bold mb-3 border-bottom pb-2 border-secondary mt-4"><i class="fas fa-user-shield"></i> Owner Information</h5>
+                    <p class="mb-1"><strong class="text-secondary">Merchant Name:</strong> <span class="text-white">${product.merchantName || 'N/A'}</span></p>
+                    <p class="mb-1"><strong class="text-secondary">Registered Email:</strong> <span class="text-white">${product.email || product.creatorEmail || 'N/A'}</span></p>
+                    <p class="mb-1"><strong class="text-secondary">Creation Date:</strong> <span class="text-white">${new Date(product.createdAt || Date.now()).toLocaleString()}</span></p>
+                </div>
+            `,
+            background: '#0a0a0a', color: '#fff',
+            confirmButtonText: 'Close Dossier',
+            confirmButtonColor: '#444',
+            width: '600px'
+        });
     }
 
     async function editProduct(encodedData) {
@@ -470,7 +507,7 @@
     async function deleteProduct(productId) {
         if((await Swal.fire({
             title: 'Wipe Product?', 
-            text: "This will permanently remove the product from the NATER-PAY global marketplace.", 
+            text: "This will permanently remove the product from the NATER-PAY global marketplace. Use this to delete fake or prohibited items.", 
             icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', 
             background: '#0a0a0a', color: '#fff', confirmButtonText: 'Yes, Delete it'
         })).isConfirmed) {
@@ -495,6 +532,7 @@
         }
     }
 
+    // OTHER ADMIN FUNCTIONS
     async function modifyLedger(id, name, type) {
         const { value: vals } = await Swal.fire({
             title: type.toUpperCase() + ' WALLET', text: `Target: ${name}`,
