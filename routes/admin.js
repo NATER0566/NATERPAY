@@ -5,7 +5,7 @@ const KYC = require('../models/KYC');
 const SupportTicket = require('../models/SupportTicket');
 const Notification = require('../models/Notification');
 const PaymentLink = require('../models/PaymentLink'); 
-const Advertisement = require('../models/Advertisement'); // <-- Added for Adverts
+const Advertisement = require('../models/Advertisement');
 const { generateTransactionReference } = require('../utils/auth');
 const axios = require('axios'); 
 
@@ -184,27 +184,45 @@ async function verifyRealWorldKYC(request, reply) {
         
         if (!kycRecord) return reply.status(404).send({ success: false, message: 'KYC record not found' });
         
-        // THE FIX: Pulling from level1 securely
         const bvn = kycRecord.level1?.bvn;
         if (!bvn) return reply.status(400).send({ success: false, message: 'No BVN provided by user to verify.' });
 
-        const paystackResponse = await axios.get(`https://api.paystack.co/bank/resolve_bvn/${bvn}`, {
-            headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
-        });
+        try {
+            const paystackResponse = await axios.get(`https://api.paystack.co/bank/resolve_bvn/${bvn}`, {
+                headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
+            });
 
-        const paystackData = paystackResponse.data.data;
+            const paystackData = paystackResponse.data.data;
 
-        reply.send({ 
-            success: true, 
-            message: 'Paystack verification complete',
-            systemName: kycRecord.user.name, 
-            paystackDetails: {
-                firstName: paystackData.first_name,
-                lastName: paystackData.last_name,
-                dob: paystackData.formatted_dob,
-                phone: paystackData.mobile
+            reply.send({ 
+                success: true, 
+                message: 'Paystack verification complete',
+                systemName: kycRecord.user.name, 
+                paystackDetails: {
+                    firstName: paystackData.first_name,
+                    lastName: paystackData.last_name,
+                    dob: paystackData.formatted_dob,
+                    phone: paystackData.mobile
+                }
+            });
+        } catch (paystackError) {
+            // THE FIX: Graceful fallback if NIBSS/Paystack is down
+            const apiErrorMsg = paystackError.response?.data?.message || '';
+            if (apiErrorMsg.includes('Service Unavailable') || apiErrorMsg.includes('not supported')) {
+                return reply.send({
+                    success: true,
+                    message: 'Note: Paystack NIBSS is currently offline. Manual verification required.',
+                    systemName: kycRecord.user.name,
+                    paystackDetails: {
+                        firstName: "NIBSS OFFLINE",
+                        lastName: "SERVICE UNAVAILABLE",
+                        dob: "N/A",
+                        phone: "N/A"
+                    }
+                });
             }
-        });
+            throw paystackError; // Rethrow normal errors like invalid BVN
+        }
     } catch (error) {
         console.error('Paystack API Error:', error.response?.data || error.message);
         reply.status(400).send({ success: false, message: error.response?.data?.message || 'Failed to communicate with Paystack API.' });
@@ -220,7 +238,6 @@ async function approveKYC(request, reply) {
         const user = await User.findById(kyc.user);
         if (!user) return reply.status(404).send({ success: false, message: 'User not found' });
         
-        // THE FIX: Safely utilize the schema methods to complete the specific level
         if (kyc.currentLevel === 1) {
             await kyc.approveLevel1(request.user._id);
             user.kycLevel = 1;
@@ -248,21 +265,22 @@ async function approveKYC(request, reply) {
 async function rejectKYC(request, reply) {
     try {
         const { kycId } = request.params;
-        const { reason } = request.body;
+        
+        // THE FIX: Safely check if request.body exists before looking for 'reason' to prevent Node.js crash
+        const reason = request.body && request.body.reason ? request.body.reason : 'Your provided details could not be verified.';
         
         const kyc = await KYC.findById(kycId);
         if (!kyc) return reply.status(404).send({ success: false, message: 'KYC not found' });
 
-        // THE FIX: Schema method correctly flags the entire entity as rejected
-        await kyc.reject(reason || 'Your provided details could not be verified.');
+        await kyc.reject(reason);
 
         if (request.server && request.server.io) {
             request.server.io.to(`user:${kyc.user}`).emit('notification', { title: 'KYC Rejected', message: `Reason: ${kyc.rejectionReason}` });
         }
 
-        reply.send({ success: true, message: 'KYC rejected' });
+        reply.send({ success: true, message: 'KYC rejected successfully.' });
     } catch (error) {
-        console.error(error);
+        console.error('Reject KYC Error:', error);
         reply.status(500).send({ success: false, message: 'Server error during KYC rejection' });
     }
 }
@@ -318,10 +336,9 @@ async function deleteProduct(request, reply) {
 
 async function getPendingAds(request, reply) {
     try {
-        // Fetch all ads so Admin can see pending, approved, and rejected
         const ads = await Advertisement.find({})
             .populate('ownerId', 'name email')
-            .sort({ status: -1, createdAt: -1 }); // Sorts 'pending' to the top
+            .sort({ status: -1, createdAt: -1 }); 
             
         reply.send({ success: true, ads });
     } catch (error) {
@@ -405,16 +422,14 @@ async function updateUserBalance(request, reply) {
             return reply.status(400).send({ success: false, message: 'Invalid action provided.' });
         }
 
-        // 1. UPDATE WALLET FIRST (This is the most important part)
         wallet.availableBalance = String(newAvail);
         wallet.balance = String(newLedger);
         await wallet.save();
 
-        // 2. LOG TRANSACTION SAFELY (Wrapped in try/catch to prevent 500 error if schema rejects)
         try {
             const adminTx = new Transaction({
                 user: id, 
-                type: action === 'credit' ? 'funding' : 'withdrawal', // Safest allowed schema enums
+                type: action === 'credit' ? 'funding' : 'withdrawal', 
                 description: `Admin ${action.toUpperCase()}: ${reason}`, 
                 amount: amountFloat,
                 fee: 0, 
@@ -460,12 +475,10 @@ async function verifyTransaction(request, reply) {
             const newAvail = currentAvail + txAmount;
             const newLedger = currentLedger + txAmount;
 
-            // SAVE TRANSACTION FIRST
             tx.balanceAfter = String(newAvail);
             tx.status = 'success';
             await tx.save(); 
 
-            // SAVE WALLET AFTER
             wallet.availableBalance = String(newAvail);
             wallet.balance = String(newLedger);
             await wallet.save();
@@ -473,7 +486,6 @@ async function verifyTransaction(request, reply) {
             if (request.server && request.server.io) request.server.io.to(`user:${tx.user}`).emit('wallet:update', { balance: wallet.availableBalance });
             
         } else {
-            // For non-funding transaction types, just mark as success
             tx.status = 'success';
             await tx.save();
         }
@@ -509,7 +521,6 @@ async function sendPushNotification(request, reply) {
     }
 }
 
-// Support ticket stubs
 async function getSupportTickets(request, reply) { reply.send({ success: true, tickets: [] }); }
 async function assignTicket(request, reply) { reply.send({ success: true, message: 'Assigned' }); }
 async function resolveTicket(request, reply) { reply.send({ success: true, message: 'Resolved' }); }
@@ -521,5 +532,5 @@ module.exports = {
   getPendingWithdrawals, processWithdrawal, 
   getPendingKYC, verifyRealWorldKYC, approveKYC, rejectKYC,
   updateProduct, deleteProduct,
-  getPendingAds, approveAd, rejectAd // Export the Adverts functions!
+  getPendingAds, approveAd, rejectAd
 };
