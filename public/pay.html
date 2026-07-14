@@ -12,80 +12,231 @@
     <script src="https://js.paystack.co/v1/inline.js"></script>
 
     <style>
-        :root { --gold: #FFD700; --bg: #050505; --card-bg: rgba(15, 15, 15, 0.95); }
-        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        :root { 
+            --gold: #FFD700; 
+            --gold-glow: rgba(255, 215, 0, 0.6); 
+            --gold-subtle: rgba(255, 215, 0, 0.15);
+            --bg: #030303; 
+            --card-bg: #0a0a0a; 
+            --green: #00e676;
+            --nater-red: #d32f2f;
+        }
         
-        .checkout-card { 
-            background: var(--card-bg); border: 2px solid var(--gold); border-radius: 20px; 
-            width: 100%; max-width: 500px; box-shadow: 0 15px 50px rgba(0,0,0,0.8); 
-            text-align: center; word-wrap: break-word; overflow-wrap: break-word;
-            overflow: hidden; /* Ensures the image respects the rounded corners */
+        * { box-sizing: border-box; }
+
+        body { 
+            background: var(--bg); 
+            color: white; 
+            font-family: 'Montserrat', sans-serif; 
+            margin: 0; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            font-weight: 900;
         }
 
-        /* Product Image Header */
+        /* HEADER */
+        header {
+            position: sticky; top: 0; width: 100%; padding: 12px 5%;
+            background: rgba(0, 0, 0, 0.95); border-bottom: 3px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(10px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+            margin-bottom: 40px;
+        }
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;}
+        .site-part-1 { color: var(--gold); font-size: 1.8rem; text-shadow: 0 0 15px var(--gold-glow); } 
+        .site-part-2 { color: var(--nater-red); font-size: 1.2rem; letter-spacing: 3px; }
+
+        @media (max-width: 480px) {
+            .site-part-1 { font-size: 1.4rem; }
+            .site-part-2 { font-size: 1rem; }
+            header .btn { font-size: 0.8rem !important; padding: 8px 14px !important; }
+        }
+
+        /* MARKETPLACE STYLE CARD */
+        .checkout-container {
+            width: 100%; max-width: 500px;
+            padding: 0 15px;
+            margin-bottom: 60px;
+        }
+
+        .product-card {
+            background: var(--card-bg); border: 2px solid var(--gold); border-radius: 20px;
+            overflow: hidden; 
+            position: relative; display: flex; flex-direction: column;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(255,215,0,0.15);
+        }
+
+        /* COMPACT IMAGE CONTAINER - Height matches marketplace */
         .product-image-header {
-            width: 100%;
-            height: 250px;
-            background-color: #111;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            border-bottom: 2px solid #333;
-            display: none; /* Hidden by default until we load the image */
-            position: relative;
+            width: 100%; height: 250px; background-color: #111;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            border-bottom: 2px solid #333; position: relative; cursor: pointer;
+            overflow: hidden; display: flex; align-items: center; justify-content: center;
         }
         
-        /* Fallback icon if no image exists */
         .store-icon-fallback { 
-            background: rgba(255,215,0,0.1); width: 80px; height: 80px; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; font-size: 2rem; 
-            color: var(--gold); margin: 40px auto 20px auto; border: 2px solid var(--gold); 
+            background: #111; width: 100%; height: 250px; 
+            display: flex; align-items: center; justify-content: center; font-size: 3.5rem; 
+            color: #333; border-bottom: 2px solid #333; position: relative; cursor: pointer;
         }
 
-        .checkout-body { padding: 30px; }
+        /* PERSISTENT CLICK TEXT PROMPT */
+        .click-to-view {
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8); border: 1px solid var(--gold);
+            color: var(--gold); padding: 5px 15px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 900; text-transform: uppercase;
+            letter-spacing: 1px; pointer-events: none; z-index: 3;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.6); white-space: nowrap;
+        }
+
+        /* BADGES */
+        .badge-category {
+            position: absolute; top: 15px; left: 15px; background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #555; color: #fff; padding: 8px 16px; border-radius: 50px; 
+            font-size: 0.85rem; font-weight: 900; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px;
+        }
         
-        .merchant-badge {
-            background: rgba(255,215,0,0.1); color: var(--gold); padding: 5px 15px; 
-            border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; 
-            display: inline-block; margin-bottom: 15px; border: 1px solid rgba(255,215,0,0.3);
+        .badge-verified {
+            position: absolute; top: 15px; right: 15px; background: #000;
+            border: 2px solid var(--green); color: var(--green); padding: 8px 16px;
+            border-radius: 50px; font-size: 0.85rem; font-weight: 900; letter-spacing: 0.5px; z-index: 2;
         }
 
-        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.8rem; margin-bottom: 10px; line-height: 1.2; }
-        .product-desc { color: #aaa; font-size: 0.95rem; font-weight: 500; margin-bottom: 30px; line-height: 1.5; padding: 0 10px;}
+        @media (max-width: 600px) {
+            .badge-verified { top: 60px; } /* Steps badge safely down on mobile */
+        }
 
-        .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; text-align: left; transition: 0.3s; }
+        /* DETAILS AREA */
+        .product-details { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; align-items: center; }
+        
+        .product-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.5rem; margin-bottom: 20px; color: #fff; line-height: 1.3; text-shadow: 0 2px 5px rgba(0,0,0,0.5);}
+        
+        /* CREATOR INFO BOX */
+        .creator-info-box {
+            background: rgba(0,0,0,0.6); border: 2px solid #333; border-radius: 12px;
+            padding: 15px; margin-bottom: 25px; width: 100%;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .owner-header { color: var(--gold); font-size: 1rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .owner-sub { color: #888; font-size: 0.85rem; font-weight: 900; margin-bottom: 12px; font-style: italic; } 
+        
+        .creator-info-box div.contact-row { 
+            margin-bottom: 5px; font-size: 1rem; font-weight: 900; color: #eee; 
+            display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; word-break: break-all;
+        }
+        .creator-info-box div.contact-row:last-child { margin-bottom: 0; }
+        .creator-info-box i { width: 18px; text-align: center; font-size: 1.1rem; }
+        .creator-name i { color: #fff; }
+        .creator-email i { color: var(--gold); }
+        
+        /* PRODUCT DESCRIPTION */
+        .product-desc { 
+            color: #ddd; font-size: 1rem; font-weight: 900; margin-bottom: 25px; 
+            line-height: 1.6; background: rgba(0, 0, 0, 0.5); border: 2px solid #333;
+            padding: 18px; border-radius: 12px; max-height: 120px; overflow-y: auto;
+            word-wrap: break-word; width: 100%; box-shadow: inset 0 3px 10px rgba(0,0,0,0.5);
+        }
+        .product-desc::-webkit-scrollbar { width: 4px; }
+        .product-desc::-webkit-scrollbar-track { background: transparent; }
+        .product-desc::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; }
+        .product-desc::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+        /* FOOTER STATS CENTERED */
+        .card-footer-info { 
+            display: flex; flex-direction: column; align-items: center; 
+            margin-bottom: 25px; width: 100%; gap: 15px;
+        }
+        
+        .price-label { font-size: 0.9rem; color: #888; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px;}
+        .product-price { font-family: 'Cinzel', serif; color: var(--gold); font-size: 2rem; font-weight: 900; text-shadow: 0 0 10px var(--gold-glow);}
+        .sales-stats { font-size: 0.95rem; color: #fff; font-weight: 900; background: #222; padding: 10px 20px; border-radius: 50px; border: 2px solid #444;}
+
+        /* CHECKOUT FORM ELEMENTS */
+        .checkout-form-area { width: 100%; border-top: 2px solid #333; padding-top: 25px; margin-top: 10px;}
+
+        .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 12px; padding: 15px 20px; margin-bottom: 20px; text-align: left; transition: 0.3s; }
         .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px rgba(255,215,0,0.2); }
-        .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 900; text-transform: uppercase; margin-bottom: 8px; }
-        .input-group-custom input { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 600; outline: none; }
+        .input-group-custom label { display: block; font-size: 0.8rem; color: var(--gold); font-weight: 900; text-transform: uppercase; margin-bottom: 8px; }
+        .input-group-custom input { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 900; outline: none; font-family: 'Montserrat', sans-serif;}
         
-        .amount-display { font-family: 'Cinzel', serif; font-size: 2.8rem; color: var(--gold); font-weight: 900; margin: 10px 0 25px 0; text-shadow: 0 0 20px rgba(255,215,0,0.3); }
-
-        .btn-pay { background: var(--gold); color: black; font-weight: 900; border-radius: 15px; padding: 20px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s; margin-top: 10px; }
-        .btn-pay:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255,255,255,0.2); }
+        .btn-pay {
+            background: linear-gradient(90deg, #111, #222); color: #fff; font-weight: 900; border-radius: 12px;
+            padding: 18px; width: 100%; border: 2px solid var(--gold); font-size: 1.1rem;
+            letter-spacing: 1.5px; text-transform: uppercase; transition: all 0.4s; 
+            text-align: center; display: flex; justify-content: center; align-items: center; gap: 10px;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.5);
+        }
+        .btn-pay i { font-size: 1.3rem; transition: transform 0.3s; }
+        .btn-pay:hover { background: var(--gold); color: #000; box-shadow: 0 10px 25px var(--gold-glow); transform: translateY(-3px); }
 
         .secure-badge { color: #555; font-size: 0.8rem; font-weight: 800; margin-top: 25px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .secure-badge img { height: 18px; opacity: 0.5; }
+
+        /* UNRESTRICTED IMAGE MODAL */
+        .modal-dialog { max-width: 95vw; margin: 1.75rem auto; }
+        .modal-content { background: rgba(5,5,5,0.95); border: 2px solid var(--gold); box-shadow: 0 0 40px var(--gold-glow); border-radius: 15px;}
+        .modal-header { border-bottom: none; }
+        #fullSizeImage { width: 100%; max-height: 85vh; object-fit: contain; border-radius: 10px; }
+
     </style>
 </head>
 <body>
 
-<div class="checkout-card" id="checkoutCard">
-    <div class="py-5" id="loadingState">
-        <i class="fas fa-spinner fa-spin fa-3x text-warning mb-3 mt-4"></i>
-        <p class="fw-bold">Securing Storefront Route...</p>
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">MARKET</span>
+    </div>
+    <a href="javascript:history.back()" class="btn btn-outline-warning rounded-pill px-4 py-2 fw-bold" style="font-size: 1.1rem; border-width: 2px;">
+        <i class="fas fa-arrow-left me-2"></i> Go Back
+    </a>
+</header>
+
+<div class="checkout-container">
+    <div class="product-card" id="checkoutCard">
+        <div class="py-5 text-center w-100" id="loadingState">
+            <i class="fas fa-spinner fa-spin fa-3x text-warning mb-3 mt-4"></i>
+            <p class="fw-bold fs-5" style="font-family:'Cinzel';">Securing Storefront Route...</p>
+        </div>
     </div>
 </div>
+
+<!-- FULL SCREEN UNRESTRICTED IMAGE VIEWER MODAL -->
+<div class="modal fade" id="imageViewerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header pb-0">
+        <h5 class="modal-title text-warning fw-bold fs-5 ms-2" style="font-family: 'Cinzel';"><i class="fas fa-image"></i> Product Image Preview</h5>
+        <button type="button" class="btn-close btn-close-white fs-5" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center p-4">
+        <img id="fullSizeImage" src="" alt="Full Product Image">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     let globalLinkData = null;
     let dynamicPaystackKey = null;
+
+    function viewFullImage(base64String) {
+        document.getElementById('fullSizeImage').src = base64String;
+        const modal = new bootstrap.Modal(document.getElementById('imageViewerModal'));
+        modal.show();
+    }
 
     async function loadPaymentLink() {
         const urlParams = new URLSearchParams(window.location.search);
         const linkId = urlParams.get('id');
 
         if (!linkId) {
-            document.getElementById('checkoutCard').innerHTML = '<div class="py-5"><h4 class="text-danger fw-bold"><i class="fas fa-times-circle d-block mb-3 fa-2x"></i>Invalid Checkout Link</h4></div>';
+            document.getElementById('checkoutCard').innerHTML = '<div class="py-5 text-center w-100"><h4 class="text-danger fw-bold"><i class="fas fa-times-circle d-block mb-3 fa-2x"></i>Invalid Checkout Link</h4></div>';
             return;
         }
 
@@ -97,21 +248,26 @@
                 globalLinkData = data.link;
                 dynamicPaystackKey = data.paystackPublicKey;
                 
-                // Add merchant name to link data
-                globalLinkData.merchantName = data.link.merchantName || 'Verified Merchant';
-                
+                // Add default data for display safety
+                globalLinkData.merchantName = data.link.merchantName || data.link.creatorName || 'Verified Merchant';
+                globalLinkData.email = data.link.email || data.link.creatorEmail || (data.link.merchantSupport && data.link.merchantSupport.email) || 'Not Provided';
+                globalLinkData.category = data.link.category || 'General';
+                globalLinkData.transactionCount = data.link.transactionCount || 0;
+                globalLinkData.shortDesc = data.link.description || 'Secure NATERPAY Checkout';
+
                 renderCheckout(globalLinkData);
             } else {
-                document.getElementById('checkoutCard').innerHTML = '<div class="py-5"><h4 class="text-danger fw-bold"><i class="fas fa-store-slash d-block mb-3 fa-2x"></i>Product Unavailable</h4><p class="text-secondary">This link may be expired or disabled by the merchant.</p></div>';
+                document.getElementById('checkoutCard').innerHTML = '<div class="py-5 text-center w-100"><h4 class="text-danger fw-bold"><i class="fas fa-store-slash d-block mb-3 fa-2x"></i>Product Unavailable</h4><p class="text-secondary">This link may be expired or disabled by the merchant.</p></div>';
             }
         } catch (e) {
-            document.getElementById('checkoutCard').innerHTML = '<div class="py-5"><h4 class="text-danger fw-bold">Connection Error</h4><p class="text-secondary">Could not reach the NATERPAY ledger.</p></div>';
+            document.getElementById('checkoutCard').innerHTML = '<div class="py-5 text-center w-100"><h4 class="text-danger fw-bold">Connection Error</h4><p class="text-secondary">Could not reach the NATERPAY ledger.</p></div>';
         }
     }
 
     function renderCheckout(link) {
-        let amountHTML = '';
+        const displayPrice = link.isFlexibleAmount ? 'Flexible' : `₦${Number(link.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
         
+        let amountHTML = '';
         if (link.isFlexibleAmount) {
             amountHTML = `
                 <div class="input-group-custom">
@@ -119,47 +275,68 @@
                     <input type="number" id="customAmount" placeholder="0.00" min="100">
                 </div>
             `;
-        } else {
-            amountHTML = `<div class="amount-display">₦${Number(link.amount).toLocaleString(undefined, {minimumFractionDigits:2})}</div>`;
         }
 
-        // Logic to display the beautiful image header or the fallback icon
-        let imageHeaderHTML = '';
-        let fallbackIconHTML = '';
-        
+        let mediaHeaderHTML = '';
         if (link.productImageBase64) {
-            imageHeaderHTML = `<div class="product-image-header" style="display: block; background-image: url('${link.productImageBase64}');"></div>`;
+            mediaHeaderHTML = `
+                <div class="product-image-header" onclick="viewFullImage('${link.productImageBase64}')" style="background-image: url('${link.productImageBase64}');">
+                    <div class="badge-category"><i class="fas fa-tag me-1"></i> ${link.category}</div>
+                    <div class="badge-verified"><i class="fas fa-circle text-success me-1"></i> VERIFIED</div>
+                    <div class="click-to-view"><i class="fas fa-search-plus"></i> Click image to view</div>
+                </div>`;
         } else {
-            fallbackIconHTML = `<div class="store-icon-fallback"><i class="fas fa-shopping-bag"></i></div>`;
+            mediaHeaderHTML = `
+                <div class="store-icon-fallback" title="No image uploaded">
+                    <i class="fas fa-box-open text-secondary"></i>
+                    <div class="badge-category"><i class="fas fa-tag me-1"></i> ${link.category}</div>
+                    <div class="badge-verified"><i class="fas fa-circle text-success me-1"></i> VERIFIED</div>
+                </div>`;
         }
 
         document.getElementById('checkoutCard').innerHTML = `
-            ${imageHeaderHTML}
+            ${mediaHeaderHTML}
             
-            <div class="checkout-body">
-                ${fallbackIconHTML}
+            <div class="product-details">
+                <h3 class="product-title">${link.title}</h3>
                 
-                <div class="merchant-badge"><i class="fas fa-check-circle me-1"></i> ${link.merchantName}</div>
-                <h2 class="product-title">${link.title}</h2>
-                <div class="product-desc">${link.description || 'Secure NATERPAY Checkout'}</div>
-
-                ${amountHTML}
-
-                <div class="input-group-custom">
-                    <label>Your Full Name</label>
-                    <input type="text" id="customerName" placeholder="e.g. John Doe">
-                </div>
-                <div class="input-group-custom">
-                    <label>Your Email Address</label>
-                    <input type="email" id="customerEmail" placeholder="e.g. email@domain.com">
+                <div class="creator-info-box">
+                    <div class="owner-header"><i class="fas fa-crown"></i> Product Owner Details</div>
+                    <div class="owner-sub">Contact him/her through the email if needed</div>
+                    <div class="contact-row creator-name"><i class="fas fa-user-circle"></i> ${link.merchantName}</div>
+                    <div class="contact-row creator-email"><i class="fas fa-envelope"></i> ${link.email}</div>
                 </div>
 
-                <button class="btn-pay" onclick="payWithPaystack()">
-                    <i class="fas fa-lock me-2"></i> PAY SECURELY
-                </button>
+                <div class="product-desc">${link.shortDesc}</div>
+
+                <div class="card-footer-info">
+                    <div class="price-col text-center">
+                        <div class="price-label">Secure Access Price</div>
+                        <div class="product-price">${displayPrice}</div>
+                    </div>
+                    <div class="sales-col mt-2">
+                        <span class="sales-stats"><i class="fas fa-chart-line text-success me-2"></i> ${link.transactionCount} Successfully Sold</span>
+                    </div>
+                </div>
                 
-                <div class="secure-badge">
-                    <i class="fas fa-shield-alt"></i> Secured by Paystack
+                <div class="checkout-form-area">
+                    ${amountHTML}
+                    <div class="input-group-custom">
+                        <label>Your Full Name</label>
+                        <input type="text" id="customerName" placeholder="e.g. John Doe">
+                    </div>
+                    <div class="input-group-custom">
+                        <label>Your Email Address</label>
+                        <input type="email" id="customerEmail" placeholder="e.g. email@domain.com">
+                    </div>
+
+                    <button class="btn-pay" onclick="payWithPaystack()">
+                        <i class="fas fa-lock"></i> PAY SECURELY
+                    </button>
+                    
+                    <div class="secure-badge">
+                        <i class="fas fa-shield-alt"></i> Secured by Paystack
+                    </div>
                 </div>
             </div>
         `;
@@ -221,27 +398,25 @@
             const data = await res.json();
             
             if (data.success) {
-                // If the merchant provided a fulfillment link, tell the user they are being redirected
                 let redirectMessage = '';
                 if (data.redirectUrl) {
-                    redirectMessage = `<p class="mt-3 text-warning fw-bold"><i class="fas fa-spinner fa-spin me-2"></i> Redirecting you to your product...</p>`;
+                    redirectMessage = `<p class="mt-4 text-warning fw-bold"><i class="fas fa-spinner fa-spin me-2"></i> Redirecting you to your product...</p>`;
                 }
 
                 document.getElementById('checkoutCard').innerHTML = `
-                    <div class="checkout-body py-5">
-                        <div class="store-icon-fallback" style="color: #00ff88; border-color: #00ff88; margin-top: 0;"><i class="fas fa-check"></i></div>
+                    <div class="product-details py-5">
+                        <div class="store-icon-fallback bg-transparent mx-auto mb-4" style="color: #00ff88; border: 2px solid #00ff88; width:100px; height:100px; border-radius:50%;"><i class="fas fa-check"></i></div>
                         <h2 class="product-title" style="color: #00ff88;">Payment Successful</h2>
-                        <div class="product-desc mb-0">Thank you, ${customerName}.</div>
+                        <div class="product-desc mb-0 border-0 bg-transparent text-center">Thank you, ${customerName}. Your secure access has been granted.</div>
                         ${redirectMessage}
                     </div>
                 `;
                 Swal.close();
 
-                // FULFILLMENT REDIRECT LOGIC
                 if (data.redirectUrl) {
                     setTimeout(() => {
                         window.location.href = data.redirectUrl;
-                    }, 3000); // 3 second delay so they can read the success message
+                    }, 3000); 
                 }
 
             } else {
