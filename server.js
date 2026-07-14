@@ -120,14 +120,21 @@ async function registerRoutes() {
   fastify.post('/api/kyc/level3', { preHandler: require('./middleware/auth').authenticate }, kycRoutes.submitLevel3);
   
   // === UPGRADED STOREFRONT & PAYMENT LINKS ROUTES ===
-  const paymentLinkRoutes = require('./routes/payment-link'); // Ensures it reads from your exact file name
+  const paymentLinkRoutes = require('./routes/payment-link');
   fastify.get('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.getLinks);
   fastify.post('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.createLink);
-  // Using :id instead of :linkId to perfectly match the backend controller math
   fastify.get('/api/payment-links/:id', paymentLinkRoutes.getLink);
   fastify.post('/api/payment-links/:id/pay', paymentLinkRoutes.payLink);
   fastify.get('/api/marketplace/all', paymentLinkRoutes.getAllMarketplaceLinks);
   // ==================================================
+
+  // === ADVERT & MARKETPLACE ROUTES ===
+  const adsRoutes = require('./routes/ads');
+  fastify.get('/api/ads', adsRoutes.getAds);
+  fastify.post('/api/ads/:id/click', adsRoutes.registerClick);
+  fastify.get('/api/ads/me', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.getUserAds);
+  fastify.post('/api/ads', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.createAd);
+  // ===================================
   
   const invoiceRoutes = require('./routes/invoice');
   fastify.get('/api/invoices', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.getInvoices);
