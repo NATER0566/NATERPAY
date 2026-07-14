@@ -4,7 +4,7 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Marketplace & Adverts</title>
+    <title>NATER-PAY | Global Marketplace</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -25,9 +25,8 @@
         .site-part-1 { color: var(--gold); font-size: 1.4rem; text-shadow: 0 2px 5px rgba(255,215,0,0.3); } 
         .site-part-2 { color: var(--red); font-size: 1rem; letter-spacing: 3px; }
 
-        .container { max-width: 1300px; margin: 30px auto; padding: 0 20px; }
+        .container { max-width: 1400px; margin: 30px auto; padding: 0 20px; }
 
-        /* Revenue Driving CTA */
         .revenue-banner {
             background: linear-gradient(135deg, rgba(20,20,20,0.9) 0%, rgba(40,30,0,0.95) 100%);
             border: 1.5px solid var(--gold); border-radius: 20px; padding: 30px; margin-bottom: 30px;
@@ -39,16 +38,14 @@
         .high-priority-glow::before { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%); transform: skewX(-25deg); animation: refractive-shine 3.5s infinite; z-index: 1; pointer-events: none; }
         @keyframes refractive-shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
 
-        /* Filters & Search */
         .search-bar { background: rgba(0,0,0,0.6); border: 1px solid #444; border-radius: 50px; padding: 5px 20px; display: flex; align-items: center; margin-bottom: 20px; }
         .search-bar input { background: transparent; border: none; color: white; width: 100%; padding: 10px; outline: none; }
         
-        .category-scroll { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; margin-bottom: 20px; scrollbar-width: none; }
+        .category-scroll { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 15px; margin-bottom: 20px; scrollbar-width: none; }
         .category-scroll::-webkit-scrollbar { display: none; }
-        .cat-pill { background: var(--card-bg); border: 1px solid #333; padding: 8px 18px; border-radius: 50px; white-space: nowrap; cursor: pointer; transition: 0.3s; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
-        .cat-pill:hover, .cat-pill.active { border-color: var(--gold); background: rgba(255,215,0,0.1); color: var(--gold); }
+        .cat-pill { background: var(--card-bg); border: 1px solid #333; padding: 8px 18px; border-radius: 50px; white-space: nowrap; cursor: pointer; transition: 0.3s; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+        .cat-pill:hover, .cat-pill.active { border-color: var(--gold); background: rgba(255,215,0,0.1); color: var(--gold); box-shadow: 0 4px 10px rgba(255,215,0,0.2); }
 
-        /* Advert Cards */
         .ad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .ad-card { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; overflow: hidden; transition: 0.3s; position: relative; display: flex; flex-direction: column; }
         .ad-card:hover { transform: translateY(-5px); border-color: #555; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
@@ -61,14 +58,13 @@
         .ad-card:hover .ad-img { transform: scale(1.05); }
         
         .ad-content { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
-        .ad-biz-name { font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 5px; }
+        .ad-biz-name { font-size: 0.7rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 5px; }
         .ad-title { font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 10px; line-height: 1.3; }
         .ad-desc { font-size: 0.85rem; color: #ccc; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
         
         .ad-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #222; padding-top: 15px; }
         .ad-location { font-size: 0.75rem; color: #888; display: flex; align-items: center; gap: 5px; }
         
-        /* Modals & Inputs */
         .custom-modal-content { background: rgba(15,15,15,0.98); border: 1px solid var(--gold); border-radius: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
         .input-dark { background: rgba(0,0,0,0.6); border: 1.5px solid #333; color: white; padding: 12px 20px; border-radius: 12px; width: 100%; font-weight: 600; margin-bottom: 15px; transition: 0.3s; }
         .input-dark:focus { border-color: var(--gold); outline: none; }
@@ -93,37 +89,43 @@
 <div class="container">
     <div class="revenue-banner">
         <div>
-            <h2 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; margin-bottom: 5px;">REACH THOUSANDS DAILY</h2>
-            <p class="mb-0 fw-bold opacity-75">Promote your products, services, and events to verified NATER-PAY users.</p>
+            <h2 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; margin-bottom: 5px;">GLOBAL MARKETPLACE</h2>
+            <p class="mb-0 fw-bold opacity-75">Promote your products, services, apps, and events to the entire NATER-PAY network.</p>
         </div>
         <button class="btn btn-warning text-dark fw-bold py-3 px-5 rounded-pill high-priority-glow fs-5" data-bs-toggle="modal" data-bs-target="#postAdModal">
-            <i class="fas fa-bullhorn me-2"></i> POST YOUR ADVERT
+            <i class="fas fa-bullhorn me-2"></i> POST AN ADVERT
         </button>
     </div>
 
     <div class="search-bar">
         <i class="fas fa-search text-muted me-2"></i>
-        <input type="text" id="searchInput" placeholder="Search products, businesses, or locations..." onkeyup="filterAds()">
+        <input type="text" id="searchInput" placeholder="Search products, software, businesses, or locations..." onkeyup="filterAds()">
     </div>
 
     <div class="category-scroll" id="categoryContainer">
         <div class="cat-pill active" onclick="setCategory('All', this)">All Categories</div>
-        <div class="cat-pill" onclick="setCategory('Shopping', this)"><i class="fas fa-shopping-bag me-1"></i> Shopping</div>
-        <div class="cat-pill" onclick="setCategory('Phones & Gadgets', this)"><i class="fas fa-mobile-alt me-1"></i> Gadgets</div>
-        <div class="cat-pill" onclick="setCategory('Fashion & Beauty', this)"><i class="fas fa-tshirt me-1"></i> Fashion</div>
-        <div class="cat-pill" onclick="setCategory('Real Estate', this)"><i class="fas fa-home me-1"></i> Real Estate</div>
-        <div class="cat-pill" onclick="setCategory('Vehicles', this)"><i class="fas fa-car me-1"></i> Vehicles</div>
-        <div class="cat-pill" onclick="setCategory('Food & Restaurants', this)"><i class="fas fa-utensils me-1"></i> Food</div>
-        <div class="cat-pill" onclick="setCategory('Education', this)"><i class="fas fa-graduation-cap me-1"></i> Education</div>
-        <div class="cat-pill" onclick="setCategory('Jobs', this)"><i class="fas fa-briefcase me-1"></i> Jobs</div>
-        <div class="cat-pill" onclick="setCategory('Events', this)"><i class="fas fa-calendar-alt me-1"></i> Events</div>
+        <div class="cat-pill" onclick="setCategory('Shopping & Retail', this)"><i class="fas fa-shopping-bag"></i> Shopping & Retail</div>
+        <div class="cat-pill" onclick="setCategory('Software, Apps & Tech', this)"><i class="fas fa-laptop-code"></i> Software & Tech</div>
+        <div class="cat-pill" onclick="setCategory('Religion & Faith', this)"><i class="fas fa-place-of-worship"></i> Religion & Faith</div>
+        <div class="cat-pill" onclick="setCategory('Science & Research', this)"><i class="fas fa-flask"></i> Science & Research</div>
+        <div class="cat-pill" onclick="setCategory('Phones, Computers & Gadgets', this)"><i class="fas fa-mobile-alt"></i> Gadgets</div>
+        <div class="cat-pill" onclick="setCategory('Fashion & Beauty', this)"><i class="fas fa-tshirt"></i> Fashion & Beauty</div>
+        <div class="cat-pill" onclick="setCategory('Real Estate & Properties', this)"><i class="fas fa-home"></i> Real Estate</div>
+        <div class="cat-pill" onclick="setCategory('Vehicles & Automobile', this)"><i class="fas fa-car"></i> Vehicles</div>
+        <div class="cat-pill" onclick="setCategory('Food & Restaurants', this)"><i class="fas fa-utensils"></i> Food & Dining</div>
+        <div class="cat-pill" onclick="setCategory('Education & Courses', this)"><i class="fas fa-graduation-cap"></i> Education</div>
+        <div class="cat-pill" onclick="setCategory('Jobs & Recruitment', this)"><i class="fas fa-briefcase"></i> Jobs</div>
+        <div class="cat-pill" onclick="setCategory('Health & Medical', this)"><i class="fas fa-heartbeat"></i> Health</div>
+        <div class="cat-pill" onclick="setCategory('Services & Freelance', this)"><i class="fas fa-tools"></i> Services</div>
+        <div class="cat-pill" onclick="setCategory('Agriculture & Farming', this)"><i class="fas fa-tractor"></i> Agriculture</div>
+        <div class="cat-pill" onclick="setCategory('Events & Entertainment', this)"><i class="fas fa-calendar-alt"></i> Events</div>
+        <div class="cat-pill" onclick="setCategory('Financial Services', this)"><i class="fas fa-chart-line"></i> Financial</div>
+        <div class="cat-pill" onclick="setCategory('Miscellaneous', this)"><i class="fas fa-ellipsis-h"></i> Others</div>
     </div>
-
-    <h5 class="fw-bold mb-4" style="color: var(--gold); border-bottom: 1px solid #333; padding-bottom: 10px;">LATEST OPPORTUNITIES</h5>
     
     <div class="ad-grid" id="adGridContainer">
         <div class="col-12 text-center py-5 opacity-50">
-            <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing marketplace data...
+            <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing global marketplace data...
         </div>
     </div>
 </div>
@@ -138,33 +140,41 @@
             <div class="modal-body p-4">
                 
                 <div id="adStep1">
-                    <h6 class="text-muted fw-bold mb-3">STEP 1: BUSINESS DETAILS</h6>
+                    <h6 class="text-muted fw-bold mb-3">STEP 1: BUSINESS / ENTITY DETAILS</h6>
                     <div class="row">
-                        <div class="col-md-6"><input type="text" id="adBizName" class="input-dark" placeholder="Business / Brand Name" required></div>
-                        <div class="col-md-6"><input type="text" id="adTitle" class="input-dark" placeholder="Advert Title (e.g. 50% Off Laptops)" required></div>
+                        <div class="col-md-6"><input type="text" id="adBizName" class="input-dark" placeholder="Brand, Church, App, or Entity Name" required></div>
+                        <div class="col-md-6"><input type="text" id="adTitle" class="input-dark" placeholder="Advert Title (e.g. New App Launch!)" required></div>
                         <div class="col-md-6">
                             <select id="adCategory" class="input-dark text-muted">
-                                <option value="" disabled selected>Select Category</option>
-                                <option value="Shopping">Shopping</option>
-                                <option value="Phones & Gadgets">Phones & Gadgets</option>
+                                <option value="" disabled selected>Select Global Category</option>
+                                <option value="Shopping & Retail">Shopping & Retail</option>
+                                <option value="Software, Apps & Tech">Software, Apps & Tech</option>
+                                <option value="Religion & Faith">Religion & Faith</option>
+                                <option value="Science & Research">Science & Research</option>
+                                <option value="Phones, Computers & Gadgets">Phones, Computers & Gadgets</option>
                                 <option value="Fashion & Beauty">Fashion & Beauty</option>
-                                <option value="Real Estate">Real Estate</option>
-                                <option value="Vehicles">Vehicles</option>
+                                <option value="Real Estate & Properties">Real Estate & Properties</option>
+                                <option value="Vehicles & Automobile">Vehicles & Automobile</option>
                                 <option value="Food & Restaurants">Food & Restaurants</option>
-                                <option value="Education">Education</option>
-                                <option value="Jobs">Jobs & Recruitment</option>
-                                <option value="Events">Events</option>
+                                <option value="Education & Courses">Education & Courses</option>
+                                <option value="Jobs & Recruitment">Jobs & Recruitment</option>
+                                <option value="Health & Medical">Health & Medical</option>
+                                <option value="Services & Freelance">Services & Freelance</option>
+                                <option value="Agriculture & Farming">Agriculture & Farming</option>
+                                <option value="Events & Entertainment">Events & Entertainment</option>
+                                <option value="Financial Services">Financial Services</option>
+                                <option value="Miscellaneous">Others / Miscellaneous</option>
                             </select>
                         </div>
-                        <div class="col-md-6"><input type="text" id="adLocation" class="input-dark" placeholder="Location (e.g. Keffi, Nasarawa)" required></div>
+                        <div class="col-md-6"><input type="text" id="adLocation" class="input-dark" placeholder="Location (e.g. Global, Online, Nigeria)" required></div>
                     </div>
-                    <textarea id="adDesc" class="input-dark" rows="3" placeholder="Describe your product or service in detail..." required></textarea>
+                    <textarea id="adDesc" class="input-dark" rows="3" placeholder="Describe your product, app, event, or service in detail..." required></textarea>
                     
                     <h6 class="text-muted fw-bold mb-3 mt-2">CONTACT INFO</h6>
                     <div class="row">
                         <div class="col-md-4"><input type="tel" id="adPhone" class="input-dark" placeholder="Phone Number" required></div>
                         <div class="col-md-4"><input type="tel" id="adWhatsapp" class="input-dark" placeholder="WhatsApp Number" required></div>
-                        <div class="col-md-4"><input type="url" id="adWeb" class="input-dark" placeholder="Website Link (Optional)"></div>
+                        <div class="col-md-4"><input type="url" id="adWeb" class="input-dark" placeholder="Website / App Link (Optional)"></div>
                     </div>
 
                     <h6 class="text-muted fw-bold mb-3 mt-2">MEDIA UPLOAD</h6>
@@ -240,22 +250,18 @@
     let currentCategory = 'All';
     let selectedPackage = 'standard';
 
-    // UI Init
     function initStars() { const c = document.getElementById('starCanvas'); c.width = window.innerWidth; c.height = window.innerHeight; const ctx = c.getContext('2d'); const s = []; for(let i=0; i<150; i++) s.push({x:Math.random()*c.width, y:Math.random()*c.height, size:Math.random()*2, speed:Math.random()*0.5}); function draw() { ctx.clearRect(0,0,c.width,c.height); ctx.fillStyle="white"; s.forEach(star => { ctx.beginPath(); ctx.arc(star.x, star.y, star.size, 0, Math.PI*2); ctx.fill(); star.y += star.speed; if(star.y > c.height) star.y = 0; }); requestAnimationFrame(draw); } draw(); }
     
-    // File to Base64 for Secure Uploads
     const toBase64 = file => new Promise((resolve, reject) => {
         const reader = new FileReader(); reader.readAsDataURL(file);
         reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error);
     });
 
-    // Main Fetch
     async function loadAds() {
         const token = localStorage.getItem("naterpay_token");
         if(!token) { window.location.href = '/index.html'; return; }
         
         try {
-            // We fetch from the backend route we are about to build
             const res = await fetch('/api/ads', { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
             
@@ -270,14 +276,12 @@
         const container = document.getElementById('adGridContainer');
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
         
-        // Filter Logic
         let filteredAds = allAds.filter(ad => {
             const matchSearch = ad.title.toLowerCase().includes(searchTerm) || ad.businessName.toLowerCase().includes(searchTerm) || ad.location.toLowerCase().includes(searchTerm);
             const matchCat = currentCategory === 'All' || ad.category === currentCategory;
             return matchSearch && matchCat;
         });
 
-        // Sort: Featured first, then newest
         filteredAds.sort((a, b) => (b.featured === a.featured) ? new Date(b.createdAt) - new Date(a.createdAt) : (b.featured ? 1 : -1));
 
         if(filteredAds.length === 0) {
@@ -292,7 +296,7 @@
                     <img src="${ad.imageUrl}" class="ad-img" alt="${ad.title}">
                 </div>
                 <div class="ad-content">
-                    <div class="ad-biz-name"><i class="fas fa-store me-1"></i> ${ad.businessName}</div>
+                    <div class="ad-biz-name"><i class="fas fa-tag me-1"></i> ${ad.category}</div>
                     <div class="ad-title">${ad.title}</div>
                     <div class="ad-desc">${ad.description}</div>
                     <div class="ad-footer">
@@ -307,7 +311,6 @@
         `).join('');
     }
 
-    // Interactive Filters
     function filterAds() { renderAds(); }
     function setCategory(cat, element) {
         currentCategory = cat;
@@ -316,13 +319,11 @@
         renderAds();
     }
 
-    // Track Clicks
     async function registerClick(adId, url) {
         window.open(url, '_blank');
         try { await fetch(`/api/ads/${adId}/click`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); } catch(e){}
     }
 
-    // Modal Nav
     function nextStep() {
         const reqs = ['adBizName', 'adTitle', 'adCategory', 'adLocation', 'adDesc', 'adPhone', 'adWhatsapp', 'adImage'];
         for(let id of reqs) { if(!document.getElementById(id).value) { Swal.fire('Missing Data', 'Please fill all required fields and upload an image.', 'warning'); return; } }
@@ -331,7 +332,6 @@
     function prevStep() { document.getElementById('adStep1').style.display = 'block'; document.getElementById('adStep2').style.display = 'none'; }
     function selectPkg(pkg, el) { selectedPackage = pkg; document.querySelectorAll('.pkg-card').forEach(c => c.classList.remove('selected')); el.classList.add('selected'); }
 
-    // Submission Engine
     async function submitAdvert() {
         const token = localStorage.getItem("naterpay_token");
         const file = document.getElementById('adImage').files[0];
@@ -354,7 +354,6 @@
                 imageUrl: base64Image
             };
 
-            // Post to the backend route we are about to build
             const res = await fetch('/api/ads', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -373,7 +372,6 @@
         }
     }
 
-    // Business Dashboard
     async function viewMyAds() {
         const token = localStorage.getItem("naterpay_token");
         const modal = new bootstrap.Modal(document.getElementById('myAdsModal'));
