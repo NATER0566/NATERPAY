@@ -84,13 +84,13 @@
         <button class="admin-tab" onclick="showTab('users')"><i class="fas fa-users-cog me-2"></i>Ledger</button>
         <button class="admin-tab" onclick="showTab('withdrawals')"><i class="fas fa-money-bill-wave me-2"></i>Withdrawals <span id="withdrawBadge" class="badge bg-danger ms-1 d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('kyc')"><i class="fas fa-id-card me-2"></i>KYC <span id="kycBadge" class="badge bg-danger ms-1 d-none">0</span></button>
+        <button class="admin-tab" onclick="showTab('adverts')"><i class="fas fa-bullhorn me-2"></i>Adverts <span id="advertsBadge" class="badge bg-danger ms-1 d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('transactions')"><i class="fas fa-server me-2"></i>Audit Log</button>
         <button class="admin-tab" onclick="showTab('ecosystem')"><i class="fas fa-link me-2"></i>Links</button>
         <button class="admin-tab" onclick="showTab('marketplace')"><i class="fas fa-store me-2"></i>Marketplace</button>
         <button class="admin-tab" onclick="showTab('notifications')"><i class="fas fa-bell me-2"></i>Announce</button>
     </div>
     
-    <!-- OVERVIEW TAB -->
     <div id="tab-overview" class="tab-content">
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-3"><div class="stat-box"><div class="high-vis-label">USERS</div><div class="stat-number" id="statUsers">...</div></div></div>
@@ -100,7 +100,6 @@
         </div>
     </div>
     
-    <!-- USER LEDGER TAB -->
     <div id="tab-users" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -116,7 +115,6 @@
         </div>
     </div>
 
-    <!-- WITHDRAWALS TAB -->
     <div id="tab-withdrawals" class="tab-content" style="display: none;">
         <div class="admin-card">
             <h5 class="mb-3 text-gold fw-bold">PENDING WITHDRAWAL REQUESTS</h5>
@@ -131,7 +129,6 @@
         </div>
     </div>
 
-    <!-- KYC TAB -->
     <div id="tab-kyc" class="tab-content" style="display: none;">
         <div class="admin-card">
             <h5 class="mb-3 text-gold fw-bold">PENDING IDENTITY VERIFICATIONS</h5>
@@ -145,8 +142,27 @@
             </div>
         </div>
     </div>
+
+    <div id="tab-adverts" class="tab-content" style="display: none;">
+        <div class="admin-card">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h5 class="text-gold fw-bold m-0">ADVERTS MODERATION</h5>
+                    <p class="text-muted small mb-0">Review pending adverts submitted by businesses before they go live on the global marketplace.</p>
+                </div>
+                <button class="btn btn-sm btn-outline-light" onclick="fetchAdverts()"><i class="fas fa-sync-alt me-1"></i> Sync Ads</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark align-middle">
+                    <thead><tr><th>ADVERT MEDIA</th><th>DETAILS</th><th>PACKAGE & PRICE</th><th>STATUS</th><th class="text-end">ACTIONS</th></tr></thead>
+                    <tbody id="advertsTable">
+                        <tr><td colspan="5" class="text-center opacity-50 py-4">Loading adverts...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     
-    <!-- TRANSACTIONS / AUDIT TAB -->
     <div id="tab-transactions" class="tab-content" style="display: none;">
         <div class="admin-card">
             <h5 class="mb-3 text-gold fw-bold">LIVE TRANSACTION AUDIT</h5>
@@ -159,7 +175,6 @@
         </div>
     </div>
 
-    <!-- ECOSYSTEM TAB -->
     <div id="tab-ecosystem" class="tab-content" style="display: none;">
         <div class="admin-card">
             <h5 class="mb-2 text-gold fw-bold">ECOSYSTEM: PAYMENT LINKS & INVOICES</h5>
@@ -174,7 +189,6 @@
         </div>
     </div>
 
-    <!-- MARKETPLACE TAB -->
     <div id="tab-marketplace" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -195,7 +209,6 @@
         </div>
     </div>
 
-    <!-- NOTIFICATIONS TAB -->
     <div id="tab-notifications" class="tab-content" style="display: none;">
         <div class="row">
             <div class="col-lg-4 mb-3">
@@ -253,11 +266,10 @@
         if(t==='kyc') fetchKYC();
         if(t==='withdrawals') fetchWithdrawals();
         if(t==='marketplace') fetchMarketplace();
+        if(t==='adverts') fetchAdverts();
     }
 
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
-
-    // GLOBAL CACHE FOR USERS (USED TO FIX MARKETPLACE NAMES)
     window.globalSystemUsers = [];
 
     async function loadAdminEcosystem() {
@@ -276,7 +288,6 @@
             const userRes = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
             const usersData = await userRes.json();
             
-            // CACHE USERS SO MARKETPLACE CAN LOOK THEM UP BY ID
             if(usersData.users) window.globalSystemUsers = usersData.users;
 
             document.getElementById('usersTable').innerHTML = usersData.users.map(u => `
@@ -333,33 +344,128 @@
             document.getElementById('transactionsTable').innerHTML = txHtml;
             document.getElementById('ecosystemTable').innerHTML = ecoHtml || '<tr><td colspan="6" class="text-center opacity-50 py-4">No Invoices or Links generated yet.</td></tr>';
 
-            fetchKYC(); fetchWithdrawals();
+            fetchKYC(); fetchWithdrawals(); fetchAdverts();
         } catch (e) { console.error("Admin load error", e); }
     }
 
+    // ==========================================
+    // ADVERTS MODERATION ENGINE
+    // ==========================================
+    async function fetchAdverts() {
+        try {
+            const res = await fetch('/api/admin/ads', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
+            const data = await res.json();
+            const ads = data.ads || [];
+            
+            const pendingAds = ads.filter(a => a.status === 'pending');
+            const badge = document.getElementById('advertsBadge');
+            
+            if (pendingAds.length > 0) {
+                badge.innerText = pendingAds.length;
+                badge.classList.remove('d-none');
+            } else {
+                badge.classList.add('d-none');
+            }
+
+            const tbody = document.getElementById('advertsTable');
+            if(ads.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No adverts found in the system.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = ads.map(ad => {
+                const statusColor = ad.status === 'approved' ? 'success' : (ad.status === 'pending' ? 'warning text-dark' : 'danger');
+                const encodedAd = encodeURIComponent(JSON.stringify(ad));
+                
+                return `
+                    <tr>
+                        <td>
+                            <img src="${ad.imageUrl}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #444; cursor: pointer;" onclick="viewAdDossier('${encodedAd}')">
+                        </td>
+                        <td>
+                            <div class="fw-bold text-white text-truncate" style="max-width: 200px;">${ad.title}</div>
+                            <small class="text-gold"><i class="fas fa-store"></i> ${ad.businessName}</small><br>
+                            <small class="text-muted"><i class="fas fa-tag"></i> ${ad.category}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary text-uppercase">${ad.package}</span>
+                        </td>
+                        <td><span class="status-pill bg-${statusColor}">${ad.status}</span></td>
+                        <td class="text-end">
+                            <div class="action-btns">
+                                <button class="btn btn-info text-white" onclick="viewAdDossier('${encodedAd}')" title="View Details"><i class="fas fa-eye"></i></button>
+                                ${ad.status === 'pending' ? `
+                                    <button class="btn btn-success" onclick="processAd('${ad._id}', 'approve')" title="Approve to go Live"><i class="fas fa-check"></i></button>
+                                    <button class="btn btn-danger" onclick="processAd('${ad._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>
+                                ` : `
+                                    <button class="btn btn-outline-danger" onclick="processAd('${ad._id}', 'reject')" title="Revoke"><i class="fas fa-ban"></i></button>
+                                `}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (error) {
+            document.getElementById('advertsTable').innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Failed to load adverts.</td></tr>';
+        }
+    }
+
+    function viewAdDossier(encodedData) {
+        const ad = JSON.parse(decodeURIComponent(encodedData));
+        Swal.fire({
+            title: 'Advert Review Dossier',
+            html: `
+                <div class="text-start mt-2" style="font-size: 0.9rem;">
+                    <img src="${ad.imageUrl}" class="w-100 rounded mb-3" style="max-height: 250px; object-fit: contain; border: 1px solid var(--gold);">
+                    <p class="mb-1"><strong class="text-gold">Title:</strong> ${ad.title}</p>
+                    <p class="mb-1"><strong class="text-gold">Business:</strong> ${ad.businessName}</p>
+                    <p class="mb-1"><strong class="text-gold">Category:</strong> ${ad.category}</p>
+                    <p class="mb-1"><strong class="text-gold">Package:</strong> <span class="badge bg-secondary text-uppercase">${ad.package}</span></p>
+                    <p class="mb-1"><strong class="text-gold">Contact:</strong> <i class="fas fa-phone"></i> ${ad.phoneNumber} | <i class="fab fa-whatsapp text-success"></i> ${ad.whatsappNumber}</p>
+                    <p class="mb-1"><strong class="text-gold">Location:</strong> ${ad.location}</p>
+                    <div class="mt-3 p-2 bg-dark rounded border border-secondary text-white">${ad.description}</div>
+                </div>
+            `,
+            background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close', confirmButtonColor: '#444'
+        });
+    }
+
+    async function processAd(adId, action) {
+        const actionText = action === 'approve' ? 'Approve and publish' : 'Reject';
+        if((await Swal.fire({title: `Confirm Action?`, text: `${actionText} this advert?`, showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
+            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try {
+                const res = await fetch(`/api/admin/ads/${adId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
+                const data = await res.json();
+                if(data.success) { 
+                    Swal.fire('Success', `Advert ${action}d successfully.`, 'success'); 
+                    fetchAdverts(); 
+                } else {
+                    Swal.fire('Failed', data.message || 'Operation failed', 'error');
+                }
+            } catch (err) { Swal.fire('Error', 'Server communication failed.', 'error'); }
+        }
+    }
+
+    // ==========================================
+    // OTHER ECOSYSTEM FUNCTIONS
+    // ==========================================
+
     async function fetchMarketplace() {
         try {
-            const res = await fetch('/api/payment-links', { 
-                headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } 
-            });
+            const res = await fetch('/api/payment-links', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
             const data = await res.json();
             const products = data.links ? data.links : (Array.isArray(data) ? data : []);
 
             const tbody = document.getElementById('marketplaceTable');
-            if (products.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No products found.</td></tr>';
-                return;
-            }
+            if (products.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No products found.</td></tr>'; return; }
 
             tbody.innerHTML = products.map(p => {
                 const priceDisplay = p.isFlexibleAmount ? 'Flexible' : `₦${Number(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
                 let imgHtml = p.productImageBase64 ? `<img src="${p.productImageBase64}" class="product-img-thumb me-3">` : `<div class="product-img-thumb me-3"><i class="fas fa-box text-secondary fs-5"></i></div>`;
                 
-                // CROSS-REFERENCE FIX: Search the globally cached users from the ledger to find the owner's exact details
                 const ownerId = p.user || p.userId || p.merchant || p.creator;
                 const foundUser = window.globalSystemUsers.find(u => u._id === ownerId) || {};
-                
-                // Prioritize the matched Ledger data over the raw product object data
                 const mName = foundUser.name || p.merchantName || p.userName || 'Verified Merchant';
                 const mEmail = foundUser.email || p.userEmail || p.email || 'No Email';
                 
@@ -367,32 +473,7 @@
                 p.displayEmail = mEmail;
                 const encodedProduct = encodeURIComponent(JSON.stringify(p));
 
-                return `
-                    <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                ${imgHtml}
-                                <div>
-                                    <div class="fw-bold text-truncate" style="max-width: 200px;">${p.title}</div>
-                                    <span class="status-pill bg-dark border mt-1">${p.category || 'Product'}</span>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="text-white fw-bold"><i class="fas fa-store text-gold me-1"></i> ${mName}</div>
-                            <small class="text-secondary">${mEmail}</small>
-                        </td>
-                        <td class="text-warning fw-bold fs-5">${priceDisplay}</td>
-                        <td><span class="badge bg-secondary">${p.transactionCount || 0} Sales</span></td>
-                        <td class="text-end">
-                            <div class="action-btns">
-                                <button class="btn btn-info text-white" onclick="viewProductDetails('${encodedProduct}')"><i class="fas fa-eye"></i> Info</button>
-                                <button class="btn btn-primary" onclick="editProduct('${encodedProduct}')"><i class="fas fa-edit"></i> Edit</button>
-                                <button class="btn btn-danger" onclick="deleteProduct('${p._id || p.linkId}')"><i class="fas fa-trash"></i> Drop</button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
+                return `<tr><td><div class="d-flex align-items-center">${imgHtml}<div><div class="fw-bold text-truncate" style="max-width: 200px;">${p.title}</div><span class="status-pill bg-dark border mt-1">${p.category || 'Product'}</span></div></div></td><td><div class="text-white fw-bold"><i class="fas fa-store text-gold me-1"></i> ${mName}</div><small class="text-secondary">${mEmail}</small></td><td class="text-warning fw-bold fs-5">${priceDisplay}</td><td><span class="badge bg-secondary">${p.transactionCount || 0} Sales</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewProductDetails('${encodedProduct}')"><i class="fas fa-eye"></i></button><button class="btn btn-primary" onclick="editProduct('${encodedProduct}')"><i class="fas fa-edit"></i></button><button class="btn btn-danger" onclick="deleteProduct('${p._id || p.linkId}')"><i class="fas fa-trash"></i></button></div></td></tr>`;
             }).join('');
         } catch (error) { document.getElementById('marketplaceTable').innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Failed to load marketplace.</td></tr>'; }
     }
@@ -401,183 +482,59 @@
         const p = JSON.parse(decodeURIComponent(encodedData));
         const imageBlock = p.productImageBase64 ? `<div class="mb-3 text-center"><img src="${p.productImageBase64}" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 2px solid var(--gold);"></div>` : `<div class="mb-3 text-center py-4 bg-dark rounded border"><i class="fas fa-box fa-3x text-secondary"></i><p class="mt-2 text-muted small">No Image Uploaded</p></div>`;
 
-        Swal.fire({
-            title: 'Full Product Dossier',
-            html: `<div class="text-start mt-3" style="font-size: 0.95rem; line-height: 1.6;">
-                    ${imageBlock}
-                    <h5 class="text-gold fw-bold mb-3 border-bottom pb-2"><i class="fas fa-info-circle"></i> Item Data</h5>
-                    <p class="mb-1"><strong>Title:</strong> ${p.title}</p>
-                    <p class="mb-1"><strong>Category:</strong> ${p.category || 'N/A'}</p>
-                    <p class="mb-1"><strong>Price:</strong> <span class="text-warning fw-bold">₦${p.amount}</span></p>
-                    <p class="mb-3"><strong>Description:</strong> <br><span class="text-white bg-black p-2 rounded d-block mt-1">${p.description || 'No description provided.'}</span></p>
-                    
-                    <h5 class="text-danger fw-bold mb-3 border-bottom pb-2 mt-4"><i class="fas fa-user-shield"></i> Owner Information</h5>
-                    <p class="mb-1"><strong>Merchant Name:</strong> ${p.displayMerchantName}</p>
-                    <p class="mb-1"><strong>Registered Email:</strong> ${p.displayEmail}</p>
-                </div>`,
-            background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Dossier', confirmButtonColor: '#444'
-        });
+        Swal.fire({ title: 'Full Product Dossier', html: `<div class="text-start mt-3" style="font-size: 0.95rem; line-height: 1.6;">${imageBlock}<h5 class="text-gold fw-bold mb-3 border-bottom pb-2"><i class="fas fa-info-circle"></i> Item Data</h5><p class="mb-1"><strong>Title:</strong> ${p.title}</p><p class="mb-1"><strong>Category:</strong> ${p.category || 'N/A'}</p><p class="mb-1"><strong>Price:</strong> <span class="text-warning fw-bold">₦${p.amount}</span></p><p class="mb-3"><strong>Description:</strong> <br><span class="text-white bg-black p-2 rounded d-block mt-1">${p.description || 'No description provided.'}</span></p><h5 class="text-danger fw-bold mb-3 border-bottom pb-2 mt-4"><i class="fas fa-user-shield"></i> Owner Information</h5><p class="mb-1"><strong>Merchant Name:</strong> ${p.displayMerchantName}</p><p class="mb-1"><strong>Registered Email:</strong> ${p.displayEmail}</p></div>`, background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Dossier', confirmButtonColor: '#444' });
     }
 
     async function editProduct(encodedData) {
         const product = JSON.parse(decodeURIComponent(encodedData));
         const productId = product._id || product.linkId;
         
-        const { value: formValues } = await Swal.fire({
-            title: 'Edit Product details',
-            html: `
-                <div style="text-align: left;">
-                    <label class="high-vis-label mt-2">Title</label>
-                    <input id="swal-title" class="swal2-input bg-dark text-white w-100 m-0" value="${product.title || ''}">
-                    <label class="high-vis-label mt-3">Price (₦)</label>
-                    <input id="swal-price" type="number" class="swal2-input bg-dark text-white w-100 m-0" value="${product.amount || ''}" ${product.isFlexibleAmount ? 'disabled' : ''}>
-                    <label class="high-vis-label mt-3">Category</label>
-                    <input id="swal-category" class="swal2-input bg-dark text-white w-100 m-0" value="${product.category || ''}">
-                    <label class="high-vis-label mt-3">Description</label>
-                    <textarea id="swal-desc" class="swal2-textarea bg-dark text-white w-100 m-0" rows="3">${product.description || ''}</textarea>
-                </div>
-            `,
-            background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Save Changes',
-            preConfirm: () => ({ title: document.getElementById('swal-title').value, amount: document.getElementById('swal-price').value, category: document.getElementById('swal-category').value, description: document.getElementById('swal-desc').value })
-        });
+        const { value: formValues } = await Swal.fire({ title: 'Edit Product details', html: `<div style="text-align: left;"><label class="high-vis-label mt-2">Title</label><input id="swal-title" class="swal2-input bg-dark text-white w-100 m-0" value="${product.title || ''}"><label class="high-vis-label mt-3">Price (₦)</label><input id="swal-price" type="number" class="swal2-input bg-dark text-white w-100 m-0" value="${product.amount || ''}" ${product.isFlexibleAmount ? 'disabled' : ''}><label class="high-vis-label mt-3">Category</label><input id="swal-category" class="swal2-input bg-dark text-white w-100 m-0" value="${product.category || ''}"><label class="high-vis-label mt-3">Description</label><textarea id="swal-desc" class="swal2-textarea bg-dark text-white w-100 m-0" rows="3">${product.description || ''}</textarea></div>`, background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Save Changes', preConfirm: () => ({ title: document.getElementById('swal-title').value, amount: document.getElementById('swal-price').value, category: document.getElementById('swal-category').value, description: document.getElementById('swal-desc').value }) });
 
         if (formValues) {
             Swal.fire({title:'Saving Modifications...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try {
-                // ROUTING FIX: Call the ADMIN route, not the user route
-                const res = await fetch(`/api/admin/products/${productId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
-                    body: JSON.stringify(formValues)
-                });
-                const data = await res.json();
-                if(res.ok || data.success) {
-                    await Swal.fire({title: 'Updated!', icon: 'success', background: '#0a0a0a', color: '#fff'});
-                    fetchMarketplace();
-                } else Swal.fire('Failed', data.message, 'error');
+                const res = await fetch(`/api/admin/products/${productId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify(formValues) });
+                if(res.ok || (await res.json()).success) { await Swal.fire({title: 'Updated!', icon: 'success', background: '#0a0a0a', color: '#fff'}); fetchMarketplace(); } else Swal.fire('Failed', 'Update failed', 'error');
             } catch(e) { Swal.fire('Error', 'Server communication failed.', 'error'); }
         }
     }
 
     async function deleteProduct(productId) {
-        if((await Swal.fire({
-            title: 'Wipe Product?', text: "Permanently remove this product from the marketplace.", 
-            icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', 
-            background: '#0a0a0a', color: '#fff', confirmButtonText: 'Yes, Delete it'
-        })).isConfirmed) {
+        if((await Swal.fire({ title: 'Wipe Product?', text: "Permanently remove this product.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff', confirmButtonText: 'Yes, Delete it' })).isConfirmed) {
             Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try {
-                // ROUTING FIX: Call the ADMIN route, not the user route
-                const res = await fetch(`/api/admin/products/${productId}`, { 
-                    method: 'DELETE', 
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } 
-                });
-                const data = await res.json();
-                if(res.ok || data.success) { 
-                    await Swal.fire({title: 'Deleted!', icon: 'success', background: '#0a0a0a', color: '#fff'}); 
-                    fetchMarketplace(); 
-                } else Swal.fire('Action Failed', data.message || 'Database refused deletion.', 'error');
+                const res = await fetch(`/api/admin/products/${productId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
+                if(res.ok || (await res.json()).success) { await Swal.fire({title: 'Deleted!', icon: 'success', background: '#0a0a0a', color: '#fff'}); fetchMarketplace(); } else Swal.fire('Action Failed', 'Database refused deletion.', 'error');
             } catch (e) { Swal.fire('Network Error', 'Could not reach server.', 'error'); }
         }
     }
 
-    // ----------------------------------------------------
-    // UPDATED PAYLOAD FUNCTIONS AS REQUESTED
-    // ----------------------------------------------------
-    
     async function modifyUserBalance(userId, actionType, amountVal, reasonText) {
-        // If amount and reason are not passed directly, prompt the admin via SweetAlert2
         if (!amountVal || !reasonText) {
-            const { value: formValues } = await Swal.fire({
-                title: actionType.toUpperCase() + ' WALLET', 
-                text: `Target: ${reasonText || userId}`, // reasonText temporarily holds username from table click
-                html: `
-                    <input id="swal-amt" type="number" class="swal2-input bg-dark text-white" placeholder="Amount (₦)">
-                    <input id="swal-rsn" type="text" class="swal2-input bg-dark text-white" placeholder="Audit Reason">
-                `,
-                background: '#0a0a0a', color: '#fff', showCancelButton: true,
-                preConfirm: () => {
-                    const amt = document.getElementById('swal-amt').value;
-                    if(!amt || isNaN(amt) || Number(amt) <= 0) { Swal.showValidationMessage('Enter a valid amount'); return false; }
-                    return [amt, document.getElementById('swal-rsn').value];
-                }
-            });
-            if (formValues && formValues[0]) {
-                amountVal = Number(formValues[0]);
-                reasonText = formValues[1] || 'Manual Adjustment';
-            } else {
-                return; // Admin cancelled
-            }
+            const { value: formValues } = await Swal.fire({ title: actionType.toUpperCase() + ' WALLET', text: `Target: ${reasonText || userId}`, html: `<input id="swal-amt" type="number" class="swal2-input bg-dark text-white" placeholder="Amount (₦)"><input id="swal-rsn" type="text" class="swal2-input bg-dark text-white" placeholder="Audit Reason">`, background: '#0a0a0a', color: '#fff', showCancelButton: true, preConfirm: () => { const amt = document.getElementById('swal-amt').value; if(!amt || isNaN(amt) || Number(amt) <= 0) { Swal.showValidationMessage('Enter a valid amount'); return false; } return [amt, document.getElementById('swal-rsn').value]; } });
+            if (formValues && formValues[0]) { amountVal = Number(formValues[0]); reasonText = formValues[1] || 'Manual Adjustment'; } else return;
         }
 
         Swal.fire({title:'Processing...', allowOutsideClick: false, didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-        
         try {
-            const response = await fetch(`/api/admin/users/${userId}/balance`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` 
-                },
-                body: JSON.stringify({
-                    action: actionType, 
-                    amount: amountVal,
-                    reason: reasonText
-                })
-            });
-            
+            const response = await fetch(`/api/admin/users/${userId}/balance`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ action: actionType, amount: amountVal, reason: reasonText }) });
             const data = await response.json();
-            
-            if (response.ok && data.success) {
-                Swal.fire({title: 'Success', text: 'Ledger successfully updated.', icon: 'success', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
-            } else {
-                Swal.fire({icon: 'warning', title: 'Action Failed', text: data.message || 'Could not modify balance.', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
-            }
-        } catch (error) {
-            Swal.fire({title: 'Network Error', text: 'Could not communicate with the server.', icon: 'error', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
-        }
+            if (response.ok && data.success) Swal.fire({title: 'Success', text: 'Ledger successfully updated.', icon: 'success', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
+            else Swal.fire({icon: 'warning', title: 'Action Failed', text: data.message || 'Could not modify balance.', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
+        } catch (error) { Swal.fire({title: 'Network Error', text: 'Could not communicate with the server.', icon: 'error', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem()); }
     }
 
     async function forceVerifyTransaction(txId) {
-        const { isConfirmed } = await Swal.fire({
-            title: `Force Clear Verification?`, 
-            text: `Are you sure you want to force the backend to verify this transaction?`, 
-            icon: 'warning',
-            showCancelButton: true, 
-            confirmButtonColor: '#d32f2f',
-            confirmButtonText: 'Yes, Force It',
-            background: '#0a0a0a', 
-            color: '#fff'
-        });
-
-        if (isConfirmed) {
+        if ((await Swal.fire({ title: `Force Clear Verification?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', confirmButtonText: 'Yes, Force It', background: '#0a0a0a', color: '#fff' })).isConfirmed) {
             Swal.fire({title:'Verifying...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try {
-                const response = await fetch('/api/admin/transactions/verify', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` 
-                    },
-                    body: JSON.stringify({
-                        transactionId: txId
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    Swal.fire({title: 'Verified!', text: data.message || 'Transaction cleared successfully', icon: 'success', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
-                } else {
-                    Swal.fire({title: 'Failed', text: data.message || 'Verification failed on backend', icon: 'error', background: '#0a0a0a', color: '#fff'});
-                }
-            } catch (err) {
-                Swal.fire({title: 'Error', text: 'Server communication failed.', icon: 'error', background: '#0a0a0a', color: '#fff'});
-            }
+                const response = await fetch('/api/admin/transactions/verify', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ transactionId: txId }) });
+                if (response.ok && (await response.json()).success) Swal.fire({title: 'Verified!', icon: 'success', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem());
+                else Swal.fire({title: 'Failed', icon: 'error', background: '#0a0a0a', color: '#fff'});
+            } catch (err) { Swal.fire({title: 'Error', icon: 'error', background: '#0a0a0a', color: '#fff'}); }
         }
     }
-
-    // ----------------------------------------------------
 
     async function fetchWithdrawals() {
         try {
@@ -587,19 +544,13 @@
             const withdrawals = data.pendingWithdrawals || [];
             if(data.success && withdrawals.length > 0) {
                 stat.innerText = withdrawals.length; badge.innerText = withdrawals.length; badge.classList.remove('d-none');
-                wTable.innerHTML = withdrawals.map(w => {
-                    const date = new Date(w.createdAt || w.date).toLocaleString();
-                    const bankName = w.bankName || w.metadata?.bankName || w.metadata?.bankAccount?.bankName || 'N/A';
-                    const accNo = w.accountNumber || w.metadata?.accountNumber || w.metadata?.bankAccount?.accountNumber || 'N/A';
-                    const accName = w.accountName || w.metadata?.accountName || w.metadata?.bankAccount?.accountName || 'N/A';
-                    return `<tr><td><div class="fw-bold">${w.user?.name || 'Unknown User'}</div><small class="text-secondary">${date}</small></td><td class="text-warning fw-bold fs-5">₦${parseNum(w.amount).toLocaleString()}</td><td class="text-white fw-bold">${bankName}</td><td><div class="text-white">${accNo}</div><small class="text-gold">${accName}</small></td><td class="text-end"><div class="action-btns"><button class="btn btn-success fw-bold" onclick="processWithdrawal('${w._id}', 'approve')"><i class="fas fa-check"></i> Approve</button><button class="btn btn-danger fw-bold" onclick="processWithdrawal('${w._id}', 'reject')"><i class="fas fa-times"></i> Reject</button></div></td></tr>`;
-                }).join('');
+                wTable.innerHTML = withdrawals.map(w => { const date = new Date(w.createdAt || w.date).toLocaleString(); const bankName = w.bankName || w.metadata?.bankName || w.metadata?.bankAccount?.bankName || 'N/A'; const accNo = w.accountNumber || w.metadata?.accountNumber || w.metadata?.bankAccount?.accountNumber || 'N/A'; const accName = w.accountName || w.metadata?.accountName || w.metadata?.bankAccount?.accountName || 'N/A'; return `<tr><td><div class="fw-bold">${w.user?.name || 'Unknown User'}</div><small class="text-secondary">${date}</small></td><td class="text-warning fw-bold fs-5">₦${parseNum(w.amount).toLocaleString()}</td><td class="text-white fw-bold">${bankName}</td><td><div class="text-white">${accNo}</div><small class="text-gold">${accName}</small></td><td class="text-end"><div class="action-btns"><button class="btn btn-success fw-bold" onclick="processWithdrawal('${w._id}', 'approve')"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="processWithdrawal('${w._id}', 'reject')"><i class="fas fa-times"></i></button></div></td></tr>`; }).join('');
             } else { stat.innerText = '0'; badge.classList.add('d-none'); wTable.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No pending withdrawals.</td></tr>'; }
         } catch(e) {}
     }
 
     async function processWithdrawal(txId, action) {
-        if((await Swal.fire({title: `Confirm Action`, text: `Are you sure?`, showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
+        if((await Swal.fire({title: `Confirm Action`, showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
             Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try {
                 const res = await fetch(`/api/admin/withdrawals/${txId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
@@ -651,7 +602,7 @@
         if(!title || !body) return Swal.fire('Error', 'Title and body required', 'error');
         Swal.fire({title:'Broadcasting...', didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
         try {
-            const res = await fetch('/api/admin/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ target, title, message: body }) });
+            const res = await fetch('/api/admin/notifications/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ targetEmail: target, title, message: body }) });
             if((await res.json()).success) { Swal.fire('Sent', '', 'success'); fetchNotifications(); }
         } catch(e) { Swal.fire('Error', 'Broadcast failed', 'error'); }
     }
