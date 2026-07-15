@@ -32,14 +32,12 @@
 
         .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; flex: 1; }
         
-        /* HERO BANNER */
         .leaderboard-hero {
             background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(10, 10, 10, 0.95) 100%);
             border: 1.5px solid var(--gold); border-radius: 20px; padding: 40px;
             margin-bottom: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); text-align: center;
         }
 
-        /* MY RANK CARD */
         .my-rank-card {
             background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
             border: 1px dashed var(--gold); border-radius: 16px; padding: 25px;
@@ -53,50 +51,40 @@
             font-size: 2rem; color: var(--gold);
         }
         .progress-container { flex: 1; min-width: 250px; }
-        .progress-bar-custom {
-            height: 8px; background: #333; border-radius: 10px; overflow: hidden; margin-top: 8px;
-        }
-        .progress-fill {
-            height: 100%; background: linear-gradient(90deg, #d4af37, #fff); width: 0%;
-            box-shadow: 0 0 10px rgba(212, 175, 55, 0.8); transition: width 1s ease-in-out;
-        }
+        .progress-bar-custom { height: 8px; background: #333; border-radius: 10px; overflow: hidden; margin-top: 8px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #d4af37, #fff); width: 0%; box-shadow: 0 0 10px rgba(212, 175, 55, 0.8); transition: width 1s ease-in-out; }
 
-        /* TABS */
-        .nav-tabs { border-bottom: 2px solid #333; margin-bottom: 20px; }
-        .nav-link { color: #888; font-family: 'Cinzel', serif; font-weight: 800; letter-spacing: 1px; border: none; background: transparent; padding: 12px 25px; transition: 0.3s; }
+        /* HORIZONTAL SCROLLING TABS FOR MOBILE */
+        .nav-tabs { 
+            border-bottom: 2px solid #333; margin-bottom: 20px; 
+            flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; 
+            -webkit-overflow-scrolling: touch; padding-bottom: 5px;
+        }
+        .nav-tabs::-webkit-scrollbar { height: 4px; }
+        .nav-tabs::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 4px; }
+        .nav-link { color: #888; font-family: 'Cinzel', serif; font-weight: 800; letter-spacing: 1px; border: none; background: transparent; padding: 12px 20px; white-space: nowrap; transition: 0.3s; }
         .nav-link:hover { color: #fff; border: none; }
         .nav-link.active { color: var(--gold); background: transparent; border: none; border-bottom: 3px solid var(--gold); text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); }
 
-        /* LEADERBOARD LIST */
-        .board-card {
-            background: var(--card-bg); border: 1px solid #222; border-radius: 16px; padding: 10px;
-        }
-        .rank-row {
-            display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #1a1a1a;
-            transition: 0.3s; border-radius: 12px; margin-bottom: 5px;
-        }
+        .board-card { background: var(--card-bg); border: 1px solid #222; border-radius: 16px; padding: 10px; }
+        .rank-row { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #1a1a1a; transition: 0.3s; border-radius: 12px; margin-bottom: 5px; }
         .rank-row:hover { background: rgba(212, 175, 55, 0.05); transform: translateX(5px); }
         .rank-row:last-child { border-bottom: none; margin-bottom: 0; }
         
         .rank-number { font-family: 'Cinzel', serif; font-size: 1.5rem; font-weight: 900; width: 40px; color: #555; }
         
-        /* TOP 3 HIGHLIGHTS */
         .rank-1 { background: linear-gradient(90deg, rgba(212,175,55,0.15) 0%, transparent 100%); border-left: 4px solid #FFD700; }
         .rank-1 .rank-number { color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.5); font-size: 2rem; }
-        
         .rank-2 { background: linear-gradient(90deg, rgba(192,192,192,0.1) 0%, transparent 100%); border-left: 4px solid #C0C0C0; }
         .rank-2 .rank-number { color: #C0C0C0; text-shadow: 0 0 10px rgba(192,192,192,0.5); font-size: 1.8rem; }
-        
         .rank-3 { background: linear-gradient(90deg, rgba(205,127,50,0.1) 0%, transparent 100%); border-left: 4px solid #cd7f32; }
         .rank-3 .rank-number { color: #cd7f32; text-shadow: 0 0 10px rgba(205,127,50,0.5); font-size: 1.6rem; }
 
         .rank-user-info { flex: 1; display: flex; align-items: center; gap: 15px; }
         .rank-avatar { width: 45px; height: 45px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; }
-        
         .rank-score { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.2rem; color: var(--gold); text-align: right; }
         .rank-badge { font-size: 0.7rem; text-transform: uppercase; padding: 3px 8px; border-radius: 50px; font-weight: 800; letter-spacing: 1px; margin-top: 4px; display: inline-block; }
 
-        /* BADGE COLORS */
         .badge-elite { background: rgba(229, 228, 226, 0.1); border: 1px solid #e5e4e2; color: #e5e4e2; }
         .badge-platinum { background: rgba(0, 255, 255, 0.1); border: 1px solid #00ffff; color: #00ffff; }
         .badge-gold { background: rgba(212, 175, 55, 0.1); border: 1px solid #d4af37; color: #d4af37; }
@@ -104,11 +92,9 @@
         .badge-bronze { background: rgba(205, 127, 50, 0.1); border: 1px solid #cd7f32; color: #cd7f32; }
         .badge-starter { background: rgba(100, 100, 100, 0.1); border: 1px solid #666; color: #999; }
 
-        /* RULES SECTION */
         .rules-card { background: rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 16px; padding: 25px; margin-top: 40px; }
         .rules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
         .rule-item { display: flex; align-items: center; gap: 10px; background: #111; padding: 15px; border-radius: 12px; border: 1px solid #222; }
-        .rule-item i { font-size: 1.5rem; }
     </style>
 </head>
 <body>
@@ -128,7 +114,7 @@
     <div class="leaderboard-hero">
         <h2 style="font-family: 'Cinzel', serif; font-weight: 900; color: var(--gold); letter-spacing: 2px;">CELEBRATE ACHIEVEMENT. INSPIRE GROWTH.</h2>
         <p class="text-light fs-6 mx-auto mt-3" style="max-width: 700px; line-height: 1.8;">
-            The Global Leaderboard showcases the most active members of the NATER PAY community. Rankings are calculated autonomously by our secure ledger based on genuine verified activities.
+            The Global Leaderboard recognizes every aspect of our community. Whether you are referring friends, making purchases, funding wallets, or running a business, your genuine activity earns you rank and respect.
         </p>
     </div>
 
@@ -152,53 +138,83 @@
         </div>
     </div>
 
-    <ul class="nav nav-tabs justify-content-center" id="boardTabs" role="tablist">
+    <!-- EXPANDED LEADERBOARD TABS -->
+    <ul class="nav nav-tabs" id="boardTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="tab-referrers" data-bs-toggle="tab" data-bs-target="#board-referrers" type="button" role="tab">
                 <i class="fas fa-users me-2"></i> Top Referrers
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="tab-transactors" data-bs-toggle="tab" data-bs-target="#board-transactors" type="button" role="tab">
-                <i class="fas fa-exchange-alt me-2"></i> Top Transactors
+            <button class="nav-link" id="tab-spenders" data-bs-toggle="tab" data-bs-target="#board-spenders" type="button" role="tab">
+                <i class="fas fa-shopping-cart me-2"></i> Top Purchasers
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-funders" data-bs-toggle="tab" data-bs-target="#board-funders" type="button" role="tab">
+                <i class="fas fa-wallet me-2"></i> Top Funders
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-merchants" data-bs-toggle="tab" data-bs-target="#board-merchants" type="button" role="tab">
+                <i class="fas fa-store me-2"></i> Top Merchants
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-invoicers" data-bs-toggle="tab" data-bs-target="#board-invoicers" type="button" role="tab">
+                <i class="fas fa-file-invoice-dollar me-2"></i> Top Invoicers
             </button>
         </li>
     </ul>
 
     <div class="tab-content" id="boardContent">
         <div class="tab-pane fade show active" id="board-referrers" role="tabpanel">
-            <div class="board-card" id="listReferrers">
-                <div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Synchronizing Global Ledger...</div>
-            </div>
+            <div class="board-card" id="listReferrers"><div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Syncing...</div></div>
         </div>
-
-        <div class="tab-pane fade" id="board-transactors" role="tabpanel">
-            <div class="board-card" id="listTransactors">
-                <div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Synchronizing Global Ledger...</div>
-            </div>
+        <div class="tab-pane fade" id="board-spenders" role="tabpanel">
+            <div class="board-card" id="listSpenders"><div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Syncing...</div></div>
+        </div>
+        <div class="tab-pane fade" id="board-funders" role="tabpanel">
+            <div class="board-card" id="listFunders"><div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Syncing...</div></div>
+        </div>
+        <div class="tab-pane fade" id="board-merchants" role="tabpanel">
+            <div class="board-card" id="listMerchants"><div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Syncing...</div></div>
+        </div>
+        <div class="tab-pane fade" id="board-invoicers" role="tabpanel">
+            <div class="board-card" id="listInvoicers"><div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Syncing...</div></div>
         </div>
     </div>
 
+    <!-- UPDATED RULES -->
     <div class="rules-card">
         <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;"><i class="fas fa-gem me-2"></i> HOW RANKING WORKS</h5>
-        <p class="text-muted small mb-4">Rankings and Points are calculated automatically. Points dictate your global badge status.</p>
+        <p class="text-muted small mb-4">Points dictate your global badge status. For security and privacy, rankings are based on the volume of successful actions (Counts & Points), not specific monetary amounts.</p>
         
         <div class="row g-3 mb-4">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="rule-item">
-                    <i class="fas fa-user-plus text-success"></i>
+                    <i class="fas fa-users text-success"></i>
                     <div>
-                        <div class="fw-bold text-white" style="font-size: 0.9rem;">Successful Referral</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">+50 Points per verified invite</div>
+                        <div class="fw-bold text-white" style="font-size: 0.85rem;">Referrals</div>
+                        <div class="text-muted" style="font-size: 0.7rem;">+50 Pts / Invite</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="rule-item">
-                    <i class="fas fa-bolt text-warning"></i>
+                    <i class="fas fa-store text-info"></i>
                     <div>
-                        <div class="fw-bold text-white" style="font-size: 0.9rem;">Successful Transaction</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">+10 Points per bill payment/topup</div>
+                        <div class="fw-bold text-white" style="font-size: 0.85rem;">Merchant Sales</div>
+                        <div class="text-muted" style="font-size: 0.7rem;">+20 Pts / Sale</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="rule-item">
+                    <i class="fas fa-shopping-cart text-warning"></i>
+                    <div>
+                        <div class="fw-bold text-white" style="font-size: 0.85rem;">Purchases</div>
+                        <div class="text-muted" style="font-size: 0.7rem;">+10 Pts / Bill Paid</div>
                     </div>
                 </div>
             </div>
@@ -212,8 +228,6 @@
             <div class="rule-item"><i class="fas fa-gem" style="color:#00ffff;"></i> <div><div class="fw-bold text-white" style="font-size: 0.8rem;">Platinum</div><small class="text-muted" style="font-size:0.7rem;">5,001 - 10,000 Pts</small></div></div>
             <div class="rule-item"><i class="fas fa-crown" style="color:#e5e4e2;"></i> <div><div class="fw-bold text-white" style="font-size: 0.8rem;">Elite</div><small class="text-muted" style="font-size:0.7rem;">10,000+ Pts</small></div></div>
         </div>
-        
-        <p class="text-center text-muted mt-4 mb-0" style="font-size: 0.7rem;">Fraudulent or duplicate activities are automatically excluded from the leaderboard ledger by the Naterpay Anti-Fraud AI Engine.</p>
     </div>
 
 </div>
@@ -242,7 +256,6 @@
         animate();
     }
 
-    // BADGE CALCULATION LOGIC
     function getBadgeDetails(points) {
         if(points >= 10000) return { name: 'Elite', class: 'badge-elite', next: null, max: 10000 };
         if(points >= 5001) return { name: 'Platinum', class: 'badge-platinum', next: 'Elite', max: 10000 };
@@ -252,7 +265,6 @@
         return { name: 'Starter', class: 'badge-starter', next: 'Bronze', max: 500 };
     }
 
-    // 1. DYNAMICALLY LOAD THE LOGGED-IN USER'S RANK
     async function loadMyRank() {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) { window.location.href = '/index.html'; return; }
@@ -264,10 +276,10 @@
             if (data.success) {
                 document.getElementById('myName').innerText = data.userFullName || "Naterpay User";
                 
-                // Calculate Points: 10 pts per transaction log, 50 pts per referral
+                // Advanced Personal Point Calculation
                 const txCount = data.totalLogs || 0;
                 const refCount = data.referralCount || 0;
-                const totalPoints = (txCount * 10) + (refCount * 50);
+                const totalPoints = (txCount * 10) + (refCount * 50); // Approximated total for personal view
                 
                 document.getElementById('myPoints').innerText = `${totalPoints.toLocaleString()} PTS`;
 
@@ -285,7 +297,7 @@
                     targetText.innerText = `${(badge.max - totalPoints).toLocaleString()} pts to ${badge.next}`;
                 } else {
                     bar.style.width = `100%`;
-                    bar.style.background = `linear-gradient(90deg, #e5e4e2, #fff)`; // Elite styling
+                    bar.style.background = `linear-gradient(90deg, #e5e4e2, #fff)`; 
                     targetText.innerText = `Max Rank Achieved!`;
                 }
             }
@@ -294,10 +306,7 @@
         }
     }
 
-    // 2. LIVE GLOBAL LEADERBOARD FETCH (Connected to Real Backend)
     async function renderGlobalBoard() {
-        const refContainer = document.getElementById('listReferrers');
-        const txContainer = document.getElementById('listTransactors');
         const authToken = localStorage.getItem("naterpay_token");
 
         try {
@@ -305,14 +314,13 @@
             const data = await res.json();
 
             if (data.success) {
-                const generateRows = (dataList, isRef) => {
-                    if (dataList.length === 0) return '<div class="text-center py-4 opacity-50"><i class="fas fa-box-open fa-2x mb-2"></i><br>No ledger data available yet.</div>';
+                const generateRows = (dataList, suffix) => {
+                    if (!dataList || dataList.length === 0) return '<div class="text-center py-4 opacity-50"><i class="fas fa-box-open fa-2x mb-2"></i><br>No ledger data available yet.</div>';
                     
                     return dataList.map((user, index) => {
                         const rank = index + 1;
                         const rankClass = rank <= 3 ? `rank-${rank}` : '';
                         const badgeInfo = getBadgeDetails(user.points);
-                        const metricLabel = isRef ? `${user.refs} Invites` : `${user.txs} Logs`;
                         
                         return `
                             <div class="rank-row ${rankClass}">
@@ -326,21 +334,26 @@
                                 </div>
                                 <div class="text-end">
                                     <div class="rank-score">${user.points.toLocaleString()} <span style="font-size:0.6rem; color:#888;">PTS</span></div>
-                                    <small class="text-muted" style="font-size:0.7rem;">${metricLabel}</small>
+                                    <small class="text-muted" style="font-size:0.7rem;">${user.count} ${suffix}</small>
                                 </div>
                             </div>
                         `;
                     }).join('');
                 };
 
-                refContainer.innerHTML = generateRows(data.referrers, true);
-                txContainer.innerHTML = generateRows(data.transactors, false);
+                document.getElementById('listReferrers').innerHTML = generateRows(data.referrers, 'Invites');
+                document.getElementById('listSpenders').innerHTML = generateRows(data.spenders, 'Purchases');
+                document.getElementById('listFunders').innerHTML = generateRows(data.funders, 'Deposits');
+                document.getElementById('listMerchants').innerHTML = generateRows(data.merchants, 'Sales');
+                document.getElementById('listInvoicers').innerHTML = generateRows(data.invoicers, 'Invoices Paid');
             } else {
                 throw new Error("Payload failed");
             }
         } catch (e) {
-            refContainer.innerHTML = '<div class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle mb-2"></i><br>Failed to synchronize with global ledger.</div>';
-            txContainer.innerHTML = '<div class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle mb-2"></i><br>Failed to synchronize with global ledger.</div>';
+            const errHtml = '<div class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle mb-2"></i><br>Failed to synchronize with global ledger.</div>';
+            ['listReferrers', 'listSpenders', 'listFunders', 'listMerchants', 'listInvoicers'].forEach(id => {
+                document.getElementById(id).innerHTML = errHtml;
+            });
         }
     }
 
