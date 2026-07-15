@@ -2,6 +2,15 @@ require('dotenv').config();
 
 console.log("MONGODB_URI =", process.env.MONGODB_URI);
 
+// ============================================================================
+// BULLETPROOF BOOLEAN PARSER
+// Automatically fixes invisible spaces or capital letters from Render Env Vars
+// ============================================================================
+const checkBool = (val, fallback = false) => {
+  if (!val) return fallback;
+  return val.toString().toLowerCase().trim() === 'true';
+};
+
 const config = {
   env: process.env.NODE_ENV || 'production',
   port: parseInt(process.env.PORT) || 3000,
@@ -66,16 +75,17 @@ const config = {
   },
   
   featureFlags: {
-    wallet: process.env.ENABLE_WALLET === 'true',
-    loans: process.env.ENABLE_LOANS === 'true',
-    savings: process.env.ENABLE_SAVINGS === 'true',
-    escrow: process.env.ENABLE_ESCROW === 'true',
-    virtualCards: process.env.ENABLE_VIRTUAL_CARDS === 'true',
-    agentBanking: process.env.ENABLE_AGENT_BANKING === 'true',
-    taskEarn: process.env.ENABLE_TASK_EARN === 'true',
-    dailyRewards: process.env.ENABLE_DAILY_REWARDS === 'true',
-    spinWin: process.env.ENABLE_SPIN_WIN === 'true',
-    airtimeCash: process.env.ENABLE_AIRTIME_CASH === 'true'
+    // Uses the checkBool helper. If Render is blank/broken, defaults Wallet and Tasks to true so your site stays up.
+    wallet: checkBool(process.env.ENABLE_WALLET, true), 
+    loans: checkBool(process.env.ENABLE_LOANS),
+    savings: checkBool(process.env.ENABLE_SAVINGS),
+    escrow: checkBool(process.env.ENABLE_ESCROW),
+    virtualCards: checkBool(process.env.ENABLE_VIRTUAL_CARDS),
+    agentBanking: checkBool(process.env.ENABLE_AGENT_BANKING),
+    taskEarn: checkBool(process.env.ENABLE_TASK_EARN, true), 
+    dailyRewards: checkBool(process.env.ENABLE_DAILY_REWARDS),
+    spinWin: checkBool(process.env.ENABLE_SPIN_WIN),
+    airtimeCash: checkBool(process.env.ENABLE_AIRTIME_CASH)
   },
   
   security: {
@@ -122,7 +132,7 @@ function validateConfig() {
   const missing = required.filter(key => !process.env[key]);
   
   if (missing.length > 0) {
-    console.error(`Missing required environment variables: ${missing.join(', ')}`);
+    console.error(`[CRITICAL] Missing required environment variables: ${missing.join(', ')}`);
     if (config.env === 'production') {
       process.exit(1);
     }
