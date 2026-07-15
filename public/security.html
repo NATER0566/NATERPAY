@@ -151,10 +151,10 @@
         
         <div class="d-flex align-items-center justify-content-between p-3 mb-3" style="background: rgba(30,30,30,0.95); border-radius: 15px; border: 1px solid #444;">
             <div class="d-flex align-items-center gap-3">
-                <i class="fas fa-laptop text-warning fa-2x"></i>
+                <i class="fas fa-laptop text-warning fa-2x" id="deviceIcon"></i>
                 <div>
-                    <div class="fw-bold">Current Device</div>
-                    <small class="text-muted">This browser • Active now</small>
+                    <div class="fw-bold" id="deviceName">Current Device</div>
+                    <small class="text-muted" id="deviceBrowser">Detecting browser...</small>
                 </div>
             </div>
             <span class="badge bg-success">Current</span>
@@ -192,6 +192,40 @@
             requestAnimationFrame(animate);
         }
         animate();
+    }
+
+    // THE FIX: Smart Device Detection Engine
+    function detectUserDevice() {
+        const ua = navigator.userAgent;
+        let browser = "Unknown Browser";
+        let os = "Unknown Device";
+        let icon = "fa-laptop";
+
+        // Detect Browser
+        if (ua.indexOf("Firefox") > -1) browser = "Mozilla Firefox";
+        else if (ua.indexOf("SamsungBrowser") > -1) browser = "Samsung Internet";
+        else if (ua.indexOf("Opera") > -1 || ua.indexOf("OPR") > -1) browser = "Opera";
+        else if (ua.indexOf("Edg") > -1) browser = "Microsoft Edge";
+        else if (ua.indexOf("Chrome") > -1) browser = "Google Chrome";
+        else if (ua.indexOf("Safari") > -1) browser = "Apple Safari";
+
+        // Detect OS / Device
+        if (ua.indexOf("Win") > -1) os = "Windows PC";
+        else if (ua.indexOf("Mac") > -1) os = "Apple Mac";
+        else if (ua.indexOf("X11") > -1 || ua.indexOf("Linux") > -1) os = "Linux PC";
+        
+        if (ua.indexOf("Android") > -1) { 
+            os = "Android Device"; 
+            icon = "fa-mobile-alt"; 
+        } else if (ua.indexOf("iPhone") > -1 || ua.indexOf("iPad") > -1) { 
+            os = "Apple iOS Device"; 
+            icon = "fa-mobile-alt"; 
+        }
+
+        // Apply to UI
+        document.getElementById('deviceName').innerText = os;
+        document.getElementById('deviceBrowser').innerText = `${browser} • Active now`;
+        document.getElementById('deviceIcon').className = `fas ${icon} text-warning fa-2x`;
     }
     
     // Checks if the user has a PIN set on page load
@@ -268,7 +302,7 @@
         }
     }
     
-    // Change Password - NOW 100% REAL
+    // Change Password
     async function changePassword(event) {
         event.preventDefault();
         
@@ -312,7 +346,7 @@
         }
     }
     
-    // Logout Sessions - NOW 100% REAL
+    // Logout Sessions
     function logoutAllSessions() {
         Swal.fire({
             title: 'Terminate Sessions?',
@@ -349,6 +383,7 @@
     
     window.onload = () => {
         initStars();
+        detectUserDevice(); // Triggers the auto-detection on load
         loadSecurityStatus();
     };
     window.onresize = initStars;
