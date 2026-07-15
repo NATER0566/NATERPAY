@@ -44,12 +44,8 @@
         .amount-input:focus { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,175,55,0.3); }
         
         .provider-card {
-            background: rgba(30,30,30,0.95); border: 1px solid #444; border-radius: 15px;
-            padding: 20px; cursor: pointer; transition: 0.3s; text-align: center;
-        }
-        .provider-card:hover, .provider-card.active {
-            border-color: var(--gold); background: rgba(212,175,55,0.1);
-            transform: translateY(-3px);
+            background: rgba(212,175,55,0.1); border: 1px solid var(--gold); border-radius: 15px;
+            padding: 20px; text-align: center; margin: 0 auto; max-width: 300px;
         }
         
         .quick-amount-btn {
@@ -95,22 +91,13 @@
             <button class="quick-amount-btn" onclick="setAmount(10000)">₦10,000</button>
         </div>
         
-        <h5 class="mb-3 text-center mt-4" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;">SELECT PAYMENT METHOD</h5>
+        <h5 class="mb-3 text-center mt-4" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;">PAYMENT METHOD</h5>
         
-        <div class="row g-3 mb-4 justify-content-center">
-            <div class="col-md-5">
-                <div class="provider-card active" onclick="selectProvider(this, 'paystack')">
-                    <i class="fas fa-credit-card fa-2x mb-2" style="color: var(--gold);"></i>
-                    <div class="fw-bold">Paystack Gateway</div>
-                    <small class="text-muted">Instant Card & Bank Transfer</small>
-                </div>
-            </div>
-            <div class="col-md-5">
-                <div class="provider-card" onclick="selectProvider(this, 'monnify')">
-                    <i class="fas fa-university fa-2x mb-2" style="color: var(--gold);"></i>
-                    <div class="fw-bold">Monnify Gateway</div>
-                    <small class="text-muted">Dedicated Bank Transfer</small>
-                </div>
+        <div class="mb-4">
+            <div class="provider-card">
+                <i class="fas fa-credit-card fa-2x mb-2" style="color: var(--gold);"></i>
+                <div class="fw-bold">Paystack Secure Gateway</div>
+                <small class="text-muted">Instant Card & Bank Transfer</small>
             </div>
         </div>
         
@@ -120,21 +107,17 @@
     </div>
     
     <div class="text-center text-muted small fw-bold">
-        <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> End-to-End Encryption Powered by Paystack & Monnify</p>
+        <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> End-to-End Encryption Powered by Paystack</p>
         <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
 
 <script>
-    let selectedProvider = 'paystack';
+    const selectedProvider = 'paystack'; // Locked strictly to Paystack
     
-    // ==========================================
-    // THE FIX: GHOST TRANSACTION PREVENTION ENGINE
-    // ==========================================
-    // This event fires every time the page becomes visible, even if loaded from cache (Back Button)
+    // Ghost Transaction Prevention Engine
     window.addEventListener('pageshow', function(event) {
         if (localStorage.getItem('pending_funding_ref')) {
-            // Instantly blur the screen so they cannot click anything
             document.body.style.opacity = '0.4';
             document.body.style.pointerEvents = 'none';
             
@@ -148,7 +131,6 @@
                 background: '#111', color: '#fff' 
             });
 
-            // Force them to the dashboard where the strict verify script clears/fails the log
             setTimeout(() => {
                 window.location.replace('dashboard.html');
             }, 1000);
@@ -182,12 +164,6 @@
         document.getElementById('fundAmount').value = amount;
     }
     
-    function selectProvider(element, provider) {
-        document.querySelectorAll('.provider-card').forEach(card => card.classList.remove('active'));
-        element.classList.add('active');
-        selectedProvider = provider;
-    }
-    
     async function processFunding() {
         const amount = parseFloat(document.getElementById('fundAmount').value);
         
@@ -200,7 +176,7 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
         
         const btn = document.getElementById('payBtn');
-        btn.disabled = true; // Hard-lock the button
+        btn.disabled = true; 
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> SECURING CONNECTION...';
         
         try {
@@ -213,13 +189,11 @@
             const data = await res.json();
             
             if (data.success && data.checkoutUrl) {
-                // Memory saved.
                 localStorage.setItem('pending_funding_ref', data.paymentReference);
                 
                 Swal.fire({
                     icon: 'info', title: 'Redirecting...', text: 'Connecting to secure payment gateway.', showConfirmButton: false, timer: 1500, background: '#111', color: '#fff'
                 }).then(() => {
-                    // Redirects user. The button remains disabled so they can't double-click.
                     window.location.href = data.checkoutUrl;
                 });
             } else {
