@@ -23,10 +23,7 @@
             box-shadow: 0 4px 30px rgba(0,0,0,0.8); backdrop-filter: blur(15px);
         }
 
-        .brand-text { 
-            font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
-            text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;
-        }
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85; }
         .site-part-1 { color: var(--gold); font-size: 1.5rem; text-shadow: 0 2px 5px rgba(212,175,55,0.3); } 
         .site-part-2 { color: #d32f2f; font-size: 1.1rem; letter-spacing: 3px; }
 
@@ -44,41 +41,31 @@
         }
         .info-card:hover { border-color: rgba(212,175,55,0.5); transform: translateY(-5px); box-shadow: 0 10px 30px rgba(212,175,55,0.15); }
 
-        .task-icon-wrapper {
-            width: 60px; height: 60px; border-radius: 15px; display: flex; align-items: center; justify-content: center;
-            font-size: 1.8rem; margin-bottom: 20px;
-        }
+        .task-icon-wrapper { width: 60px; height: 60px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 20px; }
         
         .reward-badge {
             background: rgba(212, 175, 55, 0.15); border: 1px solid var(--gold); color: var(--gold);
-            padding: 5px 12px; border-radius: 50px; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px;
-            display: inline-block; margin-bottom: 15px; font-family: 'Cinzel', serif;
+            padding: 5px 12px; border-radius: 50px; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px; display: inline-block; margin-bottom: 15px; font-family: 'Cinzel', serif;
         }
 
         .btn-task {
             background: transparent; color: var(--gold); border: 1.5px solid var(--gold);
-            font-weight: 800; border-radius: 12px; padding: 12px; width: 100%; transition: 0.3s;
-            text-transform: uppercase; letter-spacing: 1px; margin-top: auto;
+            font-weight: 800; border-radius: 12px; padding: 12px; width: 100%; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; margin-top: auto;
         }
         .btn-task:hover:not(:disabled) { background: var(--gold); color: black; box-shadow: 0 5px 15px rgba(212,175,55,0.3); }
         .btn-task:disabled { border-color: #444; color: #888; cursor: not-allowed; }
 
-        /* SPONSORED AD BLOCK */
         .sponsored-ad-card {
             background: linear-gradient(180deg, rgba(30,30,30,0.9) 0%, rgba(10,10,10,0.95) 100%);
             border: 1px solid #444; border-radius: 16px; padding: 20px; display: flex;
-            align-items: center; justify-content: space-between; margin-bottom: 15px;
-            transition: 0.3s; gap: 20px;
+            align-items: center; justify-content: space-between; margin-bottom: 15px; transition: 0.3s; gap: 20px;
         }
         .sponsored-ad-card:hover { border-color: var(--gold); }
         .ad-details { flex: 1; }
         .ad-title { font-weight: 800; font-size: 1.1rem; color: #fff; margin-bottom: 5px; }
         .ad-desc { font-size: 0.85rem; color: #aaa; margin-bottom: 10px; }
         
-        .business-card {
-            background: linear-gradient(90deg, #111, #000); border: 1px dashed var(--gold);
-            border-radius: 16px; padding: 30px; text-align: center; margin-top: 50px;
-        }
+        .business-card { background: linear-gradient(90deg, #111, #000); border: 1px dashed var(--gold); border-radius: 16px; padding: 30px; text-align: center; margin-top: 50px; }
     </style>
 </head>
 <body>
@@ -103,13 +90,9 @@
     </div>
 
     <div class="row g-4 mb-5">
-        
-        <!-- SAFE: Referral Task -->
         <div class="col-md-6 col-lg-4">
             <div class="info-card">
-                <div class="task-icon-wrapper" style="background: rgba(0, 255, 136, 0.1); color: #00ff88;">
-                    <i class="fas fa-users"></i>
-                </div>
+                <div class="task-icon-wrapper" style="background: rgba(0, 255, 136, 0.1); color: #00ff88;"><i class="fas fa-users"></i></div>
                 <div class="reward-badge">Reward: ₦100 / User</div>
                 <h5 class="fw-bold mb-3">Refer & Earn</h5>
                 <p class="text-muted small mb-4">Invite friends to join NATER PAY. Earn instantly when they register, verify, and complete their first transaction.</p>
@@ -117,12 +100,9 @@
             </div>
         </div>
 
-        <!-- SAFE: Cashback Task -->
         <div class="col-md-6 col-lg-4">
             <div class="info-card">
-                <div class="task-icon-wrapper" style="background: rgba(212, 175, 55, 0.1); color: var(--gold);">
-                    <i class="fas fa-undo-alt"></i>
-                </div>
+                <div class="task-icon-wrapper" style="background: rgba(212, 175, 55, 0.1); color: var(--gold);"><i class="fas fa-undo-alt"></i></div>
                 <div class="reward-badge">Reward: 0.5% - 1.0%</div>
                 <h5 class="fw-bold mb-3">Transaction Cashback</h5>
                 <p class="text-muted small mb-4">Buy Data, Airtime, or pay bills. A percentage of your spend is dynamically auto-credited back to your ledger.</p>
@@ -130,67 +110,34 @@
             </div>
         </div>
 
-        <!-- SAFE: Profile Completion -->
         <div class="col-md-6 col-lg-4">
             <div class="info-card">
-                <div class="task-icon-wrapper" style="background: rgba(0, 191, 255, 0.1); color: #00bfff;">
-                    <i class="fas fa-id-badge"></i>
-                </div>
+                <div class="task-icon-wrapper" style="background: rgba(0, 191, 255, 0.1); color: #00bfff;"><i class="fas fa-id-badge"></i></div>
                 <div class="reward-badge">Reward: ₦50 (One-Time)</div>
                 <h5 class="fw-bold mb-3">Profile Completion</h5>
                 <p class="text-muted small mb-4">Secure your account by verifying your email and submitting Tier 1 KYC to instantly unlock your reward.</p>
-                <button class="btn-task" id="btnProfileTask" onclick="checkProfileCompletion()">Verify Profile Now</button>
+                <button class="btn-task" id="btnProfileTask" onclick="claimProfileReward()">Claim Verification Reward</button>
             </div>
         </div>
     </div>
 
-    <!-- NEW: CLICK & EARN SPONSORED ADS ENGINE -->
     <h4 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold); border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 10px; margin-top: 20px;">
-        <i class="fas fa-mouse-pointer me-2"></i> FEATURED SPONSORS (CLICK & EARN)
+        <i class="fas fa-mouse-pointer me-2"></i> SPONSORED CAMPAIGNS (CLICK & EARN)
     </h4>
-    <p class="text-muted small mb-4">Support our partners. Click the ad, stay on the page for 15 seconds, and earn instant cash.</p>
+    <p class="text-muted small mb-4">Support our partners. Click the ad, stay on the page for 5 seconds, and earn instant cash.</p>
 
-    <div>
-        <!-- AD SLOT 1 -->
-        <div class="sponsored-ad-card" id="ad_slot_1">
-            <div class="task-icon-wrapper" style="background: rgba(255, 255, 255, 0.1); color: #fff; width: 50px; height: 50px; margin: 0;">
-                <i class="fas fa-globe"></i>
-            </div>
-            <div class="ad-details">
-                <div class="ad-title">Learn High-Income Tech Skills</div>
-                <div class="ad-desc">Visit Nater Learning Hub to start your journey in Web Development today.</div>
-                <span class="badge bg-dark text-warning border border-warning">Reward: ₦5.00</span>
-            </div>
-            <button class="btn btn-outline-warning fw-bold" id="btn_ad_1" onclick="processAdClick(1, 'https://naterlearninghub.me', 5)">
-                <i class="fas fa-external-link-alt me-2"></i> View Ad
-            </button>
-        </div>
-
-        <!-- AD SLOT 2 -->
-        <div class="sponsored-ad-card" id="ad_slot_2">
-            <div class="task-icon-wrapper" style="background: rgba(255, 255, 255, 0.1); color: #fff; width: 50px; height: 50px; margin: 0;">
-                <i class="fab fa-youtube"></i>
-            </div>
-            <div class="ad-details">
-                <div class="ad-title">Nater Grace Code Official</div>
-                <div class="ad-desc">Watch our latest programming tutorials and hit the subscribe button!</div>
-                <span class="badge bg-dark text-warning border border-warning">Reward: ₦4.00</span>
-            </div>
-            <button class="btn btn-outline-warning fw-bold" id="btn_ad_2" onclick="processAdClick(2, 'https://youtube.com', 4)">
-                <i class="fas fa-external-link-alt me-2"></i> View Ad
-            </button>
-        </div>
+    <div id="dynamicAdsContainer">
+        <div class="text-center py-4 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Scanning Database for Live Ads...</div>
     </div>
 
-    <!-- BUSINESS PROMOTION -->
     <div class="business-card">
         <h4 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;">FOR BUSINESSES: GET GUARANTEED TRAFFIC</h4>
         <p class="text-muted mb-4 mx-auto" style="max-width: 600px;">
             Drive thousands of real users to your website, app, or social media. 
             Deposit your budget, and you only pay for actual views. (Includes Naterpay Anti-Bot Protection).
         </p>
-        <button class="btn btn-warning rounded-pill px-4 fw-bold text-dark" onclick="contactAdSales()">
-            <i class="fas fa-rocket me-2"></i> Advertise Here
+        <button class="btn btn-warning rounded-pill px-4 fw-bold text-dark" onclick="window.location.href='create-ad.html'">
+            <i class="fas fa-rocket me-2"></i> Create an Ad Campaign
         </button>
     </div>
 
@@ -219,36 +166,99 @@
         animate();
     }
 
-    function checkProfileCompletion() {
-        Swal.fire({
-            title: 'Verifying Profile...',
-            allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading(); },
-            background: '#0a0a0a', color: '#fff'
-        });
-        setTimeout(() => {
-            Swal.fire({ icon: 'warning', title: 'Action Required', text: 'Please visit the KYC Identity portal to complete this task.', confirmButtonText: 'Go to KYC', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' })
-            .then((result) => { if (result.isConfirmed) window.location.href = 'kyc.html'; });
-        }, 1500);
+    // ==========================================
+    // REAL PROFILE REWARD LOGIC
+    // ==========================================
+    async function claimProfileReward() {
+        const btn = document.getElementById('btnProfileTask');
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Verifying...`;
+        btn.disabled = true;
+
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) return Swal.fire({ icon: 'error', title: 'Login Required', background: '#0a0a0a', color: '#fff' });
+
+        try {
+            const response = await fetch('/api/tasks/claim-profile', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                btn.innerHTML = `<i class="fas fa-check-circle me-2"></i> Claimed (₦50)`;
+                btn.classList.replace('btn-outline-warning', 'btn-success');
+                Swal.fire({ icon: 'success', title: 'Reward Credited!', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+            } else {
+                btn.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i> Check Status`;
+                btn.disabled = false;
+                Swal.fire({ icon: 'error', title: 'Action Required', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' })
+                .then(res => { if(res.isConfirmed && data.message.includes('verify')) window.location.href='kyc.html'; });
+            }
+        } catch (err) {
+            btn.innerHTML = `Claim Verification Reward`;
+            btn.disabled = false;
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to contact server.', background: '#0a0a0a', color: '#fff' });
+        }
     }
 
-    function contactAdSales() {
-        window.open('https://wa.me/2348160979620?text=I want to advertise my business on Naterpay Click & Earn', '_blank');
+    // ==========================================
+    // REAL DATABASE ADS LOGIC
+    // ==========================================
+    async function loadDynamicAds() {
+        const container = document.getElementById('dynamicAdsContainer');
+        try {
+            const response = await fetch('/api/ads'); // Uses your existing ads route
+            const data = await response.json();
+
+            // If you don't have ads in the DB yet, show a clean message
+            if (!data.success || !data.ads || data.ads.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5 rounded-4" style="background: rgba(0,0,0,0.5); border: 1px dashed #333;">
+                        <i class="fas fa-bullhorn fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
+                        <h6 class="text-muted fw-bold">No Active Campaigns</h6>
+                        <p class="small text-muted mb-0">Check back tomorrow for new Click & Earn tasks, or create your own ad below!</p>
+                    </div>`;
+                return;
+            }
+
+            // Loop through live database ads and render them
+            container.innerHTML = '';
+            data.ads.forEach(ad => {
+                const icon = ad.type === 'video' ? 'fa-youtube' : 'fa-globe';
+                const reward = ad.rewardAmount || 5;
+                
+                container.innerHTML += `
+                    <div class="sponsored-ad-card" id="ad_slot_${ad._id}">
+                        <div class="task-icon-wrapper" style="background: rgba(255, 255, 255, 0.1); color: #fff; width: 50px; height: 50px; margin: 0;">
+                            <i class="fab ${icon}"></i>
+                        </div>
+                        <div class="ad-details">
+                            <div class="ad-title">${ad.title || 'Sponsored Campaign'}</div>
+                            <div class="ad-desc">${ad.description || 'Click to view the advertiser page.'}</div>
+                            <span class="badge bg-dark text-warning border border-warning">Reward: ₦${reward}</span>
+                        </div>
+                        <button class="btn btn-outline-warning fw-bold" id="btn_ad_${ad._id}" onclick="processAdClick('${ad._id}', '${ad.link}', ${reward})">
+                            <i class="fas fa-external-link-alt me-2"></i> View Ad
+                        </button>
+                    </div>
+                `;
+            });
+
+        } catch (error) {
+            container.innerHTML = `<div class="text-center py-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to load ads.</div>`;
+        }
     }
 
-    // THE CLICK & EARN ENGINE
     function processAdClick(adId, adUrl, rewardAmount) {
         const btn = document.getElementById(`btn_ad_${adId}`);
-        
-        // Prevent double clicking
         if(btn.disabled) return;
 
-        // 1. Open the advertiser's link in a new tab immediately
+        // 1. Open live URL
         window.open(adUrl, '_blank');
         
-        // 2. Lock the button and start the verification countdown
+        // 2. Start 5-second timer
         btn.disabled = true;
-        let countdown = 15;
+        let countdown = 5; 
         
         const timerInterval = setInterval(() => {
             countdown--;
@@ -263,32 +273,31 @@
 
     async function claimAdReward(adId, rewardAmount, btnElement) {
         btnElement.innerHTML = `<i class="fas fa-sync-alt fa-spin me-2"></i> Crediting...`;
-        
         const authToken = localStorage.getItem("naterpay_token");
+        
         if (!authToken) {
-            Swal.fire({ icon: 'error', title: 'Authentication Error', text: 'Please log in to claim rewards.', background: '#0a0a0a', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Login Required', background: '#0a0a0a', color: '#fff' });
             btnElement.innerHTML = `<i class="fas fa-external-link-alt me-2"></i> View Ad`;
             btnElement.disabled = false;
             return;
         }
 
         try {
-            // This is the endpoint we need to build on the backend
+            // Posts to your newly updated claim-ad route
             const response = await fetch('/api/tasks/claim-ad', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                 body: JSON.stringify({ adId: adId })
             });
-            
             const data = await response.json();
 
             if (data.success) {
                 btnElement.innerHTML = `<i class="fas fa-check-circle me-2"></i> Claimed (₦${rewardAmount})`;
                 btnElement.classList.replace('btn-outline-warning', 'btn-success');
-                Swal.fire({ icon: 'success', title: 'Reward Credited!', text: `₦${rewardAmount} has been added to your ledger.`, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+                Swal.fire({ icon: 'success', title: 'Reward Credited!', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
             } else {
                 btnElement.innerHTML = `<i class="fas fa-check me-2"></i> Done Today`;
-                Swal.fire({ icon: 'info', title: 'Already Claimed', text: data.message || 'You have already claimed this reward today. Check back tomorrow!', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                Swal.fire({ icon: 'info', title: 'Already Claimed', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
             }
         } catch (error) {
             btnElement.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Error`;
@@ -296,7 +305,10 @@
         }
     }
 
-    window.onload = initStars;
+    window.onload = () => {
+        initStars();
+        loadDynamicAds(); // Triggers the real database fetch on load
+    };
     window.onresize = initStars;
 </script>
 
