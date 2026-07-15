@@ -136,6 +136,11 @@ async function registerRoutes() {
   fastify.post('/api/ads', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.createAd);
   // ===================================
   
+  // === NEW: CLICK & EARN TASK ROUTES ===
+  const tasksRoutes = require('./routes/tasks');
+  fastify.post('/api/tasks/claim-ad', { preHandler: require('./middleware/auth').authenticate }, tasksRoutes.claimAd);
+  // =====================================
+  
   const invoiceRoutes = require('./routes/invoice');
   fastify.get('/api/invoices', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.getInvoices);
   fastify.post('/api/invoices', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.createInvoice);
