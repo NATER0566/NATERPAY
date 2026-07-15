@@ -115,7 +115,7 @@
                 <div class="task-icon-wrapper" style="background: rgba(0, 191, 255, 0.1); color: #00bfff;"><i class="fas fa-id-badge"></i></div>
                 <div class="reward-badge">Reward: ₦50 (One-Time)</div>
                 <h5 class="fw-bold mb-3">Profile Completion</h5>
-                <p class="text-muted small mb-4">Secure your account by verifying your email and submitting Tier 1 KYC to instantly unlock your reward.</p>
+                <p class="text-muted small mb-4">Secure your account by completing your KYC Verification to instantly unlock your reward.</p>
                 <button class="btn-task" id="btnProfileTask" onclick="claimProfileReward()">Claim Verification Reward</button>
             </div>
         </div>
@@ -124,7 +124,7 @@
     <h4 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold); border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 10px; margin-top: 20px;">
         <i class="fas fa-mouse-pointer me-2"></i> SPONSORED CAMPAIGNS (CLICK & EARN)
     </h4>
-    <p class="text-muted small mb-4">Support our partners. Click the ad, stay on the page for 5 seconds, and earn instant cash.</p>
+    <p class="text-muted small mb-4">Support our partners. Click the ad, stay on the page for 20 seconds, and earn instant cash.</p>
 
     <div id="dynamicAdsContainer">
         <div class="text-center py-4 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Scanning Database for Live Ads...</div>
@@ -136,7 +136,7 @@
             Drive thousands of real users to your website, app, or social media. 
             Deposit your budget, and you only pay for actual views. (Includes Naterpay Anti-Bot Protection).
         </p>
-        <button class="btn btn-warning rounded-pill px-4 fw-bold text-dark" onclick="window.location.href='create-ad.html'">
+        <button class="btn btn-warning rounded-pill px-4 fw-bold text-dark" onclick="window.location.href='ads.html'">
             <i class="fas fa-rocket me-2"></i> Create an Ad Campaign
         </button>
     </div>
@@ -189,10 +189,10 @@
                 btn.classList.replace('btn-outline-warning', 'btn-success');
                 Swal.fire({ icon: 'success', title: 'Reward Credited!', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
             } else {
-                btn.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i> Check Status`;
+                btn.innerHTML = `Claim Verification Reward`;
                 btn.disabled = false;
-                Swal.fire({ icon: 'error', title: 'Action Required', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' })
-                .then(res => { if(res.isConfirmed && data.message.includes('verify')) window.location.href='kyc.html'; });
+                Swal.fire({ icon: 'warning', title: 'Action Required', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' })
+                .then(res => { if(res.isConfirmed) window.location.href='kyc.html'; });
             }
         } catch (err) {
             btn.innerHTML = `Claim Verification Reward`;
@@ -207,10 +207,9 @@
     async function loadDynamicAds() {
         const container = document.getElementById('dynamicAdsContainer');
         try {
-            const response = await fetch('/api/ads'); // Uses your existing ads route
+            const response = await fetch('/api/ads'); 
             const data = await response.json();
 
-            // If you don't have ads in the DB yet, show a clean message
             if (!data.success || !data.ads || data.ads.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-5 rounded-4" style="background: rgba(0,0,0,0.5); border: 1px dashed #333;">
@@ -221,23 +220,25 @@
                 return;
             }
 
-            // Loop through live database ads and render them
             container.innerHTML = '';
             data.ads.forEach(ad => {
-                const icon = ad.type === 'video' ? 'fa-youtube' : 'fa-globe';
+                // Safeguard: Check all possible database field names for the link
+                const targetLink = ad.targetUrl || ad.link || ad.url || '';
+                // Pull actual image or use placeholder
+                const imageUrl = ad.imageUrl || ad.image || 'https://via.placeholder.com/150/050505/d4af37?text=AD';
                 const reward = ad.rewardAmount || 5;
                 
                 container.innerHTML += `
                     <div class="sponsored-ad-card" id="ad_slot_${ad._id}">
-                        <div class="task-icon-wrapper" style="background: rgba(255, 255, 255, 0.1); color: #fff; width: 50px; height: 50px; margin: 0;">
-                            <i class="fab ${icon}"></i>
+                        <div class="task-icon-wrapper" style="margin: 0; padding: 0; overflow: hidden; border: 1px solid #d4af37; background: #000;">
+                            <img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Ad Image">
                         </div>
                         <div class="ad-details">
                             <div class="ad-title">${ad.title || 'Sponsored Campaign'}</div>
                             <div class="ad-desc">${ad.description || 'Click to view the advertiser page.'}</div>
                             <span class="badge bg-dark text-warning border border-warning">Reward: ₦${reward}</span>
                         </div>
-                        <button class="btn btn-outline-warning fw-bold" id="btn_ad_${ad._id}" onclick="processAdClick('${ad._id}', '${ad.link}', ${reward})">
+                        <button class="btn btn-outline-warning fw-bold" id="btn_ad_${ad._id}" onclick="processAdClick('${ad._id}', '${targetLink}', ${reward})">
                             <i class="fas fa-external-link-alt me-2"></i> View Ad
                         </button>
                     </div>
@@ -253,12 +254,18 @@
         const btn = document.getElementById(`btn_ad_${adId}`);
         if(btn.disabled) return;
 
-        // 1. Open live URL
+        // Anti-Cheat: Reject if advertiser forgot to add a link
+        if (!adUrl || adUrl === 'undefined' || adUrl === 'null' || adUrl.trim() === '') {
+            Swal.fire({ icon: 'error', title: 'Invalid Link', text: 'The advertiser did not provide a valid link for this campaign.', background: '#0a0a0a', color: '#fff' });
+            return;
+        }
+
+        // Open live URL
         window.open(adUrl, '_blank');
         
-        // 2. Start 5-second timer
+        // Strict 20-second timer lock
         btn.disabled = true;
-        let countdown = 5; 
+        let countdown = 20; 
         
         const timerInterval = setInterval(() => {
             countdown--;
@@ -283,7 +290,6 @@
         }
 
         try {
-            // Posts to your newly updated claim-ad route
             const response = await fetch('/api/tasks/claim-ad', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
@@ -307,7 +313,7 @@
 
     window.onload = () => {
         initStars();
-        loadDynamicAds(); // Triggers the real database fetch on load
+        loadDynamicAds(); 
     };
     window.onresize = initStars;
 </script>
