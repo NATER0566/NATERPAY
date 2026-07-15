@@ -116,7 +116,6 @@
             </div>
         </div>
 
-        <!-- PROFILE TASK WRAPPER (Will hide when claimed) -->
         <div class="col-md-6 col-lg-4" id="profileTaskWrapper">
             <div class="info-card">
                 <div class="task-icon-wrapper" style="background: rgba(0, 191, 255, 0.1); color: #00bfff;"><i class="fas fa-id-badge"></i></div>
@@ -133,12 +132,10 @@
     </h4>
     <p class="text-muted small mb-4">Support our partners. Click the ad, stay on the page for 20 seconds, and earn instant cash.</p>
 
-    <!-- LIVE BIG ADS INJECTED HERE -->
     <div id="dynamicAdsContainer" class="row">
         <div class="col-12 text-center py-4 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Scanning Database for Live Ads...</div>
     </div>
 
-    <!-- BUSINESS PROMOTION -->
     <div class="business-card">
         <h4 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;">FOR BUSINESSES: GET GUARANTEED TRAFFIC</h4>
         <p class="text-muted mb-4 mx-auto" style="max-width: 600px;">
@@ -195,7 +192,6 @@
 
             if (data.success) {
                 Swal.fire({ icon: 'success', title: 'Reward Credited!', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
-                // Hide the profile card completely since it's a one-time reward
                 document.getElementById('profileTaskWrapper').style.display = 'none';
             } else {
                 btn.innerHTML = `Claim Verification Reward`;
@@ -237,18 +233,15 @@
 
             container.innerHTML = '';
             data.ads.forEach(ad => {
-                // 1. EXTRACT DATA CORRECTLY FROM DB
                 const rawWeb = ad.website || ad.targetUrl || ad.link || ad.url || '';
                 const rawWa = ad.whatsappNumber || '';
                 const rawPh = ad.phoneNumber || '';
                 
-                // 2. DETERMINE THE BEST CLICKABLE LINK
                 let primaryLink = '';
                 if (rawWeb) primaryLink = rawWeb.startsWith('http') ? rawWeb : 'https://' + rawWeb;
                 else if (rawWa) primaryLink = 'https://wa.me/' + rawWa.replace(/[^0-9]/g, '');
                 else if (rawPh) primaryLink = 'tel:' + rawPh;
 
-                // 3. BUILD CONTACT DETAILS DISPLAY
                 let contactsHtml = '';
                 if (rawWa) contactsHtml += `<span class="me-3 fw-bold"><i class="fab fa-whatsapp text-success"></i> ${rawWa}</span>`;
                 if (rawPh) contactsHtml += `<span class="fw-bold"><i class="fas fa-phone text-info"></i> ${rawPh}</span>`;
@@ -256,7 +249,6 @@
                 const imageUrl = ad.imageUrl || ad.image || 'https://via.placeholder.com/1200x400/050505/d4af37?text=ADVERTISEMENT';
                 const reward = ad.rewardAmount || 5;
                 
-                // 4. RENDER HUGE AD BANNER
                 container.innerHTML += `
                     <div class="col-md-6 col-xl-6" id="ad_slot_${ad._id}">
                         <div class="sponsored-ad-card">
@@ -288,6 +280,12 @@
     // ==========================================
     // STRICT 20-SECOND ANTI-CHEAT TIMER
     // ==========================================
+    let currentActiveAdId = null;
+    let expectedReturnTime = 0;
+    let currentReward = 0;
+    let currentBtn = null;
+    let timerInterval = null;
+
     function processAdClick(adId, adUrl, rewardAmount) {
         const btn = document.getElementById(`btn_ad_${adId}`);
         if(btn.disabled) return;
@@ -297,33 +295,97 @@
             return;
         }
 
+        // Open live URL in new tab
         window.open(adUrl, '_blank');
         
         btn.disabled = true;
-        let countdown = 20; // Strict 20 seconds
         
-        const timerInterval = setInterval(() => {
+        const REQUIRED_SECONDS = 20; 
+        expectedReturnTime = Date.now() + (REQUIRED_SECONDS * 1000);
+        currentActiveAdId = adId;
+        currentReward = rewardAmount;
+        currentBtn = btn;
+        
+        // Visual countdown
+        let countdown = REQUIRED_SECONDS;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> PLEASE WAIT (${countdown}s)`;
+        
+        timerInterval = setInterval(() => {
             countdown--;
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> PLEASE WAIT (${countdown}s)`;
-            
-            if (countdown <= 0) {
+            if (countdown > 0) {
+                if(currentBtn) currentBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> PLEASE WAIT (${countdown}s)`;
+            } else {
                 clearInterval(timerInterval);
-                claimAdReward(adId, rewardAmount, btn);
+                if (currentActiveAdId) {
+                    // Time is up, auto-claim
+                    claimAdReward(currentActiveAdId, currentReward, currentBtn);
+                    resetTracker();
+                }
             }
         }, 1000);
+        
+        Swal.fire({
+            title: 'Task Started!',
+            text: `You must stay on the advertiser's page for at least ${REQUIRED_SECONDS} seconds. Do not return early!`,
+            icon: 'info',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 5000,
+            background: '#0a0a0a',
+            color: '#fff'
+        });
     }
+
+    function resetTracker() {
+        currentActiveAdId = null;
+        expectedReturnTime = 0;
+        currentReward = 0;
+        currentBtn = null;
+        if(timerInterval) clearInterval(timerInterval);
+    }
+
+    // THE ANTI-CHEAT VISIBILITY LISTENER
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && currentActiveAdId) {
+            const timeLeft = Math.ceil((expectedReturnTime - Date.now()) / 1000);
+            
+            if (timeLeft > 0) {
+                // CHEAT DETECTED: They came back too early
+                currentBtn.disabled = false;
+                currentBtn.innerHTML = `<i class="fas fa-play-circle me-2"></i> VIEW ADVERT & EARN ₦${currentReward}`;
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Task Failed!',
+                    text: `You returned too early! You needed to wait ${timeLeft} more seconds. Click to try again.`,
+                    confirmButtonColor: '#d32f2f',
+                    background: '#0a0a0a',
+                    color: '#fff'
+                });
+                
+                resetTracker();
+            } else {
+                // SUCCESS: They waited the full time and returned
+                claimAdReward(currentActiveAdId, currentReward, currentBtn);
+                resetTracker();
+            }
+        }
+    });
 
     // ==========================================
     // AUTO-HIDE ADS UPON SUCCESS
     // ==========================================
     async function claimAdReward(adId, rewardAmount, btnElement) {
-        btnElement.innerHTML = `<i class="fas fa-sync-alt fa-spin me-2"></i> Crediting...`;
+        if(btnElement) btnElement.innerHTML = `<i class="fas fa-sync-alt fa-spin me-2"></i> Crediting...`;
         const authToken = localStorage.getItem("naterpay_token");
         
         if (!authToken) {
             Swal.fire({ icon: 'error', title: 'Login Required', background: '#0a0a0a', color: '#fff' });
-            btnElement.innerHTML = `<i class="fas fa-play-circle me-2"></i> VIEW ADVERT & EARN ₦${rewardAmount}`;
-            btnElement.disabled = false;
+            if(btnElement) {
+                btnElement.innerHTML = `<i class="fas fa-play-circle me-2"></i> VIEW ADVERT & EARN ₦${rewardAmount}`;
+                btnElement.disabled = false;
+            }
             return;
         }
 
@@ -337,20 +399,22 @@
 
             if (data.success) {
                 Swal.fire({ icon: 'success', title: 'Reward Credited!', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
-                // Make the Ad vanish so the user can focus on the next one!
-                document.getElementById(`ad_slot_${adId}`).style.display = 'none';
+                const adSlot = document.getElementById(`ad_slot_${adId}`);
+                if(adSlot) adSlot.style.display = 'none';
             } else {
-                // If they already claimed it, hide it anyway so it stops taking up space
                 if(data.message.includes('already claimed')) {
-                    document.getElementById(`ad_slot_${adId}`).style.display = 'none';
-                } else {
+                    const adSlot = document.getElementById(`ad_slot_${adId}`);
+                    if(adSlot) adSlot.style.display = 'none';
+                } else if(btnElement) {
                     btnElement.innerHTML = `<i class="fas fa-check me-2"></i> Done Today`;
                 }
                 Swal.fire({ icon: 'info', title: 'Notice', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
             }
         } catch (error) {
-            btnElement.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Error`;
-            btnElement.disabled = false;
+            if(btnElement) {
+                btnElement.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Error`;
+                btnElement.disabled = false;
+            }
             Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to communicate with the reward server.', background: '#0a0a0a', color: '#fff' });
         }
     }
