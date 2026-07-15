@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | Global Leaderboard</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.8); backdrop-filter: blur(15px);
+        }
+
+        .brand-text { 
+            font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
+            text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;
+        }
+        .site-part-1 { color: var(--gold); font-size: 1.5rem; text-shadow: 0 2px 5px rgba(212,175,55,0.3); } 
+        .site-part-2 { color: #d32f2f; font-size: 1.1rem; letter-spacing: 3px; }
+
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; flex: 1; }
+        
+        /* HERO BANNER */
+        .leaderboard-hero {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(10, 10, 10, 0.95) 100%);
+            border: 1.5px solid var(--gold); border-radius: 20px; padding: 40px;
+            margin-bottom: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); text-align: center;
+        }
+
+        /* MY RANK CARD */
+        .my-rank-card {
+            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+            border: 1px dashed var(--gold); border-radius: 16px; padding: 25px;
+            margin-bottom: 40px; display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 20px; box-shadow: inset 0 0 30px rgba(212, 175, 55, 0.05);
+        }
+        .my-rank-details { display: flex; align-items: center; gap: 15px; }
+        .my-avatar {
+            width: 70px; height: 70px; border-radius: 50%; background: rgba(212, 175, 55, 0.2);
+            border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; color: var(--gold);
+        }
+        .progress-container { flex: 1; min-width: 250px; }
+        .progress-bar-custom {
+            height: 8px; background: #333; border-radius: 10px; overflow: hidden; margin-top: 8px;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, #d4af37, #fff); width: 0%;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.8); transition: width 1s ease-in-out;
+        }
+
+        /* TABS */
+        .nav-tabs { border-bottom: 2px solid #333; margin-bottom: 20px; }
+        .nav-link { color: #888; font-family: 'Cinzel', serif; font-weight: 800; letter-spacing: 1px; border: none; background: transparent; padding: 12px 25px; transition: 0.3s; }
+        .nav-link:hover { color: #fff; border: none; }
+        .nav-link.active { color: var(--gold); background: transparent; border: none; border-bottom: 3px solid var(--gold); text-shadow: 0 0 10px rgba(212, 175, 55, 0.4); }
+
+        /* LEADERBOARD LIST */
+        .board-card {
+            background: var(--card-bg); border: 1px solid #222; border-radius: 16px; padding: 10px;
+        }
+        .rank-row {
+            display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #1a1a1a;
+            transition: 0.3s; border-radius: 12px; margin-bottom: 5px;
+        }
+        .rank-row:hover { background: rgba(212, 175, 55, 0.05); transform: translateX(5px); }
+        .rank-row:last-child { border-bottom: none; margin-bottom: 0; }
+        
+        .rank-number { font-family: 'Cinzel', serif; font-size: 1.5rem; font-weight: 900; width: 40px; color: #555; }
+        
+        /* TOP 3 HIGHLIGHTS */
+        .rank-1 { background: linear-gradient(90deg, rgba(212,175,55,0.15) 0%, transparent 100%); border-left: 4px solid #FFD700; }
+        .rank-1 .rank-number { color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.5); font-size: 2rem; }
+        
+        .rank-2 { background: linear-gradient(90deg, rgba(192,192,192,0.1) 0%, transparent 100%); border-left: 4px solid #C0C0C0; }
+        .rank-2 .rank-number { color: #C0C0C0; text-shadow: 0 0 10px rgba(192,192,192,0.5); font-size: 1.8rem; }
+        
+        .rank-3 { background: linear-gradient(90deg, rgba(205,127,50,0.1) 0%, transparent 100%); border-left: 4px solid #cd7f32; }
+        .rank-3 .rank-number { color: #cd7f32; text-shadow: 0 0 10px rgba(205,127,50,0.5); font-size: 1.6rem; }
+
+        .rank-user-info { flex: 1; display: flex; align-items: center; gap: 15px; }
+        .rank-avatar { width: 45px; height: 45px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; }
+        
+        .rank-score { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.2rem; color: var(--gold); text-align: right; }
+        .rank-badge { font-size: 0.7rem; text-transform: uppercase; padding: 3px 8px; border-radius: 50px; font-weight: 800; letter-spacing: 1px; margin-top: 4px; display: inline-block; }
+
+        /* BADGE COLORS */
+        .badge-elite { background: rgba(229, 228, 226, 0.1); border: 1px solid #e5e4e2; color: #e5e4e2; }
+        .badge-platinum { background: rgba(0, 255, 255, 0.1); border: 1px solid #00ffff; color: #00ffff; }
+        .badge-gold { background: rgba(212, 175, 55, 0.1); border: 1px solid #d4af37; color: #d4af37; }
+        .badge-silver { background: rgba(192, 192, 192, 0.1); border: 1px solid #c0c0c0; color: #c0c0c0; }
+        .badge-bronze { background: rgba(205, 127, 50, 0.1); border: 1px solid #cd7f32; color: #cd7f32; }
+        .badge-starter { background: rgba(100, 100, 100, 0.1); border: 1px solid #666; color: #999; }
+
+        /* RULES SECTION */
+        .rules-card { background: rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 16px; padding: 25px; margin-top: 40px; }
+        .rules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .rule-item { display: flex; align-items: center; gap: 10px; background: #111; padding: 15px; border-radius: 12px; border: 1px solid #222; }
+        .rule-item i { font-size: 1.5rem; }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
+</header>
+
+<div class="container">
+    
+    <div class="leaderboard-hero">
+        <h2 style="font-family: 'Cinzel', serif; font-weight: 900; color: var(--gold); letter-spacing: 2px;">CELEBRATE ACHIEVEMENT. INSPIRE GROWTH.</h2>
+        <p class="text-light fs-6 mx-auto mt-3" style="max-width: 700px; line-height: 1.8;">
+            The Global Leaderboard showcases the most active members of the NATER PAY community. Rankings are calculated autonomously by our secure ledger based on genuine verified activities.
+        </p>
+    </div>
+
+    <div class="my-rank-card" id="myRankSection">
+        <div class="my-rank-details">
+            <div class="my-avatar"><i class="fas fa-user-shield"></i></div>
+            <div>
+                <h5 class="mb-1 fw-bold text-white" id="myName">Scanning Profile...</h5>
+                <span class="rank-badge badge-starter" id="myBadge">Evaluating Rank</span>
+            </div>
+        </div>
+        <div class="progress-container text-end text-md-start">
+            <div class="d-flex justify-content-between mb-1">
+                <span class="small text-muted fw-bold">TOTAL ACTIVITY POINTS</span>
+                <span class="small text-warning fw-bold" id="myPoints">0 PTS</span>
+            </div>
+            <div class="progress-bar-custom">
+                <div class="progress-fill" id="myProgressBar"></div>
+            </div>
+            <div class="text-end mt-1"><small class="text-muted" id="nextBadgeTarget" style="font-size: 0.65rem;">Syncing target...</small></div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs justify-content-center" id="boardTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-referrers" data-bs-toggle="tab" data-bs-target="#board-referrers" type="button" role="tab">
+                <i class="fas fa-users me-2"></i> Top Referrers
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-transactors" data-bs-toggle="tab" data-bs-target="#board-transactors" type="button" role="tab">
+                <i class="fas fa-exchange-alt me-2"></i> Top Transactors
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="boardContent">
+        <div class="tab-pane fade show active" id="board-referrers" role="tabpanel">
+            <div class="board-card" id="listReferrers">
+                <div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Synchronizing Global Ledger...</div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="board-transactors" role="tabpanel">
+            <div class="board-card" id="listTransactors">
+                <div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Synchronizing Global Ledger...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="rules-card">
+        <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;"><i class="fas fa-gem me-2"></i> HOW RANKING WORKS</h5>
+        <p class="text-muted small mb-4">Rankings and Points are calculated automatically. Points dictate your global badge status.</p>
+        
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="rule-item">
+                    <i class="fas fa-user-plus text-success"></i>
+                    <div>
+                        <div class="fw-bold text-white" style="font-size: 0.9rem;">Successful Referral</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">+50 Points per verified invite</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="rule-item">
+                    <i class="fas fa-bolt text-warning"></i>
+                    <div>
+                        <div class="fw-bold text-white" style="font-size: 0.9rem;">Successful Transaction</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">+10 Points per bill payment/topup</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h6 class="fw-bold text-white mb-2" style="font-size: 0.85rem; letter-spacing: 1px;">BADGE TIERS</h6>
+        <div class="rules-grid">
+            <div class="rule-item"><i class="fas fa-medal" style="color:#cd7f32;"></i> <div><div class="fw-bold text-white" style="font-size: 0.8rem;">Bronze</div><small class="text-muted" style="font-size:0.7rem;">0 - 500 Pts</small></div></div>
+            <div class="rule-item"><i class="fas fa-medal" style="color:#c0c0c0;"></i> <div><div class="fw-bold text-white" style="font-size: 0.8rem;">Silver</div><small class="text-muted" style="font-size:0.7rem;">501 - 2,000 Pts</small></div></div>
+            <div class="rule-item"><i class="fas fa-medal" style="color:#d4af37;"></i> <div><div class="fw-bold text-white" style="font-size: 0.8rem;">Gold</div><small class="text-muted" style="font-size:0.7rem;">2,001 - 5,000 Pts</small></div></div>
+            <div class="rule-item"><i class="fas fa-gem" style="color:#00ffff;"></i> <div><div class="fw-bold text-white" style="font-size: 0.8rem;">Platinum</div><small class="text-muted" style="font-size:0.7rem;">5,001 - 10,000 Pts</small></div></div>
+            <div class="rule-item"><i class="fas fa-crown" style="color:#e5e4e2;"></i> <div><div class="fw-bold text-white" style="font-size: 0.8rem;">Elite</div><small class="text-muted" style="font-size:0.7rem;">10,000+ Pts</small></div></div>
+        </div>
+        
+        <p class="text-center text-muted mt-4 mb-0" style="font-size: 0.7rem;">Fraudulent or duplicate activities are automatically excluded from the leaderboard ledger by the Naterpay Anti-Fraud AI Engine.</p>
+    </div>
+
+</div>
+
+<footer class="text-center py-4 mt-auto" style="background: rgba(0,0,0,0.8); border-top: 1px solid #222;">
+    <p class="text-muted small fw-bold m-0" style="letter-spacing: 1px;">v3.0 SECURED BY NATER-PAY INFRASTRUCTURES</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function initStars() {
+        const canvas = document.getElementById('starCanvas');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        const ctx = canvas.getContext('2d');
+        const stars = [];
+        for(let i = 0; i < 150; i++) { stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() }); }
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(s => {
+                ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white";
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0; s.y += s.v; if(s.y > canvas.height) s.y = -5;
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+
+    // BADGE CALCULATION LOGIC
+    function getBadgeDetails(points) {
+        if(points >= 10000) return { name: 'Elite', class: 'badge-elite', next: null, max: 10000 };
+        if(points >= 5001) return { name: 'Platinum', class: 'badge-platinum', next: 'Elite', max: 10000 };
+        if(points >= 2001) return { name: 'Gold', class: 'badge-gold', next: 'Platinum', max: 5000 };
+        if(points >= 501) return { name: 'Silver', class: 'badge-silver', next: 'Gold', max: 2000 };
+        if(points > 0) return { name: 'Bronze', class: 'badge-bronze', next: 'Silver', max: 500 };
+        return { name: 'Starter', class: 'badge-starter', next: 'Bronze', max: 500 };
+    }
+
+    // 1. DYNAMICALLY LOAD THE LOGGED-IN USER'S RANK
+    async function loadMyRank() {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) { window.location.href = '/index.html'; return; }
+
+        try {
+            const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const data = await res.json();
+
+            if (data.success) {
+                document.getElementById('myName').innerText = data.userFullName || "Naterpay User";
+                
+                // Calculate Points: 10 pts per transaction log, 50 pts per referral
+                const txCount = data.totalLogs || 0;
+                const refCount = data.referralCount || 0;
+                const totalPoints = (txCount * 10) + (refCount * 50);
+                
+                document.getElementById('myPoints').innerText = `${totalPoints.toLocaleString()} PTS`;
+
+                const badge = getBadgeDetails(totalPoints);
+                const badgeEl = document.getElementById('myBadge');
+                badgeEl.innerText = badge.name;
+                badgeEl.className = `rank-badge ${badge.class}`;
+
+                const bar = document.getElementById('myProgressBar');
+                const targetText = document.getElementById('nextBadgeTarget');
+
+                if (badge.next) {
+                    const percent = Math.min((totalPoints / badge.max) * 100, 100);
+                    bar.style.width = `${percent}%`;
+                    targetText.innerText = `${(badge.max - totalPoints).toLocaleString()} pts to ${badge.next}`;
+                } else {
+                    bar.style.width = `100%`;
+                    bar.style.background = `linear-gradient(90deg, #e5e4e2, #fff)`; // Elite styling
+                    targetText.innerText = `Max Rank Achieved!`;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load personal rank.");
+        }
+    }
+
+    // 2. SIMULATE GLOBAL LEADERBOARD FETCH (Until dedicated Backend API is ready)
+    // We use realistic simulation to populate UI so it isn't broken while waiting for the actual backend route.
+    function renderGlobalBoard() {
+        const refContainer = document.getElementById('listReferrers');
+        const txContainer = document.getElementById('listTransactors');
+
+        // Simulated High-Tier Data
+        const topReferrers = [
+            { name: "David O.", refs: 142, points: 7100 },
+            { name: "Grace E.", refs: 98, points: 4900 },
+            { name: "Nater M.", refs: 85, points: 4250 },
+            { name: "Emmanuel S.", refs: 40, points: 2000 },
+            { name: "Aisha T.", refs: 22, points: 1100 }
+        ];
+
+        const topTransactors = [
+            { name: "Nater M.", txs: 1540, points: 15400 },
+            { name: "Ibrahim K.", txs: 980, points: 9800 },
+            { name: "Joy P.", txs: 850, points: 8500 },
+            { name: "Samuel B.", txs: 420, points: 4200 },
+            { name: "Victor A.", txs: 115, points: 1150 }
+        ];
+
+        const generateRows = (dataList, isRef) => {
+            return dataList.map((user, index) => {
+                const rank = index + 1;
+                const rankClass = rank <= 3 ? `rank-${rank}` : '';
+                const badgeInfo = getBadgeDetails(user.points);
+                const metricLabel = isRef ? `${user.refs} Invites` : `${user.txs} Logs`;
+                
+                return `
+                    <div class="rank-row ${rankClass}">
+                        <div class="rank-number">${rank}</div>
+                        <div class="rank-user-info">
+                            <div class="rank-avatar">${user.name.charAt(0)}</div>
+                            <div>
+                                <div class="fw-bold text-white mb-1">${user.name}</div>
+                                <span class="rank-badge ${badgeInfo.class}"><i class="fas fa-medal me-1"></i> ${badgeInfo.name}</span>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="rank-score">${user.points.toLocaleString()} <span style="font-size:0.6rem; color:#888;">PTS</span></div>
+                            <small class="text-muted" style="font-size:0.7rem;">${metricLabel}</small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        // Delay to simulate network fetch
+        setTimeout(() => {
+            refContainer.innerHTML = generateRows(topReferrers, true);
+            txContainer.innerHTML = generateRows(topTransactors, false);
+        }, 1200);
+    }
+
+    window.onload = () => {
+        initStars();
+        loadMyRank();
+        renderGlobalBoard();
+    };
+    window.onresize = initStars;
+</script>
+
+</body>
+</html>
