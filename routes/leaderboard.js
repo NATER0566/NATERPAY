@@ -3,41 +3,49 @@ const Transaction = require('../models/Transaction');
 
 async function getLeaderboard(request, reply) {
     try {
-        // 1. GET TOP REFERRERS
-        // Scans the User database for people with the highest referral counts
+        // 1. TOP REFERRERS
         const topReferrersData = await User.find({ referralCount: { $gt: 0 } })
-            .sort({ referralCount: -1 })
-            .limit(10)
-            .select('name referralCount');
-
-        const referrersList = topReferrersData.map(u => ({
-            name: u.name || 'Naterpay User',
-            refs: u.referralCount,
-            points: u.referralCount * 50 // 50 Points per referral
+            .sort({ referralCount: -1 }).limit(10).select('name referralCount');
+        const referrers = topReferrersData.map(u => ({
+            name: u.name || 'Naterpay User', count: u.referralCount, points: u.referralCount * 50
         }));
 
-        // 2. GET TOP TRANSACTORS
-        // Uses MongoDB Aggregation to securely group successful transactions by user
-        const topTransactorsData = await Transaction.aggregate([
-            { $match: { status: 'success' } },
-            { $group: { _id: '$user', txs: { $sum: 1 } } },
-            { $sort: { txs: -1 } },
-            { $limit: 10 },
-            { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'userInfo' } },
-            { $unwind: '$userInfo' }
-        ]);
+        // HELPER FUNCTION: Securely aggregate transactions by type
+        async function getTopUsersByTxType(typesArray, pointsMultiplier) {
+            const data = await Transaction.aggregate([
+                { $match: { status: 'success', type: { $in: typesArray } } },
+                { $group: { _id: '$user', count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 10 },
+                { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'userInfo' } },
+                { $unwind: '$userInfo' }
+            ]);
+            return data.map(t => ({
+                name: t.userInfo.name || 'Naterpay User', count: t.count, points: t.count * pointsMultiplier
+            }));
+        }
 
-        const transactorsList = topTransactorsData.map(t => ({
-            name: t.userInfo.name || 'Naterpay User',
-            txs: t.txs,
-            points: t.txs * 10 // 10 Points per transaction
-        }));
+        // 2. TOP SPENDERS (Bills, VTU, Data, Exams) - 10 points per purchase
+        const spenders = await getTopUsersByTxType(
+            ['airtime', 'data', 'electricity', 'cable', 'exam', 'education', 'betting', 'insurance'], 10
+        );
 
-        // 3. RETURN SECURE PAYLOAD
+        // 3. TOP FUNDERS (Deposits) - 5 points per deposit
+        const funders = await getTopUsersByTxType(['funding'], 5);
+
+        // 4. TOP MERCHANTS (Receiving payments via Links, QR, POS) - 20 points per sale
+        const merchants = await getTopUsersByTxType(['payment_link', 'qr_payment', 'pos'], 20);
+
+        // 5. TOP INVOICERS (Successfully paid invoices) - 20 points per invoice
+        const invoicers = await getTopUsersByTxType(['invoice'], 20);
+
         return reply.send({
             success: true,
-            referrers: referrersList,
-            transactors: transactorsList
+            referrers,
+            spenders,
+            funders,
+            merchants,
+            invoicers
         });
 
     } catch (error) {
@@ -46,6 +54,4 @@ async function getLeaderboard(request, reply) {
     }
 }
 
-module.exports = {
-    getLeaderboard
-};
+module.exports = { getLeaderboard };
