@@ -1,23 +1,24 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
 // ============================================================================
-// EMAIL SERVER CONFIGURATION (Using Resend SMTP for flawless CID delivery)
+// ULTRA-FAST HTTPS EMAIL CONFIGURATION (Bypasses SMTP Blocks)
 // ============================================================================
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.resend.com',
-    port: process.env.SMTP_PORT || 465,
-    secure: true,
-    auth: {
-        // If you are using Resend, the username is always 'resend'
-        user: process.env.SMTP_USER || 'resend', 
-        // Uses your Resend API key as the password
-        pass: process.env.SMTP_PASS || process.env.RESEND_API_KEY 
-    }
-});
-
+const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+
+// PRE-LOAD IMAGE TO BASE64: This prevents the server from hanging when reading files
+let logoBase64 = '';
+try {
+    const imagePath = path.join(__dirname, '../public/logopay.jpg.jpg');
+    const imageBuffer = fs.readFileSync(imagePath);
+    logoBase64 = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
+} catch (error) {
+    console.warn('[EMAIL WARNING] logopay.jpg.jpg not found in public folder. Using secure fallback.');
+    logoBase64 = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'; // Fallback so app never crashes
+}
 
 // ============================================================================
 // NATER-PAY HTML EMAIL TEMPLATE (DARK MODE, GOLD & ANIMATED)
@@ -32,7 +33,7 @@ function getEmailHTML(title, mainText, bigHighlightText) {
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;800&display=swap');
             
-            /* These animations will run on Apple Mail and clients that support modern CSS */
+            /* Animations for supported Apple/Web clients */
             @keyframes pumping {
                 0% { transform: scale(1); }
                 50% { transform: scale(1.05); }
@@ -64,7 +65,7 @@ function getEmailHTML(title, mainText, bigHighlightText) {
             
             <tr>
                 <td align="center" style="padding: 15px 20px 30px 20px; background-color: #0a0a0a; border-bottom: 2px solid #d4af37;">
-                    <img src="cid:naterpay_logo" alt="NATER-PAY LOGO" class="animated-logo" style="width: 140px; border-radius: 16px; border: 2px solid #d4af37; box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);">
+                    <img src="${logoBase64}" alt="NATER-PAY LOGO" class="animated-logo" style="width: 140px; border-radius: 16px; border: 2px solid #d4af37; box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);">
                 </td>
             </tr>
             
@@ -99,12 +100,12 @@ function getEmailHTML(title, mainText, bigHighlightText) {
 }
 
 // ============================================================================
-// EMAIL SENDING FUNCTIONS
+// LIGHTNING-FAST EMAIL SENDING
 // ============================================================================
 
 async function sendOTPEmail(email, otp) {
     try {
-        const mailOptions = {
+        const { data, error } = await resend.emails.send({
             from: `"NATER-PAY SECURE" <${fromEmail}>`,
             to: email,
             subject: 'NATER-PAY | Account Verification',
@@ -112,16 +113,11 @@ async function sendOTPEmail(email, otp) {
                 'Authorization Required', 
                 'You requested a verification code to authenticate your NATER-PAY terminal. Please use the One-Time Password (OTP) below to grant access.',
                 otp
-            ),
-            attachments: [{
-                filename: 'logopay.jpg.jpg',
-                path: path.join(__dirname, '../public/logopay.jpg.jpg'), 
-                cid: 'naterpay_logo' 
-            }]
-        };
+            )
+        });
 
-        await transporter.sendMail(mailOptions);
-        console.log(`[EMAIL] OTP sent successfully to ${email}`);
+        if (error) throw new Error(error.message);
+        console.log(`[EMAIL] OTP sent instantly to ${email} (ID: ${data.id})`);
     } catch (error) {
         console.error(`[EMAIL ERROR] Failed to send OTP to ${email}:`, error);
     }
@@ -129,7 +125,7 @@ async function sendOTPEmail(email, otp) {
 
 async function sendPasswordResetEmail(email, otp) {
     try {
-        const mailOptions = {
+        const { data, error } = await resend.emails.send({
             from: `"NATER-PAY SUPPORT" <${fromEmail}>`,
             to: email,
             subject: 'NATER-PAY | Password Reset Request',
@@ -137,16 +133,11 @@ async function sendPasswordResetEmail(email, otp) {
                 'Vault Override Request', 
                 'A request was made to override and reset the security password for your NATER-PAY terminal. Use the secure code below to authorize the change.',
                 otp
-            ),
-            attachments: [{
-                filename: 'logopay.jpg.jpg',
-                path: path.join(__dirname, '../public/logopay.jpg.jpg'), 
-                cid: 'naterpay_logo' 
-            }]
-        };
+            )
+        });
 
-        await transporter.sendMail(mailOptions);
-        console.log(`[EMAIL] Password reset OTP sent successfully to ${email}`);
+        if (error) throw new Error(error.message);
+        console.log(`[EMAIL] Password reset OTP sent instantly to ${email} (ID: ${data.id})`);
     } catch (error) {
         console.error(`[EMAIL ERROR] Failed to send Password Reset to ${email}:`, error);
     }
