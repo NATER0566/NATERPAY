@@ -5,58 +5,66 @@ const socketIo = require('socket.io');
 const NodeCache = require('node-cache');
 const config = require('./config');
 
-// Initialize Fastify WITH INCREASED BODY LIMIT FOR BASE64 IMAGES
+// ============================================================================
+// CORE SYSTEM INITIALIZATION
+// ============================================================================
 const fastify = Fastify({
   logger: true,
   trustProxy: true,
-  bodyLimit: 15 * 1024 * 1024 // 15MB limit allows large CMS Slides to upload without hanging
+  bodyLimit: 15 * 1024 * 1024 // 15MB limit allows large CMS Slides to upload safely
 });
 
-// Initialize cache
+// Initialize Global Cache
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
-// Register plugins
+// ============================================================================
+// PLUGIN REGISTRATION (Security, CORS, Static Files)
+// ============================================================================
 async function registerPlugins() {
-  // CORS - Fully opened to ensure Socket.io notifications reach the dashboard
+  // CORS - Fully opened to ensure Socket.io and frontend interactions flow perfectly
   await fastify.register(require('@fastify/cors'), {
     origin: '*',
     credentials: true
   });
   
-  // Helmet
+  // Helmet - CSP disabled to allow your custom frontend inline CSS/JS to run
   await fastify.register(require('@fastify/helmet'), {
     contentSecurityPolicy: false
   });
   
-  // Rate limiting
+  // Anti-DDoS Rate Limiting
   await fastify.register(require('@fastify/rate-limit'), {
     max: config.rateLimit.max,
     timeWindow: config.rateLimit.windowMs,
     skipOnError: true
   });
   
-  // Static files
+  // Static files server (Serves images like logopay.jpg.jpg securely)
   await fastify.register(require('@fastify/static'), {
     root: __dirname + '/public',
     prefix: '/'
   });
 }
 
-// Connect to MongoDB
+// ============================================================================
+// DATABASE CONNECTION (MongoDB)
+// ============================================================================
 async function connectDatabase() {
   try {
     await mongoose.connect(config.database.uri, {
       useNewUrlParser: true,
       useUnifiedTopology: true
     });
-    console.log('MongoDB connected successfully');
+    console.log('[SYSTEM] Naterpay Database Ledger connected successfully.');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('[FATAL ERROR] MongoDB connection failed:', error);
     process.exit(1);
   }
 }
 
-// Register routes
+// ============================================================================
+// ENTERPRISE ROUTE REGISTRATION API MAP
+// ============================================================================
 async function registerRoutes() {
   const authRoutes = require('./routes/auth');
   fastify.post('/api/auth/register', authRoutes.register);
@@ -66,14 +74,10 @@ async function registerRoutes() {
   fastify.post('/api/auth/refresh-token', authRoutes.refreshToken);
   fastify.post('/api/auth/forgot-password', authRoutes.forgotPassword);
   fastify.post('/api/auth/reset-password', authRoutes.resetPassword);
-  
   fastify.get('/api/auth/profile', { preHandler: require('./middleware/auth').authenticate }, authRoutes.getProfile);
   fastify.post('/api/auth/logout', { preHandler: require('./middleware/auth').authenticate }, authRoutes.logout);
-  
-  // === NEW SECURITY ROUTES ===
   fastify.post('/api/auth/change-password', { preHandler: require('./middleware/auth').authenticate }, authRoutes.changePassword);
   fastify.post('/api/auth/logout-all', { preHandler: require('./middleware/auth').authenticate }, authRoutes.logoutAllSessions);
-  // ===========================
   
   const userRoutes = require('./routes/user');
   fastify.get('/api/user/dashboard-data', { preHandler: require('./middleware/auth').authenticate }, userRoutes.getDashboardData);
@@ -91,10 +95,9 @@ async function registerRoutes() {
   fastify.post('/api/wallet/set-pin', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.setPin);
   fastify.post('/api/wallet/verify-bank', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.resolveBankAccount);
 
-  // === PAYSTACK WEBHOOK (NO AUTH REQUIRED - IT USES SECRET KEY HASH) ===
+  // === WEBHOOKS (Bypasses manual Auth, secured by hash matching) ===
   fastify.post('/api/webhooks/paystack', walletRoutes.handlePaystackWebhook);
-  // ====================================================================
-
+  
   const vtuRoutes = require('./routes/vtu');
   fastify.post('/api/vtu/airtime', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyAirtime);
   fastify.post('/api/vtu/data', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyData);
@@ -135,10 +138,8 @@ async function registerRoutes() {
   const tasksRoutes = require('./routes/tasks');
   fastify.post('/api/tasks/claim-ad', { preHandler: require('./middleware/auth').authenticate }, tasksRoutes.claimAd);
   
-  // === NEW: LIVE LEADERBOARD ROUTE ===
   const leaderboardRoutes = require('./routes/leaderboard');
   fastify.get('/api/leaderboard', { preHandler: require('./middleware/auth').authenticate }, leaderboardRoutes.getLeaderboard);
-  // ===================================
   
   const invoiceRoutes = require('./routes/invoice');
   fastify.get('/api/invoices', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.getInvoices);
@@ -157,14 +158,15 @@ async function registerRoutes() {
   fastify.get('/api/support/tickets/:ticketId', { preHandler: require('./middleware/auth').authenticate }, supportRoutes.getTicket);
   fastify.post('/api/support/tickets/:ticketId/messages', { preHandler: require('./middleware/auth').authenticate }, supportRoutes.addMessage);
   
+  // === ADMIN PANEL ROUTES ===
   const adminRoutes = require('./routes/admin');
   fastify.get('/api/admin/users', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getUsers);
   fastify.get('/api/admin/users/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getUser);
   fastify.put('/api/admin/users/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.updateUser);
   fastify.get('/api/admin/transactions', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getTransactions);
   fastify.get('/api/admin/analytics', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getAnalytics);
-  fastify.get('/api/admin/kyc/pending', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingKYC);
   
+  fastify.get('/api/admin/kyc/pending', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingKYC);
   fastify.get('/api/admin/kyc/:kycId/verify', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.verifyRealWorldKYC);
   fastify.put('/api/admin/kyc/:kycId/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.approveKYC);
   fastify.put('/api/admin/kyc/:kycId/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.rejectKYC);
@@ -208,6 +210,7 @@ async function registerRoutes() {
   const statusRoutes = require('./routes/status');
   fastify.get('/api/system-status', statusRoutes.getSystemStatus);
   
+  // FEATURE FLAG MIDDLEWARE
   fastify.addHook('onRequest', async (request, reply) => {
     const path = request.url;
     const disabledFeatures = [];
@@ -230,7 +233,9 @@ async function registerRoutes() {
   });
 }
 
-// Setup Socket.io
+// ============================================================================
+// WEBSOCKET (Real-time updates)
+// ============================================================================
 function setupSocketIO(server) {
   const io = socketIo(server, {
     cors: {
@@ -267,12 +272,15 @@ function setupSocketIO(server) {
     socket.on('cms_update', () => io.emit('cms_update'));
     socket.on('slides_refresh', () => io.emit('slides_refresh'));
     socket.on('notification', (data) => io.to(`user:${socket.userId}`).emit('notification', data));
-    socket.on('disconnect', () => console.log('User disconnected:', socket.userId));
+    socket.on('disconnect', () => console.log('[SOCKET] User disconnected:', socket.userId));
   });
   
   return io;
 }
 
+// ============================================================================
+// AUTOMATED CRON JOBS (Reconciliation, Analytics, Invoices)
+// ============================================================================
 function startCronJobs() {
   const cron = require('node-cron');
   cron.schedule(config.cron.reconciliation, async () => {
@@ -290,7 +298,9 @@ function startCronJobs() {
   });
 }
 
-// Start server
+// ============================================================================
+// STARTUP ENGINE
+// ============================================================================
 async function start() {
   try {
     await registerPlugins();
@@ -303,13 +313,14 @@ async function start() {
     startCronJobs();
     
     await fastify.listen({ port: config.port, host: config.host });
-    console.log(`Server running on port ${config.port}`);
+    console.log(`[SYSTEM] Server successfully running and bound to port ${config.port}`);
   } catch (error) {
     fastify.log.error(error);
     process.exit(1);
   }
 }
 
+// Graceful Shutdown Handlers
 process.on('SIGTERM', async () => { await fastify.close(); await mongoose.connection.close(); process.exit(0); });
 process.on('SIGINT', async () => { await fastify.close(); await mongoose.connection.close(); process.exit(0); });
 
