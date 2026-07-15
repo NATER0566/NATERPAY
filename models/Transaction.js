@@ -291,7 +291,7 @@ transactionSchema.set('toJSON', {
 transactionSchema.post('save', async function (doc) {
     // 1. ONLY trigger on 'success'
     // 2. EXCLUDE funding/deposits so they actually have to SPEND money to trigger the reward
-    const excludedTypes = ['funding', 'wallet_fund', 'referral_bonus'];
+    const excludedTypes = ['funding', 'wallet_fund', 'referral_bonus', 'cashback'];
 
     if (doc.status === 'success' && !excludedTypes.includes(doc.type)) {
         try {
@@ -374,6 +374,70 @@ transactionSchema.post('save', async function (doc) {
             }
         } catch (error) {
             console.error("Auto-Referral Engine Error:", error.message);
+        }
+    }
+});
+
+// ============================================================================
+// NATER-PAY AUTOMATED CASHBACK REWARD ENGINE
+// ============================================================================
+transactionSchema.post('save', async function (doc) {
+    // 1. ONLY trigger on eligible service purchases
+    const eligibleTypes = ['airtime', 'data', 'electricity', 'cable', 'exam'];
+
+    // 2. ONLY trigger if the transaction was successful
+    if (doc.status === 'success' && eligibleTypes.includes(doc.type)) {
+        try {
+            const mongoose = require('mongoose');
+            const Wallet = mongoose.models.Wallet || mongoose.model('Wallet');
+            const Transaction = mongoose.models.Transaction || mongoose.model('Transaction');
+
+            // 3. DOUBLE-SPEND PROTECTION: Check if we already paid cashback for this exact transaction ID
+            const existingCashback = await Transaction.findOne({ idempotencyKey: `cb_${doc._id}` });
+            if (existingCashback) return; // If already paid, silently stop
+
+            // 4. DYNAMIC RATE CALCULATOR (Based on the safe margins we set)
+            let cashbackRate = 0;
+            if (doc.type === 'data' || doc.type === 'exam') {
+                cashbackRate = 0.01; // 1.0% Cashback
+            } else if (doc.type === 'airtime' || doc.type === 'electricity' || doc.type === 'cable') {
+                cashbackRate = 0.005; // 0.5% Cashback
+            }
+
+            const txAmount = parseFloat(doc.amount.toString());
+            const cashbackReward = txAmount * cashbackRate;
+
+            // 5. ONLY PAY IF REWARD IS VALID (Greater than 0)
+            if (cashbackReward > 0) {
+                const userWallet = await Wallet.findOne({ user: doc.user });
+                
+                if (userWallet) {
+                    const currentAvail = parseFloat(userWallet.availableBalance || 0);
+                    const currentLedger = parseFloat(userWallet.balance || 0);
+
+                    // A. Instantly Auto-Credit the Main Wallet
+                    userWallet.availableBalance = String(currentAvail + cashbackReward);
+                    userWallet.balance = String(currentLedger + cashbackReward);
+                    await userWallet.save();
+
+                    // B. Generate the Official Cashback Receipt
+                    const cbTx = new Transaction({
+                        user: doc.user,
+                        type: 'cashback',
+                        description: `${doc.type.toUpperCase()} Reward Cashback`,
+                        amount: cashbackReward,
+                        fee: 0,
+                        balanceBefore: String(currentAvail),
+                        balanceAfter: userWallet.availableBalance,
+                        status: 'success',
+                        provider: 'system',
+                        idempotencyKey: `cb_${doc._id}` // Locks the engine from ever paying this twice
+                    });
+                    await cbTx.save();
+                }
+            }
+        } catch (error) {
+            console.error("Auto-Cashback Engine Error:", error.message);
         }
     }
 });
