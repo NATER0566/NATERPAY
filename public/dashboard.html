@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -329,26 +330,40 @@
     <h5 class="ecosystem-section-title"><i class="fas fa-store"></i> Merchant & Business</h5>
     <div class="row g-2" id="gridBusiness">
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="pos.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
-                <i class="fas fa-star star-badge"></i>
-                <i class="fas fa-cash-register main-icon"></i><span>POS Terminal</span>
+            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('POS Terminal'); return false;">
+                <span class="position-absolute badge bg-dark border border-secondary text-warning" style="top:5px; right:5px; font-size:0.5rem; letter-spacing: 1px;">UPGRADING</span>
+                <i class="fas fa-cash-register main-icon text-secondary"></i><span class="text-secondary">POS Terminal</span>
             </a>
         </div>
+        
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="bulksms.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-paper-plane main-icon"></i><span>Bulk SMS</span></a>
+            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('Bulk SMS'); return false;">
+                <span class="position-absolute badge bg-dark border border-secondary text-warning" style="top:5px; right:5px; font-size:0.5rem; letter-spacing: 1px;">UPGRADING</span>
+                <i class="fas fa-paper-plane main-icon text-secondary"></i><span class="text-secondary">Bulk SMS</span>
+            </a>
         </div>
+        
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="insurance.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-shield-alt main-icon"></i><span>Insurance</span></a>
+            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('Insurance'); return false;">
+                <span class="position-absolute badge bg-dark border border-secondary text-warning" style="top:5px; right:5px; font-size:0.5rem; letter-spacing: 1px;">UPGRADING</span>
+                <i class="fas fa-shield-alt main-icon text-secondary"></i><span class="text-secondary">Insurance</span>
+            </a>
         </div>
+        
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="merchant-dashboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-chart-line main-icon"></i><span>Biz Analytics</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="reseller.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-network-wired main-icon"></i><span>Reseller Hub</span></a>
         </div>
+        
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="payment-links.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-link main-icon"></i><span>Pay Links</span></a>
+            <a href="payment-links.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
+                <i class="fas fa-star star-badge"></i>
+                <i class="fas fa-link main-icon"></i><span>Pay Links</span>
+            </a>
         </div>
+        
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="qr-pay.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-qrcode main-icon"></i><span>QR Collect</span></a>
         </div>
@@ -426,6 +441,18 @@
     let stars = [];
     let socketConnectionLink = null;
     let unreadNotifications = [];
+
+    // THE FIX: SweetAlert function for the maintenance buttons
+    function showComingSoon(serviceName) {
+        Swal.fire({
+            icon: 'info',
+            title: 'System Upgrade',
+            text: `${serviceName} is currently undergoing a scheduled infrastructure upgrade with our partners. It will be back online soon!`,
+            background: '#0a0a0a',
+            color: '#fff',
+            confirmButtonColor: '#FFD700'
+        });
+    }
 
     function triggerLoad(element) {
         element.classList.add('loading');
@@ -571,7 +598,6 @@
             if(data.success) {
                 document.getElementById('profileBadgeName').innerText = data.userFullName || "Verified Terminal Operator";
                 
-                // THE NEW KYC ENGINE FETCH
                 try {
                     const kycRes = await fetch('/api/kyc', { headers: { 'Authorization': `Bearer ${authToken}` } });
                     const kycData = await kycRes.json();
@@ -684,9 +710,12 @@
                         const txType = (tx.type || '').toLowerCase();
                         const desc = (tx.description || '').toLowerCase();
 
-                        if (['funding', 'invoice', 'payment_link', 'salary', 'bonus', 'refund', 'cashback'].includes(txType)) {
+                        // THE FIX: Added 'referral_bonus' and Admin credits so they appear as PLUS / GREEN
+                        if (['funding', 'invoice', 'payment_link', 'salary', 'bonus', 'refund', 'cashback', 'referral_bonus'].includes(txType)) {
                             isCredit = true;
                         } else if (txType === 'transfer' && (desc.includes('received') || desc.includes('from'))) {
+                            isCredit = true;
+                        } else if (desc.includes('admin credit')) {
                             isCredit = true;
                         }
 
