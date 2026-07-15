@@ -294,60 +294,54 @@
         }
     }
 
-    // 2. SIMULATE GLOBAL LEADERBOARD FETCH (Until dedicated Backend API is ready)
-    // We use realistic simulation to populate UI so it isn't broken while waiting for the actual backend route.
-    function renderGlobalBoard() {
+    // 2. LIVE GLOBAL LEADERBOARD FETCH (Connected to Real Backend)
+    async function renderGlobalBoard() {
         const refContainer = document.getElementById('listReferrers');
         const txContainer = document.getElementById('listTransactors');
+        const authToken = localStorage.getItem("naterpay_token");
 
-        // Simulated High-Tier Data
-        const topReferrers = [
-            { name: "David O.", refs: 142, points: 7100 },
-            { name: "Grace E.", refs: 98, points: 4900 },
-            { name: "Nater M.", refs: 85, points: 4250 },
-            { name: "Emmanuel S.", refs: 40, points: 2000 },
-            { name: "Aisha T.", refs: 22, points: 1100 }
-        ];
+        try {
+            const res = await fetch('/api/leaderboard', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const data = await res.json();
 
-        const topTransactors = [
-            { name: "Nater M.", txs: 1540, points: 15400 },
-            { name: "Ibrahim K.", txs: 980, points: 9800 },
-            { name: "Joy P.", txs: 850, points: 8500 },
-            { name: "Samuel B.", txs: 420, points: 4200 },
-            { name: "Victor A.", txs: 115, points: 1150 }
-        ];
-
-        const generateRows = (dataList, isRef) => {
-            return dataList.map((user, index) => {
-                const rank = index + 1;
-                const rankClass = rank <= 3 ? `rank-${rank}` : '';
-                const badgeInfo = getBadgeDetails(user.points);
-                const metricLabel = isRef ? `${user.refs} Invites` : `${user.txs} Logs`;
-                
-                return `
-                    <div class="rank-row ${rankClass}">
-                        <div class="rank-number">${rank}</div>
-                        <div class="rank-user-info">
-                            <div class="rank-avatar">${user.name.charAt(0)}</div>
-                            <div>
-                                <div class="fw-bold text-white mb-1">${user.name}</div>
-                                <span class="rank-badge ${badgeInfo.class}"><i class="fas fa-medal me-1"></i> ${badgeInfo.name}</span>
+            if (data.success) {
+                const generateRows = (dataList, isRef) => {
+                    if (dataList.length === 0) return '<div class="text-center py-4 opacity-50"><i class="fas fa-box-open fa-2x mb-2"></i><br>No ledger data available yet.</div>';
+                    
+                    return dataList.map((user, index) => {
+                        const rank = index + 1;
+                        const rankClass = rank <= 3 ? `rank-${rank}` : '';
+                        const badgeInfo = getBadgeDetails(user.points);
+                        const metricLabel = isRef ? `${user.refs} Invites` : `${user.txs} Logs`;
+                        
+                        return `
+                            <div class="rank-row ${rankClass}">
+                                <div class="rank-number">${rank}</div>
+                                <div class="rank-user-info">
+                                    <div class="rank-avatar">${user.name.charAt(0)}</div>
+                                    <div>
+                                        <div class="fw-bold text-white mb-1">${user.name}</div>
+                                        <span class="rank-badge ${badgeInfo.class}"><i class="fas fa-medal me-1"></i> ${badgeInfo.name}</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="rank-score">${user.points.toLocaleString()} <span style="font-size:0.6rem; color:#888;">PTS</span></div>
+                                    <small class="text-muted" style="font-size:0.7rem;">${metricLabel}</small>
+                                </div>
                             </div>
-                        </div>
-                        <div class="text-end">
-                            <div class="rank-score">${user.points.toLocaleString()} <span style="font-size:0.6rem; color:#888;">PTS</span></div>
-                            <small class="text-muted" style="font-size:0.7rem;">${metricLabel}</small>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        };
+                        `;
+                    }).join('');
+                };
 
-        // Delay to simulate network fetch
-        setTimeout(() => {
-            refContainer.innerHTML = generateRows(topReferrers, true);
-            txContainer.innerHTML = generateRows(topTransactors, false);
-        }, 1200);
+                refContainer.innerHTML = generateRows(data.referrers, true);
+                txContainer.innerHTML = generateRows(data.transactors, false);
+            } else {
+                throw new Error("Payload failed");
+            }
+        } catch (e) {
+            refContainer.innerHTML = '<div class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle mb-2"></i><br>Failed to synchronize with global ledger.</div>';
+            txContainer.innerHTML = '<div class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle mb-2"></i><br>Failed to synchronize with global ledger.</div>';
+        }
     }
 
     window.onload = () => {
