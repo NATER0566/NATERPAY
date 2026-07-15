@@ -1,7 +1,5 @@
 require('dotenv').config();
 
-
-
 console.log("MONGODB_URI =", process.env.MONGODB_URI);
 
 const config = {
@@ -68,13 +66,13 @@ const config = {
   },
   
   featureFlags: {
-    wallet: process.env.ENABLE_WALLET === 'true',
+    wallet: true, // Forced true for core platform operations
     loans: process.env.ENABLE_LOANS === 'true',
     savings: process.env.ENABLE_SAVINGS === 'true',
     escrow: process.env.ENABLE_ESCROW === 'true',
     virtualCards: process.env.ENABLE_VIRTUAL_CARDS === 'true',
     agentBanking: process.env.ENABLE_AGENT_BANKING === 'true',
-    taskEarn: process.env.ENABLE_TASK_EARN === 'true',
+    taskEarn: true, // FORCE ENABLED: Overrides environment sync issues to unblock the dashboard immediately
     dailyRewards: process.env.ENABLE_DAILY_REWARDS === 'true',
     spinWin: process.env.ENABLE_SPIN_WIN === 'true',
     airtimeCash: process.env.ENABLE_AIRTIME_CASH === 'true'
@@ -118,7 +116,6 @@ const config = {
   }
 };
 
-// Validate required environment variables
 function validateConfig() {
   const required = ['MONGODB_URI', 'JWT_SECRET', 'JWT_REFRESH_SECRET'];
   const missing = required.filter(key => !process.env[key]);
