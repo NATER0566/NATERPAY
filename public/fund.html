@@ -82,7 +82,7 @@
 <div class="container">
     <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);"><i class="fas fa-shield-alt me-2"></i> SECURE DEPOSIT</h1>
     
-    <div class="fund-card">
+    <div class="fund-card" id="mainFundContainer">
         <label class="small text-muted mb-2 d-block fw-bold text-center">ENTER AMOUNT (₦)</label>
         <input type="number" id="fundAmount" class="amount-input mb-4" placeholder="0.00" min="100">
         
@@ -128,6 +128,33 @@
 <script>
     let selectedProvider = 'paystack';
     
+    // ==========================================
+    // THE FIX: GHOST TRANSACTION PREVENTION ENGINE
+    // ==========================================
+    // This event fires every time the page becomes visible, even if loaded from cache (Back Button)
+    window.addEventListener('pageshow', function(event) {
+        if (localStorage.getItem('pending_funding_ref')) {
+            // Instantly blur the screen so they cannot click anything
+            document.body.style.opacity = '0.4';
+            document.body.style.pointerEvents = 'none';
+            
+            Swal.fire({ 
+                icon: 'warning',
+                title: 'Verifying Gateway...', 
+                text: 'We detected a recent payment attempt. Redirecting you to verify its status.', 
+                allowOutsideClick: false, 
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading(), 
+                background: '#111', color: '#fff' 
+            });
+
+            // Force them to the dashboard where the strict verify script clears/fails the log
+            setTimeout(() => {
+                window.location.replace('dashboard.html');
+            }, 1000);
+        }
+    });
+
     function initStars() {
         const canvas = document.getElementById('starCanvas');
         canvas.width = window.innerWidth;
@@ -173,7 +200,7 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
         
         const btn = document.getElementById('payBtn');
-        btn.disabled = true; // Prevents double-clicking and spamming the server
+        btn.disabled = true; // Hard-lock the button
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> SECURING CONNECTION...';
         
         try {
@@ -186,11 +213,13 @@
             const data = await res.json();
             
             if (data.success && data.checkoutUrl) {
+                // Memory saved.
                 localStorage.setItem('pending_funding_ref', data.paymentReference);
                 
                 Swal.fire({
-                    icon: 'info', title: 'Redirecting...', text: 'Connecting to secure payment gateway.', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff'
+                    icon: 'info', title: 'Redirecting...', text: 'Connecting to secure payment gateway.', showConfirmButton: false, timer: 1500, background: '#111', color: '#fff'
                 }).then(() => {
+                    // Redirects user. The button remains disabled so they can't double-click.
                     window.location.href = data.checkoutUrl;
                 });
             } else {
