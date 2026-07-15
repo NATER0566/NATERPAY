@@ -55,15 +55,21 @@
         .btn-task:hover:not(:disabled) { background: var(--gold); color: black; box-shadow: 0 5px 15px rgba(212,175,55,0.3); }
         .btn-task:disabled { border-color: #444; color: #888; cursor: not-allowed; }
 
+        /* BIG ADVERTISEMENT BANNER REDESIGN */
         .sponsored-ad-card {
-            background: linear-gradient(180deg, rgba(30,30,30,0.9) 0%, rgba(10,10,10,0.95) 100%);
-            border: 1px solid #444; border-radius: 16px; padding: 20px; display: flex;
-            align-items: center; justify-content: space-between; margin-bottom: 15px; transition: 0.3s; gap: 20px;
+            background: var(--card-bg); border: 1.5px solid #333; border-radius: 20px; 
+            overflow: hidden; margin-bottom: 30px; transition: 0.3s; display: flex; flex-direction: column;
         }
-        .sponsored-ad-card:hover { border-color: var(--gold); }
-        .ad-details { flex: 1; }
-        .ad-title { font-weight: 800; font-size: 1.1rem; color: #fff; margin-bottom: 5px; }
-        .ad-desc { font-size: 0.85rem; color: #aaa; margin-bottom: 10px; }
+        .sponsored-ad-card:hover { border-color: var(--gold); box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15); transform: translateY(-3px); }
+        
+        .ad-banner-img {
+            width: 100%; height: 250px; object-fit: cover; border-bottom: 2px solid var(--gold);
+        }
+        
+        .ad-body-content { padding: 25px; }
+        .ad-title { font-weight: 900; font-size: 1.4rem; color: #fff; margin-bottom: 8px; font-family: 'Cinzel', serif; }
+        .ad-desc { font-size: 0.95rem; color: #ccc; margin-bottom: 15px; line-height: 1.6; }
+        .ad-contact-strip { font-size: 0.85rem; color: #888; background: #111; padding: 10px 15px; border-radius: 8px; display: inline-block; margin-bottom: 20px; border: 1px dashed #333; }
         
         .business-card { background: linear-gradient(90deg, #111, #000); border: 1px dashed var(--gold); border-radius: 16px; padding: 30px; text-align: center; margin-top: 50px; }
     </style>
@@ -110,7 +116,8 @@
             </div>
         </div>
 
-        <div class="col-md-6 col-lg-4">
+        <!-- PROFILE TASK WRAPPER (Will hide when claimed) -->
+        <div class="col-md-6 col-lg-4" id="profileTaskWrapper">
             <div class="info-card">
                 <div class="task-icon-wrapper" style="background: rgba(0, 191, 255, 0.1); color: #00bfff;"><i class="fas fa-id-badge"></i></div>
                 <div class="reward-badge">Reward: ₦50 (One-Time)</div>
@@ -126,10 +133,12 @@
     </h4>
     <p class="text-muted small mb-4">Support our partners. Click the ad, stay on the page for 20 seconds, and earn instant cash.</p>
 
-    <div id="dynamicAdsContainer">
-        <div class="text-center py-4 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Scanning Database for Live Ads...</div>
+    <!-- LIVE BIG ADS INJECTED HERE -->
+    <div id="dynamicAdsContainer" class="row">
+        <div class="col-12 text-center py-4 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Scanning Database for Live Ads...</div>
     </div>
 
+    <!-- BUSINESS PROMOTION -->
     <div class="business-card">
         <h4 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;">FOR BUSINESSES: GET GUARANTEED TRAFFIC</h4>
         <p class="text-muted mb-4 mx-auto" style="max-width: 600px;">
@@ -167,7 +176,7 @@
     }
 
     // ==========================================
-    // REAL PROFILE REWARD LOGIC
+    // AUTO-HIDE CLAIMED PROFILE REWARD
     // ==========================================
     async function claimProfileReward() {
         const btn = document.getElementById('btnProfileTask');
@@ -185,14 +194,20 @@
             const data = await response.json();
 
             if (data.success) {
-                btn.innerHTML = `<i class="fas fa-check-circle me-2"></i> Claimed (₦50)`;
-                btn.classList.replace('btn-outline-warning', 'btn-success');
                 Swal.fire({ icon: 'success', title: 'Reward Credited!', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                // Hide the profile card completely since it's a one-time reward
+                document.getElementById('profileTaskWrapper').style.display = 'none';
             } else {
                 btn.innerHTML = `Claim Verification Reward`;
                 btn.disabled = false;
-                Swal.fire({ icon: 'warning', title: 'Action Required', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' })
-                .then(res => { if(res.isConfirmed) window.location.href='kyc.html'; });
+                
+                if (data.message.includes('already claimed')) {
+                    document.getElementById('profileTaskWrapper').style.display = 'none';
+                    Swal.fire({ icon: 'info', title: 'Already Claimed', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                } else {
+                    Swal.fire({ icon: 'warning', title: 'Action Required', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' })
+                    .then(res => { if(res.isConfirmed) window.location.href='kyc.html'; });
+                }
             }
         } catch (err) {
             btn.innerHTML = `Claim Verification Reward`;
@@ -202,7 +217,7 @@
     }
 
     // ==========================================
-    // REAL DATABASE ADS LOGIC
+    // MASSIVE ADS RENDERER WITH URL FIXER
     // ==========================================
     async function loadDynamicAds() {
         const container = document.getElementById('dynamicAdsContainer');
@@ -212,7 +227,7 @@
 
             if (!data.success || !data.ads || data.ads.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-5 rounded-4" style="background: rgba(0,0,0,0.5); border: 1px dashed #333;">
+                    <div class="col-12 text-center py-5 rounded-4" style="background: rgba(0,0,0,0.5); border: 1px dashed #333;">
                         <i class="fas fa-bullhorn fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
                         <h6 class="text-muted fw-bold">No Active Campaigns</h6>
                         <p class="small text-muted mb-0">Check back tomorrow for new Click & Earn tasks, or create your own ad below!</p>
@@ -222,54 +237,74 @@
 
             container.innerHTML = '';
             data.ads.forEach(ad => {
-                // Safeguard: Check all possible database field names for the link
-                const targetLink = ad.targetUrl || ad.link || ad.url || '';
-                // Pull actual image or use placeholder
-                const imageUrl = ad.imageUrl || ad.image || 'https://via.placeholder.com/150/050505/d4af37?text=AD';
+                // 1. EXTRACT DATA CORRECTLY FROM DB
+                const rawWeb = ad.website || ad.targetUrl || ad.link || ad.url || '';
+                const rawWa = ad.whatsappNumber || '';
+                const rawPh = ad.phoneNumber || '';
+                
+                // 2. DETERMINE THE BEST CLICKABLE LINK
+                let primaryLink = '';
+                if (rawWeb) primaryLink = rawWeb.startsWith('http') ? rawWeb : 'https://' + rawWeb;
+                else if (rawWa) primaryLink = 'https://wa.me/' + rawWa.replace(/[^0-9]/g, '');
+                else if (rawPh) primaryLink = 'tel:' + rawPh;
+
+                // 3. BUILD CONTACT DETAILS DISPLAY
+                let contactsHtml = '';
+                if (rawWa) contactsHtml += `<span class="me-3 fw-bold"><i class="fab fa-whatsapp text-success"></i> ${rawWa}</span>`;
+                if (rawPh) contactsHtml += `<span class="fw-bold"><i class="fas fa-phone text-info"></i> ${rawPh}</span>`;
+
+                const imageUrl = ad.imageUrl || ad.image || 'https://via.placeholder.com/1200x400/050505/d4af37?text=ADVERTISEMENT';
                 const reward = ad.rewardAmount || 5;
                 
+                // 4. RENDER HUGE AD BANNER
                 container.innerHTML += `
-                    <div class="sponsored-ad-card" id="ad_slot_${ad._id}">
-                        <div class="task-icon-wrapper" style="margin: 0; padding: 0; overflow: hidden; border: 1px solid #d4af37; background: #000;">
-                            <img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Ad Image">
+                    <div class="col-md-6 col-xl-6" id="ad_slot_${ad._id}">
+                        <div class="sponsored-ad-card">
+                            <img src="${imageUrl}" class="ad-banner-img" alt="Ad Image">
+                            <div class="ad-body-content">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-dark text-warning border border-warning">Reward: ₦${reward}</span>
+                                    <span class="text-muted small"><i class="fas fa-tag"></i> ${ad.category || 'Promotion'}</span>
+                                </div>
+                                <h3 class="ad-title">${ad.title || 'Sponsored Campaign'}</h3>
+                                <p class="ad-desc">${ad.description || 'View this amazing offer from our sponsor.'}</p>
+                                
+                                ${contactsHtml ? `<div class="ad-contact-strip">${contactsHtml}</div>` : ''}
+                                
+                                <button class="btn btn-outline-warning fw-bold w-100 py-2 fs-5" id="btn_ad_${ad._id}" onclick="processAdClick('${ad._id}', '${primaryLink}', ${reward})">
+                                    <i class="fas fa-play-circle me-2"></i> VIEW ADVERT & EARN ₦${reward}
+                                </button>
+                            </div>
                         </div>
-                        <div class="ad-details">
-                            <div class="ad-title">${ad.title || 'Sponsored Campaign'}</div>
-                            <div class="ad-desc">${ad.description || 'Click to view the advertiser page.'}</div>
-                            <span class="badge bg-dark text-warning border border-warning">Reward: ₦${reward}</span>
-                        </div>
-                        <button class="btn btn-outline-warning fw-bold" id="btn_ad_${ad._id}" onclick="processAdClick('${ad._id}', '${targetLink}', ${reward})">
-                            <i class="fas fa-external-link-alt me-2"></i> View Ad
-                        </button>
                     </div>
                 `;
             });
 
         } catch (error) {
-            container.innerHTML = `<div class="text-center py-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to load ads.</div>`;
+            container.innerHTML = `<div class="col-12 text-center py-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to load ads.</div>`;
         }
     }
 
+    // ==========================================
+    // STRICT 20-SECOND ANTI-CHEAT TIMER
+    // ==========================================
     function processAdClick(adId, adUrl, rewardAmount) {
         const btn = document.getElementById(`btn_ad_${adId}`);
         if(btn.disabled) return;
 
-        // Anti-Cheat: Reject if advertiser forgot to add a link
-        if (!adUrl || adUrl === 'undefined' || adUrl === 'null' || adUrl.trim() === '') {
-            Swal.fire({ icon: 'error', title: 'Invalid Link', text: 'The advertiser did not provide a valid link for this campaign.', background: '#0a0a0a', color: '#fff' });
+        if (!adUrl || adUrl === 'undefined' || adUrl.trim() === '') {
+            Swal.fire({ icon: 'error', title: 'Invalid Link', text: 'The advertiser did not provide a valid link or contact number.', background: '#0a0a0a', color: '#fff' });
             return;
         }
 
-        // Open live URL
         window.open(adUrl, '_blank');
         
-        // Strict 20-second timer lock
         btn.disabled = true;
-        let countdown = 20; 
+        let countdown = 20; // Strict 20 seconds
         
         const timerInterval = setInterval(() => {
             countdown--;
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Verifying (${countdown}s)`;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> PLEASE WAIT (${countdown}s)`;
             
             if (countdown <= 0) {
                 clearInterval(timerInterval);
@@ -278,13 +313,16 @@
         }, 1000);
     }
 
+    // ==========================================
+    // AUTO-HIDE ADS UPON SUCCESS
+    // ==========================================
     async function claimAdReward(adId, rewardAmount, btnElement) {
         btnElement.innerHTML = `<i class="fas fa-sync-alt fa-spin me-2"></i> Crediting...`;
         const authToken = localStorage.getItem("naterpay_token");
         
         if (!authToken) {
             Swal.fire({ icon: 'error', title: 'Login Required', background: '#0a0a0a', color: '#fff' });
-            btnElement.innerHTML = `<i class="fas fa-external-link-alt me-2"></i> View Ad`;
+            btnElement.innerHTML = `<i class="fas fa-play-circle me-2"></i> VIEW ADVERT & EARN ₦${rewardAmount}`;
             btnElement.disabled = false;
             return;
         }
@@ -298,15 +336,21 @@
             const data = await response.json();
 
             if (data.success) {
-                btnElement.innerHTML = `<i class="fas fa-check-circle me-2"></i> Claimed (₦${rewardAmount})`;
-                btnElement.classList.replace('btn-outline-warning', 'btn-success');
                 Swal.fire({ icon: 'success', title: 'Reward Credited!', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+                // Make the Ad vanish so the user can focus on the next one!
+                document.getElementById(`ad_slot_${adId}`).style.display = 'none';
             } else {
-                btnElement.innerHTML = `<i class="fas fa-check me-2"></i> Done Today`;
-                Swal.fire({ icon: 'info', title: 'Already Claimed', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                // If they already claimed it, hide it anyway so it stops taking up space
+                if(data.message.includes('already claimed')) {
+                    document.getElementById(`ad_slot_${adId}`).style.display = 'none';
+                } else {
+                    btnElement.innerHTML = `<i class="fas fa-check me-2"></i> Done Today`;
+                }
+                Swal.fire({ icon: 'info', title: 'Notice', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
             }
         } catch (error) {
             btnElement.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Error`;
+            btnElement.disabled = false;
             Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to communicate with the reward server.', background: '#0a0a0a', color: '#fff' });
         }
     }
