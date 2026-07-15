@@ -119,27 +119,26 @@ async function registerRoutes() {
   fastify.post('/api/kyc/level2', { preHandler: require('./middleware/auth').authenticate }, kycRoutes.submitLevel2);
   fastify.post('/api/kyc/level3', { preHandler: require('./middleware/auth').authenticate }, kycRoutes.submitLevel3);
   
-  // === UPGRADED STOREFRONT & PAYMENT LINKS ROUTES ===
   const paymentLinkRoutes = require('./routes/payment-link');
   fastify.get('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.getLinks);
   fastify.post('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.createLink);
   fastify.get('/api/payment-links/:id', paymentLinkRoutes.getLink);
   fastify.post('/api/payment-links/:id/pay', paymentLinkRoutes.payLink);
   fastify.get('/api/marketplace/all', paymentLinkRoutes.getAllMarketplaceLinks);
-  // ==================================================
 
-  // === ADVERT & MARKETPLACE ROUTES ===
   const adsRoutes = require('./routes/ads');
   fastify.get('/api/ads', adsRoutes.getAds);
   fastify.post('/api/ads/:id/click', adsRoutes.registerClick);
   fastify.get('/api/ads/me', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.getUserAds);
   fastify.post('/api/ads', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.createAd);
-  // ===================================
   
-  // === NEW: CLICK & EARN TASK ROUTES ===
   const tasksRoutes = require('./routes/tasks');
   fastify.post('/api/tasks/claim-ad', { preHandler: require('./middleware/auth').authenticate }, tasksRoutes.claimAd);
-  // =====================================
+  
+  // === NEW: LIVE LEADERBOARD ROUTE ===
+  const leaderboardRoutes = require('./routes/leaderboard');
+  fastify.get('/api/leaderboard', { preHandler: require('./middleware/auth').authenticate }, leaderboardRoutes.getLeaderboard);
+  // ===================================
   
   const invoiceRoutes = require('./routes/invoice');
   fastify.get('/api/invoices', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.getInvoices);
@@ -166,11 +165,9 @@ async function registerRoutes() {
   fastify.get('/api/admin/analytics', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getAnalytics);
   fastify.get('/api/admin/kyc/pending', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingKYC);
   
-  // === UPGRADED KYC ADMIN ROUTES ===
   fastify.get('/api/admin/kyc/:kycId/verify', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.verifyRealWorldKYC);
   fastify.put('/api/admin/kyc/:kycId/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.approveKYC);
   fastify.put('/api/admin/kyc/:kycId/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.rejectKYC);
-  // =================================
 
   fastify.get('/api/admin/support/tickets', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getSupportTickets);
   fastify.put('/api/admin/support/tickets/:id/assign', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.assignTicket);
@@ -180,16 +177,12 @@ async function registerRoutes() {
   fastify.post('/api/admin/transactions/verify', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.verifyTransaction);
   fastify.post('/api/admin/notifications/send', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.sendPushNotification);
   
-  // === ADDED MARKETPLACE ADMIN ROUTES TO FIX THE 404 ERROR ===
   fastify.put('/api/admin/products/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.updateProduct);
   fastify.delete('/api/admin/products/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.deleteProduct);
-  // ===========================================================
 
-  // === ADVERTS MODERATION ADMIN ROUTES ===
   fastify.get('/api/admin/ads', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingAds);
   fastify.put('/api/admin/ads/:id/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.approveAd);
   fastify.put('/api/admin/ads/:id/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.rejectAd);
-  // =======================================
   
   const cmsRoutes = require('./routes/cms');
   fastify.get('/api/cms/homepage-data', cmsRoutes.getHomepageData);
@@ -212,10 +205,8 @@ async function registerRoutes() {
   fastify.get('/api/api/balance', { preHandler: apiRoutes.authenticateApiKey }, apiRoutes.apiGetBalance);
   fastify.post('/api/api/transactions', { preHandler: apiRoutes.authenticateApiKey }, apiRoutes.apiCreateTransaction);
 
-  // === SYSTEM STATUS ROUTE (PUBLIC) ===
   const statusRoutes = require('./routes/status');
   fastify.get('/api/system-status', statusRoutes.getSystemStatus);
-  // ====================================
   
   fastify.addHook('onRequest', async (request, reply) => {
     const path = request.url;
