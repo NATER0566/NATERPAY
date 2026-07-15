@@ -66,13 +66,13 @@ const config = {
   },
   
   featureFlags: {
-    wallet: true, // Forced true for core platform operations
+    wallet: process.env.ENABLE_WALLET === 'true',
     loans: process.env.ENABLE_LOANS === 'true',
     savings: process.env.ENABLE_SAVINGS === 'true',
     escrow: process.env.ENABLE_ESCROW === 'true',
     virtualCards: process.env.ENABLE_VIRTUAL_CARDS === 'true',
     agentBanking: process.env.ENABLE_AGENT_BANKING === 'true',
-    taskEarn: true, // FORCE ENABLED: Overrides environment sync issues to unblock the dashboard immediately
+    taskEarn: process.env.ENABLE_TASK_EARN === 'true',
     dailyRewards: process.env.ENABLE_DAILY_REWARDS === 'true',
     spinWin: process.env.ENABLE_SPIN_WIN === 'true',
     airtimeCash: process.env.ENABLE_AIRTIME_CASH === 'true'
@@ -116,6 +116,7 @@ const config = {
   }
 };
 
+// Validate required environment variables
 function validateConfig() {
   const required = ['MONGODB_URI', 'JWT_SECRET', 'JWT_REFRESH_SECRET'];
   const missing = required.filter(key => !process.env[key]);
