@@ -135,8 +135,11 @@ async function registerRoutes() {
   fastify.get('/api/ads/me', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.getUserAds);
   fastify.post('/api/ads', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.createAd);
   
+  // === NEW: CLICK & EARN TASK ROUTES ===
   const tasksRoutes = require('./routes/tasks');
   fastify.post('/api/tasks/claim-ad', { preHandler: require('./middleware/auth').authenticate }, tasksRoutes.claimAd);
+  fastify.post('/api/tasks/claim-profile', { preHandler: require('./middleware/auth').authenticate }, tasksRoutes.claimProfileReward);
+  // =====================================
   
   const leaderboardRoutes = require('./routes/leaderboard');
   fastify.get('/api/leaderboard', { preHandler: require('./middleware/auth').authenticate }, leaderboardRoutes.getLeaderboard);
