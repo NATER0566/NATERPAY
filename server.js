@@ -195,6 +195,7 @@ async function registerRoutes() {
   fastify.get('/api/admin/ads', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingAds);
   fastify.put('/api/admin/ads/:id/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.approveAd);
   fastify.put('/api/admin/ads/:id/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.rejectAd);
+  fastify.delete('/api/admin/ads/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.deleteAd);
   
   const cmsRoutes = require('./routes/cms');
   fastify.get('/api/cms/homepage-data', cmsRoutes.getHomepageData);
@@ -293,6 +294,23 @@ function setupSocketIO(server) {
 // ============================================================================
 function startCronJobs() {
   const cron = require('node-cron');
+  
+  // === NEW: AUTOMATIC AD EXPIRATION ENGINE ===
+  cron.schedule('0 0 * * *', async () => {
+    try {
+      const Ad = require('./models/Ad');
+      // Automatically flip approved ads to 'expired' if their runtime is over
+      const expiredResult = await Ad.updateMany(
+        { status: 'approved', expiryDate: { $lt: new Date() } },
+        { status: 'expired' }
+      );
+      console.log(`[SYSTEM CRON] Wiped and expired ${expiredResult.modifiedCount} old ad campaigns.`);
+    } catch (error) {
+      console.error('[CRON ERROR] Ad campaign automatic expiration failed:', error);
+    }
+  });
+  // ===========================================
+
   cron.schedule(config.cron.reconciliation, async () => {
     try { const { reconcileTransactions } = require('./services/reconciliation'); await reconcileTransactions(); } catch (error) {}
   });
