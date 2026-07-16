@@ -158,7 +158,7 @@
             </div>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>ADVERT MEDIA</th><th>DETAILS</th><th>PACKAGE & PRICE</th><th>STATUS</th><th class="text-end">ACTIONS</th></tr></thead>
+                    <thead><tr><th>FORMAT/MEDIA</th><th>CAMPAIGN DETAILS</th><th>PACKAGE & BUDGET</th><th>STATUS</th><th class="text-end">ACTIONS</th></tr></thead>
                     <tbody id="advertsTable">
                         <tr><td colspan="5" class="text-center opacity-50 py-4">Loading adverts...</td></tr>
                     </tbody>
@@ -258,7 +258,7 @@
         if(t==='kyc') fetchKYC();
         if(t==='marketplace') fetchMarketplace();
         if(t==='adverts') fetchAdverts();
-        if(t==='transactions') loadAdminEcosystem(); // Refresh Audit Log
+        if(t==='transactions') loadAdminEcosystem(); 
     }
 
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
@@ -445,7 +445,7 @@
     }
 
     // ==========================================
-    // UPGRADED KYC ENGINE WITH STRICT SCHEMA MAPPING
+    // KYC
     // ==========================================
     async function fetchKYC() {
         try {
@@ -487,7 +487,6 @@
             const k = JSON.parse(decodeURIComponent(encodedData));
             
             let bvnSection = '';
-            // THE FIX: Reading strictly from k.level1 mapping
             if (k.level1 && (k.level1.bvn || k.level1.nin)) {
                 bvnSection = `
                     <h6 class="text-gold mt-3 border-bottom border-secondary pb-1"><i class="fas fa-fingerprint"></i> Identity Numbers</h6>
@@ -498,7 +497,6 @@
             }
 
             let docSection = '';
-            // THE FIX: Reading strictly from k.level2 mapping
             if (k.level2 && (k.level2.idImage || k.level2.selfieImage)) {
                 docSection = `
                     <h6 class="text-gold mt-4 border-bottom border-secondary pb-1"><i class="fas fa-passport"></i> Uploaded Documents</h6>
@@ -512,7 +510,6 @@
             }
 
             let addressSection = '';
-            // THE FIX: Reading strictly from k.level3 mapping
             if (k.level3 && k.level3.address) {
                 addressSection = `
                     <h6 class="text-gold mt-4 border-bottom border-secondary pb-1"><i class="fas fa-home"></i> Address Proof</h6>
@@ -548,33 +545,18 @@
     async function processKYC(kycId, action) {
         const actionWord = action === 'approve' ? 'Approve' : 'Reject';
         if((await Swal.fire({title:`Confirm ${actionWord}?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
-            // Start the loading spinner
             Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
-            
             try {
-                const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { 
-                    method: 'PUT', 
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } 
-                });
-                
+                const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
                 const data = await res.json();
-                
-                // Stop spinning and show either Success or Error
-                if (data.success) { 
-                    Swal.fire({icon: 'success', title: 'Success', text: data.message || 'KYC updated successfully.', background: '#0a0a0a', color: '#fff'});
-                    fetchKYC(); // Refresh the table
-                } else {
-                    Swal.fire({icon: 'error', title: 'Action Failed', text: data.message || 'Could not process KYC.', background: '#0a0a0a', color: '#fff'});
-                }
-            } catch (err) {
-                // Failsafe for network disconnections
-                Swal.fire({icon: 'error', title: 'Network Error', text: 'Server communication failed.', background: '#0a0a0a', color: '#fff'});
-            }
+                if (data.success) { Swal.fire({icon: 'success', title: 'Success', text: data.message || 'KYC updated.', background: '#0a0a0a', color: '#fff'}); fetchKYC(); } 
+                else { Swal.fire({icon: 'error', title: 'Action Failed', text: data.message, background: '#0a0a0a', color: '#fff'}); }
+            } catch (err) { Swal.fire({icon: 'error', title: 'Network Error', background: '#0a0a0a', color: '#fff'}); }
         }
     }
 
     // ==========================================
-    // ADVERTS MODERATION
+    // UPDATED ENTERPRISE ADVERTS MODERATION
     // ==========================================
     async function fetchAdverts() {
         try {
@@ -595,21 +577,100 @@
                 const statusColor = ad.status === 'approved' ? 'success' : (ad.status === 'pending' ? 'warning text-dark' : 'danger');
                 const encodedAd = encodeURIComponent(JSON.stringify(ad));
                 
-                return `<tr><td><img src="${ad.imageUrl}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #444; cursor: pointer;" onclick="viewAdDossier('${encodedAd}')"></td><td><div class="fw-bold text-white text-truncate" style="max-width: 200px;">${ad.title}</div><small class="text-gold"><i class="fas fa-store"></i> ${ad.businessName}</small><br><small class="text-muted"><i class="fas fa-tag"></i> ${ad.category}</small></td><td><span class="badge bg-secondary text-uppercase">${ad.package}</span></td><td><span class="status-pill bg-${statusColor}">${ad.status}</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewAdDossier('${encodedAd}')" title="View Details"><i class="fas fa-eye"></i></button>${ad.status === 'pending' ? `<button class="btn btn-success" onclick="processAd('${ad._id}', 'approve')" title="Approve to go Live"><i class="fas fa-check"></i></button><button class="btn btn-danger" onclick="processAd('${ad._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>` : `<button class="btn btn-outline-danger" onclick="processAd('${ad._id}', 'reject')" title="Revoke"><i class="fas fa-ban"></i></button>`}</div></td></tr>`;
+                // Render Dynamic Media Thumbnail for Admin
+                let mediaThumb = '';
+                if (ad.adType === 'Video') {
+                    mediaThumb = `<div style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #444; display:flex; align-items:center; justify-content:center; background:#111; cursor:pointer;" onclick="viewAdDossier('${encodedAd}')"><i class="fas fa-video fa-2x text-info"></i></div>`;
+                } else if (ad.adType === 'Text' || ad.adType === 'PDF') {
+                    mediaThumb = `<div style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #444; display:flex; align-items:center; justify-content:center; background:#111; cursor:pointer;" onclick="viewAdDossier('${encodedAd}')"><i class="fas fa-file-alt fa-2x text-danger"></i></div>`;
+                } else {
+                    mediaThumb = `<img src="${ad.mediaUrl || 'https://via.placeholder.com/60/111/d4af37?text=Ad'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #444; cursor: pointer;" onclick="viewAdDossier('${encodedAd}')">`;
+                }
+                
+                return `<tr>
+                    <td>${mediaThumb}</td>
+                    <td>
+                        <div class="fw-bold text-white text-truncate" style="max-width: 200px;">${ad.title}</div>
+                        <small class="text-gold"><i class="fas fa-store"></i> ${ad.businessName}</small><br>
+                        <small class="text-muted"><i class="fas fa-tag"></i> ${ad.adType || 'Ad'} | ${ad.category}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary text-uppercase">${ad.packageType || 'BASIC'}</span><br>
+                        <small class="text-warning">₦${ad.packageCost || 0} / ${ad.maxRewardedViews || 0} Views</small>
+                    </td>
+                    <td><span class="status-pill bg-${statusColor}">${ad.status}</span></td>
+                    <td class="text-end">
+                        <div class="action-btns">
+                            <button class="btn btn-info text-white" onclick="viewAdDossier('${encodedAd}')" title="View Details"><i class="fas fa-eye"></i></button>
+                            ${ad.status === 'pending' ? 
+                                `<button class="btn btn-success" onclick="processAd('${ad._id}', 'approve')" title="Approve to go Live"><i class="fas fa-check"></i></button>
+                                 <button class="btn btn-warning text-dark fw-bold" onclick="processAd('${ad._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>` 
+                            : 
+                                `<button class="btn btn-outline-warning" onclick="processAd('${ad._id}', 'reject')" title="Revoke/Pause"><i class="fas fa-ban"></i></button>`
+                            }
+                            <button class="btn btn-danger" onclick="deleteAdForever('${ad._id}')" title="Delete Forever"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
             }).join('');
         } catch (error) { document.getElementById('advertsTable').innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Failed to load adverts.</td></tr>'; }
     }
 
     function viewAdDossier(encodedData) {
         const ad = JSON.parse(decodeURIComponent(encodedData));
-        Swal.fire({ title: 'Advert Review Dossier', html: `<div class="text-start mt-2" style="font-size: 0.9rem;"><img src="${ad.imageUrl}" class="w-100 rounded mb-3" style="max-height: 250px; object-fit: contain; border: 1px solid var(--gold);"><p class="mb-1"><strong class="text-gold">Title:</strong> ${ad.title}</p><p class="mb-1"><strong class="text-gold">Business:</strong> ${ad.businessName}</p><p class="mb-1"><strong class="text-gold">Category:</strong> ${ad.category}</p><p class="mb-1"><strong class="text-gold">Package:</strong> <span class="badge bg-secondary text-uppercase">${ad.package}</span></p><p class="mb-1"><strong class="text-gold">Contact:</strong> <i class="fas fa-phone"></i> ${ad.phoneNumber} | <i class="fab fa-whatsapp text-success"></i> ${ad.whatsappNumber}</p><p class="mb-1"><strong class="text-gold">Location:</strong> ${ad.location}</p><div class="mt-3 p-2 bg-dark rounded border border-secondary text-white">${ad.description}</div></div>`, background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close', confirmButtonColor: '#444' });
+        
+        let mediaDisplay = '';
+        if (ad.adType === 'Video') {
+            mediaDisplay = `<video src="${ad.mediaUrl}" controls class="w-100 rounded mb-3" style="max-height: 250px; background: #000;"></video>`;
+        } else if (ad.adType === 'PDF' || ad.adType === 'Text') {
+            mediaDisplay = `<div class="bg-dark p-4 text-center mb-3 rounded border border-secondary"><i class="fas fa-file-alt fa-3x text-muted mb-2"></i><br><a href="${ad.mediaUrl}" target="_blank" class="text-warning text-decoration-none fw-bold"><i class="fas fa-external-link-alt me-1"></i> Open Asset Document</a></div>`;
+        } else {
+            mediaDisplay = `<img src="${ad.mediaUrl || 'https://via.placeholder.com/400x250/111/d4af37?text=Image'}" class="w-100 rounded mb-3" style="max-height: 250px; object-fit: contain; border: 1px solid var(--gold);">`;
+        }
+
+        Swal.fire({ 
+            title: 'Campaign Dossier', 
+            html: `
+                <div class="text-start mt-2" style="font-size: 0.9rem;">
+                    ${mediaDisplay}
+                    <p class="mb-1"><strong class="text-gold">Format:</strong> <span class="badge bg-dark border">${ad.adType || 'Ad'}</span></p>
+                    <p class="mb-1"><strong class="text-gold">Headline:</strong> ${ad.title}</p>
+                    <p class="mb-1"><strong class="text-gold">Entity:</strong> ${ad.businessName}</p>
+                    <p class="mb-1"><strong class="text-gold">Category:</strong> ${ad.category}</p>
+                    <p class="mb-1"><strong class="text-gold">Package:</strong> <span class="badge bg-secondary text-uppercase">${ad.packageType || 'basic'}</span> (₦${ad.packageCost || 0})</p>
+                    <p class="mb-1"><strong class="text-gold">Views Budget:</strong> ${ad.maxRewardedViews || 0} Unique Views</p>
+                    <p class="mb-1"><strong class="text-gold">Contact:</strong> <i class="fas fa-phone"></i> ${ad.phoneNumber} | <i class="fab fa-whatsapp text-success"></i> ${ad.whatsappNumber}</p>
+                    <p class="mb-1"><strong class="text-gold">Target:</strong> ${ad.targetLocation || 'Global'} / ${ad.targetDevice || 'All'}</p>
+                    <div class="mt-3 p-3 bg-dark rounded border border-secondary text-white" style="line-height: 1.6;">${ad.description}</div>
+                </div>
+            `, 
+            background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444' 
+        });
     }
 
     async function processAd(adId, action) {
-        const actionText = action === 'approve' ? 'Approve and publish' : 'Reject';
+        const actionText = action === 'approve' ? 'Approve and publish' : 'Reject / Pause';
         if((await Swal.fire({title: `Confirm Action?`, text: `${actionText} this advert?`, showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
             Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try { const res = await fetch(`/api/admin/ads/${adId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); const data = await res.json(); if(data.success) { Swal.fire('Success', `Advert ${action}d successfully.`, 'success'); fetchAdverts(); } else { Swal.fire('Failed', data.message || 'Operation failed', 'error'); } } catch (err) { Swal.fire('Error', 'Server communication failed.', 'error'); }
+        }
+    }
+
+    async function deleteAdForever(adId) {
+        if((await Swal.fire({title: 'Wipe Permanently?', text: 'This will erase the campaign, media, and history forever. This cannot be undone.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff', confirmButtonText: 'Yes, Obliterate it'})).isConfirmed) {
+            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try {
+                const res = await fetch(`/api/admin/ads/${adId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
+                const data = await res.json();
+                if(data.success) { 
+                    Swal.fire({icon: 'success', title: 'Erased', text: 'Campaign wiped from existence.', background: '#0a0a0a', color: '#fff'}); 
+                    fetchAdverts(); 
+                } else { 
+                    Swal.fire({icon: 'error', title: 'Failed', text: data.message || 'Operation failed', background: '#0a0a0a', color: '#fff'}); 
+                }
+            } catch(e) { 
+                Swal.fire({icon: 'error', title: 'Network Error', text: 'Server communication failed.', background: '#0a0a0a', color: '#fff'}); 
+            }
         }
     }
 
