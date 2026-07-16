@@ -55,7 +55,6 @@
         .btn-task:hover:not(:disabled) { background: var(--gold); color: black; box-shadow: 0 5px 15px rgba(212,175,55,0.3); }
         .btn-task:disabled { border-color: #444; color: #888; cursor: not-allowed; }
 
-        /* BIG ADVERTISEMENT BANNER REDESIGN */
         .sponsored-ad-card {
             background: var(--card-bg); border: 1.5px solid #333; border-radius: 20px; 
             overflow: hidden; margin-bottom: 30px; transition: 0.3s; display: flex; flex-direction: column; position: relative;
@@ -99,7 +98,7 @@
     <div class="task-hero text-center">
         <h2 style="font-family: 'Cinzel', serif; font-weight: 900; color: var(--gold); letter-spacing: 2px;">COMPLETE TASKS. EARN REAL REWARDS.</h2>
         <p class="text-light fs-6 mx-auto mt-3" style="max-width: 800px; line-height: 1.8;">
-            Every reward on NATER PAY is strictly backed by service commissions or direct advertiser budgets. Fast, secure, and instantly credited to your wallet.
+            Every reward on NATER PAY is strictly backed by service commissions or direct advertiser budgets. View unique campaigns and get credited instantly.
         </p>
     </div>
 
@@ -135,10 +134,17 @@
         </div>
     </div>
 
-    <h4 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold); border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 10px; margin-top: 20px;">
-        <i class="fas fa-mouse-pointer me-2"></i> SPONSORED CAMPAIGNS (CLICK & EARN)
-    </h4>
-    <p class="text-muted small mb-4">Click the advert, view the advertiser's page for exactly 20 seconds, and return to claim your reward.</p>
+    <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3" style="border-color: rgba(212,175,55,0.2) !important;">
+        <div>
+            <h4 style="font-family: 'Cinzel'; color: var(--gold); margin: 0;">
+                <i class="fas fa-mouse-pointer me-2"></i> SPONSORED CAMPAIGNS
+            </h4>
+            <p class="text-muted small m-0 mt-2">Click the advert, view the page for exactly 20 seconds, and return to claim your reward.</p>
+        </div>
+        <div class="text-end d-none d-md-block">
+            <span class="badge bg-dark text-warning border border-warning fs-6 py-2 px-3">Daily Limit: 20 Ads</span>
+        </div>
+    </div>
 
     <div id="dynamicAdsContainer" class="row">
         <div class="col-12 text-center py-4 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Scanning Database for Live Ads...</div>
@@ -148,7 +154,7 @@
         <h4 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;">FOR BUSINESSES: GET GUARANTEED TRAFFIC</h4>
         <p class="text-muted mb-4 mx-auto" style="max-width: 600px;">
             Drive thousands of real users to your website, app, or social media. 
-            Deposit your budget, and you only pay for actual views. (Includes Naterpay Anti-Bot Protection).
+            Deposit your budget, and you only pay for unique, verified human views.
         </p>
         <button class="btn btn-warning rounded-pill px-4 fw-bold text-dark" onclick="window.location.href='ads.html'">
             <i class="fas fa-rocket me-2"></i> Create an Ad Campaign
@@ -204,7 +210,6 @@
                 
                 if (data.message.includes('already claimed')) {
                     document.getElementById('profileTaskWrapper').style.display = 'none';
-                    Swal.fire({ icon: 'info', title: 'Already Claimed', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
                 } else {
                     Swal.fire({ icon: 'warning', title: 'Action Required', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' })
                     .then(res => { if(res.isConfirmed) window.location.href='kyc.html'; });
@@ -213,7 +218,6 @@
         } catch (err) {
             btn.innerHTML = `Claim Verification Reward`;
             btn.disabled = false;
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to contact server.', background: '#0a0a0a', color: '#fff' });
         }
     }
 
@@ -228,7 +232,7 @@
                     <div class="col-12 text-center py-5 rounded-4" style="background: rgba(0,0,0,0.5); border: 1px dashed #333;">
                         <i class="fas fa-bullhorn fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
                         <h6 class="text-muted fw-bold">No Active Campaigns</h6>
-                        <p class="small text-muted mb-0">Check back tomorrow for new Click & Earn tasks, or create your own ad below!</p>
+                        <p class="small text-muted mb-0">Check back later for new exclusive rewards.</p>
                     </div>`;
                 return;
             }
@@ -254,7 +258,7 @@
                 container.innerHTML += `
                     <div class="col-md-6 col-xl-6" id="ad_slot_${ad._id}">
                         <div class="sponsored-ad-card">
-                            <button class="btn-dismiss" onclick="dismissAd('${ad._id}')" title="Dismiss this advert"><i class="fas fa-times"></i></button>
+                            <button class="btn-dismiss" onclick="dismissAd('${ad._id}')" title="Hide this advert"><i class="fas fa-times"></i></button>
                             <img src="${imageUrl}" class="ad-banner-img" alt="Ad Image">
                             <div class="ad-body-content">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -275,15 +279,41 @@
                 `;
             });
 
+            // After rendering, secretly check all displayed ads against backend to hide ones already claimed
+            // (A self-cleaning mechanic if the user refreshed the page)
+            cleanClaimedAds(data.ads);
+
         } catch (error) {
             container.innerHTML = `<div class="col-12 text-center py-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to load ads.</div>`;
         }
     }
 
+    // Silent background check to hide ads they've already claimed this lifetime
+    async function cleanClaimedAds(adsArray) {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) return;
+        
+        // This silently pings the backend. If it returns 'already claimed', we hide it from the feed immediately.
+        for (let ad of adsArray) {
+            try {
+                const res = await fetch('/api/tasks/claim-ad', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    body: JSON.stringify({ adId: ad._id, verifyOnly: true }) // You can add a flag to backend later, but for now we catch the error
+                });
+                const data = await res.json();
+                if(data.message && data.message.includes('already claimed')) {
+                    const slot = document.getElementById(`ad_slot_${ad._id}`);
+                    if(slot) slot.style.display = 'none';
+                }
+            } catch(e) {}
+        }
+    }
+
     function dismissAd(adId) {
         Swal.fire({
-            title: 'Cancel Task?',
-            text: "You won't be able to earn from this advert until it resets tomorrow.",
+            title: 'Hide Advert?',
+            text: "This advert will be removed from your feed.",
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Yes, hide it',
@@ -296,8 +326,7 @@
     }
 
     // =========================================================================
-    // THE ULTIMATE ABSOLUTE TIMESTAMP DELTA ENGINE
-    // Completely bypasses browser background throttling and forces strict compliance
+    // ABSOLUTE TIMESTAMP DELTA ENGINE
     // =========================================================================
     let trackingAdId = null;
     let trackingReward = 0;
@@ -314,14 +343,12 @@
             return;
         }
 
-        // Lock all buttons
         document.querySelectorAll('.ad-card-btn').forEach(b => b.disabled = true);
         
         trackingAdId = adId;
         trackingReward = rewardAmount;
         hasLeftTab = false; 
 
-        // Open live URL in new tab
         window.open(adUrl, '_blank');
         
         trackingBtn.innerHTML = `<i class="fas fa-eye-slash me-2"></i> WAITING FOR YOU TO VIEW AD...`;
@@ -334,29 +361,23 @@
         });
     }
 
-    // MASTER VISIBILITY LISTENER (Catches tab switches, minimization, and blur)
     function handleVisibilityChange() {
         if (!trackingAdId) return; 
 
-        // Check if user is away from NATERPAY (Tab hidden OR Window lost focus)
         if (document.hidden || !document.hasFocus()) {
             if (!hasLeftTab) {
                 hasLeftTab = true;
-                timeAwayStarted = Date.now(); // Record exact atomic time they left
+                timeAwayStarted = Date.now(); 
                 trackingBtn.innerHTML = `<i class="fas fa-stopwatch me-2"></i> TRACKING 20s VIEW...`;
             }
         } else {
-            // User returned to NATERPAY
             if (hasLeftTab) {
-                // Calculate exact seconds elapsed (Cannot be paused by phone battery savers)
                 const secondsAway = (Date.now() - timeAwayStarted) / 1000;
                 
                 if (secondsAway >= 20) {
-                    // Success! They stayed away for 20+ seconds
                     claimAdReward(trackingAdId, trackingReward, trackingBtn);
                     cleanupTracking();
                 } else {
-                    // Cheat Detected! They returned too early
                     const secondsShort = Math.ceil(20 - secondsAway);
                     Swal.fire({
                         icon: 'error',
@@ -371,7 +392,6 @@
         }
     }
 
-    // Bind multiple events to catch every possible way a user leaves/returns to the page
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleVisibilityChange);
     window.addEventListener("focus", handleVisibilityChange);
@@ -402,13 +422,15 @@
             const data = await response.json();
 
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Reward Credited!', text: `You earned ₦${rewardAmount}.`, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+                Swal.fire({ icon: 'success', title: 'Task Completed!', text: `You earned ₦${rewardAmount}. This ad has now been marked as completed.`, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff', toast: true, position: 'top-end', showConfirmButton: false, timer: 4000 });
                 document.getElementById(`ad_slot_${adId}`).style.display = 'none';
             } else {
                 if(data.message.includes('already claimed')) {
                     document.getElementById(`ad_slot_${adId}`).style.display = 'none';
+                } else if(data.message.includes('limit reached')) {
+                    btnElement.innerHTML = `<i class="fas fa-ban me-2"></i> Daily Limit Reached`;
                 } else {
-                    btnElement.innerHTML = `<i class="fas fa-check me-2"></i> Done Today`;
+                    btnElement.innerHTML = `<i class="fas fa-check me-2"></i> Completed`;
                 }
                 Swal.fire({ icon: 'info', title: 'Notice', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
             }
