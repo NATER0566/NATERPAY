@@ -11,74 +11,89 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
-        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
+        :root { --gold: #FFD700; --gold-dim: #d4af37; --bg: #030303; --card-bg: rgba(18, 18, 18, 0.85); --neon-glow: rgba(255, 215, 0, 0.15); }
         body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
         header {
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
-            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
+            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold-dim);
             display: flex; justify-content: space-between; align-items: center; z-index: 1000;
             box-shadow: 0 4px 30px rgba(0,0,0,0.8); backdrop-filter: blur(15px);
         }
 
         .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85; }
-        .site-part-1 { color: var(--gold); font-size: 1.5rem; text-shadow: 0 2px 5px rgba(212,175,55,0.3); } 
+        .site-part-1 { color: var(--gold); text-shadow: 0 2px 5px rgba(255,215,0,0.3); } 
         .site-part-2 { color: #d32f2f; font-size: 1.1rem; letter-spacing: 3px; }
 
         .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; flex: 1; }
         
         .task-hero {
-            background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(10, 10, 10, 0.95) 100%);
-            border: 1.5px solid var(--gold); border-radius: 20px; padding: 40px;
-            margin-bottom: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); position: relative; overflow: hidden;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(5, 5, 5, 0.98) 100%);
+            border: 1.5px solid var(--gold-dim); border-radius: 20px; padding: 40px;
+            margin-bottom: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(255,215,0,0.05); position: relative; overflow: hidden;
         }
 
+        /* PREMIUM APP CARDS */
         .info-card {
-            background: var(--card-bg); border: 1px solid #333; border-radius: 16px;
-            padding: 30px; height: 100%; transition: all 0.3s ease; display: flex; flex-direction: column;
+            background: var(--card-bg); border: 1.5px solid #222; border-radius: 18px;
+            padding: 30px; height: 100%; transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); display: flex; flex-direction: column;
+            backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .info-card:hover { border-color: rgba(212,175,55,0.5); transform: translateY(-5px); box-shadow: 0 10px 30px rgba(212,175,55,0.15); }
+        .info-card:hover { border-color: var(--gold-dim); transform: translateY(-8px); box-shadow: 0 15px 35px var(--neon-glow); }
 
         .task-icon-wrapper { width: 60px; height: 60px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 20px; }
         
         .reward-badge {
-            background: rgba(212, 175, 55, 0.15); border: 1px solid var(--gold); color: var(--gold);
-            padding: 5px 12px; border-radius: 50px; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px; display: inline-block; margin-bottom: 15px; font-family: 'Cinzel', serif;
+            background: rgba(255, 215, 0, 0.1); border: 1px solid var(--gold-dim); color: var(--gold);
+            padding: 6px 14px; border-radius: 50px; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px; display: inline-block; margin-bottom: 15px; font-family: 'Cinzel', serif;
+            text-shadow: 0 1px 2px black;
         }
 
         .btn-task {
-            background: transparent; color: var(--gold); border: 1.5px solid var(--gold);
+            background: rgba(0,0,0,0.4); color: var(--gold); border: 1.5px solid var(--gold-dim);
             font-weight: 800; border-radius: 12px; padding: 12px; width: 100%; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; margin-top: auto;
         }
-        .btn-task:hover:not(:disabled) { background: var(--gold); color: black; box-shadow: 0 5px 15px rgba(212,175,55,0.3); }
-        .btn-task:disabled { border-color: #444; color: #888; cursor: not-allowed; }
+        .btn-task:hover:not(:disabled) { background: var(--gold-dim); color: black; box-shadow: 0 5px 20px rgba(215,175,55,0.4); transform: translateY(-2px); }
+        .btn-task:disabled { border-color: #333; color: #555; cursor: not-allowed; background: #111; }
 
+        /* PREMIUM SPONSORED CAMPAIGN CARDS */
         .sponsored-ad-card {
-            background: var(--card-bg); border: 1.5px solid #333; border-radius: 20px; 
-            overflow: hidden; margin-bottom: 30px; transition: 0.3s; display: flex; flex-direction: column; position: relative;
+            background: var(--card-bg); border: 1.5px solid #252525; border-radius: 20px; 
+            overflow: hidden; margin-bottom: 30px; transition: 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); display: flex; flex-direction: column; position: relative;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.7); backdrop-filter: blur(10px);
         }
-        .sponsored-ad-card:hover { border-color: var(--gold); box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15); transform: translateY(-3px); }
+        .sponsored-ad-card:hover { border-color: var(--gold); box-shadow: 0 15px 45px var(--neon-glow); transform: translateY(-5px); }
         
         .btn-dismiss {
             position: absolute; top: 15px; right: 15px; z-index: 10;
-            background: rgba(0,0,0,0.7); color: #fff; border: 1px solid #555;
+            background: rgba(0,0,0,0.8); color: #fff; border: 1px solid #444;
             width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
             transition: 0.3s; cursor: pointer;
         }
-        .btn-dismiss:hover { background: #d32f2f; border-color: #ff4c4c; }
+        .btn-dismiss:hover { background: #d32f2f; border-color: #ff4c4c; transform: scale(1.1); }
 
         .ad-banner-media {
-            width: 100%; height: 250px; object-fit: cover; border-bottom: 2px solid var(--gold); background: #111; display: flex; align-items: center; justify-content: center;
+            width: 100%; height: 250px; object-fit: cover; border-bottom: 2px solid var(--gold-dim); background: #0d0d0d; display: flex; align-items: center; justify-content: center;
         }
         
-        .ad-body-content { padding: 25px; }
-        .ad-title { font-weight: 900; font-size: 1.4rem; color: #fff; margin-bottom: 8px; font-family: 'Cinzel', serif; padding-right: 40px; }
-        .ad-desc { font-size: 0.95rem; color: #ccc; margin-bottom: 15px; line-height: 1.6; }
-        .ad-contact-strip { font-size: 0.85rem; color: #888; background: #111; padding: 10px 15px; border-radius: 8px; display: inline-block; margin-bottom: 20px; border: 1px dashed #333; }
+        .ad-body-content { padding: 25px; display: flex; flex-direction: column; flex-grow: 1; }
+        .ad-title { font-weight: 900; font-size: 1.4rem; color: #fff; margin-bottom: 10px; font-family: 'Cinzel', serif; padding-right: 40px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .ad-desc { font-size: 0.92rem; color: #ccc; margin-bottom: 18px; line-height: 1.6; }
+        .ad-contact-strip { font-size: 0.85rem; color: #aaa; background: rgba(0,0,0,0.5); padding: 12px 18px; border-radius: 10px; display: inline-block; margin-bottom: 20px; border: 1px dashed #444; width: max-content; max-width: 100%; }
         
-        .business-card { background: linear-gradient(90deg, #111, #000); border: 1px dashed var(--gold); border-radius: 16px; padding: 30px; text-align: center; margin-top: 50px; }
+        .business-card { background: linear-gradient(90deg, #0f0f0f, #050505); border: 1.5px dashed var(--gold-dim); border-radius: 16px; padding: 30px; text-align: center; margin-top: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+
+        /* EXTRAVAGANT REFLECTIVE SPINNING LOADER FOR EMPTY STATE */
+        .premium-empty-container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; width: 100%; }
+        .reflective-badge-wrapper { position: relative; width: 120px; height: 120px; margin-bottom: 25px; }
+        .glow-ring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; border: 3px solid transparent; border-top-color: var(--gold); border-bottom-color: #d32f2f; animation: spinGlow 2s linear infinite; filter: drop-shadow(0 0 15px var(--gold)); }
+        .inner-core { position: absolute; top: 12.5%; left: 12.5%; width: 75%; height: 75%; background: rgba(15,15,15,0.9); border-radius: 50%; border: 1px solid #333; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 15px rgba(255,215,0,0.2); }
+        .inner-core i { font-size: 2.2rem; animation: pulseReflect 2s ease-in-out infinite; }
+        
+        @keyframes spinGlow { 0% { transform: rotate(0deg); filter: drop-shadow(0 0 10px var(--gold)); } 50% { filter: drop-shadow(0 0 25px #d32f2f); } 100% { transform: rotate(360deg); filter: drop-shadow(0 0 10px var(--gold)); } }
+        @keyframes pulseReflect { 0%, 100% { transform: scale(1); opacity: 0.7; color: var(--gold); } 50% { transform: scale(1.1); opacity: 1; color: #ffffff; text-shadow: 0 0 15px var(--gold); } }
     </style>
 </head>
 <body>
@@ -123,7 +138,8 @@
             </div>
         </div>
 
-        <div class="col-md-6 col-lg-4" id="profileTaskWrapper">
+        <!-- PROFILE REWARD CARD WITH LIFETIME DATA VALIDATION MAPPING -->
+        <div class="col-md-6 col-lg-4" id="profileTaskWrapper" style="display: none;">
             <div class="info-card">
                 <div class="task-icon-wrapper" style="background: rgba(0, 191, 255, 0.1); color: #00bfff;"><i class="fas fa-id-badge"></i></div>
                 <div class="reward-badge">Reward: ₦50 (One-Time)</div>
@@ -139,7 +155,7 @@
             <h4 style="font-family: 'Cinzel'; color: var(--gold); margin: 0;">
                 <i class="fas fa-mouse-pointer me-2"></i> SPONSORED CAMPAIGNS
             </h4>
-            <p class="text-muted small m-0 mt-2">Click the advert, view the page for exactly 20 seconds, and return to claim your reward.</p>
+            <p class="text-muted small m-0 mt-2">Click the ad, view the content running live, spend exactly 20 seconds, and return to claim your reward balance.</p>
         </div>
         <div class="text-end d-none d-md-block">
             <span class="badge bg-dark text-warning border border-warning fs-6 py-2 px-3">Daily Limit: 20 Ads</span>
@@ -186,6 +202,26 @@
         animate();
     }
 
+    // --- REQUIREMENT 1: SILENT INITIALIZATION VALIDATOR FOR ONE-TIME PROFILE TASK ---
+    async function checkProfileTaskState() {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) return;
+        try {
+            // Check current dashboard preference/profile metrics via baseline profile data
+            const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const data = await res.json();
+            
+            // If the user has already achieved KYC level verification or has explicitly claimed the reward, hide it immediately
+            if (data.success && (data.user?.kycLevel >= 1 || data.dashboard?.profileRewardClaimed === true)) {
+                document.getElementById('profileTaskWrapper').style.display = 'none';
+            } else {
+                document.getElementById('profileTaskWrapper').style.display = 'block';
+            }
+        } catch(e) {
+            document.getElementById('profileTaskWrapper').style.display = 'block';
+        }
+    }
+
     async function claimProfileReward() {
         const btn = document.getElementById('btnProfileTask');
         btn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Verifying...`;
@@ -221,18 +257,37 @@
         }
     }
 
+    // --- REQUIREMENT 2 & 3: ADVANCED MEDIA MATRIX + REFLECTIVE ROTATION BADGE ENGINE ---
     async function loadDynamicAds() {
         const container = document.getElementById('dynamicAdsContainer');
+        const authToken = localStorage.getItem("naterpay_token");
+        
         try {
             const response = await fetch('/api/ads'); 
             const data = await response.json();
 
+            // Track if user has consumed all permitted transactions today
+            let dailyLimitReached = false;
+            if (data.message && data.message.includes('limit reached')) {
+                dailyLimitReached = true;
+            }
+
             if (!data.success || !data.ads || data.ads.length === 0) {
+                // RENDER EXTRAVAGANT METALLIC GLOW BADGE LOADER CONDITIONALLY
+                const headingText = dailyLimitReached ? 'Daily Limit Reached!' : 'No Daily Task Yet';
+                const subText = dailyLimitReached ? 'Incredible work! You have completed all 20 sponsored allocations for today. Return tomorrow to earn more.' : 'The advertiser vault is settling balances. Check back shortly for new dynamic allocations.';
+                const coreIcon = dailyLimitReached ? 'fa-check-circle' : 'fa-clock';
+                
                 container.innerHTML = `
-                    <div class="col-12 text-center py-5 rounded-4" style="background: rgba(0,0,0,0.5); border: 1px dashed #333;">
-                        <i class="fas fa-bullhorn fa-3x text-muted mb-3" style="opacity: 0.3;"></i>
-                        <h6 class="text-muted fw-bold">No Active Campaigns</h6>
-                        <p class="small text-muted mb-0">Check back later for new exclusive rewards.</p>
+                    <div class="premium-empty-container col-12">
+                        <div class="reflective-badge-wrapper">
+                            <div class="glow-ring"></div>
+                            <div class="inner-core">
+                                <i class="fas ${coreIcon}"></i>
+                            </div>
+                        </div>
+                        <h4 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800; letter-spacing: 1px;">${headingText}</h4>
+                        <p class="text-muted small mt-2 mx-auto" style="max-width: 500px; line-height: 1.6;">${subText}</p>
                     </div>`;
                 return;
             }
@@ -249,40 +304,40 @@
                 else if (rawPh) primaryLink = 'tel:' + rawPh;
 
                 let contactsHtml = '';
-                if (rawWa) contactsHtml += `<span class="me-3 fw-bold"><i class="fab fa-whatsapp text-success"></i> ${rawWa}</span>`;
-                if (rawPh) contactsHtml += `<span class="fw-bold"><i class="fas fa-phone text-info"></i> ${rawPh}</span>`;
+                if (rawWa) contactsHtml += `<span class="me-3 fw-bold"><i class="fab fa-whatsapp text-success text-shadow"></i> ${rawWa}</span>`;
+                if (rawPh) contactsHtml += `<span class="fw-bold"><i class="fas fa-phone text-info text-shadow"></i> ${rawPh}</span>`;
 
                 const mediaUrl = ad.mediaUrl || 'https://via.placeholder.com/1200x400/050505/d4af37?text=ADVERTISEMENT';
                 const reward = ad.rewardAmount || 5;
 
-                // --- DYNAMIC ENTERPRISE MEDIA RENDERER ---
+                // MULTI-FORMAT MEDIA MATRIC INTERPRETATION (Image, Autoplay Video, Doc Icons)
                 let mediaHtml = '';
                 if (ad.adType === 'Video') {
-                    mediaHtml = `<video src="${mediaUrl}" class="ad-banner-media" controls muted style="object-fit: cover;"></video>`;
+                    mediaHtml = `<video src="${mediaUrl}" class="ad-banner-media" autoplay muted loop playsinline></video>`;
                 } else if (ad.adType === 'Text') {
-                    mediaHtml = `<div class="ad-banner-media"><i class="fas fa-bullhorn fa-4x text-muted"></i></div>`;
+                    mediaHtml = `<div class="ad-banner-media"><i class="fas fa-bullhorn fa-4x text-muted opacity-50"></i></div>`;
                 } else if (ad.adType === 'PDF') {
-                    mediaHtml = `<div class="ad-banner-media"><i class="fas fa-file-pdf fa-4x text-danger"></i></div>`;
+                    mediaHtml = `<div class="ad-banner-media"><i class="fas fa-file-pdf fa-4x text-danger opacity-50"></i></div>`;
                 } else {
-                    mediaHtml = `<img src="${mediaUrl}" class="ad-banner-media" alt="Campaign Media">`;
+                    mediaHtml = `<img src="${mediaUrl}" class="ad-banner-media" alt="Campaign Visual">`;
                 }
                 
                 container.innerHTML += `
-                    <div class="col-md-6 col-xl-6" id="ad_slot_${ad._id}">
+                    <div class="col-md-6" id="ad_slot_${ad._id}">
                         <div class="sponsored-ad-card">
-                            <button class="btn-dismiss" onclick="dismissAd('${ad._id}')" title="Hide this advert"><i class="fas fa-times"></i></button>
+                            <button class="btn-dismiss" onclick="dismissAd('${ad._id}')" title="Hide ad slot"><i class="fas fa-times"></i></button>
                             ${mediaHtml}
                             <div class="ad-body-content">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="badge bg-dark text-warning border border-warning">Reward: ₦${reward}</span>
-                                    <span class="text-muted small"><i class="fas fa-tag"></i> ${ad.adType || 'Promotion'} | ${ad.category || ''}</span>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="reward-badge mb-0">Reward: ₦${reward}</span>
+                                    <span class="text-muted small fw-bold"><i class="fas fa-bolt text-warning me-1"></i> ${ad.adType || 'Image'}</span>
                                 </div>
                                 <h3 class="ad-title">${ad.title || 'Sponsored Campaign'}</h3>
-                                <p class="ad-desc">${ad.description || 'View this amazing offer from our sponsor.'}</p>
+                                <p class="ad-desc text-truncate-3">${ad.description || 'View this enterprise campaign allocation from our network partner.'}</p>
                                 
                                 ${contactsHtml ? `<div class="ad-contact-strip">${contactsHtml}</div>` : ''}
                                 
-                                <button class="btn btn-outline-warning fw-bold w-100 py-2 fs-5 ad-card-btn" id="btn_ad_${ad._id}" onclick="startAbsoluteTrackingTask('${ad._id}', '${primaryLink}', ${reward})">
+                                <button class="btn btn-task ad-card-btn" id="btn_ad_${ad._id}" onclick="startAbsoluteTrackingTask('${ad._id}', '${primaryLink}', ${reward})">
                                     <i class="fas fa-play-circle me-2"></i> VIEW ADVERT & EARN ₦${reward}
                                 </button>
                             </div>
@@ -291,15 +346,14 @@
                 `;
             });
 
-            // After rendering, secretly check all displayed ads against backend to hide ones already claimed
+            // Run structural life checking for claimed items
             cleanClaimedAds(data.ads);
 
         } catch (error) {
-            container.innerHTML = `<div class="col-12 text-center py-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to load ads.</div>`;
+            container.innerHTML = `<div class="col-12 text-center py-5 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to secure connection with ad servers.</div>`;
         }
     }
 
-    // Silent background check to hide ads they've already claimed this lifetime
     async function cleanClaimedAds(adsArray) {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
@@ -450,7 +504,7 @@
         }
     }
 
-    window.onload = () => { initStars(); loadDynamicAds(); };
+    window.onload = () => { initStars(); checkProfileTaskState(); loadDynamicAds(); };
     window.onresize = initStars;
 </script>
 
