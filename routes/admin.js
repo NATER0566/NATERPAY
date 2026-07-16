@@ -5,7 +5,7 @@ const KYC = require('../models/KYC');
 const SupportTicket = require('../models/SupportTicket');
 const Notification = require('../models/Notification');
 const PaymentLink = require('../models/PaymentLink'); 
-const Advertisement = require('../models/Advertisement');
+const Ad = require('../models/Ad'); // <-- UPDATED TO NEW ENTERPRISE SCHEMA
 const { generateTransactionReference } = require('../utils/auth');
 const axios = require('axios'); 
 
@@ -188,9 +188,6 @@ async function verifyRealWorldKYC(request, reply) {
         if (!bvn) return reply.status(400).send({ success: false, message: 'No BVN provided by user to verify.' });
 
         try {
-            // ==========================================
-            // ATTEMPT 1: PAYSTACK (Primary API)
-            // ==========================================
             const paystackResponse = await axios.get(`https://api.paystack.co/bank/resolve_bvn/${bvn}`, {
                 headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
             });
@@ -211,25 +208,20 @@ async function verifyRealWorldKYC(request, reply) {
         } catch (paystackError) {
             console.warn("Paystack offline or failed. Initiating Monnify Fallback...");
 
-            // ==========================================
-            // ATTEMPT 2: MONNIFY FALLBACK ENGINE
-            // ==========================================
             try {
                 const baseUrl = process.env.MONNIFY_URL || 'https://sandbox.monnify.com';
                 const encodedKeys = Buffer.from(`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`).toString('base64');
                 
-                // Authenticate with Monnify
                 const authResponse = await axios.post(`${baseUrl}/api/v1/auth/login`, {}, { 
                     headers: { Authorization: `Basic ${encodedKeys}` } 
                 });
                 const accessToken = authResponse.data.responseBody.accessToken;
 
-                // Monnify Matching Check
                 const monnifyResponse = await axios.post(`${baseUrl}/api/v1/vas/bvn-details-match`, {
                     bvn: bvn,
                     name: kycRecord.user.name,
-                    dateOfBirth: "01-Jan-1990", // Dummy required field
-                    mobileNo: "08000000000"     // Dummy required field
+                    dateOfBirth: "01-Jan-1990", 
+                    mobileNo: "08000000000"     
                 }, {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 });
@@ -250,9 +242,6 @@ async function verifyRealWorldKYC(request, reply) {
                 });
 
             } catch (monnifyError) {
-                // ==========================================
-                // BOTH FAILED: NIBSS IS COMPLETELY OFFLINE
-                // ==========================================
                 console.error("Monnify Fallback also failed:", monnifyError.response?.data || monnifyError.message);
                 return reply.send({
                     success: true,
@@ -309,7 +298,6 @@ async function approveKYC(request, reply) {
 async function rejectKYC(request, reply) {
     try {
         const { kycId } = request.params;
-        
         const reason = request.body && request.body.reason ? request.body.reason : 'Your provided details could not be verified.';
         
         const kyc = await KYC.findById(kycId);
@@ -338,9 +326,7 @@ async function updateProduct(request, reply) {
         const { title, amount, category, description } = request.body;
 
         const product = await PaymentLink.findById(id);
-        if (!product) {
-            return reply.status(404).send({ success: false, message: 'Product item not found' });
-        }
+        if (!product) return reply.status(404).send({ success: false, message: 'Product item not found' });
 
         if (title) product.title = title;
         if (category) product.category = category;
@@ -352,7 +338,6 @@ async function updateProduct(request, reply) {
         await product.save();
         reply.send({ success: true, message: 'Product listing modified successfully', product });
     } catch (error) {
-        console.error('Admin update product listing error:', error);
         reply.status(500).send({ success: false, message: 'Failed to update marketplace item' });
     }
 }
@@ -361,26 +346,22 @@ async function deleteProduct(request, reply) {
     try {
         const { id } = request.params;
         const product = await PaymentLink.findByIdAndDelete(id);
-        
-        if (!product) {
-            return reply.status(404).send({ success: false, message: 'Listing already purged or not found' });
-        }
-
+        if (!product) return reply.status(404).send({ success: false, message: 'Listing already purged or not found' });
         reply.send({ success: true, message: 'Product completely purged from global ledger' });
     } catch (error) {
-        console.error('Admin delete product execution error:', error);
         reply.status(500).send({ success: false, message: 'Failed to delete product from ledger' });
     }
 }
 
 // ============================================================================
-// ADVERTS MODERATION ENGINE
+// ENTERPRISE ADVERTS MODERATION ENGINE
 // ============================================================================
 
 async function getPendingAds(request, reply) {
     try {
-        const ads = await Advertisement.find({})
-            .populate('ownerId', 'name email')
+        // Fetch ALL ads to populate the admin panel, sorted by status (pending first)
+        const ads = await Ad.find({})
+            .populate('user', 'name email')
             .sort({ status: -1, createdAt: -1 }); 
             
         reply.send({ success: true, ads });
@@ -393,17 +374,17 @@ async function getPendingAds(request, reply) {
 async function approveAd(request, reply) {
     try {
         const { id } = request.params;
-        const ad = await Advertisement.findById(id);
+        const ad = await Ad.findById(id);
         if (!ad) return reply.status(404).send({ success: false, message: 'Advert not found' });
         
         ad.status = 'approved';
         await ad.save();
 
         if (request.server && request.server.io) {
-            request.server.io.to(`user:${ad.ownerId}`).emit('notification', { 
-                title: 'Advert Approved!', 
+            request.server.io.to(`user:${ad.user}`).emit('notification', { 
+                title: 'Campaign Approved!', 
                 type: 'success',
-                message: `Your advert "${ad.title}" is now LIVE on the global marketplace.` 
+                message: `Your campaign "${ad.title}" is now LIVE on the global marketplace.` 
             });
         }
         reply.send({ success: true, message: 'Advert approved and is now live.' });
@@ -415,22 +396,75 @@ async function approveAd(request, reply) {
 async function rejectAd(request, reply) {
     try {
         const { id } = request.params;
-        const ad = await Advertisement.findById(id);
+        const ad = await Ad.findById(id);
         if (!ad) return reply.status(404).send({ success: false, message: 'Advert not found' });
+        
+        // ONLY refund if it hasn't already been rejected/refunded to prevent infinite money glitch
+        if (ad.status !== 'rejected') {
+            const totalRefund = (ad.packageCost || 0) + (ad.viewBudgetCost || 0);
+            
+            const wallet = await Wallet.findOne({ user: ad.user });
+            if (wallet) {
+                const currentAvail = Number(parseFloat(wallet.availableBalance?.toString() || '0').toFixed(2));
+                const currentLedger = Number(parseFloat(wallet.balance?.toString() || '0').toFixed(2));
+                
+                wallet.availableBalance = String(currentAvail + totalRefund);
+                wallet.balance = String(currentLedger + totalRefund);
+                await wallet.save();
+
+                // Log the refund receipt
+                try {
+                    const refundTx = new Transaction({
+                        user: ad.user,
+                        type: 'funding',
+                        description: `Refund: Rejected Campaign (${ad.title})`,
+                        amount: totalRefund,
+                        fee: 0,
+                        balanceBefore: String(currentAvail),
+                        balanceAfter: wallet.availableBalance,
+                        status: 'success',
+                        provider: 'system',
+                        reference: `REF-${Date.now()}`
+                    });
+                    await refundTx.save();
+                } catch(e) { console.error("Refund log failed", e); }
+
+                // Notify User UI
+                if (request.server && request.server.io) {
+                    request.server.io.to(`user:${ad.user}`).emit('wallet:update', { balance: wallet.availableBalance });
+                }
+            }
+        }
         
         ad.status = 'rejected';
         await ad.save();
 
         if (request.server && request.server.io) {
-            request.server.io.to(`user:${ad.ownerId}`).emit('notification', { 
-                title: 'Advert Rejected', 
+            request.server.io.to(`user:${ad.user}`).emit('notification', { 
+                title: 'Campaign Rejected & Refunded', 
                 type: 'error',
-                message: `Your advert "${ad.title}" was rejected due to policy violations.` 
+                message: `Your campaign "${ad.title}" was rejected due to policy violations. Your funds have been refunded to your wallet.` 
             });
         }
-        reply.send({ success: true, message: 'Advert rejected.' });
+        
+        reply.send({ success: true, message: 'Advert rejected and funds fully refunded.' });
     } catch (error) {
+        console.error('Admin Reject Ad Error:', error);
         reply.status(500).send({ success: false, message: 'Failed to reject advert' });
+    }
+}
+
+async function deleteAd(request, reply) {
+    try {
+        const { id } = request.params;
+        const ad = await Ad.findByIdAndDelete(id);
+        
+        if (!ad) return reply.status(404).send({ success: false, message: 'Advert already deleted or not found' });
+
+        // Note: No refund is issued here because this is for permanent data purging.
+        reply.send({ success: true, message: 'Advert permanently obliterated from database.' });
+    } catch (error) {
+        reply.status(500).send({ success: false, message: 'Failed to permanently delete advert' });
     }
 }
 
@@ -575,5 +609,5 @@ module.exports = {
   getPendingWithdrawals, processWithdrawal, 
   getPendingKYC, verifyRealWorldKYC, approveKYC, rejectKYC,
   updateProduct, deleteProduct,
-  getPendingAds, approveAd, rejectAd
+  getPendingAds, approveAd, rejectAd, deleteAd // EXPORTED ALL AD FUNCTIONS
 };
