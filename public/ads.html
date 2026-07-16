@@ -27,6 +27,17 @@
         .nav-tab-btn { background: transparent; border: 1px solid #444; color: #aaa; padding: 10px 25px; border-radius: 50px; font-weight: 700; white-space: nowrap; transition: 0.3s; }
         .nav-tab-btn.active, .nav-tab-btn:hover { background: rgba(255,215,0,0.1); border-color: var(--gold); color: var(--gold); }
 
+        /* PREMIUM SEARCH BAR */
+        .premium-search {
+            background: rgba(15, 15, 15, 0.9); border: 1.5px solid #333; border-radius: 50px; 
+            padding: 5px 20px; display: flex; align-items: center; transition: 0.3s;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+        }
+        .premium-search:focus-within { border-color: var(--gold); box-shadow: 0 0 15px rgba(255,215,0,0.15), inset 0 2px 10px rgba(0,0,0,0.8); }
+        .premium-search input { background: transparent; border: none; color: white; width: 100%; padding: 12px 10px; outline: none; font-weight: 500; }
+        .premium-search input::placeholder { color: #666; }
+        .premium-search i { color: var(--gold); font-size: 1.1rem; }
+
         /* DYNAMIC MARKETPLACE FEED STYLES */
         .ad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
         .ad-card { background: var(--card-bg); border: 1px solid #333; border-radius: 16px; overflow: hidden; transition: 0.3s; position: relative; display: flex; flex-direction: column; }
@@ -37,7 +48,6 @@
         .ad-media-wrapper { width: 100%; height: 220px; overflow: hidden; position: relative; background: #111; display: flex; align-items: center; justify-content: center; }
         .ad-media { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
         .ad-card:hover .ad-media { transform: scale(1.03); }
-        .video-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.8); font-size: 3rem; pointer-events: none; }
         
         .ad-content { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
         .ad-meta { font-size: 0.7rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 8px; display: flex; justify-content: space-between; }
@@ -51,21 +61,23 @@
         .ad-footer { margin-top: auto; padding-top: 15px; border-top: 1px solid #222; }
 
         /* WIZARD STYLES */
-        .wizard-container { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; padding: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); display: none; }
+        .wizard-container { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; padding: 40px 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); display: none; }
+        @media (min-width: 768px) { .wizard-container { padding: 40px; } }
+        
         .wizard-step { display: none; }
         .wizard-step.active { display: block; animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         .step-indicator { display: flex; justify-content: space-between; margin-bottom: 30px; position: relative; }
         .step-indicator::before { content: ''; position: absolute; top: 15px; left: 0; width: 100%; height: 2px; background: #333; z-index: 0; }
-        .step-dot { width: 32px; height: 32px; background: #111; border: 2px solid #444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #666; z-index: 1; position: relative; transition: 0.3s; }
+        .step-dot { width: 32px; height: 32px; background: #111; border: 2px solid #444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #666; z-index: 1; position: relative; transition: 0.3s; font-size: 0.8rem; }
         .step-dot.active { background: var(--gold); border-color: var(--gold); color: black; box-shadow: 0 0 15px rgba(255,215,0,0.4); }
         .step-dot.completed { background: #28a745; border-color: #28a745; color: white; }
 
         .input-dark { background: rgba(0,0,0,0.6); border: 1.5px solid #333; color: white; padding: 14px 20px; border-radius: 12px; width: 100%; font-weight: 500; margin-bottom: 20px; transition: 0.3s; }
         .input-dark:focus { border-color: var(--gold); outline: none; box-shadow: inset 0 0 10px rgba(255,215,0,0.1); }
         
-        .type-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .type-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .type-card { border: 1px solid #444; border-radius: 12px; padding: 20px 10px; text-align: center; cursor: pointer; transition: 0.3s; background: #111; }
         .type-card i { font-size: 2rem; color: #888; margin-bottom: 10px; transition: 0.3s; }
         .type-card.selected { border-color: var(--gold); background: rgba(255,215,0,0.05); }
@@ -77,8 +89,8 @@
         /* ANALYTICS TABLE */
         .analytics-container { display: none; }
         .table-dark { background: transparent; }
-        .table-dark th { color: var(--gold); font-family: 'Cinzel'; border-bottom: 1px solid #444; padding: 15px; }
-        .table-dark td { padding: 15px; border-bottom: 1px solid #222; vertical-align: middle; }
+        .table-dark th { color: var(--gold); font-family: 'Cinzel'; border-bottom: 1px solid #444; padding: 15px; white-space: nowrap; }
+        .table-dark td { padding: 15px; border-bottom: 1px solid #222; vertical-align: middle; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -89,9 +101,9 @@
     <div class="brand-text">
         <span class="site-part-1">NATER</span><span class="site-part-2">PAY</span>
     </div>
-    <div class="d-flex gap-3">
-        <a href="tasks.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-play-circle me-2"></i> Task & Earn Portal</a>
-        <a href="dashboard.html" class="btn btn-outline-light rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Home</a>
+    <div class="d-flex gap-2 gap-md-3">
+        <a href="tasks.html" class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-bold d-flex align-items-center"><i class="fas fa-play-circle me-1 me-md-2"></i> <span class="d-none d-md-inline">Task Portal</span></a>
+        <a href="dashboard.html" class="btn btn-sm btn-outline-light rounded-pill px-3 fw-bold d-flex align-items-center"><i class="fas fa-arrow-left me-1 me-md-2"></i> <span class="d-none d-md-inline">Home</span></a>
     </div>
 </header>
 
@@ -100,18 +112,20 @@
     <div class="nav-tabs-custom">
         <button class="nav-tab-btn active" onclick="switchView('marketplace')"><i class="fas fa-store me-2"></i> Ad Marketplace</button>
         <button class="nav-tab-btn" onclick="switchView('wizard')"><i class="fas fa-bullhorn me-2"></i> Create Campaign</button>
-        <button class="nav-tab-btn" onclick="switchView('analytics')"><i class="fas fa-chart-pie me-2"></i> Analytics & History</button>
+        <button class="nav-tab-btn" onclick="switchView('analytics')"><i class="fas fa-chart-pie me-2"></i> Analytics</button>
     </div>
 
     <!-- VIEW 1: DYNAMIC MARKETPLACE FEED -->
     <div id="view-marketplace">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; margin: 0;">GLOBAL DIRECTORY</h3>
-            <div class="search-bar w-50 m-0">
-                <i class="fas fa-search text-muted me-2"></i>
+        <!-- FIXED RESPONSIVE SEARCH BAR -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <h3 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; margin: 0; text-align: center;">GLOBAL DIRECTORY</h3>
+            <div class="premium-search w-100 w-md-50">
+                <i class="fas fa-search"></i>
                 <input type="text" id="searchInput" placeholder="Search businesses, jobs, products, events..." onkeyup="filterAds()">
             </div>
         </div>
+
         <div class="ad-grid" id="adGridContainer">
             <div class="col-12 text-center py-5 opacity-50">
                 <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing enterprise ledger...
@@ -136,7 +150,7 @@
         <form id="adWizardForm">
             <!-- STEP 1: AD TYPE -->
             <div class="wizard-step active" id="step-1">
-                <h5 class="fw-bold mb-4 text-white">Select Campaign Format</h5>
+                <h5 class="fw-bold mb-4 text-white text-center text-md-start">Select Campaign Format</h5>
                 <div class="type-selector">
                     <div class="type-card selected" onclick="selectAdType('Image', this)"><i class="fas fa-image"></i><h6 class="fw-bold m-0">Image Ad</h6></div>
                     <div class="type-card" onclick="selectAdType('Video', this)"><i class="fas fa-video"></i><h6 class="fw-bold m-0">Video Ad</h6></div>
@@ -148,7 +162,9 @@
                     <div class="type-card" onclick="selectAdType('Text', this)"><i class="fas fa-font"></i><h6 class="fw-bold m-0">Text/Article</h6></div>
                     <div class="type-card" onclick="selectAdType('PDF', this)"><i class="fas fa-file-pdf"></i><h6 class="fw-bold m-0">Document/PDF</h6></div>
                 </div>
-                <div class="text-end"><button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(2)">Next Step <i class="fas fa-arrow-right"></i></button></div>
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="button" class="btn btn-warning px-4 py-2 fw-bold w-100 w-sm-auto rounded-pill" onclick="nextStep(2)">Next Step <i class="fas fa-arrow-right ms-2"></i></button>
+                </div>
             </div>
 
             <!-- STEP 2: BUSINESS INFO -->
@@ -162,9 +178,9 @@
                     <div class="col-md-4"><input type="tel" id="bizWhatsapp" class="input-dark" placeholder="WhatsApp Number"></div>
                     <div class="col-12"><input type="text" id="bizAddress" class="input-dark" placeholder="Full Business Address / City / Country"></div>
                 </div>
-                <div class="d-flex justify-content-between mt-3">
-                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(1)">Back</button>
-                    <button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(3)">Next Step <i class="fas fa-arrow-right"></i></button>
+                <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 mt-3">
+                    <button type="button" class="btn btn-outline-light px-4 py-2 rounded-pill w-100 w-sm-auto" onclick="prevStep(1)">Back</button>
+                    <button type="button" class="btn btn-warning px-4 py-2 fw-bold rounded-pill w-100 w-sm-auto" onclick="nextStep(3)">Next Step <i class="fas fa-arrow-right ms-2"></i></button>
                 </div>
             </div>
 
@@ -201,32 +217,31 @@
                     </div>
                 </div>
 
-                <!-- DYNAMIC FIELDS CONTAINER (Managed by JS) -->
                 <div id="dynamicFieldsContainer" class="row mb-2"></div>
 
                 <input type="url" id="adTargetUrl" class="input-dark" placeholder="Target Landing URL (Where should users go?)" required>
                 <textarea id="adDesc" class="input-dark" rows="4" placeholder="Write your full promotional description here..." required></textarea>
                 
-                <div class="d-flex justify-content-between mt-3">
-                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(2)">Back</button>
-                    <button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(4)">Next Step <i class="fas fa-arrow-right"></i></button>
+                <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 mt-3">
+                    <button type="button" class="btn btn-outline-light px-4 py-2 rounded-pill w-100 w-sm-auto" onclick="prevStep(2)">Back</button>
+                    <button type="button" class="btn btn-warning px-4 py-2 fw-bold rounded-pill w-100 w-sm-auto" onclick="nextStep(4)">Next Step <i class="fas fa-arrow-right ms-2"></i></button>
                 </div>
             </div>
 
             <!-- STEP 4: MEDIA UPLOAD -->
             <div class="wizard-step" id="step-4">
-                <h5 class="fw-bold mb-2 text-white">Upload Media (Cloudinary Direct)</h5>
-                <p class="text-muted small mb-4">Supported: JPG, PNG, MP4, PDF. Do not upload base64 data.</p>
+                <h5 class="fw-bold mb-2 text-white text-center text-md-start">Upload Media (Cloudinary)</h5>
+                <p class="text-muted small mb-4 text-center text-md-start">Supported: JPG, PNG, MP4, PDF.</p>
                 
-                <div class="border border-secondary border-dashed p-5 text-center rounded-4 mb-4" style="background: rgba(0,0,0,0.3);">
+                <div class="border border-secondary border-dashed p-4 p-md-5 text-center rounded-4 mb-4" style="background: rgba(0,0,0,0.3);">
                     <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3" id="mediaUploadIcon"></i>
                     <h6 class="text-white" id="mediaUploadText">Select primary media file</h6>
-                    <input type="file" id="adMediaFile" class="form-control bg-dark text-white mt-3 w-75 mx-auto border-secondary" required>
+                    <input type="file" id="adMediaFile" class="form-control bg-dark text-white mt-3 w-100 w-md-75 mx-auto border-secondary" required>
                 </div>
 
-                <div class="d-flex justify-content-between mt-3">
-                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(3)">Back</button>
-                    <button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(5)">Next Step <i class="fas fa-arrow-right"></i></button>
+                <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 mt-3">
+                    <button type="button" class="btn btn-outline-light px-4 py-2 rounded-pill w-100 w-sm-auto" onclick="prevStep(3)">Back</button>
+                    <button type="button" class="btn btn-warning px-4 py-2 fw-bold rounded-pill w-100 w-sm-auto" onclick="nextStep(5)">Next Step <i class="fas fa-arrow-right ms-2"></i></button>
                 </div>
             </div>
 
@@ -260,79 +275,80 @@
                     <option value="50000">50,000 Unique Views (₦250,000 Budget)</option>
                 </select>
 
-                <div class="d-flex justify-content-between mt-4">
-                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(4)">Back</button>
-                    <button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(6)">Choose Package <i class="fas fa-arrow-right"></i></button>
+                <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 mt-4">
+                    <button type="button" class="btn btn-outline-light px-4 py-2 rounded-pill w-100 w-sm-auto" onclick="prevStep(4)">Back</button>
+                    <button type="button" class="btn btn-warning px-4 py-2 fw-bold rounded-pill w-100 w-sm-auto" onclick="nextStep(6)">Choose Package <i class="fas fa-arrow-right ms-2"></i></button>
                 </div>
             </div>
 
             <!-- STEP 6: DURATION PACKAGES -->
             <div class="wizard-step" id="step-6">
-                <h5 class="fw-bold mb-4 text-white text-center">Select Listing Duration Package</h5>
+                <h5 class="fw-bold mb-4 text-white text-center">Select Listing Duration</h5>
                 <div class="row g-3 mb-4">
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-lg-3">
                         <div class="pkg-card" onclick="selectPricingPkg('basic', 1000, this)">
                             <h5 class="fw-bold text-white fs-6">BASIC</h5>
                             <div class="badge bg-secondary mb-2">20 Days</div>
                             <h3 class="text-gold fw-bold mb-3 fs-5">₦1,000</h3>
-                            <p class="small text-muted m-0">Standard Feed Listing</p>
+                            <p class="small text-muted m-0">Standard Feed</p>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-lg-3">
                         <div class="pkg-card selected border-warning" onclick="selectPricingPkg('standard', 3500, this)">
                             <h5 class="fw-bold text-white fs-6">STANDARD</h5>
                             <div class="badge bg-primary mb-2">40 Days</div>
                             <h3 class="text-gold fw-bold mb-3 fs-5">₦3,500</h3>
-                            <p class="small text-muted m-0">Priority Ranking & Video</p>
+                            <p class="small text-muted m-0">Priority Ranking</p>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-lg-3">
                         <div class="pkg-card" onclick="selectPricingPkg('premium', 10000, this)">
                             <h5 class="fw-bold text-warning fs-6"><i class="fas fa-star"></i> PREMIUM</h5>
                             <div class="badge bg-warning text-dark fw-bold mb-2">90 Days</div>
                             <h3 class="text-gold fw-bold mb-3 fs-5">₦10,000</h3>
-                            <p class="small text-muted m-0">Top Search Placement</p>
+                            <p class="small text-muted m-0">Top Placement</p>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-sm-6 col-lg-3">
                         <div class="pkg-card" onclick="selectPricingPkg('enterprise', 25000, this)">
-                            <h5 class="fw-bold text-danger fs-6"><i class="fas fa-crown"></i> ENTERPRISE</h5>
+                            <h5 class="fw-bold text-danger fs-6"><i class="fas fa-crown"></i> PRO</h5>
                             <div class="badge bg-danger fw-bold mb-2">180 Days</div>
                             <h3 class="text-gold fw-bold mb-3 fs-5">₦25,000</h3>
-                            <p class="small text-muted m-0">Maximum Visibility & Banners</p>
+                            <p class="small text-muted m-0">Max Visibility</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-between mt-4">
-                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(5)">Back</button>
-                    <button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(7)">Review Checkout <i class="fas fa-arrow-right"></i></button>
+                <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 mt-4">
+                    <button type="button" class="btn btn-outline-light px-4 py-2 rounded-pill w-100 w-sm-auto" onclick="prevStep(5)">Back</button>
+                    <button type="button" class="btn btn-warning px-4 py-2 fw-bold rounded-pill w-100 w-sm-auto" onclick="nextStep(7)">Review <i class="fas fa-arrow-right ms-2"></i></button>
                 </div>
             </div>
 
-            <!-- STEP 7: REVIEW & PAYMENT -->
+            <!-- STEP 7: FIXED RESPONSIVE REVIEW & PAYMENT -->
             <div class="wizard-step" id="step-7">
-                <h5 class="fw-bold mb-4 text-white text-center">Campaign Summary & Payment</h5>
+                <h5 class="fw-bold mb-4 text-white text-center">Summary & Checkout</h5>
                 
-                <div class="bg-dark p-4 rounded-4 mb-4 border border-secondary">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Package Cost (<span id="revPkgName" class="text-uppercase text-white">Standard</span>):</span>
-                        <span class="fw-bold text-white">₦<span id="revPkgPrice">3,500</span></span>
+                <div class="bg-dark p-3 p-md-4 rounded-4 mb-4 border border-secondary">
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-3 border-bottom border-secondary pb-3 gap-2">
+                        <span class="text-muted">Package (<span id="revPkgName" class="text-uppercase text-white">Standard</span>):</span>
+                        <span class="fw-bold text-white fs-5">₦<span id="revPkgPrice">3,500</span></span>
                     </div>
-                    <div class="d-flex justify-content-between mb-3 border-bottom border-secondary pb-3">
-                        <span class="text-muted">Rewarded Views Budget (<span id="revViews">1,000</span> Views):</span>
-                        <span class="fw-bold text-white">₦<span id="revBudget">5,000</span></span>
+                    <div class="d-flex flex-column flex-md-row justify-content-between mb-3 border-bottom border-secondary pb-3 gap-2">
+                        <span class="text-muted">Views Budget (<span id="revViews">1,000</span> Views):</span>
+                        <span class="fw-bold text-white fs-5">₦<span id="revBudget">5,000</span></span>
                     </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="fs-5 text-white">Total Payable Amount:</span>
-                        <span class="fs-4 fw-bold text-gold">₦<span id="checkoutTotal">8,500</span></span>
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-3 gap-2">
+                        <span class="fs-6 text-white text-uppercase letter-spacing-1">Total Payable:</span>
+                        <span class="fs-2 fw-bold text-gold">₦<span id="checkoutTotal">8,500</span></span>
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-between">
-                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(6)">Back</button>
-                    <button type="button" class="btn btn-success px-5 fw-bold fs-5 shadow" onclick="submitCampaign()">
-                        <i class="fas fa-lock me-2"></i> PAY & LAUNCH CAMPAIGN
+                <!-- FIXED RESPONSIVE BUTTON CONTAINER -->
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+                    <button type="button" class="btn btn-outline-light px-4 py-3 rounded-pill fw-bold w-100 w-md-auto" onclick="prevStep(6)">Back</button>
+                    <button type="button" class="btn btn-success px-4 py-3 fw-bold fs-6 rounded-pill w-100 shadow" onclick="submitCampaign()">
+                        <i class="fas fa-lock me-2"></i> PAY & LAUNCH
                     </button>
                 </div>
             </div>
@@ -341,16 +357,16 @@
 
     <!-- VIEW 3: ANALYTICS DASHBOARD -->
     <div id="view-analytics" class="analytics-container">
-        <h3 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;">CAMPAIGN ANALYTICS (REAL-TIME)</h3>
+        <h3 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;">CAMPAIGN ANALYTICS</h3>
         <div class="table-responsive bg-dark p-3 rounded-4 border border-secondary">
-            <table class="table table-dark table-hover align-middle m-0">
+            <table class="table table-dark table-hover align-middle m-0" style="min-width: 800px;">
                 <thead>
                     <tr>
                         <th>CAMPAIGN</th>
                         <th>STATUS</th>
-                        <th>VIEWS REMAINING</th>
+                        <th>VIEWS LEFT</th>
                         <th>ENGAGEMENT</th>
-                        <th>PERFORMANCE</th>
+                        <th>CTR</th>
                     </tr>
                 </thead>
                 <tbody id="analyticsTableBody">
@@ -363,7 +379,7 @@
 </div>
 
 <footer class="text-center py-4 mt-auto" style="background: rgba(0,0,0,0.8); border-top: 1px solid #222;">
-    <p class="text-muted small fw-bold m-0" style="letter-spacing: 1px;">v5.0 ENTERPRISE ADVERTISING INFRASTRUCTURE SECURED BY NATER-PAY</p>
+    <p class="text-muted small fw-bold m-0" style="letter-spacing: 1px;">v5.0 ENTERPRISE ADVERTISING INFRASTRUCTURE</p>
 </footer>
 
 <script>
@@ -381,7 +397,7 @@
         if(viewName === 'analytics') loadAnalytics();
     }
 
-    // --- MARKETPLACE RENDERER (DYNAMIC FORMATS) ---
+    // --- MARKETPLACE RENDERER ---
     let globalAds = [];
     async function fetchMarketplaceAds() {
         try {
@@ -405,13 +421,11 @@
             const isFeatured = ad.packageType === 'premium' || ad.packageType === 'enterprise';
             const badgeHtml = isFeatured ? `<div class="featured-badge"><i class="fas fa-crown"></i> ${ad.packageType.toUpperCase()}</div>` : '';
             
-            // Dynamic Media Renderer
             let mediaHtml = '';
             if (ad.adType === 'Video') mediaHtml = `<video src="${ad.mediaUrl}" class="ad-media" controls muted></video>`;
             else if (ad.adType === 'Text') mediaHtml = `<div class="ad-media d-flex align-items-center justify-content-center bg-dark"><i class="fas fa-bullhorn fa-4x text-muted"></i></div>`;
             else mediaHtml = `<img src="${ad.mediaUrl || 'https://via.placeholder.com/400x250/111/d4af37?text=Ad'}" class="ad-media" alt="Ad">`;
 
-            // Dynamic Context Details
             let contextHtml = '';
             if (ad.adType === 'Job') contextHtml = `<div class="mb-2"><span class="job-detail"><i class="fas fa-money-bill-wave"></i> ${ad.salary || 'Competitive'}</span></div>`;
             if (ad.adType === 'Marketplace') contextHtml = `<div class="price-tag mb-2">₦${ad.price ? ad.price.toLocaleString() : 'Negotiable'}</div>`;
@@ -445,11 +459,11 @@
     let selectedType = 'Image';
     let selectedPkg = 'standard';
     let selectedPrice = 3500;
-    let viewBudget = 5000; // Default 1000 views * 5 NGN
+    let viewBudget = 5000;
 
     function nextStep(step) {
-        if(step === 4) generateDynamicFields(); // Inject fields before showing media step
-        if(step === 7) calculateTotal(); // Prepare review page
+        if(step === 4) generateDynamicFields();
+        if(step === 7) calculateTotal();
         document.getElementById(`step-${currentStep}`).classList.remove('active');
         document.getElementById(`dot-${currentStep}`).classList.add('completed');
         currentStep = step;
@@ -468,8 +482,6 @@
         selectedType = type;
         document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
         element.classList.add('selected');
-        
-        // Update Media hints
         const icon = document.getElementById('mediaUploadIcon');
         if(type === 'Video') { icon.className = 'fas fa-file-video fa-3x text-muted mb-3'; document.getElementById('adMediaFile').accept = "video/*"; }
         else if(type === 'PDF') { icon.className = 'fas fa-file-pdf fa-3x text-muted mb-3'; document.getElementById('adMediaFile').accept = "application/pdf"; }
@@ -503,7 +515,7 @@
     function calculateTotal() {
         const viewsSelect = document.getElementById('adViewLimit');
         const views = parseInt(viewsSelect.value);
-        viewBudget = views * 5; // ₦5 per view formula
+        viewBudget = views * 5; 
         const total = selectedPrice + viewBudget;
         
         document.getElementById('revPkgName').innerText = selectedPkg;
@@ -513,12 +525,9 @@
         document.getElementById('checkoutTotal').innerText = total.toLocaleString();
     }
 
-    // --- CLOUDINARY MULTIPART FORM SUBMISSION ---
     async function submitCampaign() {
         const token = localStorage.getItem("naterpay_token");
         if(!token) return Swal.fire('Auth Error', 'Please log in.', 'error');
-
-        Swal.fire({title:'Deploying to Network...', text: 'Authenticating transaction and uploading media securely.', allowOutsideClick: false, didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
 
         const formData = new FormData();
         formData.append('adType', selectedType);
@@ -538,37 +547,36 @@
         formData.append('packageType', selectedPkg);
         formData.append('packageCost', selectedPrice);
         
-        // Dynamic Fields
         if(document.getElementById('adPrice')) formData.append('price', document.getElementById('adPrice').value);
         if(document.getElementById('adSalary')) formData.append('salary', document.getElementById('adSalary').value);
         if(document.getElementById('adVenue')) formData.append('venue', document.getElementById('adVenue').value);
         if(document.getElementById('adEventDate')) formData.append('eventDate', document.getElementById('adEventDate').value);
 
-        // Budget Engine
         const maxViews = parseInt(document.getElementById('adViewLimit').value);
         formData.append('maxRewardedViews', maxViews);
         formData.append('viewBudgetCost', maxViews * 5);
 
         const fileInput = document.getElementById('adMediaFile');
         if(selectedType !== 'Text' && fileInput.files.length > 0) {
-            formData.append('mediaFile', fileInput.files[0]); // Native binary upload to Cloudinary
+            formData.append('mediaFile', fileInput.files[0]);
         }
+
+        Swal.fire({title:'Deploying to Network...', text: 'Authenticating and uploading securely.', allowOutsideClick: false, didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
 
         try {
             const res = await fetch('/api/ads/create-multipart', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }, // NO Content-Type needed for FormData
+                headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             });
             const data = await res.json();
             if(data.success) {
-                Swal.fire({icon: 'success', title: 'Campaign Launched!', text: 'Payment successful. Campaign is pending admin review.', confirmButtonColor: '#FFD700', background:'#0a0a0a', color:'#fff'})
+                Swal.fire({icon: 'success', title: 'Campaign Launched!', text: 'Pending admin review.', confirmButtonColor: '#FFD700', background:'#0a0a0a', color:'#fff'})
                 .then(() => { window.location.reload(); });
             } else { Swal.fire({icon: 'error', title: 'Transaction Failed', text: data.message, background:'#0a0a0a', color:'#fff'}); }
         } catch(e) { Swal.fire({icon: 'error', title: 'Server Error', text: 'Network failure.', background:'#0a0a0a', color:'#fff'}); }
     }
 
-    // --- REAL-TIME ANALYTICS DASHBOARD ---
     async function loadAnalytics() {
         const tbody = document.getElementById('analyticsTableBody');
         const token = localStorage.getItem("naterpay_token");
@@ -585,19 +593,10 @@
                     
                     return `
                         <tr>
-                            <td>
-                                <div class="fw-bold">${ad.title}</div>
-                                <small class="text-muted">Pkg: ${ad.packageType.toUpperCase()}</small>
-                            </td>
-                            <td>
-                                <div class="mb-1"><i class="fas fa-tag text-muted"></i> ${ad.adType}</div>
-                                <span class="badge bg-${statusColor} text-uppercase">${ad.status}</span>
-                            </td>
+                            <td><div class="fw-bold">${ad.title}</div><small class="text-muted">Pkg: ${ad.packageType.toUpperCase()}</small></td>
+                            <td><div class="mb-1"><i class="fas fa-tag text-muted"></i> ${ad.adType}</div><span class="badge bg-${statusColor} text-uppercase">${ad.status}</span></td>
                             <td class="text-warning fw-bold fs-5">${viewsLeft.toLocaleString()}</td>
-                            <td>
-                                <div class="small text-info mb-1"><i class="fas fa-eye"></i> ${impressions.toLocaleString()} Impr.</div>
-                                <div class="small text-success"><i class="fas fa-mouse-pointer"></i> ${clicks.toLocaleString()} Clicks</div>
-                            </td>
+                            <td><div class="small text-info mb-1"><i class="fas fa-eye"></i> ${impressions.toLocaleString()} Impr.</div><div class="small text-success"><i class="fas fa-mouse-pointer"></i> ${clicks.toLocaleString()} Clicks</div></td>
                             <td class="fw-bold text-white">${ctr}%</td>
                         </tr>
                     `;
