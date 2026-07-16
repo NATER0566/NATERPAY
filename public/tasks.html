@@ -6,7 +6,7 @@
     <title>NATER-PAY | Task & Earn</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght scheduled;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
@@ -55,23 +55,34 @@
         .btn-task:hover:not(:disabled) { background: var(--gold); color: black; box-shadow: 0 5px 15px rgba(212,175,55,0.3); }
         .btn-task:disabled { border-color: #444; color: #888; cursor: not-allowed; }
 
-        /* BIG ADVERTISEMENT BANNER REDESIGN */
         .sponsored-ad-card {
             background: var(--card-bg); border: 1.5px solid #333; border-radius: 20px; 
             overflow: hidden; margin-bottom: 30px; transition: 0.3s; display: flex; flex-direction: column;
         }
         .sponsored-ad-card:hover { border-color: var(--gold); box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15); transform: translateY(-3px); }
         
-        .ad-banner-img {
-            width: 100%; height: 250px; object-fit: cover; border-bottom: 2px solid var(--gold);
-        }
-        
+        .ad-banner-img { width: 100%; height: 250px; object-fit: cover; border-bottom: 2px solid var(--gold); }
         .ad-body-content { padding: 25px; }
         .ad-title { font-weight: 900; font-size: 1.4rem; color: #fff; margin-bottom: 8px; font-family: 'Cinzel', serif; }
         .ad-desc { font-size: 0.95rem; color: #ccc; margin-bottom: 15px; line-height: 1.6; }
         .ad-contact-strip { font-size: 0.85rem; color: #888; background: #111; padding: 10px 15px; border-radius: 8px; display: inline-block; margin-bottom: 20px; border: 1px dashed #333; }
         
         .business-card { background: linear-gradient(90deg, #111, #000); border: 1px dashed var(--gold); border-radius: 16px; padding: 30px; text-align: center; margin-top: 50px; }
+
+        /* FULLSCREEN AD ENGAGEMENT OVERLAY */
+        #adViewerOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(5, 5, 5, 0.98); z-index: 9999; display: none;
+            align-items: center; justify-content: center; padding: 20px;
+            backdrop-filter: blur(20px);
+        }
+        .viewer-box {
+            max-width: 700px; width: 100%; background: #0f0f0f; 
+            border: 2px solid var(--gold); border-radius: 24px; padding: 40px;
+            text-align: center; box-shadow: 0 20px 50px rgba(212,175,55,0.15);
+        }
+        .radial-timer-wrapper { position: relative; width: 100px; height: 100px; margin: 0 auto 30px; display: flex; align-items: center; justify-content: center; }
+        .timer-number { font-size: 2.2rem; font-weight: 900; color: var(--gold); font-family: 'Cinzel', serif; }
     </style>
 </head>
 <body>
@@ -149,6 +160,24 @@
 
 </div>
 
+<div id="adViewerOverlay">
+    <div class="viewer-box">
+        <div class="radial-timer-wrapper">
+            <div class="timer-number" id="overlayCountdown">20</div>
+        </div>
+        <span class="badge bg-dark text-warning border border-warning mb-3 px-3 py-2 fw-bold" id="overlayRewardBadge">Tracking Active</span>
+        <h2 id="overlayTitle" style="font-family: 'Cinzel'; color: #fff; font-weight: 900;">Campaign Title</h2>
+        <p class="text-muted px-3" id="overlayDesc">Loading campaign details...</p>
+        
+        <div class="my-4">
+            <a id="overlayLaunchBtn" target="_blank" class="btn btn-warning btn-lg rounded-pill px-5 fw-bold text-dark w-100 py-3 shadow">
+                <i class="fas fa-external-link-alt me-2"></i> LAUNCH SPONSOR TARGET
+            </a>
+            <p class="small text-danger mt-2 fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> Warning: Leaving this overlay cancels the tracking timer!</p>
+        </div>
+    </div>
+</div>
+
 <footer class="text-center py-4 mt-auto" style="background: rgba(0,0,0,0.8); border-top: 1px solid #222;">
     <p class="text-muted small fw-bold m-0" style="letter-spacing: 1px;">OUR COMMITMENT: EVERY REWARD IS BACKED BY GENUINE BUSINESS ACTIVITY.</p>
 </footer>
@@ -172,14 +201,10 @@
         animate();
     }
 
-    // ==========================================
-    // AUTO-HIDE CLAIMED PROFILE REWARD
-    // ==========================================
     async function claimProfileReward() {
         const btn = document.getElementById('btnProfileTask');
         btn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> Verifying...`;
         btn.disabled = true;
-
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return Swal.fire({ icon: 'error', title: 'Login Required', background: '#0a0a0a', color: '#fff' });
 
@@ -189,17 +214,14 @@
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
             const data = await response.json();
-
             if (data.success) {
                 Swal.fire({ icon: 'success', title: 'Reward Credited!', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
                 document.getElementById('profileTaskWrapper').style.display = 'none';
             } else {
                 btn.innerHTML = `Claim Verification Reward`;
                 btn.disabled = false;
-                
                 if (data.message.includes('already claimed')) {
                     document.getElementById('profileTaskWrapper').style.display = 'none';
-                    Swal.fire({ icon: 'info', title: 'Already Claimed', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
                 } else {
                     Swal.fire({ icon: 'warning', title: 'Action Required', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' })
                     .then(res => { if(res.isConfirmed) window.location.href='kyc.html'; });
@@ -208,13 +230,12 @@
         } catch (err) {
             btn.innerHTML = `Claim Verification Reward`;
             btn.disabled = false;
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to contact server.', background: '#0a0a0a', color: '#fff' });
         }
     }
 
-    // ==========================================
-    // MASSIVE ADS RENDERER WITH URL FIXER
-    // ==========================================
+    // Global Store for Loaded Advert Data
+    let systemAdsArray = [];
+
     async function loadDynamicAds() {
         const container = document.getElementById('dynamicAdsContainer');
         try {
@@ -231,8 +252,10 @@
                 return;
             }
 
+            systemAdsArray = data.ads; 
             container.innerHTML = '';
-            data.ads.forEach(ad => {
+            
+            data.ads.forEach((ad, index) => {
                 const rawWeb = ad.website || ad.targetUrl || ad.link || ad.url || '';
                 const rawWa = ad.whatsappNumber || '';
                 const rawPh = ad.phoneNumber || '';
@@ -260,10 +283,8 @@
                                 </div>
                                 <h3 class="ad-title">${ad.title || 'Sponsored Campaign'}</h3>
                                 <p class="ad-desc">${ad.description || 'View this amazing offer from our sponsor.'}</p>
-                                
                                 ${contactsHtml ? `<div class="ad-contact-strip">${contactsHtml}</div>` : ''}
-                                
-                                <button class="btn btn-outline-warning fw-bold w-100 py-2 fs-5" id="btn_ad_${ad._id}" onclick="processAdClick('${ad._id}', '${primaryLink}', ${reward})">
+                                <button class="btn btn-outline-warning fw-bold w-100 py-2 fs-5" onclick="initiateAdOverlay('${index}', '${primaryLink}')">
                                     <i class="fas fa-play-circle me-2"></i> VIEW ADVERT & EARN ₦${reward}
                                 </button>
                             </div>
@@ -271,153 +292,134 @@
                     </div>
                 `;
             });
-
         } catch (error) {
             container.innerHTML = `<div class="col-12 text-center py-3 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to load ads.</div>`;
         }
     }
 
     // ==========================================
-    // STRICT 20-SECOND ANTI-CHEAT TIMER
+    // IN-APP AD OVERLAY COUNTDOWN WITH REDIRECT CONTEXT
     // ==========================================
-    let currentActiveAdId = null;
-    let expectedReturnTime = 0;
-    let currentReward = 0;
-    let currentBtn = null;
-    let timerInterval = null;
+    let overlayTimer = null;
+    let activeAdIndex = null;
 
-    function processAdClick(adId, adUrl, rewardAmount) {
-        const btn = document.getElementById(`btn_ad_${adId}`);
-        if(btn.disabled) return;
+    function initiateAdOverlay(index, primaryLink) {
+        const ad = systemAdsArray[index];
+        if (!ad) return;
 
-        if (!adUrl || adUrl === 'undefined' || adUrl.trim() === '') {
-            Swal.fire({ icon: 'error', title: 'Invalid Link', text: 'The advertiser did not provide a valid link or contact number.', background: '#0a0a0a', color: '#fff' });
-            return;
+        activeAdIndex = index;
+        
+        // Populate full screen modal content
+        document.getElementById('overlayTitle').innerText = ad.title || 'Sponsored Campaign';
+        document.getElementById('overlayDesc').innerText = ad.description || 'Please track this campaign context.';
+        document.getElementById('overlayRewardBadge').innerText = `Reward Value: ₦${ad.rewardAmount || 5}`;
+        
+        const launchBtn = document.getElementById('overlayLaunchBtn');
+        launchBtn.href = primaryLink;
+        
+        // Show Full Screen Layout Layer
+        document.getElementById('adViewerOverlay').style.display = 'flex';
+        
+        let counter = 20;
+        const countdownEl = document.getElementById('overlayCountdown');
+        countdownEl.innerText = counter;
+
+        // Auto Open Target context in a clean separate window for convenience
+        if (primaryLink && primaryLink !== '#') {
+            window.open(primaryLink, '_blank');
         }
 
-        // Open live URL in new tab
-        window.open(adUrl, '_blank');
+        if (overlayTimer) clearInterval(overlayTimer);
         
-        btn.disabled = true;
-        
-        const REQUIRED_SECONDS = 20; 
-        expectedReturnTime = Date.now() + (REQUIRED_SECONDS * 1000);
-        currentActiveAdId = adId;
-        currentReward = rewardAmount;
-        currentBtn = btn;
-        
-        // Visual countdown
-        let countdown = REQUIRED_SECONDS;
-        btn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> PLEASE WAIT (${countdown}s)`;
-        
-        timerInterval = setInterval(() => {
-            countdown--;
-            if (countdown > 0) {
-                if(currentBtn) currentBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> PLEASE WAIT (${countdown}s)`;
-            } else {
-                clearInterval(timerInterval);
-                if (currentActiveAdId) {
-                    // Time is up, auto-claim
-                    claimAdReward(currentActiveAdId, currentReward, currentBtn);
-                    resetTracker();
-                }
+        overlayTimer = setInterval(async () => {
+            counter--;
+            countdownEl.innerText = counter;
+            
+            if (counter <= 0) {
+                clearInterval(overlayTimer);
+                await executeOverlayClaim(ad);
             }
         }, 1000);
+    }
+
+    async function executeOverlayClaim(ad) {
+        const countdownEl = document.getElementById('overlayCountdown');
+        countdownEl.innerHTML = `<i class="fas fa-sync-alt fa-spin"></i>`;
         
-        Swal.fire({
-            title: 'Task Started!',
-            text: `You must stay on the advertiser's page for at least ${REQUIRED_SECONDS} seconds. Do not return early!`,
-            icon: 'info',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 5000,
-            background: '#0a0a0a',
-            color: '#fff'
-        });
-    }
-
-    function resetTracker() {
-        currentActiveAdId = null;
-        expectedReturnTime = 0;
-        currentReward = 0;
-        currentBtn = null;
-        if(timerInterval) clearInterval(timerInterval);
-    }
-
-    // THE ANTI-CHEAT VISIBILITY LISTENER
-    document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible" && currentActiveAdId) {
-            const timeLeft = Math.ceil((expectedReturnTime - Date.now()) / 1000);
-            
-            if (timeLeft > 0) {
-                // CHEAT DETECTED: They came back too early
-                currentBtn.disabled = false;
-                currentBtn.innerHTML = `<i class="fas fa-play-circle me-2"></i> VIEW ADVERT & EARN ₦${currentReward}`;
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Task Failed!',
-                    text: `You returned too early! You needed to wait ${timeLeft} more seconds. Click to try again.`,
-                    confirmButtonColor: '#d32f2f',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
-                
-                resetTracker();
-            } else {
-                // SUCCESS: They waited the full time and returned
-                claimAdReward(currentActiveAdId, currentReward, currentBtn);
-                resetTracker();
-            }
-        }
-    });
-
-    // ==========================================
-    // AUTO-HIDE ADS UPON SUCCESS
-    // ==========================================
-    async function claimAdReward(adId, rewardAmount, btnElement) {
-        if(btnElement) btnElement.innerHTML = `<i class="fas fa-sync-alt fa-spin me-2"></i> Crediting...`;
         const authToken = localStorage.getItem("naterpay_token");
-        
         if (!authToken) {
-            Swal.fire({ icon: 'error', title: 'Login Required', background: '#0a0a0a', color: '#fff' });
-            if(btnElement) {
-                btnElement.innerHTML = `<i class="fas fa-play-circle me-2"></i> VIEW ADVERT & EARN ₦${rewardAmount}`;
-                btnElement.disabled = false;
-            }
-            return;
+            document.getElementById('adViewerOverlay').style.display = 'none';
+            return Swal.fire({ icon: 'error', title: 'Authentication Error', text: 'Login required to process tasks.', background: '#0a0a0a', color: '#fff' });
         }
 
         try {
             const response = await fetch('/api/tasks/claim-ad', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ adId: adId })
+                body: JSON.stringify({ adId: ad._id })
             });
             const data = await response.json();
 
+            // Hide overlay instantly to shift context back to feed dashboard
+            document.getElementById('adViewerOverlay').style.display = 'none';
+
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Reward Credited!', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
-                const adSlot = document.getElementById(`ad_slot_${adId}`);
-                if(adSlot) adSlot.style.display = 'none';
+                // Remove ad slot from DOM grid feed dynamically
+                const slot = document.getElementById(`ad_slot_${ad._id}`);
+                if (slot) slot.style.display = 'none';
+
+                // Fancy conversion notification mapping out contact triggers
+                Swal.fire({
+                    icon: 'success',
+                    title: '₦' + (ad.rewardAmount || 5) + ' Earned Automatically!',
+                    text: 'Your task credit was secured successfully. If you find this promotion interesting, click below to establish direct contact with the vendor!',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d4af37',
+                    cancelButtonColor: '#333',
+                    confirmButtonText: '<i class="fab fa-whatsapp me-2"></i> Message Vendor / View context',
+                    cancelButtonText: 'Return to Feed',
+                    background: '#0f0f0f',
+                    color: '#fff'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const rawWeb = ad.website || ad.targetUrl || ad.link || ad.url || '';
+                        const rawWa = ad.whatsappNumber || '';
+                        const rawPh = ad.phoneNumber || '';
+                        let target = '';
+                        if (rawWeb) target = rawWeb.startsWith('http') ? rawWeb : 'https://' + rawWeb;
+                        else if (rawWa) target = 'https://wa.me/' + rawWa.replace(/[^0-9]/g, '');
+                        else if (rawPh) target = 'tel:' + rawPh;
+                        
+                        if(target) window.open(target, '_blank');
+                    }
+                });
             } else {
-                if(data.message.includes('already claimed')) {
-                    const adSlot = document.getElementById(`ad_slot_${adId}`);
-                    if(adSlot) adSlot.style.display = 'none';
-                } else if(btnElement) {
-                    btnElement.innerHTML = `<i class="fas fa-check me-2"></i> Done Today`;
+                if (data.message.includes('already claimed')) {
+                    const slot = document.getElementById(`ad_slot_${ad._id}`);
+                    if (slot) slot.style.display = 'none';
                 }
-                Swal.fire({ icon: 'info', title: 'Notice', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                Swal.fire({ icon: 'info', title: 'Task Notice', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
             }
         } catch (error) {
-            if(btnElement) {
-                btnElement.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Error`;
-                btnElement.disabled = false;
-            }
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to communicate with the reward server.', background: '#0a0a0a', color: '#fff' });
+            document.getElementById('adViewerOverlay').style.display = 'none';
+            Swal.fire({ icon: 'error', title: 'System Error', text: 'Failed to communicate with authorization cluster.', background: '#0a0a0a', color: '#fff' });
         }
     }
+
+    // Clean execution safety guard if tab loses state visibility unexpectedly
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden" && overlayTimer) {
+            clearInterval(overlayTimer);
+            document.getElementById('adViewerOverlay').style.display = 'none';
+            Swal.fire({
+                icon: 'warning',
+                title: 'Viewing Interrupted',
+                text: 'Tracking sequence aborted. You must keep NATERPAY active during verification.',
+                background: '#0a0a0a',
+                color: '#fff'
+            });
+        }
+    });
 
     window.onload = () => {
         initStars();
