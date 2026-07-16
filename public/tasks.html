@@ -85,15 +85,49 @@
         
         .business-card { background: linear-gradient(90deg, #0f0f0f, #050505); border: 1.5px dashed var(--gold-dim); border-radius: 16px; padding: 30px; text-align: center; margin-top: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
 
-        /* EXTRAVAGANT REFLECTIVE SPINNING LOADER FOR EMPTY STATE */
-        .premium-empty-container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; width: 100%; }
-        .reflective-badge-wrapper { position: relative; width: 120px; height: 120px; margin-bottom: 25px; }
-        .glow-ring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; border: 3px solid transparent; border-top-color: var(--gold); border-bottom-color: #d32f2f; animation: spinGlow 2s linear infinite; filter: drop-shadow(0 0 15px var(--gold)); }
-        .inner-core { position: absolute; top: 12.5%; left: 12.5%; width: 75%; height: 75%; background: rgba(15,15,15,0.9); border-radius: 50%; border: 1px solid #333; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 15px rgba(255,215,0,0.2); }
-        .inner-core i { font-size: 2.2rem; animation: pulseReflect 2s ease-in-out infinite; }
+        /* EXTRAVAGANT REFRACTIVE, REFLECTIVE SPINNING LOADER FOR EMPTY STATE */
+        .premium-empty-container { 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            padding: 80px 20px; text-align: center; width: 100%; animation: fadeIn 0.8s ease-out;
+        }
         
-        @keyframes spinGlow { 0% { transform: rotate(0deg); filter: drop-shadow(0 0 10px var(--gold)); } 50% { filter: drop-shadow(0 0 25px #d32f2f); } 100% { transform: rotate(360deg); filter: drop-shadow(0 0 10px var(--gold)); } }
-        @keyframes pulseReflect { 0%, 100% { transform: scale(1); opacity: 0.7; color: var(--gold); } 50% { transform: scale(1.1); opacity: 1; color: #ffffff; text-shadow: 0 0 15px var(--gold); } }
+        .reflective-spinner {
+            position: relative; width: 140px; height: 140px; margin-bottom: 35px;
+            border-radius: 50%;
+            /* Refractive metallic gradient */
+            background: conic-gradient(
+                from 0deg, 
+                rgba(255,215,0,0.1) 0%, 
+                rgba(255,255,255,0.9) 15%, 
+                var(--gold) 30%, 
+                rgba(255,215,0,0.2) 50%, 
+                var(--gold-dim) 70%, 
+                rgba(255,255,255,0.7) 85%, 
+                rgba(255,215,0,0.1) 100%
+            );
+            animation: spinReflective 2.5s linear infinite;
+            box-shadow: 0 0 40px rgba(255,215,0,0.3), inset 0 0 20px rgba(255,255,255,0.4);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .reflective-spinner::before {
+            content: ''; position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px;
+            background: radial-gradient(circle at 30% 30%, #222 0%, #000 80%);
+            border-radius: 50%; border: 1px solid rgba(255,215,0,0.2);
+            box-shadow: inset 0 0 25px rgba(0,0,0,1);
+            z-index: 1;
+        }
+
+        .inner-icon {
+            position: relative; z-index: 2; font-size: 3rem; color: var(--gold);
+            text-shadow: 0 0 20px var(--gold), 0 0 40px rgba(255,255,255,0.5);
+            /* The icon spins backwards to stay perfectly upright while the outer ring spins! */
+            animation: counterSpin 2.5s linear infinite; 
+        }
+        
+        @keyframes spinReflective { 100% { transform: rotate(360deg); } }
+        @keyframes counterSpin { 100% { transform: rotate(-360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body>
@@ -162,8 +196,9 @@
         </div>
     </div>
 
+    <!-- THIS CONTAINER WILL HOUSE EITHER THE ADS OR THE REFLECTIVE SPINNING LOADER -->
     <div id="dynamicAdsContainer" class="row">
-        <div class="col-12 text-center py-4 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Scanning Database for Live Ads...</div>
+        <div class="col-12 text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin fa-2x text-warning me-2"></i><br>Scanning Database for Live Ads...</div>
     </div>
 
     <div class="business-card">
@@ -207,11 +242,9 @@
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
         try {
-            // Check current dashboard preference/profile metrics via baseline profile data
             const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
             
-            // If the user has already achieved KYC level verification or has explicitly claimed the reward, hide it immediately
             if (data.success && (data.user?.kycLevel >= 1 || data.dashboard?.profileRewardClaimed === true)) {
                 document.getElementById('profileTaskWrapper').style.display = 'none';
             } else {
@@ -231,10 +264,7 @@
         if (!authToken) return Swal.fire({ icon: 'error', title: 'Login Required', background: '#0a0a0a', color: '#fff' });
 
         try {
-            const response = await fetch('/api/tasks/claim-profile', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
+            const response = await fetch('/api/tasks/claim-profile', { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await response.json();
 
             if (data.success) {
@@ -243,7 +273,6 @@
             } else {
                 btn.innerHTML = `Claim Verification Reward`;
                 btn.disabled = false;
-                
                 if (data.message.includes('already claimed')) {
                     document.getElementById('profileTaskWrapper').style.display = 'none';
                 } else {
@@ -257,7 +286,25 @@
         }
     }
 
-    // --- REQUIREMENT 2 & 3: ADVANCED MEDIA MATRIX + REFLECTIVE ROTATION BADGE ENGINE ---
+    // --- REQUIREMENT 2 & 3: MEDIA MATRIX & REFLECTIVE ROTATION BADGE ENGINE ---
+    
+    // Core function to summon the Refractive Empty State
+    function showEmptyState(isLimitReached) {
+        const container = document.getElementById('dynamicAdsContainer');
+        const headingText = isLimitReached ? 'Daily limit reached' : 'No daily task yet';
+        const subText = isLimitReached ? 'Come back next day to earn more from our premium advertising partners.' : 'The advertiser vault is currently settling balances. Check back shortly for new dynamic allocations.';
+        const coreIcon = isLimitReached ? 'fa-check-double' : 'fa-hourglass-half text-secondary';
+        
+        container.innerHTML = `
+            <div class="premium-empty-container col-12">
+                <div class="reflective-spinner">
+                    <i class="fas ${coreIcon} inner-icon"></i>
+                </div>
+                <h4 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; letter-spacing: 2px; text-transform: uppercase;">${headingText}</h4>
+                <p class="text-muted small mt-2 mx-auto" style="max-width: 500px; line-height: 1.6; font-size: 0.95rem;">${subText}</p>
+            </div>`;
+    }
+
     async function loadDynamicAds() {
         const container = document.getElementById('dynamicAdsContainer');
         const authToken = localStorage.getItem("naterpay_token");
@@ -266,29 +313,11 @@
             const response = await fetch('/api/ads'); 
             const data = await response.json();
 
-            // Track if user has consumed all permitted transactions today
             let dailyLimitReached = false;
-            if (data.message && data.message.includes('limit reached')) {
-                dailyLimitReached = true;
-            }
+            if (data.message && data.message.includes('limit reached')) dailyLimitReached = true;
 
             if (!data.success || !data.ads || data.ads.length === 0) {
-                // RENDER EXTRAVAGANT METALLIC GLOW BADGE LOADER CONDITIONALLY
-                const headingText = dailyLimitReached ? 'Daily Limit Reached!' : 'No Daily Task Yet';
-                const subText = dailyLimitReached ? 'Incredible work! You have completed all 20 sponsored allocations for today. Return tomorrow to earn more.' : 'The advertiser vault is settling balances. Check back shortly for new dynamic allocations.';
-                const coreIcon = dailyLimitReached ? 'fa-check-circle' : 'fa-clock';
-                
-                container.innerHTML = `
-                    <div class="premium-empty-container col-12">
-                        <div class="reflective-badge-wrapper">
-                            <div class="glow-ring"></div>
-                            <div class="inner-core">
-                                <i class="fas ${coreIcon}"></i>
-                            </div>
-                        </div>
-                        <h4 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800; letter-spacing: 1px;">${headingText}</h4>
-                        <p class="text-muted small mt-2 mx-auto" style="max-width: 500px; line-height: 1.6;">${subText}</p>
-                    </div>`;
+                showEmptyState(dailyLimitReached);
                 return;
             }
 
@@ -346,8 +375,8 @@
                 `;
             });
 
-            // Run structural life checking for claimed items
-            cleanClaimedAds(data.ads);
+            // Run structural life checking. If user claimed all rendered items, hide them and spawn the empty state.
+            await cleanClaimedAds(data.ads);
 
         } catch (error) {
             container.innerHTML = `<div class="col-12 text-center py-5 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to secure connection with ad servers.</div>`;
@@ -358,6 +387,8 @@
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
         
+        let dailyLimitHit = false;
+
         for (let ad of adsArray) {
             try {
                 const res = await fetch('/api/tasks/claim-ad', {
@@ -366,12 +397,17 @@
                     body: JSON.stringify({ adId: ad._id, verifyOnly: true }) 
                 });
                 const data = await res.json();
-                if(data.message && data.message.includes('already claimed')) {
+                
+                if(data.message && data.message.includes('limit reached')) dailyLimitHit = true;
+
+                if(data.message && (data.message.includes('already claimed') || data.message.includes('limit reached'))) {
                     const slot = document.getElementById(`ad_slot_${ad._id}`);
                     if(slot) slot.style.display = 'none';
                 }
             } catch(e) {}
         }
+        
+        checkIfAllHidden(dailyLimitHit);
     }
 
     function dismissAd(adId) {
@@ -385,8 +421,20 @@
             confirmButtonColor: '#d32f2f',
             background: '#0a0a0a', color: '#fff'
         }).then((result) => {
-            if(result.isConfirmed) document.getElementById(`ad_slot_${adId}`).style.display = 'none';
+            if(result.isConfirmed) {
+                document.getElementById(`ad_slot_${adId}`).style.display = 'none';
+                checkIfAllHidden(false); // Check if they manually closed the very last visible ad
+            }
         });
+    }
+
+    function checkIfAllHidden(isLimitReached) {
+        const slots = document.querySelectorAll('[id^="ad_slot_"]');
+        let anyVisible = false;
+        slots.forEach(slot => { if (slot.style.display !== 'none') anyVisible = true; });
+        
+        // If no ads are visible on the screen, summon the Refractive Empty State!
+        if (!anyVisible) showEmptyState(isLimitReached);
     }
 
     // =========================================================================
@@ -488,15 +536,24 @@
             if (data.success) {
                 Swal.fire({ icon: 'success', title: 'Task Completed!', text: `You earned ₦${rewardAmount}. This ad has now been marked as completed.`, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff', toast: true, position: 'top-end', showConfirmButton: false, timer: 4000 });
                 document.getElementById(`ad_slot_${adId}`).style.display = 'none';
+                checkIfAllHidden(false); // Check if they just claimed the last visible ad
             } else {
+                let isLimit = false;
                 if(data.message.includes('already claimed')) {
                     document.getElementById(`ad_slot_${adId}`).style.display = 'none';
                 } else if(data.message.includes('limit reached')) {
                     btnElement.innerHTML = `<i class="fas fa-ban me-2"></i> Daily Limit Reached`;
+                    isLimit = true;
+                    document.getElementById(`ad_slot_${adId}`).style.display = 'none';
                 } else {
                     btnElement.innerHTML = `<i class="fas fa-check me-2"></i> Completed`;
                 }
-                Swal.fire({ icon: 'info', title: 'Notice', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                
+                checkIfAllHidden(isLimit); // Re-check visibility state
+
+                if(!isLimit) {
+                    Swal.fire({ icon: 'info', title: 'Notice', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                }
             }
         } catch (error) {
             btnElement.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i> Error`;
