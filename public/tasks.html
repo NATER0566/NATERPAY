@@ -69,8 +69,8 @@
         }
         .btn-dismiss:hover { background: #d32f2f; border-color: #ff4c4c; }
 
-        .ad-banner-img {
-            width: 100%; height: 250px; object-fit: cover; border-bottom: 2px solid var(--gold);
+        .ad-banner-media {
+            width: 100%; height: 250px; object-fit: cover; border-bottom: 2px solid var(--gold); background: #111; display: flex; align-items: center; justify-content: center;
         }
         
         .ad-body-content { padding: 25px; }
@@ -252,18 +252,30 @@
                 if (rawWa) contactsHtml += `<span class="me-3 fw-bold"><i class="fab fa-whatsapp text-success"></i> ${rawWa}</span>`;
                 if (rawPh) contactsHtml += `<span class="fw-bold"><i class="fas fa-phone text-info"></i> ${rawPh}</span>`;
 
-                const imageUrl = ad.imageUrl || ad.image || 'https://via.placeholder.com/1200x400/050505/d4af37?text=ADVERTISEMENT';
+                const mediaUrl = ad.mediaUrl || 'https://via.placeholder.com/1200x400/050505/d4af37?text=ADVERTISEMENT';
                 const reward = ad.rewardAmount || 5;
+
+                // --- DYNAMIC ENTERPRISE MEDIA RENDERER ---
+                let mediaHtml = '';
+                if (ad.adType === 'Video') {
+                    mediaHtml = `<video src="${mediaUrl}" class="ad-banner-media" controls muted style="object-fit: cover;"></video>`;
+                } else if (ad.adType === 'Text') {
+                    mediaHtml = `<div class="ad-banner-media"><i class="fas fa-bullhorn fa-4x text-muted"></i></div>`;
+                } else if (ad.adType === 'PDF') {
+                    mediaHtml = `<div class="ad-banner-media"><i class="fas fa-file-pdf fa-4x text-danger"></i></div>`;
+                } else {
+                    mediaHtml = `<img src="${mediaUrl}" class="ad-banner-media" alt="Campaign Media">`;
+                }
                 
                 container.innerHTML += `
                     <div class="col-md-6 col-xl-6" id="ad_slot_${ad._id}">
                         <div class="sponsored-ad-card">
                             <button class="btn-dismiss" onclick="dismissAd('${ad._id}')" title="Hide this advert"><i class="fas fa-times"></i></button>
-                            <img src="${imageUrl}" class="ad-banner-img" alt="Ad Image">
+                            ${mediaHtml}
                             <div class="ad-body-content">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="badge bg-dark text-warning border border-warning">Reward: ₦${reward}</span>
-                                    <span class="text-muted small"><i class="fas fa-tag"></i> ${ad.category || 'Promotion'}</span>
+                                    <span class="text-muted small"><i class="fas fa-tag"></i> ${ad.adType || 'Promotion'} | ${ad.category || ''}</span>
                                 </div>
                                 <h3 class="ad-title">${ad.title || 'Sponsored Campaign'}</h3>
                                 <p class="ad-desc">${ad.description || 'View this amazing offer from our sponsor.'}</p>
@@ -280,7 +292,6 @@
             });
 
             // After rendering, secretly check all displayed ads against backend to hide ones already claimed
-            // (A self-cleaning mechanic if the user refreshed the page)
             cleanClaimedAds(data.ads);
 
         } catch (error) {
@@ -293,13 +304,12 @@
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
         
-        // This silently pings the backend. If it returns 'already claimed', we hide it from the feed immediately.
         for (let ad of adsArray) {
             try {
                 const res = await fetch('/api/tasks/claim-ad', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                    body: JSON.stringify({ adId: ad._id, verifyOnly: true }) // You can add a flag to backend later, but for now we catch the error
+                    body: JSON.stringify({ adId: ad._id, verifyOnly: true }) 
                 });
                 const data = await res.json();
                 if(data.message && data.message.includes('already claimed')) {
@@ -338,7 +348,7 @@
         trackingBtn = document.getElementById(`btn_ad_${adId}`);
         if(trackingBtn.disabled) return;
 
-        if (!adUrl || adUrl === 'undefined' || adUrl.trim() === '') {
+        if (!adUrl || adUrl === 'undefined' || adUrl.trim() === '' || adUrl === 'https://') {
             Swal.fire({ icon: 'error', title: 'Invalid Link', text: 'The advertiser did not provide a valid link.', background: '#0a0a0a', color: '#fff' });
             return;
         }
