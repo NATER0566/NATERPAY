@@ -3,7 +3,7 @@ const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 
 // ============================================================================
-// REAL PROFILE COMPLETION REWARD ENGINE (KYC FOCUSED)
+// PROFILE COMPLETION REWARD ENGINE (KYC FOCUSED)
 // ============================================================================
 async function claimProfileReward(request, reply) {
     const userId = request.user._id;
@@ -18,14 +18,9 @@ async function claimProfileReward(request, reply) {
         const User = mongoose.models.User || mongoose.model('User');
         const user = await User.findById(userId);
 
-        // STRICT KYC CHECK: Ensures they actually completed KYC
         const isKycApproved = user && (user.kycStatus === 'approved' || user.kycLevel >= 1 || user.kycTier >= 1);
-        
         if (!isKycApproved) {
-            return reply.status(400).send({ 
-                success: false, 
-                message: 'Please complete your KYC Identity Verification to unlock this reward.' 
-            });
+            return reply.status(400).send({ success: false, message: 'Please complete your KYC Identity Verification to unlock this reward.' });
         }
 
         const wallet = await Wallet.findOne({ user: userId });
@@ -59,21 +54,44 @@ async function claimProfileReward(request, reply) {
 }
 
 // ============================================================================
-// DYNAMIC CLICK & EARN AD ENGINE
+// STRICT ONCE-IN-A-LIFETIME CLICK & EARN AD ENGINE
 // ============================================================================
 async function claimAd(request, reply) {
     const { adId } = request.body;
     const userId = request.user._id;
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const dailySecurityKey = `task_ad_${adId}_${userId}_${todayStr}`;
+    // 1. LIFETIME SECURITY KEY (No date attached. Once per user, forever.)
+    const lifetimeSecurityKey = `task_ad_${adId}_${userId}`;
 
     try {
-        const existingClaim = await Transaction.findOne({ idempotencyKey: dailySecurityKey });
+        // 2. LIFETIME DOUBLE-SPEND PROTECTION
+        const existingClaim = await Transaction.findOne({ idempotencyKey: lifetimeSecurityKey });
         if (existingClaim) {
-            return reply.status(400).send({ success: false, message: 'You have already claimed this ad reward today. Check back tomorrow!' });
+            return reply.status(400).send({ 
+                success: false, 
+                message: 'already claimed' // Triggers the UI to hide the ad permanently
+            });
         }
 
+        // 3. DAILY LIMIT ENFORCEMENT (Max 20 ads per day)
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        
+        const dailyClaimsCount = await Transaction.countDocuments({
+            user: userId,
+            type: 'task_reward',
+            createdAt: { $gte: todayStart },
+            description: { $regex: /^Ad Reward:/ } 
+        });
+
+        if (dailyClaimsCount >= 20) {
+            return reply.status(400).send({ 
+                success: false, 
+                message: 'Daily limit reached! You have completed your 20 rewarded ads for today. Check back tomorrow.' 
+            });
+        }
+
+        // 4. FETCH REAL AD FROM DATABASE
         const AdModel = mongoose.models.Ad;
         let rewardAmount = 5; 
         let adName = `Sponsored Campaign #${adId}`;
@@ -82,16 +100,24 @@ async function claimAd(request, reply) {
             const adData = await AdModel.findById(adId);
             if (!adData) return reply.status(404).send({ success: false, message: 'Ad campaign has expired or does not exist.' });
             
+            // Deduct from remaining views (If you have this field in your schema)
+            // if (adData.remainingViews !== undefined && adData.remainingViews <= 0) {
+            //     return reply.status(400).send({ success: false, message: 'This campaign has reached its maximum views.' });
+            // }
+            // if(adData.remainingViews !== undefined) { adData.remainingViews -= 1; await adData.save(); }
+
             rewardAmount = parseFloat(adData.rewardAmount || 5);
             adName = `Ad Reward: ${adData.title || 'Sponsored Link'}`;
         }
 
+        // 5. CREDIT USER WALLET
         const wallet = await Wallet.findOne({ user: userId });
         const currentAvail = parseFloat(wallet.availableBalance || 0);
         wallet.availableBalance = String(currentAvail + rewardAmount);
         wallet.balance = String(parseFloat(wallet.balance || 0) + rewardAmount);
         await wallet.save();
 
+        // 6. GENERATE AUDITABLE LEDGER RECEIPT
         const tx = new Transaction({
             user: userId,
             type: 'task_reward', 
@@ -103,7 +129,7 @@ async function claimAd(request, reply) {
             status: 'success',
             provider: 'system',
             metadata: { adId },
-            idempotencyKey: dailySecurityKey 
+            idempotencyKey: lifetimeSecurityKey 
         });
         await tx.save();
 
@@ -111,12 +137,9 @@ async function claimAd(request, reply) {
         
     } catch (error) {
         console.error('[TASK ENGINE ERROR]:', error);
-        if (error.code === 11000) return reply.status(400).send({ success: false, message: 'Reward already claimed today.' });
+        if (error.code === 11000) return reply.status(400).send({ success: false, message: 'already claimed' });
         return reply.status(500).send({ success: false, message: 'Internal server error processing reward.' });
     }
 }
 
-module.exports = {
-    claimAd,
-    claimProfileReward
-};
+module.exports = { claimAd, claimProfileReward };
