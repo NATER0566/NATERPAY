@@ -1,25 +1,55 @@
-const Advertisement = require('../models/Advertisement');
+const Ad = require('../models/Ad');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
+const config = require('../config');
 
-const PACKAGE_PRICES = {
-    basic: 1000,
-    standard: 3500,
-    premium: 10000
+// Initialize Cloudinary
+cloudinary.config({
+  cloud_name: config.cloudinary.cloudName,
+  api_key: config.cloudinary.apiKey,
+  api_secret: config.cloudinary.apiSecret
+});
+
+// Helper to stream files directly to Cloudinary (No Base64!)
+const uploadToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const cld_upload_stream = cloudinary.uploader.upload_stream(
+      { folder: 'naterpay_ads', resource_type: 'auto' }, // 'auto' accepts images, videos, and PDFs
+      (error, result) => {
+        if (result) resolve(result.secure_url);
+        else reject(error);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(cld_upload_stream);
+  });
+};
+
+const PACKAGE_CONFIG = {
+    basic: { price: 1000, days: 20 },
+    standard: { price: 3500, days: 40 },
+    premium: { price: 10000, days: 90 },
+    enterprise: { price: 25000, days: 180 }
 };
 
 // ============================================================================
-// PUBLIC: FETCH APPROVED ADS FOR THE MARKETPLACE
+// PUBLIC: FETCH APPROVED ADS FOR MARKETPLACE
 // ============================================================================
 async function getAds(request, reply) {
     try {
-        const ads = await Advertisement.find({ status: 'approved' })
-            .select('-ownerId') 
-            .sort({ featured: -1, createdAt: -1 }); 
+        // Fetch ads that are approved and haven't expired or run out of views
+        const ads = await Ad.find({ 
+            status: 'approved',
+            expiryDate: { $gt: new Date() },
+            $or: [{ remainingViews: { $gt: 0 } }, { remainingViews: undefined }]
+        })
+        .select('-user') // Hide user ID for security
+        .sort({ packageCost: -1, createdAt: -1 }); // Sort Enterprise/Premium first
             
         reply.send({ success: true, ads });
     } catch (error) {
-        console.error('Fetch Ads Error:', error);
+        console.error('[ADS FETCH ERROR]:', error);
         reply.status(500).send({ success: false, message: 'Failed to load marketplace data.' });
     }
 }
@@ -29,116 +59,157 @@ async function getAds(request, reply) {
 // ============================================================================
 async function getUserAds(request, reply) {
     try {
-        const ads = await Advertisement.find({ ownerId: request.user._id }).sort({ createdAt: -1 });
+        const ads = await Ad.find({ user: request.user._id }).sort({ createdAt: -1 });
         reply.send({ success: true, ads });
     } catch (error) {
-        console.error('Fetch User Ads Error:', error);
         reply.status(500).send({ success: false, message: 'Failed to load your adverts.' });
     }
 }
 
 // ============================================================================
-// SECURE TRANSACTION: CREATE & PAY FOR ADVERT
+// ENTERPRISE SECURE TRANSACTION: CREATE & PAY VIA MULTIPART
 // ============================================================================
 async function createAd(request, reply) {
     try {
-        const { 
-            businessName, title, category, location, description, 
-            phoneNumber, whatsappNumber, website, packageType, imageUrl 
-        } = request.body;
+        const parts = request.parts();
+        let fields = {};
+        let fileBuffer = null;
+
+        // Extract fields and file streams safely
+        for await (const part of parts) {
+            if (part.type === 'file') {
+                fileBuffer = await part.toBuffer();
+            } else {
+                fields[part.fieldname] = part.value;
+            }
+        }
 
         const userId = request.user._id;
 
-        // Validate Package
-        if (!PACKAGE_PRICES[packageType]) {
-            return reply.status(400).send({ success: false, message: 'Invalid advertisement package selected.' });
-        }
+        // 1. Verify Package & Budgets
+        const pkgConfig = PACKAGE_CONFIG[fields.packageType];
+        if (!pkgConfig) return reply.status(400).send({ success: false, message: 'Invalid advertisement package.' });
         
-        const adCost = PACKAGE_PRICES[packageType];
+        const packageCost = pkgConfig.price;
+        const viewBudgetCost = parseInt(fields.viewBudgetCost) || 0;
+        const totalAdCost = packageCost + viewBudgetCost; // Enterprise CPRV Calculation
 
-        // Secure Wallet Check
+        // 2. Secure Wallet Check
         const wallet = await Wallet.findOne({ user: userId });
         if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet not found.' });
 
         const currentBalance = Number(parseFloat(wallet.availableBalance?.toString() || '0').toFixed(2));
         
-        if (currentBalance < adCost) {
+        if (currentBalance < totalAdCost) {
             return reply.status(400).send({ 
                 success: false, 
-                message: `Insufficient balance. You need ₦${adCost.toLocaleString()} for this package.` 
+                message: `Insufficient balance. You need ₦${totalAdCost.toLocaleString()} to launch this campaign.` 
             });
         }
 
-        // 1. DEDUCT FUNDS SECURELY FIRST
-        const newBalance = currentBalance - adCost;
-        const newLedger = Number(parseFloat(wallet.balance?.toString() || '0').toFixed(2)) - adCost;
+        // 3. Upload Media to Cloudinary (If provided)
+        let mediaSecureUrl = 'https://via.placeholder.com/800x400/111/d4af37?text=Promotional+Campaign';
+        if (fileBuffer && fields.adType !== 'Text') {
+            mediaSecureUrl = await uploadToCloudinary(fileBuffer);
+        }
+
+        // 4. DEDUCT FUNDS SECURELY
+        const newBalance = currentBalance - totalAdCost;
+        const newLedger = Number(parseFloat(wallet.balance?.toString() || '0').toFixed(2)) - totalAdCost;
 
         wallet.availableBalance = String(newBalance);
         wallet.balance = String(newLedger);
         await wallet.save();
 
-        // 2. SAFELY LOG TRANSACTION (Prevents strict schema crash)
+        // 5. SAFELY LOG TRANSACTION
         try {
             const paymentTx = new Transaction({
                 user: userId,
-                type: 'withdrawal', // Safe enum accepted by your DB
-                description: `Marketplace Advert (${packageType.toUpperCase()})`,
-                amount: adCost,
+                type: 'withdrawal', 
+                description: `Campaign Launch (${fields.packageType.toUpperCase()} + Views)`,
+                amount: totalAdCost,
                 fee: 0,
                 balanceBefore: String(currentBalance),
                 balanceAfter: String(newBalance),
                 status: 'success',
                 provider: 'internal',
-                reference: `ADV-${Date.now()}`
+                reference: `CMP-${Date.now()}`
             });
             await paymentTx.save(); 
         } catch (txError) {
-            console.warn("Wallet deducted for Ad, but transaction log skipped due to schema rules:", txError);
+            console.warn("Wallet deducted for Campaign, but log failed:", txError);
         }
 
-        // 3. CREATE ADVERT IN DATABASE
-        const newAd = new Advertisement({
-            ownerId: userId,
-            businessName, 
-            title, 
-            category, 
-            location, 
-            description,
-            phoneNumber, 
-            whatsappNumber, 
-            website,
-            package: packageType,
-            imageUrl,
-            status: 'pending', // Awaiting Admin Approval
-            featured: packageType === 'premium' 
+        // 6. CALCULATE EXACT EXPIRY DATE
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + pkgConfig.days);
+
+        // 7. CREATE DATABASE RECORD
+        const newAd = new Ad({
+            user: userId,
+            businessName: fields.businessName,
+            ownerName: fields.ownerName,
+            email: fields.email,
+            phoneNumber: fields.phoneNumber,
+            whatsappNumber: fields.whatsappNumber,
+            address: fields.address,
+            
+            adType: fields.adType,
+            category: fields.category,
+            title: fields.title,
+            description: fields.description,
+            targetUrl: fields.targetUrl,
+            ctaText: fields.ctaText,
+            
+            // Dynamic Data
+            price: fields.price ? Number(fields.price) : undefined,
+            salary: fields.salary,
+            venue: fields.venue,
+            eventDate: fields.eventDate ? new Date(fields.eventDate) : undefined,
+            
+            mediaUrl: mediaSecureUrl,
+            targetLocation: fields.targetLocation,
+            targetDevice: fields.targetDevice,
+            
+            packageType: fields.packageType,
+            packageCost: packageCost,
+            maxRewardedViews: parseInt(fields.maxRewardedViews) || 0,
+            remainingViews: parseInt(fields.maxRewardedViews) || 0,
+            viewBudgetCost: viewBudgetCost,
+            rewardAmount: 5,
+            
+            expiryDate: expiryDate,
+            status: 'pending' // Awaiting Admin Approval
         });
 
         await newAd.save();
 
-        // 4. NOTIFY USER INTERFACE LIVE
         if (request.server && request.server.io) {
             request.server.io.to(`user:${userId}`).emit('wallet:update', { balance: wallet.availableBalance });
         }
 
-        reply.send({ success: true, message: 'Advert paid successfully and is now pending review.' });
+        reply.send({ success: true, message: 'Campaign launched successfully! It is now pending admin review.' });
 
     } catch (error) {
-        console.error('Create Ad Error:', error);
-        reply.status(500).send({ success: false, message: 'Failed to process advert payment.' });
+        console.error('[CAMPAIGN CREATION ERROR]:', error);
+        reply.status(500).send({ success: false, message: 'Failed to process campaign launch.' });
     }
 }
 
 // ============================================================================
-// ANALYTICS: REGISTER CLICKS
+// ANALYTICS: REGISTER CLICKS OUT TO EXTERNAL URL
 // ============================================================================
 async function registerClick(request, reply) {
     try {
         const { id } = request.params;
-        await Advertisement.findByIdAndUpdate(id, { $inc: { clicks: 1 } });
+        await Ad.findByIdAndUpdate(id, { $inc: { clicks: 1 } });
         reply.send({ success: true });
     } catch (error) {
         reply.status(500).send({ success: false });
     }
 }
+
+// Note: The actual Rewarded Views countdown logic is executed safely in 
+// routes/tasks.js during the claimAd function.
 
 module.exports = { getAds, getUserAds, createAd, registerClick };
