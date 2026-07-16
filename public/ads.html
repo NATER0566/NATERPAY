@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Global Marketplace</title>
+    <title>NATER-PAY | Enterprise Advertising Network</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -16,60 +15,70 @@
         body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
-        header {
-            position: sticky; top: 0; width: 100%; padding: 15px 5%;
-            background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
-            display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(15px);
-        }
-        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; }
+        header { position: sticky; top: 0; width: 100%; padding: 15px 5%; background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold); display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(15px); }
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.9; }
         .site-part-1 { color: var(--gold); font-size: 1.4rem; text-shadow: 0 2px 5px rgba(255,215,0,0.3); } 
         .site-part-2 { color: var(--red); font-size: 1rem; letter-spacing: 3px; }
 
         .container { max-width: 1400px; margin: 30px auto; padding: 0 20px; }
 
-        .revenue-banner {
-            background: linear-gradient(135deg, rgba(20,20,20,0.9) 0%, rgba(40,30,0,0.95) 100%);
-            border: 1.5px solid var(--gold); border-radius: 20px; padding: 30px; margin-bottom: 30px;
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;
-            box-shadow: 0 10px 30px rgba(255,215,0,0.15);
-        }
+        .nav-tabs-custom { display: flex; gap: 15px; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
+        .nav-tabs-custom::-webkit-scrollbar { display: none; }
+        .nav-tab-btn { background: transparent; border: 1px solid #444; color: #aaa; padding: 10px 25px; border-radius: 50px; font-weight: 700; white-space: nowrap; transition: 0.3s; }
+        .nav-tab-btn.active, .nav-tab-btn:hover { background: rgba(255,215,0,0.1); border-color: var(--gold); color: var(--gold); }
 
-        .high-priority-glow { position: relative; overflow: hidden; border: 1.5px solid var(--gold) !important; box-shadow: 0 0 15px rgba(212, 175, 55, 0.3) !important; }
-        .high-priority-glow::before { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%); transform: skewX(-25deg); animation: refractive-shine 3.5s infinite; z-index: 1; pointer-events: none; }
-        @keyframes refractive-shine { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
-
-        .search-bar { background: rgba(0,0,0,0.6); border: 1px solid #444; border-radius: 50px; padding: 5px 20px; display: flex; align-items: center; margin-bottom: 20px; }
-        .search-bar input { background: transparent; border: none; color: white; width: 100%; padding: 10px; outline: none; }
+        /* DYNAMIC MARKETPLACE FEED STYLES */
+        .ad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
+        .ad-card { background: var(--card-bg); border: 1px solid #333; border-radius: 16px; overflow: hidden; transition: 0.3s; position: relative; display: flex; flex-direction: column; }
+        .ad-card:hover { transform: translateY(-5px); border-color: #555; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        .ad-featured { border: 2px solid var(--gold) !important; box-shadow: 0 0 20px rgba(255,215,0,0.15) !important; }
+        .featured-badge { position: absolute; top: 15px; left: 15px; background: var(--gold); color: black; font-size: 0.65rem; font-weight: 900; padding: 5px 12px; border-radius: 50px; letter-spacing: 1px; z-index: 2; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
         
-        .category-scroll { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 15px; margin-bottom: 20px; scrollbar-width: none; }
-        .category-scroll::-webkit-scrollbar { display: none; }
-        .cat-pill { background: var(--card-bg); border: 1px solid #333; padding: 8px 18px; border-radius: 50px; white-space: nowrap; cursor: pointer; transition: 0.3s; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
-        .cat-pill:hover, .cat-pill.active { border-color: var(--gold); background: rgba(255,215,0,0.1); color: var(--gold); box-shadow: 0 4px 10px rgba(255,215,0,0.2); }
-
-        .ad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .ad-card { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; overflow: hidden; transition: 0.3s; position: relative; display: flex; flex-direction: column; }
-        .ad-card:hover { transform: translateY(-5px); border-color: #555; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        
-        .ad-featured { border: 2px solid var(--gold) !important; box-shadow: 0 0 20px rgba(255,215,0,0.2) !important; }
-        .featured-badge { position: absolute; top: 15px; left: 15px; background: var(--gold); color: black; font-size: 0.7rem; font-weight: 900; padding: 5px 12px; border-radius: 50px; letter-spacing: 1px; z-index: 2; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        
-        .ad-img-wrapper { width: 100%; height: 200px; overflow: hidden; position: relative; background: #111; }
-        .ad-img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
-        .ad-card:hover .ad-img { transform: scale(1.05); }
+        .ad-media-wrapper { width: 100%; height: 220px; overflow: hidden; position: relative; background: #111; display: flex; align-items: center; justify-content: center; }
+        .ad-media { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
+        .ad-card:hover .ad-media { transform: scale(1.03); }
+        .video-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,0.8); font-size: 3rem; pointer-events: none; }
         
         .ad-content { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
-        .ad-biz-name { font-size: 0.7rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 5px; }
-        .ad-title { font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 10px; line-height: 1.3; }
-        .ad-desc { font-size: 0.85rem; color: #ccc; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .ad-meta { font-size: 0.7rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .ad-title { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 10px; line-height: 1.3; }
+        .ad-desc { font-size: 0.85rem; color: #bbb; margin-bottom: 20px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
         
-        .ad-footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #222; padding-top: 15px; }
-        .ad-location { font-size: 0.75rem; color: #888; display: flex; align-items: center; gap: 5px; }
+        /* Specific Type Layouts */
+        .price-tag { font-size: 1.2rem; font-weight: 900; color: #28a745; }
+        .job-detail { font-size: 0.8rem; color: #aaa; background: #222; padding: 5px 10px; border-radius: 5px; margin-bottom: 5px; display: inline-block; margin-right: 5px; }
+
+        .ad-footer { margin-top: auto; padding-top: 15px; border-top: 1px solid #222; }
+
+        /* WIZARD STYLES */
+        .wizard-container { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; padding: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); display: none; }
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .custom-modal-content { background: rgba(15,15,15,0.98); border: 1px solid var(--gold); border-radius: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
-        .input-dark { background: rgba(0,0,0,0.6); border: 1.5px solid #333; color: white; padding: 12px 20px; border-radius: 12px; width: 100%; font-weight: 600; margin-bottom: 15px; transition: 0.3s; }
-        .input-dark:focus { border-color: var(--gold); outline: none; }
-        .pkg-card { border: 1.5px solid #333; border-radius: 15px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; }
-        .pkg-card:hover, .pkg-card.selected { border-color: var(--gold); background: rgba(255,215,0,0.05); }
+        .step-indicator { display: flex; justify-content: space-between; margin-bottom: 30px; position: relative; }
+        .step-indicator::before { content: ''; position: absolute; top: 15px; left: 0; width: 100%; height: 2px; background: #333; z-index: 0; }
+        .step-dot { width: 32px; height: 32px; background: #111; border: 2px solid #444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #666; z-index: 1; position: relative; transition: 0.3s; }
+        .step-dot.active { background: var(--gold); border-color: var(--gold); color: black; box-shadow: 0 0 15px rgba(255,215,0,0.4); }
+        .step-dot.completed { background: #28a745; border-color: #28a745; color: white; }
+
+        .input-dark { background: rgba(0,0,0,0.6); border: 1.5px solid #333; color: white; padding: 14px 20px; border-radius: 12px; width: 100%; font-weight: 500; margin-bottom: 20px; transition: 0.3s; }
+        .input-dark:focus { border-color: var(--gold); outline: none; box-shadow: inset 0 0 10px rgba(255,215,0,0.1); }
+        
+        .type-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .type-card { border: 1px solid #444; border-radius: 12px; padding: 20px 10px; text-align: center; cursor: pointer; transition: 0.3s; background: #111; }
+        .type-card i { font-size: 2rem; color: #888; margin-bottom: 10px; transition: 0.3s; }
+        .type-card.selected { border-color: var(--gold); background: rgba(255,215,0,0.05); }
+        .type-card.selected i, .type-card.selected h6 { color: var(--gold); }
+
+        .pkg-card { border: 1.5px solid #333; border-radius: 15px; padding: 25px 15px; text-align: center; cursor: pointer; transition: 0.3s; background: #0a0a0a; height: 100%; }
+        .pkg-card:hover, .pkg-card.selected { border-color: var(--gold); background: rgba(255,215,0,0.08); transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        
+        /* ANALYTICS TABLE */
+        .analytics-container { display: none; }
+        .table-dark { background: transparent; }
+        .table-dark th { color: var(--gold); font-family: 'Cinzel'; border-bottom: 1px solid #444; padding: 15px; }
+        .table-dark td { padding: 15px; border-bottom: 1px solid #222; vertical-align: middle; }
     </style>
 </head>
 <body>
@@ -81,327 +90,521 @@
         <span class="site-part-1">NATER</span><span class="site-part-2">PAY</span>
     </div>
     <div class="d-flex gap-3">
-        <button class="btn btn-outline-light rounded-pill fw-bold" onclick="viewMyAds()"><i class="fas fa-list me-1"></i> My Adverts</button>
-        <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
+        <a href="tasks.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-play-circle me-2"></i> Task & Earn Portal</a>
+        <a href="dashboard.html" class="btn btn-outline-light rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Home</a>
     </div>
 </header>
 
 <div class="container">
-    <div class="revenue-banner">
-        <div>
-            <h2 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; margin-bottom: 5px;">GLOBAL MARKETPLACE</h2>
-            <p class="mb-0 fw-bold opacity-75">Promote your products, services, apps, and events to the entire NATER-PAY network.</p>
-        </div>
-        <button class="btn btn-warning text-dark fw-bold py-3 px-5 rounded-pill high-priority-glow fs-5" data-bs-toggle="modal" data-bs-target="#postAdModal">
-            <i class="fas fa-bullhorn me-2"></i> POST AN ADVERT
-        </button>
-    </div>
-
-    <div class="search-bar">
-        <i class="fas fa-search text-muted me-2"></i>
-        <input type="text" id="searchInput" placeholder="Search products, software, businesses, or locations..." onkeyup="filterAds()">
-    </div>
-
-    <div class="category-scroll" id="categoryContainer">
-        <div class="cat-pill active" onclick="setCategory('All', this)">All Categories</div>
-        <div class="cat-pill" onclick="setCategory('Shopping & Retail', this)"><i class="fas fa-shopping-bag"></i> Shopping & Retail</div>
-        <div class="cat-pill" onclick="setCategory('Software, Apps & Tech', this)"><i class="fas fa-laptop-code"></i> Software & Tech</div>
-        <div class="cat-pill" onclick="setCategory('Religion & Faith', this)"><i class="fas fa-place-of-worship"></i> Religion & Faith</div>
-        <div class="cat-pill" onclick="setCategory('Science & Research', this)"><i class="fas fa-flask"></i> Science & Research</div>
-        <div class="cat-pill" onclick="setCategory('Phones, Computers & Gadgets', this)"><i class="fas fa-mobile-alt"></i> Gadgets</div>
-        <div class="cat-pill" onclick="setCategory('Fashion & Beauty', this)"><i class="fas fa-tshirt"></i> Fashion & Beauty</div>
-        <div class="cat-pill" onclick="setCategory('Real Estate & Properties', this)"><i class="fas fa-home"></i> Real Estate</div>
-        <div class="cat-pill" onclick="setCategory('Vehicles & Automobile', this)"><i class="fas fa-car"></i> Vehicles</div>
-        <div class="cat-pill" onclick="setCategory('Food & Restaurants', this)"><i class="fas fa-utensils"></i> Food & Dining</div>
-        <div class="cat-pill" onclick="setCategory('Education & Courses', this)"><i class="fas fa-graduation-cap"></i> Education</div>
-        <div class="cat-pill" onclick="setCategory('Jobs & Recruitment', this)"><i class="fas fa-briefcase"></i> Jobs</div>
-        <div class="cat-pill" onclick="setCategory('Health & Medical', this)"><i class="fas fa-heartbeat"></i> Health</div>
-        <div class="cat-pill" onclick="setCategory('Services & Freelance', this)"><i class="fas fa-tools"></i> Services</div>
-        <div class="cat-pill" onclick="setCategory('Agriculture & Farming', this)"><i class="fas fa-tractor"></i> Agriculture</div>
-        <div class="cat-pill" onclick="setCategory('Events & Entertainment', this)"><i class="fas fa-calendar-alt"></i> Events</div>
-        <div class="cat-pill" onclick="setCategory('Financial Services', this)"><i class="fas fa-chart-line"></i> Financial</div>
-        <div class="cat-pill" onclick="setCategory('Miscellaneous', this)"><i class="fas fa-ellipsis-h"></i> Others</div>
-    </div>
     
-    <div class="ad-grid" id="adGridContainer">
-        <div class="col-12 text-center py-5 opacity-50">
-            <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing global marketplace data...
-        </div>
+    <div class="nav-tabs-custom">
+        <button class="nav-tab-btn active" onclick="switchView('marketplace')"><i class="fas fa-store me-2"></i> Ad Marketplace</button>
+        <button class="nav-tab-btn" onclick="switchView('wizard')"><i class="fas fa-bullhorn me-2"></i> Create Campaign</button>
+        <button class="nav-tab-btn" onclick="switchView('analytics')"><i class="fas fa-chart-pie me-2"></i> Analytics & History</button>
     </div>
-</div>
 
-<div class="modal fade" id="postAdModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content custom-modal-content text-white">
-            <div class="modal-header border-bottom border-secondary">
-                <h5 class="modal-title fw-bold" style="color: var(--gold); font-family: 'Cinzel';"><i class="fas fa-ad me-2"></i> CREATE ADVERTISEMENT</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- VIEW 1: DYNAMIC MARKETPLACE FEED -->
+    <div id="view-marketplace">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; margin: 0;">GLOBAL DIRECTORY</h3>
+            <div class="search-bar w-50 m-0">
+                <i class="fas fa-search text-muted me-2"></i>
+                <input type="text" id="searchInput" placeholder="Search businesses, jobs, products, events..." onkeyup="filterAds()">
             </div>
-            <div class="modal-body p-4">
-                
-                <div id="adStep1">
-                    <h6 class="text-muted fw-bold mb-3">STEP 1: BUSINESS / ENTITY DETAILS</h6>
-                    <div class="row">
-                        <div class="col-md-6"><input type="text" id="adBizName" class="input-dark" placeholder="Brand, Church, App, or Entity Name" required></div>
-                        <div class="col-md-6"><input type="text" id="adTitle" class="input-dark" placeholder="Advert Title (e.g. New App Launch!)" required></div>
-                        <div class="col-md-6">
-                            <select id="adCategory" class="input-dark text-muted">
-                                <option value="" disabled selected>Select Global Category</option>
-                                <option value="Shopping & Retail">Shopping & Retail</option>
-                                <option value="Software, Apps & Tech">Software, Apps & Tech</option>
-                                <option value="Religion & Faith">Religion & Faith</option>
-                                <option value="Science & Research">Science & Research</option>
-                                <option value="Phones, Computers & Gadgets">Phones, Computers & Gadgets</option>
-                                <option value="Fashion & Beauty">Fashion & Beauty</option>
-                                <option value="Real Estate & Properties">Real Estate & Properties</option>
-                                <option value="Vehicles & Automobile">Vehicles & Automobile</option>
-                                <option value="Food & Restaurants">Food & Restaurants</option>
-                                <option value="Education & Courses">Education & Courses</option>
-                                <option value="Jobs & Recruitment">Jobs & Recruitment</option>
-                                <option value="Health & Medical">Health & Medical</option>
-                                <option value="Services & Freelance">Services & Freelance</option>
-                                <option value="Agriculture & Farming">Agriculture & Farming</option>
-                                <option value="Events & Entertainment">Events & Entertainment</option>
-                                <option value="Financial Services">Financial Services</option>
-                                <option value="Miscellaneous">Others / Miscellaneous</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6"><input type="text" id="adLocation" class="input-dark" placeholder="Location (e.g. Global, Online, Nigeria)" required></div>
-                    </div>
-                    <textarea id="adDesc" class="input-dark" rows="3" placeholder="Describe your product, app, event, or service in detail..." required></textarea>
-                    
-                    <h6 class="text-muted fw-bold mb-3 mt-2">CONTACT INFO</h6>
-                    <div class="row">
-                        <div class="col-md-4"><input type="tel" id="adPhone" class="input-dark" placeholder="Phone Number" required></div>
-                        <div class="col-md-4"><input type="tel" id="adWhatsapp" class="input-dark" placeholder="WhatsApp Number" required></div>
-                        <div class="col-md-4"><input type="url" id="adWeb" class="input-dark" placeholder="Website / App Link (Optional)"></div>
-                    </div>
-
-                    <h6 class="text-muted fw-bold mb-3 mt-2">MEDIA UPLOAD</h6>
-                    <input type="file" id="adImage" class="input-dark" accept="image/*" required>
-                    
-                    <button class="btn btn-warning w-100 fw-bold mt-2" onclick="nextStep()">CHOOSE PACKAGE <i class="fas fa-arrow-right ms-2"></i></button>
-                </div>
-
-                <div id="adStep2" style="display: none;">
-                    <h6 class="text-muted fw-bold mb-4">STEP 2: SELECT PLACEMENT PACKAGE</h6>
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <div class="pkg-card" onclick="selectPkg('basic', this)">
-                                <h5 class="fw-bold">BASIC</h5>
-                                <p class="small text-muted">7 Days Listing</p>
-                                <h4 class="text-gold fw-bold mb-3">₦1,000</h4>
-                                <span class="badge bg-secondary">Standard Feed</span>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="pkg-card selected" onclick="selectPkg('standard', this)">
-                                <h5 class="fw-bold">STANDARD</h5>
-                                <p class="small text-muted">30 Days Listing</p>
-                                <h4 class="text-gold fw-bold mb-3">₦3,500</h4>
-                                <span class="badge bg-primary">Priority Ranking</span>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="pkg-card" onclick="selectPkg('premium', this)" style="border-color: var(--gold);">
-                                <h5 class="fw-bold text-warning">PREMIUM <i class="fas fa-star"></i></h5>
-                                <p class="small text-muted">30 Days Featured</p>
-                                <h4 class="text-gold fw-bold mb-3">₦10,000</h4>
-                                <span class="badge bg-warning text-dark fw-bold">Top Banner Placements</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-outline-light w-25 fw-bold" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
-                        <button class="btn btn-warning w-75 fw-bold high-priority-glow" onclick="submitAdvert()">PAY & PUBLISH ADVERT</button>
-                    </div>
-                </div>
-
+        </div>
+        <div class="ad-grid" id="adGridContainer">
+            <div class="col-12 text-center py-5 opacity-50">
+                <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing enterprise ledger...
             </div>
         </div>
     </div>
-</div>
 
-<div class="modal fade" id="myAdsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content custom-modal-content text-white">
-            <div class="modal-header border-bottom border-secondary">
-                <h5 class="modal-title fw-bold" style="color: var(--gold);"><i class="fas fa-list me-2"></i> BUSINESS DASHBOARD</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="table-responsive">
-                    <table class="table table-dark align-middle">
-                        <thead><tr><th>ADVERT</th><th>PACKAGE</th><th>STATUS</th><th>VIEWS</th></tr></thead>
-                        <tbody id="myAdsTableBody">
-                            <tr><td colspan="4" class="text-center py-4 opacity-50">Loading your adverts...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    let allAds = [];
-    let currentCategory = 'All';
-    let selectedPackage = 'standard';
-
-    function initStars() { const c = document.getElementById('starCanvas'); c.width = window.innerWidth; c.height = window.innerHeight; const ctx = c.getContext('2d'); const s = []; for(let i=0; i<150; i++) s.push({x:Math.random()*c.width, y:Math.random()*c.height, size:Math.random()*2, speed:Math.random()*0.5}); function draw() { ctx.clearRect(0,0,c.width,c.height); ctx.fillStyle="white"; s.forEach(star => { ctx.beginPath(); ctx.arc(star.x, star.y, star.size, 0, Math.PI*2); ctx.fill(); star.y += star.speed; if(star.y > c.height) star.y = 0; }); requestAnimationFrame(draw); } draw(); }
-    
-    const toBase64 = file => new Promise((resolve, reject) => {
-        const reader = new FileReader(); reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error);
-    });
-
-    async function loadAds() {
-        const token = localStorage.getItem("naterpay_token");
-        if(!token) { window.location.href = '/index.html'; return; }
+    <!-- VIEW 2: ENTERPRISE CAMPAIGN WIZARD -->
+    <div id="view-wizard" class="wizard-container">
+        <h3 class="text-center mb-4" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;">ENTERPRISE CAMPAIGN BUILDER</h3>
         
-        try {
-            const res = await fetch('/api/ads', { headers: { 'Authorization': `Bearer ${token}` } });
-            const data = await res.json();
-            
-            if(data.success) {
-                allAds = data.ads;
-                renderAds();
-            }
-        } catch(e) { console.error("Ad load failed", e); }
+        <div class="step-indicator">
+            <div class="step-dot active" id="dot-1">1</div>
+            <div class="step-dot" id="dot-2">2</div>
+            <div class="step-dot" id="dot-3">3</div>
+            <div class="step-dot" id="dot-4">4</div>
+            <div class="step-dot" id="dot-5">5</div>
+            <div class="step-dot" id="dot-6">6</div>
+            <div class="step-dot" id="dot-7">7</div>
+        </div>
+
+        <form id="adWizardForm">
+            <!-- STEP 1: AD TYPE -->
+            <div class="wizard-step active" id="step-1">
+                <h5 class="fw-bold mb-4 text-white">Select Campaign Format</h5>
+                <div class="type-selector">
+                    <div class="type-card selected" onclick="selectAdType('Image', this)"><i class="fas fa-image"></i><h6 class="fw-bold m-0">Image Ad</h6></div>
+                    <div class="type-card" onclick="selectAdType('Video', this)"><i class="fas fa-video"></i><h6 class="fw-bold m-0">Video Ad</h6></div>
+                    <div class="type-card" onclick="selectAdType('Marketplace', this)"><i class="fas fa-shopping-cart"></i><h6 class="fw-bold m-0">Product</h6></div>
+                    <div class="type-card" onclick="selectAdType('Job', this)"><i class="fas fa-briefcase"></i><h6 class="fw-bold m-0">Job Listing</h6></div>
+                    <div class="type-card" onclick="selectAdType('Event', this)"><i class="fas fa-calendar-alt"></i><h6 class="fw-bold m-0">Event Promo</h6></div>
+                    <div class="type-card" onclick="selectAdType('App', this)"><i class="fab fa-google-play"></i><h6 class="fw-bold m-0">App Promo</h6></div>
+                    <div class="type-card" onclick="selectAdType('Website', this)"><i class="fas fa-globe"></i><h6 class="fw-bold m-0">Website Visit</h6></div>
+                    <div class="type-card" onclick="selectAdType('Text', this)"><i class="fas fa-font"></i><h6 class="fw-bold m-0">Text/Article</h6></div>
+                    <div class="type-card" onclick="selectAdType('PDF', this)"><i class="fas fa-file-pdf"></i><h6 class="fw-bold m-0">Document/PDF</h6></div>
+                </div>
+                <div class="text-end"><button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(2)">Next Step <i class="fas fa-arrow-right"></i></button></div>
+            </div>
+
+            <!-- STEP 2: BUSINESS INFO -->
+            <div class="wizard-step" id="step-2">
+                <h5 class="fw-bold mb-4 text-white">Entity / Advertiser Information</h5>
+                <div class="row">
+                    <div class="col-md-6"><input type="text" id="bizName" class="input-dark" placeholder="Company/Entity Name" required></div>
+                    <div class="col-md-6"><input type="text" id="bizOwner" class="input-dark" placeholder="Owner/Representative Name"></div>
+                    <div class="col-md-4"><input type="email" id="bizEmail" class="input-dark" placeholder="Official Email"></div>
+                    <div class="col-md-4"><input type="tel" id="bizPhone" class="input-dark" placeholder="Phone Number" required></div>
+                    <div class="col-md-4"><input type="tel" id="bizWhatsapp" class="input-dark" placeholder="WhatsApp Number"></div>
+                    <div class="col-12"><input type="text" id="bizAddress" class="input-dark" placeholder="Full Business Address / City / Country"></div>
+                </div>
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(1)">Back</button>
+                    <button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(3)">Next Step <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- STEP 3: DYNAMIC AD DETAILS -->
+            <div class="wizard-step" id="step-3">
+                <h5 class="fw-bold mb-4 text-white">Campaign Details</h5>
+                <input type="text" id="adTitle" class="input-dark" placeholder="Campaign Title (e.g., Hiring Senior Dev, 50% Off Laptops)" required>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <select id="adCategory" class="input-dark" required>
+                            <option value="" disabled selected>Master Category</option>
+                            <option value="Shopping">Shopping & Retail</option>
+                            <option value="Tech">Software & Tech</option>
+                            <option value="Education">Education & Courses</option>
+                            <option value="Health">Health & Medical</option>
+                            <option value="Real Estate">Real Estate & Property</option>
+                            <option value="Jobs">Jobs & Recruitment</option>
+                            <option value="Events">Events & Entertainment</option>
+                            <option value="Finance">Finance & Crypto</option>
+                            <option value="Religion">Religion / NGO</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <select id="adCta" class="input-dark" required>
+                            <option value="" disabled selected>Call-To-Action Button</option>
+                            <option value="Visit Website">Visit Website</option>
+                            <option value="Shop Now">Shop Now</option>
+                            <option value="Download App">Download App</option>
+                            <option value="Apply Now">Apply Now</option>
+                            <option value="Contact Us">Contact Us</option>
+                            <option value="Register">Register / Book</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- DYNAMIC FIELDS CONTAINER (Managed by JS) -->
+                <div id="dynamicFieldsContainer" class="row mb-2"></div>
+
+                <input type="url" id="adTargetUrl" class="input-dark" placeholder="Target Landing URL (Where should users go?)" required>
+                <textarea id="adDesc" class="input-dark" rows="4" placeholder="Write your full promotional description here..." required></textarea>
+                
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(2)">Back</button>
+                    <button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(4)">Next Step <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- STEP 4: MEDIA UPLOAD -->
+            <div class="wizard-step" id="step-4">
+                <h5 class="fw-bold mb-2 text-white">Upload Media (Cloudinary Direct)</h5>
+                <p class="text-muted small mb-4">Supported: JPG, PNG, MP4, PDF. Do not upload base64 data.</p>
+                
+                <div class="border border-secondary border-dashed p-5 text-center rounded-4 mb-4" style="background: rgba(0,0,0,0.3);">
+                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3" id="mediaUploadIcon"></i>
+                    <h6 class="text-white" id="mediaUploadText">Select primary media file</h6>
+                    <input type="file" id="adMediaFile" class="form-control bg-dark text-white mt-3 w-75 mx-auto border-secondary" required>
+                </div>
+
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(3)">Back</button>
+                    <button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(5)">Next Step <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- STEP 5: TARGETING & REWARDED VIEW BUDGET -->
+            <div class="wizard-step" id="step-5">
+                <h5 class="fw-bold mb-4 text-white">Audience & Views Budget</h5>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <select id="targetLocation" class="input-dark">
+                            <option value="Global">Global / Worldwide</option>
+                            <option value="Nigeria">Nigeria Only</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <select id="targetDevice" class="input-dark">
+                            <option value="All">All Devices</option>
+                            <option value="Mobile">Mobile Only</option>
+                            <option value="Desktop">Desktop Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-gold border-bottom border-secondary pb-2 mb-3">Rewarded Views Budget (CPRV)</h6>
+                <p class="text-muted small mb-3">Guarantee human engagement. You only pay for users who view your ad for 20 seconds. (₦5 per view).</p>
+                
+                <select id="adViewLimit" class="input-dark" onchange="calculateTotal()" required>
+                    <option value="200">200 Unique Views (₦1,000 Budget)</option>
+                    <option value="1000" selected>1,000 Unique Views (₦5,000 Budget)</option>
+                    <option value="5000">5,000 Unique Views (₦25,000 Budget)</option>
+                    <option value="10000">10,000 Unique Views (₦50,000 Budget)</option>
+                    <option value="50000">50,000 Unique Views (₦250,000 Budget)</option>
+                </select>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(4)">Back</button>
+                    <button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(6)">Choose Package <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- STEP 6: DURATION PACKAGES -->
+            <div class="wizard-step" id="step-6">
+                <h5 class="fw-bold mb-4 text-white text-center">Select Listing Duration Package</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="pkg-card" onclick="selectPricingPkg('basic', 1000, this)">
+                            <h5 class="fw-bold text-white fs-6">BASIC</h5>
+                            <div class="badge bg-secondary mb-2">20 Days</div>
+                            <h3 class="text-gold fw-bold mb-3 fs-5">₦1,000</h3>
+                            <p class="small text-muted m-0">Standard Feed Listing</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="pkg-card selected border-warning" onclick="selectPricingPkg('standard', 3500, this)">
+                            <h5 class="fw-bold text-white fs-6">STANDARD</h5>
+                            <div class="badge bg-primary mb-2">40 Days</div>
+                            <h3 class="text-gold fw-bold mb-3 fs-5">₦3,500</h3>
+                            <p class="small text-muted m-0">Priority Ranking & Video</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="pkg-card" onclick="selectPricingPkg('premium', 10000, this)">
+                            <h5 class="fw-bold text-warning fs-6"><i class="fas fa-star"></i> PREMIUM</h5>
+                            <div class="badge bg-warning text-dark fw-bold mb-2">90 Days</div>
+                            <h3 class="text-gold fw-bold mb-3 fs-5">₦10,000</h3>
+                            <p class="small text-muted m-0">Top Search Placement</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="pkg-card" onclick="selectPricingPkg('enterprise', 25000, this)">
+                            <h5 class="fw-bold text-danger fs-6"><i class="fas fa-crown"></i> ENTERPRISE</h5>
+                            <div class="badge bg-danger fw-bold mb-2">180 Days</div>
+                            <h3 class="text-gold fw-bold mb-3 fs-5">₦25,000</h3>
+                            <p class="small text-muted m-0">Maximum Visibility & Banners</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(5)">Back</button>
+                    <button type="button" class="btn btn-warning px-4 fw-bold" onclick="nextStep(7)">Review Checkout <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- STEP 7: REVIEW & PAYMENT -->
+            <div class="wizard-step" id="step-7">
+                <h5 class="fw-bold mb-4 text-white text-center">Campaign Summary & Payment</h5>
+                
+                <div class="bg-dark p-4 rounded-4 mb-4 border border-secondary">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Package Cost (<span id="revPkgName" class="text-uppercase text-white">Standard</span>):</span>
+                        <span class="fw-bold text-white">₦<span id="revPkgPrice">3,500</span></span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3 border-bottom border-secondary pb-3">
+                        <span class="text-muted">Rewarded Views Budget (<span id="revViews">1,000</span> Views):</span>
+                        <span class="fw-bold text-white">₦<span id="revBudget">5,000</span></span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="fs-5 text-white">Total Payable Amount:</span>
+                        <span class="fs-4 fw-bold text-gold">₦<span id="checkoutTotal">8,500</span></span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-light px-4" onclick="prevStep(6)">Back</button>
+                    <button type="button" class="btn btn-success px-5 fw-bold fs-5 shadow" onclick="submitCampaign()">
+                        <i class="fas fa-lock me-2"></i> PAY & LAUNCH CAMPAIGN
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- VIEW 3: ANALYTICS DASHBOARD -->
+    <div id="view-analytics" class="analytics-container">
+        <h3 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;">CAMPAIGN ANALYTICS (REAL-TIME)</h3>
+        <div class="table-responsive bg-dark p-3 rounded-4 border border-secondary">
+            <table class="table table-dark table-hover align-middle m-0">
+                <thead>
+                    <tr>
+                        <th>CAMPAIGN</th>
+                        <th>STATUS</th>
+                        <th>VIEWS REMAINING</th>
+                        <th>ENGAGEMENT</th>
+                        <th>PERFORMANCE</th>
+                    </tr>
+                </thead>
+                <tbody id="analyticsTableBody">
+                    <tr><td colspan="5" class="text-center py-5 opacity-50">Loading enterprise analytics...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<footer class="text-center py-4 mt-auto" style="background: rgba(0,0,0,0.8); border-top: 1px solid #222;">
+    <p class="text-muted small fw-bold m-0" style="letter-spacing: 1px;">v5.0 ENTERPRISE ADVERTISING INFRASTRUCTURE SECURED BY NATER-PAY</p>
+</footer>
+
+<script>
+    function initStars() { const c = document.getElementById('starCanvas'); c.width = window.innerWidth; c.height = window.innerHeight; const ctx = c.getContext('2d'); const s = []; for(let i=0; i<150; i++) s.push({x:Math.random()*c.width, y:Math.random()*c.height, size:Math.random()*2, speed:Math.random()*0.5}); function draw() { ctx.clearRect(0,0,c.width,c.height); ctx.fillStyle="white"; s.forEach(star => { ctx.beginPath(); ctx.arc(star.x, star.y, star.size, 0, Math.PI*2); ctx.fill(); star.y += star.speed; if(star.y > c.height) star.y = 0; }); requestAnimationFrame(draw); } draw(); }
+    window.onload = () => { initStars(); fetchMarketplaceAds(); };
+    window.onresize = initStars;
+
+    function switchView(viewName) {
+        document.querySelectorAll('.nav-tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        document.getElementById('view-marketplace').style.display = 'none';
+        document.getElementById('view-wizard').style.display = 'none';
+        document.getElementById('view-analytics').style.display = 'none';
+        document.getElementById(`view-${viewName}`).style.display = 'block';
+        if(viewName === 'analytics') loadAnalytics();
     }
 
-    function renderAds() {
+    // --- MARKETPLACE RENDERER (DYNAMIC FORMATS) ---
+    let globalAds = [];
+    async function fetchMarketplaceAds() {
+        try {
+            const res = await fetch('/api/ads');
+            const data = await res.json();
+            if(data.success) {
+                globalAds = data.ads.filter(a => a.status === 'approved' || a.status === 'active');
+                renderMarketplaceFeed();
+            }
+        } catch(e) {}
+    }
+
+    function renderMarketplaceFeed() {
         const container = document.getElementById('adGridContainer');
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
+        const filteredAds = globalAds.filter(ad => ad.title.toLowerCase().includes(searchTerm) || ad.businessName?.toLowerCase().includes(searchTerm));
+
+        if(filteredAds.length === 0) { container.innerHTML = '<div class="col-12 text-center py-5 opacity-50">No active campaigns found.</div>'; return; }
+
+        container.innerHTML = filteredAds.map(ad => {
+            const isFeatured = ad.packageType === 'premium' || ad.packageType === 'enterprise';
+            const badgeHtml = isFeatured ? `<div class="featured-badge"><i class="fas fa-crown"></i> ${ad.packageType.toUpperCase()}</div>` : '';
+            
+            // Dynamic Media Renderer
+            let mediaHtml = '';
+            if (ad.adType === 'Video') mediaHtml = `<video src="${ad.mediaUrl}" class="ad-media" controls muted></video>`;
+            else if (ad.adType === 'Text') mediaHtml = `<div class="ad-media d-flex align-items-center justify-content-center bg-dark"><i class="fas fa-bullhorn fa-4x text-muted"></i></div>`;
+            else mediaHtml = `<img src="${ad.mediaUrl || 'https://via.placeholder.com/400x250/111/d4af37?text=Ad'}" class="ad-media" alt="Ad">`;
+
+            // Dynamic Context Details
+            let contextHtml = '';
+            if (ad.adType === 'Job') contextHtml = `<div class="mb-2"><span class="job-detail"><i class="fas fa-money-bill-wave"></i> ${ad.salary || 'Competitive'}</span></div>`;
+            if (ad.adType === 'Marketplace') contextHtml = `<div class="price-tag mb-2">₦${ad.price ? ad.price.toLocaleString() : 'Negotiable'}</div>`;
+            if (ad.adType === 'Event') contextHtml = `<div class="small text-warning mb-2"><i class="fas fa-calendar"></i> ${ad.eventDate ? new Date(ad.eventDate).toLocaleDateString() : 'Upcoming'} | <i class="fas fa-map-marker-alt"></i> ${ad.venue || 'TBA'}</div>`;
+
+            return `
+                <div class="ad-card ${isFeatured ? 'ad-featured' : ''}">
+                    ${badgeHtml}
+                    <div class="ad-media-wrapper">${mediaHtml}</div>
+                    <div class="ad-content">
+                        <div class="ad-meta"><span><i class="fas fa-tag"></i> ${ad.category}</span><span class="text-muted"><i class="fas fa-globe"></i> ${ad.targetLocation || 'Global'}</span></div>
+                        <div class="ad-title">${ad.title}</div>
+                        ${contextHtml}
+                        <div class="ad-desc">${ad.description}</div>
+                        <div class="ad-footer">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="small text-muted fw-bold">${ad.businessName}</div>
+                                <button class="btn btn-sm btn-outline-warning fw-bold" onclick="trackOutboundClick('${ad._id}', '${ad.targetUrl}')">${ad.ctaText} <i class="fas fa-arrow-right ms-1"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    function filterAds() { renderMarketplaceFeed(); }
+    async function trackOutboundClick(adId, url) { window.open(url, '_blank'); try { await fetch(`/api/ads/${adId}/click`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }}); } catch(e){} }
+
+    // --- WIZARD LOGIC ---
+    let currentStep = 1;
+    let selectedType = 'Image';
+    let selectedPkg = 'standard';
+    let selectedPrice = 3500;
+    let viewBudget = 5000; // Default 1000 views * 5 NGN
+
+    function nextStep(step) {
+        if(step === 4) generateDynamicFields(); // Inject fields before showing media step
+        if(step === 7) calculateTotal(); // Prepare review page
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        document.getElementById(`dot-${currentStep}`).classList.add('completed');
+        currentStep = step;
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        document.getElementById(`dot-${currentStep}`).classList.add('active');
+    }
+    function prevStep(step) {
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        document.getElementById(`dot-${currentStep}`).classList.remove('active');
+        currentStep = step;
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        document.getElementById(`dot-${currentStep}`).classList.remove('completed');
+    }
+
+    function selectAdType(type, element) {
+        selectedType = type;
+        document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+        element.classList.add('selected');
         
-        let filteredAds = allAds.filter(ad => {
-            const matchSearch = ad.title.toLowerCase().includes(searchTerm) || ad.businessName.toLowerCase().includes(searchTerm) || ad.location.toLowerCase().includes(searchTerm);
-            const matchCat = currentCategory === 'All' || ad.category === currentCategory;
-            return matchSearch && matchCat;
-        });
+        // Update Media hints
+        const icon = document.getElementById('mediaUploadIcon');
+        if(type === 'Video') { icon.className = 'fas fa-file-video fa-3x text-muted mb-3'; document.getElementById('adMediaFile').accept = "video/*"; }
+        else if(type === 'PDF') { icon.className = 'fas fa-file-pdf fa-3x text-muted mb-3'; document.getElementById('adMediaFile').accept = "application/pdf"; }
+        else { icon.className = 'fas fa-image fa-3x text-muted mb-3'; document.getElementById('adMediaFile').accept = "image/*"; }
+    }
 
-        filteredAds.sort((a, b) => (b.featured === a.featured) ? new Date(b.createdAt) - new Date(a.createdAt) : (b.featured ? 1 : -1));
+    function selectPricingPkg(pkg, price, element) {
+        selectedPkg = pkg; selectedPrice = price;
+        document.querySelectorAll('.pkg-card').forEach(c => { c.classList.remove('selected'); c.classList.remove('border-warning'); c.classList.remove('border-danger'); });
+        element.classList.add('selected');
+        if(pkg === 'premium') element.classList.add('border-warning');
+        if(pkg === 'enterprise') element.classList.add('border-danger');
+        calculateTotal();
+    }
 
-        if(filteredAds.length === 0) {
-            container.innerHTML = '<div class="col-12 text-center py-5 opacity-50">No adverts found matching your criteria.</div>';
-            return;
+    function generateDynamicFields() {
+        const container = document.getElementById('dynamicFieldsContainer');
+        container.innerHTML = '';
+        if(selectedType === 'Job') {
+            container.innerHTML = `<div class="col-md-6"><input type="text" id="adSalary" class="input-dark" placeholder="Salary Range (e.g. ₦150k - ₦250k)"></div>
+                                   <div class="col-md-6"><input type="date" id="adDeadline" class="input-dark text-muted" title="Application Deadline"></div>`;
+        } else if(selectedType === 'Marketplace') {
+            container.innerHTML = `<div class="col-md-6"><input type="number" id="adPrice" class="input-dark" placeholder="Product Price (₦)"></div>
+                                   <div class="col-md-6"><input type="number" id="adDiscount" class="input-dark" placeholder="Discount Percentage (%)"></div>`;
+        } else if(selectedType === 'Event') {
+            container.innerHTML = `<div class="col-md-6"><input type="text" id="adVenue" class="input-dark" placeholder="Event Venue"></div>
+                                   <div class="col-md-6"><input type="date" id="adEventDate" class="input-dark text-muted" title="Event Date"></div>`;
+        }
+    }
+
+    function calculateTotal() {
+        const viewsSelect = document.getElementById('adViewLimit');
+        const views = parseInt(viewsSelect.value);
+        viewBudget = views * 5; // ₦5 per view formula
+        const total = selectedPrice + viewBudget;
+        
+        document.getElementById('revPkgName').innerText = selectedPkg;
+        document.getElementById('revPkgPrice').innerText = selectedPrice.toLocaleString();
+        document.getElementById('revViews').innerText = views.toLocaleString();
+        document.getElementById('revBudget').innerText = viewBudget.toLocaleString();
+        document.getElementById('checkoutTotal').innerText = total.toLocaleString();
+    }
+
+    // --- CLOUDINARY MULTIPART FORM SUBMISSION ---
+    async function submitCampaign() {
+        const token = localStorage.getItem("naterpay_token");
+        if(!token) return Swal.fire('Auth Error', 'Please log in.', 'error');
+
+        Swal.fire({title:'Deploying to Network...', text: 'Authenticating transaction and uploading media securely.', allowOutsideClick: false, didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
+
+        const formData = new FormData();
+        formData.append('adType', selectedType);
+        formData.append('businessName', document.getElementById('bizName').value);
+        formData.append('ownerName', document.getElementById('bizOwner').value);
+        formData.append('email', document.getElementById('bizEmail').value);
+        formData.append('phoneNumber', document.getElementById('bizPhone').value);
+        formData.append('whatsappNumber', document.getElementById('bizWhatsapp').value);
+        formData.append('address', document.getElementById('bizAddress').value);
+        formData.append('title', document.getElementById('adTitle').value);
+        formData.append('category', document.getElementById('adCategory').value);
+        formData.append('ctaText', document.getElementById('adCta').value);
+        formData.append('targetUrl', document.getElementById('adTargetUrl').value);
+        formData.append('description', document.getElementById('adDesc').value);
+        formData.append('targetLocation', document.getElementById('targetLocation').value);
+        formData.append('targetDevice', document.getElementById('targetDevice').value);
+        formData.append('packageType', selectedPkg);
+        formData.append('packageCost', selectedPrice);
+        
+        // Dynamic Fields
+        if(document.getElementById('adPrice')) formData.append('price', document.getElementById('adPrice').value);
+        if(document.getElementById('adSalary')) formData.append('salary', document.getElementById('adSalary').value);
+        if(document.getElementById('adVenue')) formData.append('venue', document.getElementById('adVenue').value);
+        if(document.getElementById('adEventDate')) formData.append('eventDate', document.getElementById('adEventDate').value);
+
+        // Budget Engine
+        const maxViews = parseInt(document.getElementById('adViewLimit').value);
+        formData.append('maxRewardedViews', maxViews);
+        formData.append('viewBudgetCost', maxViews * 5);
+
+        const fileInput = document.getElementById('adMediaFile');
+        if(selectedType !== 'Text' && fileInput.files.length > 0) {
+            formData.append('mediaFile', fileInput.files[0]); // Native binary upload to Cloudinary
         }
 
-        container.innerHTML = filteredAds.map(ad => `
-            <div class="ad-card ${ad.featured ? 'ad-featured' : ''}">
-                ${ad.featured ? '<div class="featured-badge"><i class="fas fa-star"></i> FEATURED</div>' : ''}
-                <div class="ad-img-wrapper">
-                    <img src="${ad.imageUrl}" class="ad-img" alt="${ad.title}">
-                </div>
-                <div class="ad-content">
-                    <div class="ad-biz-name"><i class="fas fa-tag me-1"></i> ${ad.category}</div>
-                    <div class="ad-title">${ad.title}</div>
-                    <div class="ad-desc">${ad.description}</div>
-                    <div class="ad-footer">
-                        <div class="ad-location"><i class="fas fa-map-marker-alt"></i> ${ad.location}</div>
-                        <div class="d-flex gap-2">
-                            <button onclick="registerClick('${ad._id}', 'tel:${ad.phoneNumber}')" class="btn btn-sm btn-outline-light rounded-circle" title="Call"><i class="fas fa-phone"></i></button>
-                            <button onclick="registerClick('${ad._id}', 'https://wa.me/${ad.whatsappNumber}')" class="btn btn-sm btn-success rounded-circle" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function filterAds() { renderAds(); }
-    function setCategory(cat, element) {
-        currentCategory = cat;
-        document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
-        element.classList.add('active');
-        renderAds();
-    }
-
-    async function registerClick(adId, url) {
-        window.open(url, '_blank');
-        try { await fetch(`/api/ads/${adId}/click`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); } catch(e){}
-    }
-
-    function nextStep() {
-        const reqs = ['adBizName', 'adTitle', 'adCategory', 'adLocation', 'adDesc', 'adPhone', 'adWhatsapp', 'adImage'];
-        for(let id of reqs) { if(!document.getElementById(id).value) { Swal.fire('Missing Data', 'Please fill all required fields and upload an image.', 'warning'); return; } }
-        document.getElementById('adStep1').style.display = 'none'; document.getElementById('adStep2').style.display = 'block';
-    }
-    function prevStep() { document.getElementById('adStep1').style.display = 'block'; document.getElementById('adStep2').style.display = 'none'; }
-    function selectPkg(pkg, el) { selectedPackage = pkg; document.querySelectorAll('.pkg-card').forEach(c => c.classList.remove('selected')); el.classList.add('selected'); }
-
-    async function submitAdvert() {
-        const token = localStorage.getItem("naterpay_token");
-        const file = document.getElementById('adImage').files[0];
-        
-        Swal.fire({title:'Processing Payment...', text: 'Deducting from your ledger balance.', allowOutsideClick: false, didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
-
         try {
-            const base64Image = await toBase64(file);
-            
-            const payload = {
-                businessName: document.getElementById('adBizName').value,
-                title: document.getElementById('adTitle').value,
-                category: document.getElementById('adCategory').value,
-                location: document.getElementById('adLocation').value,
-                description: document.getElementById('adDesc').value,
-                phoneNumber: document.getElementById('adPhone').value,
-                whatsappNumber: document.getElementById('adWhatsapp').value,
-                website: document.getElementById('adWeb').value,
-                packageType: selectedPackage,
-                imageUrl: base64Image
-            };
-
-            const res = await fetch('/api/ads', {
+            const res = await fetch('/api/ads/create-multipart', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(payload)
+                headers: { 'Authorization': `Bearer ${token}` }, // NO Content-Type needed for FormData
+                body: formData
             });
             const data = await res.json();
-
             if(data.success) {
-                Swal.fire({icon: 'success', title: 'Advert Submitted!', text: 'Payment successful. Your advert is pending admin review.', confirmButtonColor: '#FFD700', background:'#0a0a0a', color:'#fff'})
-                .then(() => { bootstrap.Modal.getInstance(document.getElementById('postAdModal')).hide(); });
-            } else {
-                Swal.fire({icon: 'error', title: 'Transaction Failed', text: data.message, background:'#0a0a0a', color:'#fff'});
-            }
-        } catch(e) {
-            Swal.fire({icon: 'error', title: 'Upload Failed', text: 'Image may be too large.', background:'#0a0a0a', color:'#fff'});
-        }
+                Swal.fire({icon: 'success', title: 'Campaign Launched!', text: 'Payment successful. Campaign is pending admin review.', confirmButtonColor: '#FFD700', background:'#0a0a0a', color:'#fff'})
+                .then(() => { window.location.reload(); });
+            } else { Swal.fire({icon: 'error', title: 'Transaction Failed', text: data.message, background:'#0a0a0a', color:'#fff'}); }
+        } catch(e) { Swal.fire({icon: 'error', title: 'Server Error', text: 'Network failure.', background:'#0a0a0a', color:'#fff'}); }
     }
 
-    async function viewMyAds() {
+    // --- REAL-TIME ANALYTICS DASHBOARD ---
+    async function loadAnalytics() {
+        const tbody = document.getElementById('analyticsTableBody');
         const token = localStorage.getItem("naterpay_token");
-        const modal = new bootstrap.Modal(document.getElementById('myAdsModal'));
-        modal.show();
-
         try {
             const res = await fetch('/api/ads/me', { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
-            
-            const tbody = document.getElementById('myAdsTableBody');
             if(data.success && data.ads.length > 0) {
                 tbody.innerHTML = data.ads.map(ad => {
                     const statusColor = ad.status === 'approved' ? 'success' : (ad.status === 'pending' ? 'warning text-dark' : 'danger');
+                    const impressions = ad.impressions || 0;
+                    const clicks = ad.clicks || 0;
+                    const ctr = impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : '0.00';
+                    const viewsLeft = ad.remainingViews !== undefined ? ad.remainingViews : '∞';
+                    
                     return `
                         <tr>
-                            <td><div class="fw-bold">${ad.title}</div><small class="text-muted">${new Date(ad.createdAt).toLocaleDateString()}</small></td>
-                            <td><span class="badge bg-secondary text-uppercase">${ad.package}</span></td>
-                            <td><span class="badge bg-${statusColor} text-uppercase">${ad.status}</span></td>
-                            <td class="fw-bold"><i class="fas fa-eye text-muted me-1"></i> ${ad.views || 0}</td>
+                            <td>
+                                <div class="fw-bold">${ad.title}</div>
+                                <small class="text-muted">Pkg: ${ad.packageType.toUpperCase()}</small>
+                            </td>
+                            <td>
+                                <div class="mb-1"><i class="fas fa-tag text-muted"></i> ${ad.adType}</div>
+                                <span class="badge bg-${statusColor} text-uppercase">${ad.status}</span>
+                            </td>
+                            <td class="text-warning fw-bold fs-5">${viewsLeft.toLocaleString()}</td>
+                            <td>
+                                <div class="small text-info mb-1"><i class="fas fa-eye"></i> ${impressions.toLocaleString()} Impr.</div>
+                                <div class="small text-success"><i class="fas fa-mouse-pointer"></i> ${clicks.toLocaleString()} Clicks</div>
+                            </td>
+                            <td class="fw-bold text-white">${ctr}%</td>
                         </tr>
                     `;
                 }).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 opacity-50">You have not created any adverts yet.</td></tr>';
-            }
-        } catch(e) { document.getElementById('myAdsTableBody').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Failed to load dashboard.</td></tr>'; }
+            } else { tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 opacity-50">No campaigns found in your account.</td></tr>'; }
+        } catch(e) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Failed to load analytics data.</td></tr>'; }
     }
-
-    window.onload = () => { initStars(); loadAds(); };
-    window.onresize = initStars;
 </script>
 </body>
 </html>
