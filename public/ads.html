@@ -74,8 +74,12 @@
         .step-dot.active { background: var(--gold); border-color: var(--gold); color: black; box-shadow: 0 0 15px rgba(255,215,0,0.4); }
         .step-dot.completed { background: #28a745; border-color: #28a745; color: white; }
 
-        .input-dark { background: rgba(0,0,0,0.6); border: 1.5px solid #333; color: white; padding: 14px 20px; border-radius: 12px; width: 100%; font-weight: 500; margin-bottom: 20px; transition: 0.3s; }
+        /* NEW FORM UI UPGRADES */
+        .step-desc { font-size: 0.95rem; color: #aaa; margin-bottom: 25px; }
+        .form-label { font-size: 0.85rem; color: #ddd; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .input-dark { background: rgba(0,0,0,0.6); border: 1.5px solid #333; color: white; padding: 12px 18px; border-radius: 12px; width: 100%; font-weight: 500; transition: 0.3s; }
         .input-dark:focus { border-color: var(--gold); outline: none; box-shadow: inset 0 0 10px rgba(255,215,0,0.1); }
+        .input-helper { font-size: 0.75rem; color: #777; margin-top: 5px; }
         
         .type-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .type-card { border: 1px solid #444; border-radius: 12px; padding: 20px 10px; text-align: center; cursor: pointer; transition: 0.3s; background: #111; }
@@ -117,7 +121,6 @@
 
     <!-- VIEW 1: DYNAMIC MARKETPLACE FEED -->
     <div id="view-marketplace">
-        <!-- FIXED RESPONSIVE SEARCH BAR -->
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
             <h3 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; margin: 0; text-align: center;">GLOBAL DIRECTORY</h3>
             <div class="premium-search w-100 w-md-50">
@@ -150,7 +153,9 @@
         <form id="adWizardForm">
             <!-- STEP 1: AD TYPE -->
             <div class="wizard-step active" id="step-1">
-                <h5 class="fw-bold mb-4 text-white text-center text-md-start">Select Campaign Format</h5>
+                <h5 class="fw-bold mb-1 text-white text-center text-md-start">Step 1: Campaign Format</h5>
+                <p class="step-desc text-center text-md-start">Select the type of advertisement you want to run. This automatically formats your ad perfectly for the global feed.</p>
+                
                 <div class="type-selector">
                     <div class="type-card selected" onclick="selectAdType('Image', this)"><i class="fas fa-image"></i><h6 class="fw-bold m-0">Image Ad</h6></div>
                     <div class="type-card" onclick="selectAdType('Video', this)"><i class="fas fa-video"></i><h6 class="fw-bold m-0">Video Ad</h6></div>
@@ -169,14 +174,34 @@
 
             <!-- STEP 2: BUSINESS INFO -->
             <div class="wizard-step" id="step-2">
-                <h5 class="fw-bold mb-4 text-white">Entity / Advertiser Information</h5>
+                <h5 class="fw-bold mb-1 text-white">Step 2: Entity & Contact Information</h5>
+                <p class="step-desc">Provide accurate details about your business or brand. This builds trust with viewers and allows them to contact you directly.</p>
+                
                 <div class="row">
-                    <div class="col-md-6"><input type="text" id="bizName" class="input-dark" placeholder="Company/Entity Name" required></div>
-                    <div class="col-md-6"><input type="text" id="bizOwner" class="input-dark" placeholder="Owner/Representative Name"></div>
-                    <div class="col-md-4"><input type="email" id="bizEmail" class="input-dark" placeholder="Official Email"></div>
-                    <div class="col-md-4"><input type="tel" id="bizPhone" class="input-dark" placeholder="Phone Number" required></div>
-                    <div class="col-md-4"><input type="tel" id="bizWhatsapp" class="input-dark" placeholder="WhatsApp Number"></div>
-                    <div class="col-12"><input type="text" id="bizAddress" class="input-dark" placeholder="Full Business Address / City / Country"></div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Company / Entity Name <span class="text-danger">*</span></label>
+                        <input type="text" id="bizName" class="input-dark m-0" placeholder="e.g., Naterpay Solutions" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Representative Name</label>
+                        <input type="text" id="bizOwner" class="input-dark m-0" placeholder="e.g., John Doe">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Official Email</label>
+                        <input type="email" id="bizEmail" class="input-dark m-0" placeholder="contact@example.com">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Phone Number <span class="text-danger">*</span></label>
+                        <input type="tel" id="bizPhone" class="input-dark m-0" placeholder="+234 800 000 0000" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">WhatsApp Number</label>
+                        <input type="tel" id="bizWhatsapp" class="input-dark m-0" placeholder="+234 800 000 0000">
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Physical Address / City</label>
+                        <input type="text" id="bizAddress" class="input-dark m-0" placeholder="e.g., 123 Tech Lane, Abuja, Nigeria">
+                    </div>
                 </div>
                 <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 mt-3">
                     <button type="button" class="btn btn-outline-light px-4 py-2 rounded-pill w-100 w-sm-auto" onclick="prevStep(1)">Back</button>
@@ -186,13 +211,19 @@
 
             <!-- STEP 3: DYNAMIC AD DETAILS -->
             <div class="wizard-step" id="step-3">
-                <h5 class="fw-bold mb-4 text-white">Campaign Details</h5>
-                <input type="text" id="adTitle" class="input-dark" placeholder="Campaign Title (e.g., Hiring Senior Dev, 50% Off Laptops)" required>
+                <h5 class="fw-bold mb-1 text-white">Step 3: Campaign Content</h5>
+                <p class="step-desc">Write a catchy title and detailed description. Tell the users exactly what you are offering.</p>
+                
+                <div class="mb-3">
+                    <label class="form-label">Campaign Headline <span class="text-danger">*</span></label>
+                    <input type="text" id="adTitle" class="input-dark m-0" placeholder="e.g., Get 50% Off Our New Laptops Today!" required>
+                </div>
                 
                 <div class="row">
-                    <div class="col-md-6">
-                        <select id="adCategory" class="input-dark" required>
-                            <option value="" disabled selected>Master Category</option>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Master Category <span class="text-danger">*</span></label>
+                        <select id="adCategory" class="input-dark m-0" required>
+                            <option value="" disabled selected>Select the best fit</option>
                             <option value="Shopping">Shopping & Retail</option>
                             <option value="Tech">Software & Tech</option>
                             <option value="Education">Education & Courses</option>
@@ -204,9 +235,10 @@
                             <option value="Religion">Religion / NGO</option>
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <select id="adCta" class="input-dark" required>
-                            <option value="" disabled selected>Call-To-Action Button</option>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Call-To-Action Button <span class="text-danger">*</span></label>
+                        <select id="adCta" class="input-dark m-0" required>
+                            <option value="" disabled selected>What should the button say?</option>
                             <option value="Visit Website">Visit Website</option>
                             <option value="Shop Now">Shop Now</option>
                             <option value="Download App">Download App</option>
@@ -217,10 +249,19 @@
                     </div>
                 </div>
 
-                <div id="dynamicFieldsContainer" class="row mb-2"></div>
+                <!-- DYNAMIC FIELDS CONTAINER (Managed by JS) -->
+                <div id="dynamicFieldsContainer" class="row"></div>
 
-                <input type="url" id="adTargetUrl" class="input-dark" placeholder="Target Landing URL (Where should users go?)" required>
-                <textarea id="adDesc" class="input-dark" rows="4" placeholder="Write your full promotional description here..." required></textarea>
+                <div class="mb-3">
+                    <label class="form-label">Target Landing URL <span class="text-danger">*</span></label>
+                    <input type="url" id="adTargetUrl" class="input-dark m-0" placeholder="https://yourwebsite.com/product" required>
+                    <div class="input-helper">Where should the user be redirected when they click your Call-To-Action button?</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Full Promotional Description <span class="text-danger">*</span></label>
+                    <textarea id="adDesc" class="input-dark m-0" rows="4" placeholder="Explain your offer, product features, job requirements, or event details..." required></textarea>
+                </div>
                 
                 <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 mt-3">
                     <button type="button" class="btn btn-outline-light px-4 py-2 rounded-pill w-100 w-sm-auto" onclick="prevStep(2)">Back</button>
@@ -230,13 +271,14 @@
 
             <!-- STEP 4: MEDIA UPLOAD -->
             <div class="wizard-step" id="step-4">
-                <h5 class="fw-bold mb-2 text-white text-center text-md-start">Upload Media (Cloudinary)</h5>
-                <p class="text-muted small mb-4 text-center text-md-start">Supported: JPG, PNG, MP4, PDF.</p>
+                <h5 class="fw-bold mb-1 text-white text-center text-md-start">Step 4: Secure Media Upload</h5>
+                <p class="step-desc text-center text-md-start">Upload a high-quality visual. This is the very first thing users will see on the marketplace.</p>
                 
                 <div class="border border-secondary border-dashed p-4 p-md-5 text-center rounded-4 mb-4" style="background: rgba(0,0,0,0.3);">
                     <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3" id="mediaUploadIcon"></i>
-                    <h6 class="text-white" id="mediaUploadText">Select primary media file</h6>
-                    <input type="file" id="adMediaFile" class="form-control bg-dark text-white mt-3 w-100 w-md-75 mx-auto border-secondary" required>
+                    <h6 class="text-white" id="mediaUploadText">Select your primary media file</h6>
+                    <p class="small text-muted mb-3">Max file size: 20MB. Accepted formats: JPG, PNG, MP4, PDF.</p>
+                    <input type="file" id="adMediaFile" class="form-control bg-dark text-white mt-2 w-100 w-md-75 mx-auto border-secondary" required>
                 </div>
 
                 <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 mt-3">
@@ -247,33 +289,40 @@
 
             <!-- STEP 5: TARGETING & REWARDED VIEW BUDGET -->
             <div class="wizard-step" id="step-5">
-                <h5 class="fw-bold mb-4 text-white">Audience & Views Budget</h5>
+                <h5 class="fw-bold mb-1 text-white">Step 5: Targeting & View Budget</h5>
+                <p class="step-desc">Who should see this? Set your target audience and purchase guaranteed human views.</p>
+                
                 <div class="row mb-4">
-                    <div class="col-md-6">
-                        <select id="targetLocation" class="input-dark">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Geographic Target</label>
+                        <select id="targetLocation" class="input-dark m-0">
                             <option value="Global">Global / Worldwide</option>
                             <option value="Nigeria">Nigeria Only</option>
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <select id="targetDevice" class="input-dark">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Device Target</label>
+                        <select id="targetDevice" class="input-dark m-0">
                             <option value="All">All Devices</option>
-                            <option value="Mobile">Mobile Only</option>
-                            <option value="Desktop">Desktop Only</option>
+                            <option value="Mobile">Mobile Phones Only</option>
+                            <option value="Desktop">Desktop Computers Only</option>
                         </select>
                     </div>
                 </div>
 
-                <h6 class="fw-bold text-gold border-bottom border-secondary pb-2 mb-3">Rewarded Views Budget (CPRV)</h6>
-                <p class="text-muted small mb-3">Guarantee human engagement. You only pay for users who view your ad for 20 seconds. (₦5 per view).</p>
-                
-                <select id="adViewLimit" class="input-dark" onchange="calculateTotal()" required>
-                    <option value="200">200 Unique Views (₦1,000 Budget)</option>
-                    <option value="1000" selected>1,000 Unique Views (₦5,000 Budget)</option>
-                    <option value="5000">5,000 Unique Views (₦25,000 Budget)</option>
-                    <option value="10000">10,000 Unique Views (₦50,000 Budget)</option>
-                    <option value="50000">50,000 Unique Views (₦250,000 Budget)</option>
-                </select>
+                <div class="p-3 border border-secondary rounded-4 bg-dark">
+                    <h6 class="fw-bold text-gold border-bottom border-secondary pb-2 mb-3"><i class="fas fa-users me-2"></i> Cost Per Rewarded View (CPRV) Budget</h6>
+                    <p class="text-muted small mb-3">To guarantee real engagement, you only pay for unique users who are strictly verified to have looked at your ad for 20 full seconds (Calculated at ₦5 per user).</p>
+                    
+                    <label class="form-label">Select Guaranteed Views Package <span class="text-danger">*</span></label>
+                    <select id="adViewLimit" class="input-dark m-0" onchange="calculateTotal()" required>
+                        <option value="200">200 Unique Views (₦1,000 Total Budget)</option>
+                        <option value="1000" selected>1,000 Unique Views (₦5,000 Total Budget)</option>
+                        <option value="5000">5,000 Unique Views (₦25,000 Total Budget)</option>
+                        <option value="10000">10,000 Unique Views (₦50,000 Total Budget)</option>
+                        <option value="50000">50,000 Unique Views (₦250,000 Total Budget)</option>
+                    </select>
+                </div>
 
                 <div class="d-flex flex-column flex-sm-row justify-content-between gap-3 mt-4">
                     <button type="button" class="btn btn-outline-light px-4 py-2 rounded-pill w-100 w-sm-auto" onclick="prevStep(4)">Back</button>
@@ -283,14 +332,16 @@
 
             <!-- STEP 6: DURATION PACKAGES -->
             <div class="wizard-step" id="step-6">
-                <h5 class="fw-bold mb-4 text-white text-center">Select Listing Duration</h5>
+                <h5 class="fw-bold mb-1 text-white text-center">Step 6: Display Duration Package</h5>
+                <p class="step-desc text-center mb-4">Choose how long your campaign stays alive on the network. <br><small class="text-danger">(Note: The campaign will auto-close early if your views budget runs out).</small></p>
+                
                 <div class="row g-3 mb-4">
                     <div class="col-sm-6 col-lg-3">
                         <div class="pkg-card" onclick="selectPricingPkg('basic', 1000, this)">
                             <h5 class="fw-bold text-white fs-6">BASIC</h5>
                             <div class="badge bg-secondary mb-2">20 Days</div>
                             <h3 class="text-gold fw-bold mb-3 fs-5">₦1,000</h3>
-                            <p class="small text-muted m-0">Standard Feed</p>
+                            <p class="small text-muted m-0">Standard Feed Visibility</p>
                         </div>
                     </div>
                     <div class="col-sm-6 col-lg-3">
@@ -298,7 +349,7 @@
                             <h5 class="fw-bold text-white fs-6">STANDARD</h5>
                             <div class="badge bg-primary mb-2">40 Days</div>
                             <h3 class="text-gold fw-bold mb-3 fs-5">₦3,500</h3>
-                            <p class="small text-muted m-0">Priority Ranking</p>
+                            <p class="small text-muted m-0">Priority Algorithm Ranking</p>
                         </div>
                     </div>
                     <div class="col-sm-6 col-lg-3">
@@ -306,7 +357,7 @@
                             <h5 class="fw-bold text-warning fs-6"><i class="fas fa-star"></i> PREMIUM</h5>
                             <div class="badge bg-warning text-dark fw-bold mb-2">90 Days</div>
                             <h3 class="text-gold fw-bold mb-3 fs-5">₦10,000</h3>
-                            <p class="small text-muted m-0">Top Placement</p>
+                            <p class="small text-muted m-0">Top Search Placement</p>
                         </div>
                     </div>
                     <div class="col-sm-6 col-lg-3">
@@ -314,7 +365,7 @@
                             <h5 class="fw-bold text-danger fs-6"><i class="fas fa-crown"></i> PRO</h5>
                             <div class="badge bg-danger fw-bold mb-2">180 Days</div>
                             <h3 class="text-gold fw-bold mb-3 fs-5">₦25,000</h3>
-                            <p class="small text-muted m-0">Max Visibility</p>
+                            <p class="small text-muted m-0">Maximum Visibility Control</p>
                         </div>
                     </div>
                 </div>
@@ -325,17 +376,18 @@
                 </div>
             </div>
 
-            <!-- STEP 7: FIXED RESPONSIVE REVIEW & PAYMENT -->
+            <!-- STEP 7: REVIEW & PAYMENT -->
             <div class="wizard-step" id="step-7">
-                <h5 class="fw-bold mb-4 text-white text-center">Summary & Checkout</h5>
+                <h5 class="fw-bold mb-1 text-white text-center">Step 7: Summary & Checkout</h5>
+                <p class="step-desc text-center">Review your final cost. The total amount will be deducted directly from your Naterpay Wallet upon launch.</p>
                 
                 <div class="bg-dark p-3 p-md-4 rounded-4 mb-4 border border-secondary">
                     <div class="d-flex flex-column flex-md-row justify-content-between mb-3 border-bottom border-secondary pb-3 gap-2">
-                        <span class="text-muted">Package (<span id="revPkgName" class="text-uppercase text-white">Standard</span>):</span>
+                        <span class="text-muted">Duration Package (<span id="revPkgName" class="text-uppercase text-white">Standard</span>):</span>
                         <span class="fw-bold text-white fs-5">₦<span id="revPkgPrice">3,500</span></span>
                     </div>
                     <div class="d-flex flex-column flex-md-row justify-content-between mb-3 border-bottom border-secondary pb-3 gap-2">
-                        <span class="text-muted">Views Budget (<span id="revViews">1,000</span> Views):</span>
+                        <span class="text-muted">Views Budget (<span id="revViews">1,000</span> Guaranteed Views):</span>
                         <span class="fw-bold text-white fs-5">₦<span id="revBudget">5,000</span></span>
                     </div>
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-3 gap-2">
@@ -344,11 +396,10 @@
                     </div>
                 </div>
 
-                <!-- FIXED RESPONSIVE BUTTON CONTAINER -->
                 <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
                     <button type="button" class="btn btn-outline-light px-4 py-3 rounded-pill fw-bold w-100 w-md-auto" onclick="prevStep(6)">Back</button>
                     <button type="button" class="btn btn-success px-4 py-3 fw-bold fs-6 rounded-pill w-100 shadow" onclick="submitCampaign()">
-                        <i class="fas fa-lock me-2"></i> PAY & LAUNCH
+                        <i class="fas fa-lock me-2"></i> AUTHORIZE & LAUNCH
                     </button>
                 </div>
             </div>
@@ -497,18 +548,40 @@
         calculateTotal();
     }
 
+    // --- DYNAMIC FIELDS GENERATOR (WITH LABELS) ---
     function generateDynamicFields() {
         const container = document.getElementById('dynamicFieldsContainer');
         container.innerHTML = '';
         if(selectedType === 'Job') {
-            container.innerHTML = `<div class="col-md-6"><input type="text" id="adSalary" class="input-dark" placeholder="Salary Range (e.g. ₦150k - ₦250k)"></div>
-                                   <div class="col-md-6"><input type="date" id="adDeadline" class="input-dark text-muted" title="Application Deadline"></div>`;
+            container.innerHTML = `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Salary Range</label>
+                    <input type="text" id="adSalary" class="input-dark m-0" placeholder="e.g. ₦150k - ₦250k / month">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Application Deadline</label>
+                    <input type="date" id="adDeadline" class="input-dark m-0 text-muted">
+                </div>`;
         } else if(selectedType === 'Marketplace') {
-            container.innerHTML = `<div class="col-md-6"><input type="number" id="adPrice" class="input-dark" placeholder="Product Price (₦)"></div>
-                                   <div class="col-md-6"><input type="number" id="adDiscount" class="input-dark" placeholder="Discount Percentage (%)"></div>`;
+            container.innerHTML = `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Product Price (₦)</label>
+                    <input type="number" id="adPrice" class="input-dark m-0" placeholder="e.g. 50000">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Discount Percentage (%)</label>
+                    <input type="number" id="adDiscount" class="input-dark m-0" placeholder="e.g. 10">
+                </div>`;
         } else if(selectedType === 'Event') {
-            container.innerHTML = `<div class="col-md-6"><input type="text" id="adVenue" class="input-dark" placeholder="Event Venue"></div>
-                                   <div class="col-md-6"><input type="date" id="adEventDate" class="input-dark text-muted" title="Event Date"></div>`;
+            container.innerHTML = `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Event Venue</label>
+                    <input type="text" id="adVenue" class="input-dark m-0" placeholder="e.g. Transcorp Hilton, Abuja">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Event Date</label>
+                    <input type="date" id="adEventDate" class="input-dark m-0 text-muted">
+                </div>`;
         }
     }
 
