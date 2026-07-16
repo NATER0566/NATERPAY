@@ -26,6 +26,11 @@ async function registerPlugins() {
     origin: '*',
     credentials: true
   });
+
+  // File Upload Support (Required for Direct Cloudinary Stream Uploads)
+  await fastify.register(require('@fastify/multipart'), {
+    limits: { fileSize: 25 * 1024 * 1024 } // 25MB max limit for Videos/Images
+  });
   
   // Helmet - CSP disabled to allow your custom frontend inline CSS/JS to run
   await fastify.register(require('@fastify/helmet'), {
@@ -133,7 +138,9 @@ async function registerRoutes() {
   fastify.get('/api/ads', adsRoutes.getAds);
   fastify.post('/api/ads/:id/click', adsRoutes.registerClick);
   fastify.get('/api/ads/me', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.getUserAds);
+  // Support both legacy endpoint mapping and explicit multipart endpoint mappings
   fastify.post('/api/ads', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.createAd);
+  fastify.post('/api/ads/create-multipart', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.createAd);
   
   // === NEW: CLICK & EARN TASK ROUTES ===
   const tasksRoutes = require('./routes/tasks');
