@@ -1,8 +1,17 @@
-const mongoose = require('mongoose'); // Added mongoose to access the User model safely
+  const mongoose = require('mongoose');
 const PaymentLink = require('../models/PaymentLink');
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
 const crypto = require('crypto');
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
+
+// Configure Cloudinary using your existing env variables
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 // Conditionally load these to prevent crashes if files are missing/renamed
 let AuditLog, Notification, generateIdempotencyKey;
@@ -11,17 +20,15 @@ try { Notification = require('../models/Notification'); } catch(e) {}
 try { generateIdempotencyKey = require('../utils/auth').generateIdempotencyKey; } catch(e) {}
 
 /**
- * 1. Get user's payment links (Dashboard View / Admin View)
+ * 1. Get user's payment links (Dashboard View / Admin View) - LEGACY SUPPORT
  */
 async function getLinks(request, reply) {
   try {
-    // THE FIX: Smart Query. If the user is an admin, fetch ALL links. Otherwise, fetch only their own.
     let query = {};
     if (request.user && request.user.role !== 'admin' && request.user.role !== 'superadmin') {
         query.user = request.user._id;
     }
 
-    // THE FIX: Added .populate('user') to get the merchant's name and email for the Admin Panel
     const links = await PaymentLink.find(query)
       .populate('user', 'name email')
       .sort({ createdAt: -1 });
@@ -44,8 +51,9 @@ async function getLinks(request, reply) {
         category: link.category || 'General',
         redirectUrl: link.redirectUrl,
         productImageBase64: link.productImageBase64,
+        cloudinaryUrl: link.cloudinaryUrl,
+        status: link.status,
         
-        // Expose populated user details for the Admin Marketplace Table
         merchantName: link.user ? link.user.name : 'Verified Merchant',
         userEmail: link.user ? link.user.email : 'Unknown',
         user: link.user ? link.user._id : null
@@ -58,7 +66,7 @@ async function getLinks(request, reply) {
 }
 
 /**
- * 2. Create a new payment link (Storefront Product)
+ * 2. Create a new payment link (Storefront Product) - LEGACY JSON SUPPORT
  */
 async function createLink(request, reply) {
   try {
@@ -69,26 +77,16 @@ async function createLink(request, reply) {
         redirectUrl, productImageBase64, category 
     } = request.body;
     
-    if (!title) {
-      return reply.status(400).send({ success: false, message: 'Product title is required' });
-    }
+    if (!title) return reply.status(400).send({ success: false, message: 'Product title is required' });
 
-    // ---> FIX: ACTIVATE THE "GHOST" PHONE NUMBER FEATURE <---
-    // Capture any phone/whatsapp number variants passed from the payment-links.html form fields
     const incomingWhatsApp = request.body.whatsapp || request.body.merchantWhatsApp || request.body.sellerPhone || request.body.merchantPhone;
-    
     if (incomingWhatsApp && request.user && request.user._id) {
       try {
         const User = mongoose.models.User || mongoose.model('User');
-        // Synchronously save it directly to the core user record profile globally
         await User.findByIdAndUpdate(request.user._id, { whatsapp: incomingWhatsApp.trim() });
-      } catch (userUpdateErr) {
-        console.warn('Profile sync warning: Failed to map phone number to User model account context.', userUpdateErr.message);
-      }
+      } catch (userUpdateErr) {}
     }
-    // --------------------------------------------------------
 
-    // Generate a secure, unique string for the URL
     const linkId = 'LN_' + crypto.randomBytes(5).toString('hex').toUpperCase();
     
     const paymentLink = new PaymentLink({
@@ -107,32 +105,15 @@ async function createLink(request, reply) {
       maxTransactions: maxTransactions || null,
       expiryDate: expiryDate || null,
       category: category || 'General',
-      // E-Commerce Additions
       redirectUrl: redirectUrl || '',
-      productImageBase64: productImageBase64 || null
+      productImageBase64: productImageBase64 || null,
+      status: 'active'
     });
     
     await paymentLink.save();
     
-    // Safely log the action
-    if (AuditLog && typeof AuditLog.logAction === 'function') {
-      await AuditLog.logAction({
-        user: request.user._id,
-        action: 'payment_link_create',
-        description: `Storefront product created: ${title}`,
-        details: { linkId: paymentLink.linkId, amount },
-        ipAddress: request.ip,
-        userAgent: request.headers['user-agent']
-      }).catch(e => console.warn('Audit log suppressed', e.message));
-    }
-    
-    reply.status(201).send({
-      success: true,
-      message: 'Product published to storefront successfully',
-      linkId: paymentLink.linkId
-    });
+    reply.status(201).send({ success: true, message: 'Product published to storefront successfully', linkId: paymentLink.linkId });
   } catch (error) {
-    console.error('Create payment link error:', error);
     reply.status(500).send({ success: false, message: 'Failed to create storefront link' });
   }
 }
@@ -143,29 +124,21 @@ async function createLink(request, reply) {
 async function getLink(request, reply) {
   try {
     const { id } = request.params;
-    
-    // FIX: Populating 'whatsapp' along with 'name' and 'email' so individual checkout views can access contact data
     const paymentLink = await PaymentLink.findOne({ linkId: id }).populate('user', 'name email whatsapp');
     
-    if (!paymentLink) {
-      return reply.status(404).send({ success: false, message: 'Payment link not found' });
+    if (!paymentLink) return reply.status(404).send({ success: false, message: 'Payment link not found' });
+    
+    if (paymentLink.status === 'paused' || paymentLink.status === 'archived' || !paymentLink.isActive) {
+      return reply.status(410).send({ success: false, message: 'Product is no longer available' });
     }
     
-    if (!paymentLink.isActive) {
-      return reply.status(410).send({ success: false, message: 'Payment link is inactive' });
-    }
-    
-    // Protect against custom model methods failing if they don't exist
-    if (typeof paymentLink.isExpired === 'function' && paymentLink.isExpired()) {
-      return reply.status(410).send({ success: false, message: 'Payment link has expired' });
-    }
-    if (typeof paymentLink.isMaxReached === 'function' && paymentLink.isMaxReached()) {
-      return reply.status(410).send({ success: false, message: 'Payment link has reached maximum transactions' });
+    if (paymentLink.status === 'soldout' || (paymentLink.totalStock !== null && paymentLink.remainingStock <= 0)) {
+      return reply.status(410).send({ success: false, message: 'This product is completely sold out.' });
     }
     
     reply.send({
       success: true,
-      paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY, // Dynamic injection from Render Env
+      paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY, 
       link: {
         linkId: paymentLink.linkId,
         title: paymentLink.title,
@@ -173,51 +146,48 @@ async function getLink(request, reply) {
         amount: paymentLink.amount ? paymentLink.amount.toString() : '0',
         currency: paymentLink.currency,
         isFlexibleAmount: paymentLink.isFlexibleAmount,
-        minAmount: paymentLink.minAmount?.toString(),
-        maxAmount: paymentLink.maxAmount?.toString(),
         collectCustomerName: paymentLink.collectCustomerName,
         collectCustomerEmail: paymentLink.collectCustomerEmail,
+        collectCustomerPhone: paymentLink.collectCustomerPhone,
         merchantName: paymentLink.user ? paymentLink.user.name : 'Merchant',
-        merchantWhatsApp: paymentLink.user ? (paymentLink.user.whatsapp || '') : '', // Safe fallback mapping
+        merchantWhatsApp: paymentLink.user ? (paymentLink.user.whatsapp || '') : '', 
         category: paymentLink.category || 'General',
-        // E-Commerce Additions
         redirectUrl: paymentLink.redirectUrl,
-        productImageBase64: paymentLink.productImageBase64
+        productImageBase64: paymentLink.productImageBase64,
+        cloudinaryUrl: paymentLink.cloudinaryUrl,
+        feePreference: paymentLink.feePreference || 'buyer'
       }
     });
   } catch (error) {
-    console.error('Get payment link error:', error);
     reply.status(500).send({ success: false, message: 'Failed to fetch payment link details' });
   }
 }
 
 /**
- * 4. Process the Link Payment (Calculates 2.5% Platform Fee & Teleports user)
+ * 4. Process the Link Payment (Stock Engine & Fee Preference Routing)
  */
 async function payLink(request, reply) {
   try {
     const { id } = request.params;
-    const { customerName, customerEmail, customerPhone, gatewayReference, paymentMethod } = request.body;
+    const { customerName, customerEmail, gatewayReference, paymentMethod } = request.body;
     
-    // Map data gracefully
     const paymentAmount = parseFloat(request.body.amount || request.body.paidAmount || 0);
-    
     const paymentLink = await PaymentLink.findOne({ linkId: id });
     
-    if (!paymentLink) {
-      return reply.status(404).send({ success: false, message: 'Product route missing' });
-    }
-    if (!paymentLink.isActive) {
-      return reply.status(410).send({ success: false, message: 'Product is no longer available' });
-    }
+    if (!paymentLink) return reply.status(404).send({ success: false, message: 'Product route missing' });
+    if (paymentLink.status === 'paused' || paymentLink.status === 'archived') return reply.status(410).send({ success: false, message: 'Product is no longer available' });
+    if (paymentLink.status === 'soldout') return reply.status(410).send({ success: false, message: 'Product sold out' });
     
-    // --- NATERPAY REVENUE ENGINE ---
-    // Calculate NATERPAY Platform Fees (2.5% total processing fee)
+    // --- ENTERPRISE FEE ENGINE ---
     const platformFee = paymentAmount * 0.025; 
-    const finalCredit = paymentAmount - platformFee;
-    // -------------------------------
+    let finalCredit = paymentAmount - platformFee;
 
-    // Safely fetch and credit the Merchant's Wallet
+    // If seller set fee to 'buyer', ensure they receive full exact product price
+    if (paymentLink.feePreference === 'buyer' && !paymentLink.isFlexibleAmount) {
+        finalCredit = parseFloat(paymentLink.amount);
+    }
+    // -----------------------------
+
     const wallet = await Wallet.findOne({ user: paymentLink.user });
     if (!wallet) return reply.status(404).send({ success: false, message: 'Merchant wallet not found' });
 
@@ -226,7 +196,6 @@ async function payLink(request, reply) {
     wallet.balance = String(parseFloat(wallet.balance?.toString() || '0') + finalCredit);
     await wallet.save();
 
-    // Create the Audit Transaction Log
     const transaction = new Transaction({
       user: paymentLink.user,
       type: 'payment_link',
@@ -239,65 +208,46 @@ async function payLink(request, reply) {
       provider: paymentMethod || 'paystack',
       providerReference: gatewayReference || 'PAY_' + Date.now(),
       idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `plink_${Date.now()}_${Math.random().toString(36).substr(2,9)}`,
-      paymentLinkDetails: {
-        linkId: paymentLink.linkId,
-        customerEmail: customerEmail || null,
-        customerName: customerName || null
-      },
-      ipAddress: request.ip,
-      userAgent: request.headers['user-agent']
+      paymentLinkDetails: { linkId: paymentLink.linkId, customerEmail: customerEmail || null, customerName: customerName || null }
     });
     await transaction.save();
     
-    // Update link statistics safely
+    // --- STOCK DECREMENT & ANALYTICS ENGINE ---
     paymentLink.transactionCount = (paymentLink.transactionCount || 0) + 1;
-    paymentLink.totalCollected = String(parseFloat(paymentLink.totalCollected?.toString() || '0') + paymentAmount);
+    paymentLink.totalCollected = (parseFloat(paymentLink.totalCollected?.toString() || '0') + paymentAmount).toString();
+    paymentLink.feesPaid = (paymentLink.feesPaid || 0) + (paymentAmount - finalCredit);
+
+    if (paymentLink.totalStock !== null && paymentLink.totalStock > 0) {
+        paymentLink.remainingStock = (paymentLink.remainingStock !== null ? paymentLink.remainingStock : paymentLink.totalStock) - 1;
+        if (paymentLink.remainingStock <= 0) {
+            paymentLink.remainingStock = 0;
+            paymentLink.status = 'soldout';
+        }
+    }
     await paymentLink.save();
     
-    // Database Notification
+    // Notifications
     if (Notification && typeof Notification.create === 'function') {
-      await Notification.create({
-        user: paymentLink.user,
-        title: 'Product Sale!',
-        message: `₦${finalCredit.toLocaleString()} received via storefront: ${paymentLink.title}`,
-        type: 'transaction',
-        priority: 'high'
-      }).catch(e => console.warn('Notification log suppressed', e.message));
+      await Notification.create({ user: paymentLink.user, title: 'Product Sale!', message: `₦${finalCredit.toLocaleString()} received via storefront: ${paymentLink.title}`, type: 'transaction', priority: 'high' }).catch(e=>e);
     }
     
-    // Real-Time Socket.io UI Alert
     if (request.server && request.server.io) {
-      request.server.io.to(`user:${paymentLink.user}`).emit('wallet:update', {
-        balance: wallet.availableBalance.toString()
-      });
-      request.server.io.to(`user:${paymentLink.user}`).emit('notification', { 
-        type: 'success', 
-        title: 'New Sale!', 
-        message: `You received ₦${finalCredit.toLocaleString()} from: ${paymentLink.title}` 
-      });
-      request.server.io.to(`user:${paymentLink.user}`).emit('dashboard:refresh');
+      request.server.io.to(`user:${paymentLink.user}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+      request.server.io.to(`user:${paymentLink.user}`).emit('notification', { type: 'success', title: 'New Sale!', message: `You received ₦${finalCredit.toLocaleString()} from: ${paymentLink.title}` });
     }
     
-    reply.send({
-      success: true,
-      message: 'Payment verified and settled.',
-      transaction,
-      redirectUrl: paymentLink.redirectUrl // Passed to frontend to teleport the buyer
-    });
+    reply.send({ success: true, message: 'Payment verified and settled.', transaction, redirectUrl: paymentLink.redirectUrl });
   } catch (error) {
-    console.error('Pay storefront link error:', error);
     reply.status(500).send({ success: false, message: 'Failed to process payment fulfillment' });
   }
 }
 
 /**
- * 5. Get ALL active payment links globally (Global Marketplace View)
- * This drops the user security filter to create a public ledger feed
+ * 5. Get ALL active payment links globally
  */
 async function getAllMarketplaceLinks(request, reply) {
   try {
-    // Queries everything active across all users and extracts their dynamic profile attributes
-    const links = await PaymentLink.find({ isActive: true })
+    const links = await PaymentLink.find({ status: 'active', isActive: true })
       .populate('user', 'name email whatsapp')
       .sort({ createdAt: -1 });
     
@@ -314,17 +264,123 @@ async function getAllMarketplaceLinks(request, reply) {
         transactionCount: link.transactionCount || 0,
         category: link.category || 'General',
         productImageBase64: link.productImageBase64,
-        
-        // Dynamic map of the user relations gathered from the schema join
+        cloudinaryUrl: link.cloudinaryUrl,
         merchantName: link.user ? link.user.name : 'Verified Merchant',
         email: link.user ? link.user.email : 'Not Provided',
         whatsapp: link.user ? link.user.whatsapp : 'Not Provided'
       }))
     });
   } catch (error) {
-    console.error('Get global marketplace links error:', error);
     reply.status(500).send({ success: false, message: 'Failed to sync the global marketplace ledger' });
   }
+}
+
+// ============================================================================
+// NEW ENTERPRISE SELLER STUDIO ROUTES
+// ============================================================================
+
+// 6. Get Logged-In User's Products with Enterprise Analytics
+async function getMyProducts(request, reply) {
+    try {
+        const links = await PaymentLink.find({ user: request.user._id }).sort({ createdAt: -1 });
+        reply.send({ success: true, links });
+    } catch (error) {
+        reply.status(500).send({ success: false, message: 'Failed to fetch your products' });
+    }
+}
+
+// 7. Create Enterprise Product (Multipart Binary/Cloudinary stream)
+async function createProductMultipart(request, reply) {
+    try {
+        const parts = request.parts();
+        let productData = {};
+        let fileBuffer = null;
+
+        for await (const part of parts) {
+            if (part.file) {
+                fileBuffer = await part.toBuffer();
+            } else {
+                productData[part.fieldname] = part.value;
+            }
+        }
+
+        let uploadedMediaUrl = '';
+
+        if (fileBuffer) {
+            uploadedMediaUrl = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    { folder: "naterpay_products", resource_type: "image" },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result.secure_url);
+                    }
+                );
+                streamifier.createReadStream(fileBuffer).pipe(uploadStream);
+            });
+        }
+
+        let stock = null;
+        if (productData.totalStock && productData.totalStock !== 'null' && productData.totalStock !== '') {
+            stock = parseInt(productData.totalStock);
+        }
+
+        const linkId = 'LN_' + crypto.randomBytes(5).toString('hex').toUpperCase();
+
+        const newProduct = new PaymentLink({
+            user: request.user._id,
+            linkId: linkId,
+            title: productData.title,
+            category: productData.category || 'Product',
+            description: productData.description,
+            amount: productData.amount || '0',
+            isFlexibleAmount: productData.isFlexibleAmount === 'true',
+            status: productData.status || 'active',
+            feePreference: productData.feePreference || 'buyer',
+            totalStock: stock,
+            remainingStock: stock,
+            redirectUrl: productData.redirectUrl || '',
+            cloudinaryUrl: uploadedMediaUrl
+        });
+
+        await newProduct.save();
+        reply.send({ success: true, message: 'Product created successfully', product: newProduct });
+
+    } catch (error) {
+        console.error("Multipart Product Error:", error);
+        reply.status(500).send({ success: false, message: 'Failed to create product' });
+    }
+}
+
+// 8. Update Status (Active, Paused, Archived)
+async function updateProductStatus(request, reply) {
+    try {
+        const { id } = request.params;
+        const { status } = request.body;
+
+        const product = await PaymentLink.findOne({ _id: id, user: request.user._id });
+        if (!product) return reply.status(404).send({ success: false, message: 'Product not found' });
+
+        product.status = status;
+        await product.save();
+
+        reply.send({ success: true, message: `Product marked as ${status}` });
+    } catch (error) {
+        reply.status(500).send({ success: false, message: 'Failed to update status' });
+    }
+}
+
+// 9. Delete Forever
+async function deleteProductForever(request, reply) {
+    try {
+        const { id } = request.params;
+        const product = await PaymentLink.findOneAndDelete({ _id: id, user: request.user._id });
+        
+        if (!product) return reply.status(404).send({ success: false, message: 'Product not found' });
+
+        reply.send({ success: true, message: 'Product permanently deleted' });
+    } catch (error) {
+        reply.status(500).send({ success: false, message: 'Failed to delete product' });
+    }
 }
 
 module.exports = {
@@ -332,5 +388,10 @@ module.exports = {
   getAllMarketplaceLinks, 
   createLink,
   getLink,
-  payLink
+  payLink,
+  getMyProducts,
+  createProductMultipart,
+  updateProductStatus,
+  deleteProductForever
 };
+
