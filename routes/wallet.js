@@ -30,7 +30,7 @@ async function getWallet(request, reply) {
 }
 
 /**
- * 2. Initiate Wallet Funding (SEPARATE FUNDING CONFIGURATION)
+ * 2. Initiate Wallet Funding
  */
 async function fundWallet(request, reply) {
   try {
@@ -38,7 +38,6 @@ async function fundWallet(request, reply) {
     const paymentProvider = String(provider || 'paystack').toLowerCase();
     const requestedAmount = parseFloat(amount);
     
-    // Enterprise Rule: Funding config must be independent of withdrawal config
     const minFunding = config.business?.minFunding || 100;
     const maxFunding = config.business?.maxFunding || 10000000;
 
@@ -186,7 +185,7 @@ async function verifyFunding(request, reply) {
 }
 
 /**
- * 4. Withdraw Engine (ENTERPRISE RULES APPLIED)
+ * 4. Withdraw Engine (ENTERPRISE RULES APPLIED & BUGS FIXED)
  */
 async function withdraw(request, reply) {
   try {
@@ -215,12 +214,18 @@ async function withdraw(request, reply) {
         return reply.status(400).send({ success: false, message: `Your current verification (Tier ${kycLevel}) limits you to ₦${maxKycLimit.toLocaleString()} per withdrawal. Please upgrade your KYC.` });
     }
 
-    // --- ENTERPRISE RULE: DAILY WITHDRAWAL LIMITS ---
+    // --- BUG FIX 1: DAILY WITHDRAWAL MATH RESOLVED ---
     const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
     const dailyTxs = await Transaction.find({ user: request.user._id, type: 'withdrawal', createdAt: { $gte: startOfDay }, status: { $ne: 'failed' } });
     
     const dailyCount = dailyTxs.length;
-    const dailyVolume = dailyTxs.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    
+    // Using parseFloat to ensure JS does mathematical addition, NOT string concatenation
+    const dailyVolume = dailyTxs.reduce((sum, tx) => {
+        const txAmount = parseFloat(tx.amount?.toString() || 0);
+        return sum + txAmount;
+    }, 0);
+
     const maxDailyCount = config.business?.maxDailyWithdrawals || 5;
     const maxDailyVolume = config.business?.maxDailyWithdrawalVolume || 1000000;
 
@@ -235,7 +240,6 @@ async function withdraw(request, reply) {
     const otpThreshold = config.business?.otpThreshold || 50000;
     if (withdrawAmount >= otpThreshold && config.business?.requireHighValueOtp) {
         if (!otp) return reply.status(400).send({ success: false, message: `Withdrawals of ₦${otpThreshold.toLocaleString()} and above require OTP verification.` });
-        // Assume OTP validation happens here based on your auth logic
     }
 
     // PIN Authentication
@@ -251,7 +255,6 @@ async function withdraw(request, reply) {
     if (!isPinValid) return reply.status(401).send({ success: false, message: 'SECURITY ALERT: Incorrect Withdrawal PIN.' });
 
     // --- ENTERPRISE RULE: CONFIGURABLE PRICING ENGINE ---
-    // Reads from DB config if available, falls back to dynamic tiers
     let transferFee = 10; 
     if (config.business?.flatWithdrawalFee) {
         transferFee = config.business.flatWithdrawalFee;
@@ -275,12 +278,14 @@ async function withdraw(request, reply) {
     const safeBankName = String(bankAccount?.bankName || 'Bank').toUpperCase();
     const safeAccountNo = String(bankAccount?.accountNumber || 'Unknown');
 
+    // --- BUG FIX 2: EXPLICITLY RECORD TOTAL DEDUCTION ---
     const transaction = new Transaction({
       user: request.user._id, 
       type: 'withdrawal', 
       description: `Withdrawal to ${safeBankName} - ${safeAccountNo}`,
       amount: withdrawAmount, 
       fee: transferFee, 
+      totalDeduction: totalDeduction, // Fix added here
       balanceBefore: String(currentAvail), 
       balanceAfter: String(wallet.availableBalance || 0),
       status: 'pending', 
