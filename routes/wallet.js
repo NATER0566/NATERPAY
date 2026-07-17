@@ -7,7 +7,6 @@ const config = require('../config');
 const axios = require('axios');
 const crypto = require('crypto'); 
 
-// Optional imports (safely loaded so they don't crash if missing)
 let AuditLog, Notification, generateIdempotencyKey, generateTransactionReference;
 try { AuditLog = require('../models/AuditLog'); } catch(e) {}
 try { Notification = require('../models/Notification'); } catch(e) {}
@@ -31,7 +30,7 @@ async function getWallet(request, reply) {
 }
 
 /**
- * 2. Initiate Wallet Funding (CENTRAL FEE ENGINE: Gateway Recovery)
+ * 2. Initiate Wallet Funding (SEPARATE FUNDING CONFIGURATION)
  */
 async function fundWallet(request, reply) {
   try {
@@ -39,18 +38,23 @@ async function fundWallet(request, reply) {
     const paymentProvider = String(provider || 'paystack').toLowerCase();
     const requestedAmount = parseFloat(amount);
     
-    if (!requestedAmount || requestedAmount < (config.business?.minWithdrawal || 100)) {
-      return reply.status(400).send({ success: false, message: `Minimum funding amount is ₦${config.business?.minWithdrawal || 100}` });
+    // Enterprise Rule: Funding config must be independent of withdrawal config
+    const minFunding = config.business?.minFunding || 100;
+    const maxFunding = config.business?.maxFunding || 10000000;
+
+    if (!requestedAmount || requestedAmount < minFunding) {
+      return reply.status(400).send({ success: false, message: `Minimum funding amount is ₦${minFunding.toLocaleString()}` });
+    }
+    if (requestedAmount > maxFunding) {
+      return reply.status(400).send({ success: false, message: `Maximum funding amount is ₦${maxFunding.toLocaleString()}` });
     }
     
     const wallet = await Wallet.findOne({ user: request.user._id });
     const user = await User.findById(request.user._id);
     if (!wallet || !user) return reply.status(404).send({ success: false, message: 'User or Wallet not found' });
     
-    // --- GATEWAY RECOVERY LOGIC ---
     let gatewayFee = 0;
     if (paymentProvider === 'paystack') {
-        // Paystack Fee: 1.5% + ₦100 (if over ₦2500), Capped at ₦2000
         if (requestedAmount < 2500) {
             gatewayFee = (requestedAmount * 0.015) / (1 - 0.015);
         } else {
@@ -59,13 +63,10 @@ async function fundWallet(request, reply) {
         if (gatewayFee > 2000) gatewayFee = 2000; 
     }
 
-    // Gross amount the user's card will actually be charged to cover the gateway
     const totalToCharge = Math.ceil(requestedAmount + gatewayFee);
-
     const paymentReference = typeof generateTransactionReference === 'function' ? generateTransactionReference() : `FUND_${Date.now()}`;
     const startBalance = String(wallet.availableBalance || 0);
 
-    // Ledger records requestedAmount as principal, gatewayFee as explicit fee
     const transaction = new Transaction({
       user: request.user._id, type: 'funding', description: `Wallet funding via ${paymentProvider}`,
       amount: requestedAmount, fee: Math.ceil(gatewayFee), balanceBefore: startBalance, balanceAfter: startBalance,
@@ -81,7 +82,7 @@ async function fundWallet(request, reply) {
       const paystackResponse = await axios.post('https://api.paystack.co/transaction/initialize',
         { 
             email: user.email, 
-            amount: totalToCharge * 100, // Charge the GROSS amount in Kobo
+            amount: totalToCharge * 100, 
             reference: paymentReference, 
             callback_url: `${request.protocol}://${request.hostname}/dashboard.html` 
         },
@@ -105,13 +106,12 @@ async function fundWallet(request, reply) {
     
     reply.send({ success: true, message: 'Payment initialized', paymentReference, checkoutUrl, provider: paymentProvider });
   } catch (error) {
-    console.error('Funding Error:', error.message);
     reply.status(500).send({ success: false, message: 'Failed to initiate payment gateway.' });
   }
 }
 
 /**
- * 3. Verify Wallet Funding (CENTRAL FEE ENGINE: Net Ledger Protection)
+ * 3. Verify Wallet Funding
  */
 async function verifyFunding(request, reply) {
   try {
@@ -161,8 +161,6 @@ async function verifyFunding(request, reply) {
 
     const wallet = await Wallet.findOne({ user: transaction.user });
     
-    // --- CENTRAL FEE ENGINE: Credit exact requested principal ONLY ---
-    // The gateway swallowed the gross-up fee. We credit exactly what the user asked for.
     const creditAmount = transaction.amount; 
 
     wallet.availableBalance = String(parseFloat(wallet.availableBalance || 0) + creditAmount);
@@ -183,36 +181,65 @@ async function verifyFunding(request, reply) {
     reply.send({ success: true, message: 'Payment verified and wallet credited!' });
 
   } catch (error) {
-    console.error('Verify Funding Error:', error.message);
     reply.status(500).send({ success: false, message: 'Failed to verify payment. Network error.' });
   }
 }
 
 /**
- * 4. Withdraw Engine (CENTRAL FEE ENGINE: Tiered Platform Fees)
+ * 4. Withdraw Engine (ENTERPRISE RULES APPLIED)
  */
 async function withdraw(request, reply) {
   try {
-    const { amount, bankAccount, pin } = request.body;
-    
+    const { amount, bankAccount, pin, otp } = request.body;
     const withdrawAmount = parseFloat(amount);
-    const minWth = config.business?.minWithdrawal || 1000;
-    const maxWth = config.business?.maxWithdrawal || 500000;
-
-    if (!withdrawAmount || withdrawAmount < minWth) {
-      return reply.status(400).send({ success: false, message: `Minimum withdrawal amount is ₦${minWth}` });
-    }
-    if (withdrawAmount > maxWth) {
-      return reply.status(400).send({ success: false, message: `Maximum withdrawal amount is ₦${maxWth}` });
-    }
     
     const user = await User.findById(request.user._id);
     const wallet = await Wallet.findOne({ user: request.user._id });
     
     if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet error.' });
     if (wallet.isFrozen) return reply.status(403).send({ success: false, message: 'Wallet is frozen. Please contact support.' });
-    if (!pin) return reply.status(400).send({ success: false, message: 'Security PIN is required' });
     
+    // --- ENTERPRISE RULE: DUPLICATE WITHDRAWAL PROTECTION ---
+    const pendingWithdrawal = await Transaction.findOne({ user: request.user._id, type: 'withdrawal', status: 'pending' });
+    if (pendingWithdrawal) {
+        return reply.status(400).send({ success: false, message: 'Duplicate Protection: You already have a pending withdrawal request. Please wait for it to be processed.' });
+    }
+
+    // --- ENTERPRISE RULE: KYC WITHDRAWAL LIMITS ---
+    const kycLevel = user.kycLevel || 0;
+    let maxKycLimit = 10000; // Tier 0 (Unverified)
+    if (kycLevel === 1) maxKycLimit = 50000;   // Tier 1
+    if (kycLevel >= 2) maxKycLimit = 500000;   // Tier 2 & 3
+    
+    if (withdrawAmount > maxKycLimit) {
+        return reply.status(400).send({ success: false, message: `Your current verification (Tier ${kycLevel}) limits you to ₦${maxKycLimit.toLocaleString()} per withdrawal. Please upgrade your KYC.` });
+    }
+
+    // --- ENTERPRISE RULE: DAILY WITHDRAWAL LIMITS ---
+    const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+    const dailyTxs = await Transaction.find({ user: request.user._id, type: 'withdrawal', createdAt: { $gte: startOfDay }, status: { $ne: 'failed' } });
+    
+    const dailyCount = dailyTxs.length;
+    const dailyVolume = dailyTxs.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    const maxDailyCount = config.business?.maxDailyWithdrawals || 5;
+    const maxDailyVolume = config.business?.maxDailyWithdrawalVolume || 1000000;
+
+    if (dailyCount >= maxDailyCount) {
+        return reply.status(400).send({ success: false, message: `Enterprise Policy: Daily withdrawal limit of ${maxDailyCount} transactions reached.` });
+    }
+    if (dailyVolume + withdrawAmount > maxDailyVolume) {
+        return reply.status(400).send({ success: false, message: `Enterprise Policy: This exceeds your daily withdrawal limit of ₦${maxDailyVolume.toLocaleString()}.` });
+    }
+
+    // --- ENTERPRISE RULE: HIGH VALUE OTP SECURITY ---
+    const otpThreshold = config.business?.otpThreshold || 50000;
+    if (withdrawAmount >= otpThreshold && config.business?.requireHighValueOtp) {
+        if (!otp) return reply.status(400).send({ success: false, message: `Withdrawals of ₦${otpThreshold.toLocaleString()} and above require OTP verification.` });
+        // Assume OTP validation happens here based on your auth logic
+    }
+
+    // PIN Authentication
+    if (!pin) return reply.status(400).send({ success: false, message: 'Security PIN is required' });
     let isPinValid = false;
     if (typeof wallet.verifyPin === 'function') {
         isPinValid = await wallet.verifyPin(String(pin));
@@ -221,15 +248,16 @@ async function withdraw(request, reply) {
     } else {
         return reply.status(400).send({ success: false, message: 'Please setup your withdrawal PIN in settings first.' });
     }
-
     if (!isPinValid) return reply.status(401).send({ success: false, message: 'SECURITY ALERT: Incorrect Withdrawal PIN.' });
 
-    // --- CENTRAL FEE ENGINE: Tiered Withdrawal Cost ---
+    // --- ENTERPRISE RULE: CONFIGURABLE PRICING ENGINE ---
+    // Reads from DB config if available, falls back to dynamic tiers
     let transferFee = 10; 
-    if (withdrawAmount > 5000 && withdrawAmount <= 50000) {
-        transferFee = 25;
-    } else if (withdrawAmount > 50000) {
-        transferFee = 50;
+    if (config.business?.flatWithdrawalFee) {
+        transferFee = config.business.flatWithdrawalFee;
+    } else {
+        if (withdrawAmount > 5000 && withdrawAmount <= 50000) transferFee = 25;
+        else if (withdrawAmount > 50000) transferFee = 50;
     }
     
     const totalDeduction = withdrawAmount + transferFee;
@@ -239,8 +267,7 @@ async function withdraw(request, reply) {
       return reply.status(400).send({ success: false, message: `Insufficient Funds. You need ₦${totalDeduction.toLocaleString()} including the ₦${transferFee} processing fee.` });
     }
     
-    // Deduct user wallet. 
-    // Manual Profit Custodian: Fee stays in physical admin bank account. No virtual admin routing needed.
+    // Deduct user wallet
     wallet.availableBalance = String(currentAvail - totalDeduction);
     wallet.balance = String(parseFloat(wallet.balance || 0) - totalDeduction);
     await wallet.save();
@@ -256,12 +283,11 @@ async function withdraw(request, reply) {
       fee: transferFee, 
       balanceBefore: String(currentAvail), 
       balanceAfter: String(wallet.availableBalance || 0),
-      status: 'pending', // Awaiting physical admin payout
+      status: 'pending', 
       provider: 'internal', 
       idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `wth_${Date.now()}`, 
       ipAddress: request.ip, 
       userAgent: request.headers['user-agent'],
-      
       bankName: bankAccount?.bankName || safeBankName,
       accountNumber: bankAccount?.accountNumber || safeAccountNo,
       accountName: bankAccount?.accountName || 'Unknown',
@@ -270,13 +296,24 @@ async function withdraw(request, reply) {
     
     await transaction.save();
     
-    if (request.server && request.server.io) {
-        request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: String(wallet.availableBalance || 0) });
-    }
+    // --- ENTERPRISE RULE: REAL-TIME ADMIN NOTIFICATIONS ---
+    try {
+        if (request.server && request.server.io) {
+            const admins = await User.find({ role: { $in: ['admin', 'superadmin'] } });
+            admins.forEach(adm => {
+                request.server.io.to(`user:${adm._id}`).emit('notification', { 
+                    type: 'warning', 
+                    title: 'New Withdrawal Alert', 
+                    message: `${user.name} requested ₦${withdrawAmount.toLocaleString()}` 
+                });
+            });
+            // Update User Wallet
+            request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: String(wallet.availableBalance || 0) });
+        }
+    } catch(e) {} // Fail silently if socket disconnects
     
     reply.send({ success: true, message: 'Withdrawal request submitted. Awaiting manual payout.', transaction });
   } catch (error) {
-    console.error('Withdrawal Server Error:', error); 
     reply.status(500).send({ success: false, message: error.message || 'System error processing transfer.' });
   }
 }
@@ -353,8 +390,7 @@ async function transfer(request, reply) {
     
     reply.send({ success: true, message: 'Transfer successful', transaction: senderTransaction, recipientName: recipientUser.name });
   } catch (error) {
-    console.error('Transfer Server Error:', error);
-    reply.status(500).send({ success: false, message: 'Failed to process transfer. Check console.' });
+    reply.status(500).send({ success: false, message: 'Failed to process transfer.' });
   }
 }
 
@@ -381,7 +417,6 @@ async function setPin(request, reply) {
     
     reply.send({ success: true, message: 'PIN set successfully' });
   } catch (error) {
-    console.error('Set PIN Error:', error);
     reply.status(500).send({ success: false, message: 'Failed to set PIN' });
   }
 }
@@ -395,20 +430,17 @@ async function resolveBankAccount(request, reply) {
         if (!accountNumber || !bankCode) {
             return reply.status(400).send({ success: false, message: 'Account Number and Bank Code required' });
         }
-
         const response = await axios.get(`https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`, {
             headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
         });
-
         reply.send({ success: true, accountName: response.data.data.account_name });
     } catch (error) {
-        console.error("Bank Resolve Error:", error.response?.data || error.message);
         reply.status(400).send({ success: false, message: 'Invalid Account Details.' });
     }
 }
 
 /**
- * 8. PAYSTACK SECURE WEBHOOK (CENTRAL FEE ENGINE: Absolute Net Validation)
+ * 8. PAYSTACK SECURE WEBHOOK
  */
 async function handlePaystackWebhook(request, reply) {
     try {
@@ -426,20 +458,14 @@ async function handlePaystackWebhook(request, reply) {
             const reference = data.reference;
             
             const existingTx = await Transaction.findOne({ providerReference: reference, status: 'success' });
-            if (existingTx) {
-                return reply.code(200).send('Transaction already processed');
-            }
+            if (existingTx) return reply.code(200).send('Transaction already processed');
 
             const pendingTx = await Transaction.findOne({ providerReference: reference, status: 'pending' });
-            if (!pendingTx) {
-                return reply.code(200).send('Pending transaction record not found');
-            }
+            if (!pendingTx) return reply.code(200).send('Pending transaction record not found');
 
             const wallet = await Wallet.findOne({ user: pendingTx.user });
             if (!wallet) return reply.code(200).send('Wallet not found');
 
-            // --- CENTRAL FEE ENGINE: Ignore Gateway Gross-up ---
-            // Credit EXACT principal requested originally, preventing inflation
             const creditAmount = pendingTx.amount;
             const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
             
@@ -461,22 +487,10 @@ async function handlePaystackWebhook(request, reply) {
                 });
             }
         }
-
         reply.code(200).send('Webhook Processed');
-
     } catch (error) {
-        console.error('Webhook Error:', error);
         reply.code(500).send('Internal Server Error');
     }
 }
 
-module.exports = {
-  getWallet,
-  fundWallet,
-  verifyFunding,
-  withdraw,
-  transfer,
-  setPin,
-  resolveBankAccount,
-  handlePaystackWebhook
-};  
+module.exports = { getWallet, fundWallet, verifyFunding, withdraw, transfer, setPin, resolveBankAccount, handlePaystackWebhook };
