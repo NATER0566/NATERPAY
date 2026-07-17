@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,7 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
-        :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #030303; --card-bg: rgba(15, 15, 15, 0.9); --red: #d32f2f; --green: #00ff88; }
+        :root { --gold: #FFD700; --gold-dim: #d4af37; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #030303; --card-bg: rgba(15, 15, 15, 0.9); --red: #d32f2f; --green: #00ff88; }
         body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
@@ -45,12 +44,23 @@
         }
         .withdraw-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
 
+        /* THE OVRFLOW SCREEN REPAIR: Uses fluid font clamping and safety breaks */
         .balance-display {
             background: linear-gradient(145deg, #111 0%, #1a1a1a 100%); border: 2px solid var(--gold);
             border-radius: 20px; padding: 25px; text-align: center; margin-bottom: 30px;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 0 15px var(--gold-glow);
+            overflow: hidden;
         }
-        .balance-amount { font-family: 'Cinzel'; font-size: 3rem; color: var(--gold); font-weight: 900; text-shadow: 0 0 10px var(--gold-glow); margin-top: 5px; }
+        .balance-amount { 
+            font-family: 'Cinzel'; 
+            font-size: clamp(1.8rem, 6vw, 3rem); 
+            color: var(--gold); 
+            font-weight: 900; 
+            text-shadow: 0 0 10px var(--gold-glow); 
+            margin-top: 5px; 
+            word-break: break-all;
+            overflow-wrap: break-word;
+        }
         
         .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; transition: 0.3s; position: relative; }
         .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow); }
@@ -62,7 +72,7 @@
             position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
             background: #222; border: 1px solid var(--gold); color: var(--gold);
             padding: 8px 15px; border-radius: 10px; font-size: 0.8rem; font-weight: 800;
-            cursor: pointer; transition: 0.3s;
+            cursor: pointer; transition: 0.3s; z-index: 5;
         }
         .verify-btn:hover { background: var(--gold); color: #000; }
 
@@ -80,6 +90,38 @@
         
         .info-box { background: rgba(212,175,55,0.05); border: 1px dashed rgba(212,175,55,0.3); border-radius: 15px; padding: 20px; margin-top: 25px; }
         .info-box span { font-size: 0.85rem; }
+
+        /* EXTRAVAGANT SWEETALERT MODAL REFRACTIVE LOADERS */
+        .swal-reflective-spinner {
+            position: relative; width: 100px; height: 100px; margin: 20px auto;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg, 
+                rgba(255,215,0,0.1) 0%, 
+                rgba(255,255,255,0.9) 15%, 
+                var(--gold) 30%, 
+                rgba(255,215,0,0.2) 50%, 
+                var(--gold-dim) 70%, 
+                rgba(255,255,255,0.7) 85%, 
+                rgba(255,215,0,0.1) 100%
+            );
+            animation: spinSwalReflect 2s linear infinite;
+            box-shadow: 0 0 35px rgba(255,215,0,0.35);
+        }
+        .swal-reflective-spinner::before {
+            content: ''; position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px;
+            background: radial-gradient(circle at 30% 30%, #1a1a1a 0%, #0d0d0d 100%);
+            border-radius: 50%; border: 1px solid rgba(255,215,0,0.15);
+            z-index: 1;
+        }
+        .swal-inner-icon {
+            position: absolute; z-index: 2; top: 50%; left: 50%;
+            font-size: 2.2rem; color: var(--gold);
+            text-shadow: 0 0 15px var(--gold), 0 0 30px rgba(255,255,255,0.4);
+            animation: counterSpinSwal 2s linear infinite;
+        }
+        @keyframes spinSwalReflect { 100% { transform: rotate(360deg); } }
+        @keyframes counterSpinSwal { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
     </style>
 </head>
 <body>
@@ -175,7 +217,7 @@
 <script>
     let currentWalletBalance = 0;
     const transferFee = 50; 
-    let isAccountVerified = false; // Security lock
+    let isAccountVerified = false; 
 
     function initStars() {
         const c = document.getElementById('starCanvas');
@@ -200,7 +242,8 @@
             const data = await res.json();
             
             if (data.success) {
-                currentWalletBalance = Number(data.balance || 0);
+                const safeBal = data.balance?.$numberDecimal || data.balance || 0;
+                currentWalletBalance = Number(safeBal);
                 document.getElementById('availableBalance').innerText = '₦' + currentWalletBalance.toLocaleString(undefined, {minimumFractionDigits:2});
                 calculateAfterBalance();
             }
@@ -223,7 +266,6 @@
         }
     }
 
-    // Instantly reset the verification lock if the user changes the number or bank
     document.getElementById('accountNumber').addEventListener('input', resetVerification);
     document.getElementById('bankCode').addEventListener('change', resetVerification);
 
@@ -242,7 +284,21 @@
         }
 
         const authToken = localStorage.getItem("naterpay_token");
-        Swal.fire({ title: 'Querying NIBSS...', text: 'Checking banking records...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+        
+        // --- INJECT HOLOGRAM SPINNING CONTROLLER ---
+        Swal.fire({ 
+            title: 'Querying NIBSS...', 
+            html: `
+                <div class="swal-reflective-spinner">
+                    <i class="fas fa-university swal-inner-icon"></i>
+                </div>
+                <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Validating interbank routing registers...</span>
+            `, 
+            showConfirmButton: false,
+            allowOutsideClick: false, 
+            background: '#0a0a0a', 
+            color: '#FFD700' 
+        });
         
         try {
             const res = await fetch('/api/wallet/verify-bank', {
@@ -294,7 +350,20 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            Swal.fire({ title: 'Locking Ledger...', html: '<span style="color:#aaa;">Securing internal database transaction...</span>', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+            // --- INJECT HOLOGRAM SPINNING CONTROLLER ---
+            Swal.fire({ 
+                title: 'Locking Ledger...', 
+                html: `
+                    <div class="swal-reflective-spinner">
+                        <i class="fas fa-lock swal-inner-icon"></i>
+                    </div>
+                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Authorizing immutable vault ledger transaction...</span>
+                `, 
+                showConfirmButton: false,
+                allowOutsideClick: false, 
+                background: '#0a0a0a', 
+                color: '#FFD700' 
+            });
             
             const res = await fetch('/api/wallet/withdraw', {
                 method: 'POST',
@@ -304,7 +373,6 @@
             const data = await res.json();
             
             if (data.success) {
-                // HONEST SUCCESS MESSAGE
                 Swal.fire({ 
                     icon: 'success', 
                     title: 'Withdrawal Processing!', 
