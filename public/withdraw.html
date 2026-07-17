@@ -44,7 +44,6 @@
         }
         .withdraw-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
 
-        /* THE OVRFLOW SCREEN REPAIR: Uses fluid font clamping and safety breaks */
         .balance-display {
             background: linear-gradient(145deg, #111 0%, #1a1a1a 100%); border: 2px solid var(--gold);
             border-radius: 20px; padding: 25px; text-align: center; margin-bottom: 30px;
@@ -187,7 +186,7 @@
 
         <div class="live-calc-box">
             <div class="calc-line"><span>Withdrawal Amount:</span> <span id="calcAmount">₦0.00</span></div>
-            <div class="calc-line"><span>Transfer Fee:</span> <span id="calcFee" style="color: var(--red);">₦50.00</span></div>
+            <div class="calc-line"><span>Tiered Processing Fee: <i class="fas fa-info-circle" title="Fee auto-adjusts based on withdrawal size"></i></span> <span id="calcFee" style="color: var(--red);">₦0.00</span></div>
             <div class="calc-line total"><span>Remaining Balance:</span> <span id="calcRemaining">₦0.00</span></div>
         </div>
         
@@ -201,8 +200,15 @@
         </button>
         
         <div class="info-box">
-            <h6 style="color: var(--gold); font-weight: 800; margin-bottom: 12px; font-size: 0.8rem; text-transform: uppercase;">Transfer Logistics</h6>
-            <div class="d-flex justify-content-between mb-2"><span class="text-secondary fw-bold">Min. Withdrawal:</span><span class="fw-bold text-white">₦1,000</span></div>
+            <h6 style="color: var(--gold); font-weight: 800; margin-bottom: 12px; font-size: 0.8rem; text-transform: uppercase;"><i class="fas fa-balance-scale me-1"></i> Transparent Fee Policy</h6>
+            <p class="text-secondary small fw-bold mb-3" style="line-height: 1.4;">To maintain the NATER-PAY ecosystem and ensure secure, lightning-fast payouts, a small dynamic fee applies to withdrawals. This is the only charge applied.</p>
+            <div class="d-flex justify-content-between mb-2"><span class="text-secondary fw-bold">Withdrawals up to ₦5,000:</span><span class="fw-bold text-white">₦10.00</span></div>
+            <div class="d-flex justify-content-between mb-2"><span class="text-secondary fw-bold">₦5,001 to ₦50,000:</span><span class="fw-bold text-white">₦25.00</span></div>
+            <div class="d-flex justify-content-between mb-3"><span class="text-secondary fw-bold">Above ₦50,000:</span><span class="fw-bold text-white">₦50.00</span></div>
+            
+            <hr style="border-color: #333;">
+            
+            <div class="d-flex justify-content-between mb-2 mt-3"><span class="text-secondary fw-bold">Min. Withdrawal:</span><span class="fw-bold text-white">₦1,000</span></div>
             <div class="d-flex justify-content-between mb-2"><span class="text-secondary fw-bold">Max. Withdrawal:</span><span class="fw-bold text-white">₦500,000</span></div>
             <div class="d-flex justify-content-between"><span class="text-secondary fw-bold">Clearance Time:</span><span class="fw-bold" style="color: var(--green);">Up to 24 Hours</span></div>
         </div>
@@ -216,8 +222,15 @@
 
 <script>
     let currentWalletBalance = 0;
-    const transferFee = 50; 
     let isAccountVerified = false; 
+
+    // Central Fee Engine Calculator (Matches Backend)
+    function getDynamicFee(amount) {
+        if (!amount || amount < 1000) return 0;
+        if (amount > 50000) return 50;
+        if (amount > 5000) return 25;
+        return 10;
+    }
 
     function initStars() {
         const c = document.getElementById('starCanvas');
@@ -254,7 +267,11 @@
         const inputAmount = parseFloat(document.getElementById('withdrawAmount').value) || 0;
         document.getElementById('calcAmount').innerText = '₦' + inputAmount.toLocaleString(undefined, {minimumFractionDigits:2});
         
-        let remaining = currentWalletBalance - inputAmount - transferFee;
+        // Dynamically calculate and display the fee
+        const currentFee = getDynamicFee(inputAmount);
+        document.getElementById('calcFee').innerText = '₦' + currentFee.toLocaleString(undefined, {minimumFractionDigits:2});
+        
+        let remaining = currentWalletBalance - inputAmount - currentFee;
         const remainingEl = document.getElementById('calcRemaining');
         
         if (remaining < 0) {
@@ -285,7 +302,6 @@
 
         const authToken = localStorage.getItem("naterpay_token");
         
-        // --- INJECT HOLOGRAM SPINNING CONTROLLER ---
         Swal.fire({ 
             title: 'Querying NIBSS...', 
             html: `
@@ -339,8 +355,12 @@
         if (!amount || amount < 1000 || amount > 500000) {
             Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'Amount must be between ₦1,000 and ₦500,000.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' }); return;
         }
-        if ((amount + transferFee) > currentWalletBalance) {
-            Swal.fire({ icon: 'error', title: 'Insufficient Funds', text: 'Amount plus fee exceeds your available balance.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' }); return;
+
+        // Apply dynamic fee exactly like the backend
+        const dynamicFee = getDynamicFee(amount);
+
+        if ((amount + dynamicFee) > currentWalletBalance) {
+            Swal.fire({ icon: 'error', title: 'Insufficient Funds', text: `Amount plus the ₦${dynamicFee} fee exceeds your available balance.`, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' }); return;
         }
         if (pin.length !== 4) {
             Swal.fire({ icon: 'error', title: 'Authentication Failed', text: 'Valid 4-digit PIN required.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' }); return;
@@ -350,7 +370,6 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            // --- INJECT HOLOGRAM SPINNING CONTROLLER ---
             Swal.fire({ 
                 title: 'Locking Ledger...', 
                 html: `
