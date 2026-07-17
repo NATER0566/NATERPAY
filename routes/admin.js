@@ -5,7 +5,7 @@ const KYC = require('../models/KYC');
 const SupportTicket = require('../models/SupportTicket');
 const Notification = require('../models/Notification');
 const PaymentLink = require('../models/PaymentLink'); 
-const Ad = require('../models/Ad'); // <-- UPDATED TO NEW ENTERPRISE SCHEMA
+const Ad = require('../models/Ad'); 
 const { generateTransactionReference } = require('../utils/auth');
 const axios = require('axios'); 
 
@@ -87,7 +87,7 @@ async function getAnalytics(request, reply) {
 }
 
 // ============================================================================
-// REAL WITHDRAWAL MANAGEMENT 
+// ENTERPRISE WITHDRAWAL MANAGEMENT (AUTO-REFUND & AUDIT ENGINE)
 // ============================================================================
 
 async function getPendingWithdrawals(request, reply) {
@@ -106,52 +106,92 @@ async function getPendingWithdrawals(request, reply) {
 async function processWithdrawal(request, reply) {
     try {
         const { id, action } = request.params; 
+        const { reason } = request.body || {}; // Optional reason from admin
+        
         const transaction = await Transaction.findById(id).populate('user', 'name email');
         
         if (!transaction || transaction.type !== 'withdrawal' || transaction.status !== 'pending') {
-            return reply.status(400).send({ success: false, message: 'Invalid or non-pending withdrawal.' });
+            return reply.status(400).send({ success: false, message: 'Invalid or already processed transaction.' });
         }
 
+        // ==========================================
+        // 1. APPROVAL LOGIC
+        // ==========================================
         if (action === 'approve') {
             transaction.status = 'success';
+            
+            // Enterprise Audit Trail
+            transaction.metadata = transaction.metadata || {};
+            transaction.metadata.approvedBy = request.user?.name || 'Administrator';
+            transaction.metadata.approvedAt = new Date();
             await transaction.save();
 
+            // Persistent Database Notification (Creates Unread Message Indicator)
+            if (Notification && typeof Notification.create === 'function') {
+                await Notification.create({ 
+                    user: transaction.user._id, 
+                    title: 'Withdrawal Approved', 
+                    message: `Your withdrawal of ₦${transaction.amount} has been successfully sent to your bank account.`, 
+                    type: 'success', 
+                    priority: 'high' 
+                }).catch(e => console.error("Notification creation failed:", e));
+            }
+
+            // Real-Time Socket Update
             if (request.server && request.server.io) {
                 request.server.io.to(`user:${transaction.user._id}`).emit('notification', { 
-                    title: 'Withdrawal Approved', message: 'Your funds have been sent to your bank account!' 
+                    title: 'Withdrawal Approved', message: 'Your funds have been sent to your bank account!', type: 'success'
                 });
             }
             return reply.send({ success: true, message: 'Withdrawal approved and marked as success.' });
 
+        // ==========================================
+        // 2. REJECTION LOGIC (ENTERPRISE AUTO-REFUND)
+        // ==========================================
         } else if (action === 'reject') {
             const wallet = await Wallet.findOne({ user: transaction.user._id });
             if (!wallet) return reply.status(404).send({ success: false, message: 'User wallet not found for refund.' });
 
-            const refundAmount = parseFloat(transaction.amount.toString());
-            const refundFee = parseFloat(transaction.fee.toString());
-            const totalRefund = refundAmount + refundFee; 
-
+            // --- Enterprise Rule: Automatic Refund of Principal + Fee ---
+            const refundAmount = parseFloat(transaction.amount?.toString() || '0') + parseFloat(transaction.fee?.toString() || '0');
             const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
             const currentTotal = parseFloat(wallet.balance?.toString() || '0');
 
-            wallet.availableBalance = String(currentAvail + totalRefund);
-            wallet.balance = String(currentTotal + totalRefund);
+            wallet.availableBalance = String(currentAvail + refundAmount);
+            wallet.balance = String(currentTotal + refundAmount);
             await wallet.save();
 
+            // Enterprise Audit Trail
             transaction.status = 'failed';
-            transaction.metadata = transaction.metadata || new Map();
-            transaction.metadata.set('failureReason', 'Rejected by Administrator');
             transaction.balanceAfter = wallet.availableBalance; 
+            transaction.metadata = transaction.metadata || {};
+            transaction.metadata.rejectionReason = reason || 'Rejected by Administrator';
+            transaction.metadata.rejectedBy = request.user?.name || 'Administrator';
+            transaction.metadata.rejectedAt = new Date();
             await transaction.save();
 
+            // Persistent Database Notification (Creates Unread Message Indicator)
+            if (Notification && typeof Notification.create === 'function') {
+                await Notification.create({ 
+                    user: transaction.user._id, 
+                    title: 'Withdrawal Rejected', 
+                    message: `Your ₦${transaction.amount} withdrawal was rejected. Reason: ${reason || 'Admin decision'}. Your funds and processing fees have been fully refunded to your wallet.`, 
+                    type: 'error', 
+                    priority: 'high' 
+                }).catch(e => console.error("Notification creation failed:", e));
+            }
+
+            // Real-Time Socket Update
             if (request.server && request.server.io) {
                 request.server.io.to(`user:${transaction.user._id}`).emit('wallet:update', { balance: wallet.availableBalance });
                 request.server.io.to(`user:${transaction.user._id}`).emit('notification', { 
-                    title: 'Withdrawal Rejected', message: 'Your withdrawal was declined and funds refunded.' 
+                    type: 'error', 
+                    title: 'Withdrawal Rejected', 
+                    message: `Your withdrawal was declined. Reason: ${reason || 'Admin decision'}. Funds & fees returned.` 
                 });
             }
 
-            return reply.send({ success: true, message: 'Withdrawal rejected. Funds successfully refunded to user.' });
+            return reply.send({ success: true, message: `Withdrawal rejected. ₦${refundAmount} has been completely refunded to user.` });
         } else {
             return reply.status(400).send({ success: false, message: 'Invalid action.' });
         }
@@ -359,7 +399,6 @@ async function deleteProduct(request, reply) {
 
 async function getPendingAds(request, reply) {
     try {
-        // Fetch ALL ads to populate the admin panel, sorted by status (pending first)
         const ads = await Ad.find({})
             .populate('user', 'name email')
             .sort({ status: -1, createdAt: -1 }); 
@@ -399,7 +438,6 @@ async function rejectAd(request, reply) {
         const ad = await Ad.findById(id);
         if (!ad) return reply.status(404).send({ success: false, message: 'Advert not found' });
         
-        // ONLY refund if it hasn't already been rejected/refunded to prevent infinite money glitch
         if (ad.status !== 'rejected') {
             const totalRefund = (ad.packageCost || 0) + (ad.viewBudgetCost || 0);
             
@@ -412,7 +450,6 @@ async function rejectAd(request, reply) {
                 wallet.balance = String(currentLedger + totalRefund);
                 await wallet.save();
 
-                // Log the refund receipt
                 try {
                     const refundTx = new Transaction({
                         user: ad.user,
@@ -429,7 +466,6 @@ async function rejectAd(request, reply) {
                     await refundTx.save();
                 } catch(e) { console.error("Refund log failed", e); }
 
-                // Notify User UI
                 if (request.server && request.server.io) {
                     request.server.io.to(`user:${ad.user}`).emit('wallet:update', { balance: wallet.availableBalance });
                 }
@@ -460,8 +496,6 @@ async function deleteAd(request, reply) {
         const ad = await Ad.findByIdAndDelete(id);
         
         if (!ad) return reply.status(404).send({ success: false, message: 'Advert already deleted or not found' });
-
-        // Note: No refund is issued here because this is for permanent data purging.
         reply.send({ success: true, message: 'Advert permanently obliterated from database.' });
     } catch (error) {
         reply.status(500).send({ success: false, message: 'Failed to permanently delete advert' });
@@ -469,7 +503,7 @@ async function deleteAd(request, reply) {
 }
 
 // ============================================================================
-// ADMIN UTILITIES (FIXED BALANCE & TRANSACTION ENGINES)
+// ADMIN UTILITIES
 // ============================================================================
 
 async function updateUserBalance(request, reply) {
@@ -517,9 +551,7 @@ async function updateUserBalance(request, reply) {
                 reference: `ADM-${Date.now()}`
             });
             await adminTx.save(); 
-        } catch (txError) {
-            console.warn("Wallet updated perfectly, but transaction log skipped due to strict schema rules:", txError);
-        }
+        } catch (txError) {}
 
         if (request.server && request.server.io) {
             request.server.io.to(`user:${id}`).emit('wallet:update', { balance: wallet.availableBalance });
@@ -609,5 +641,5 @@ module.exports = {
   getPendingWithdrawals, processWithdrawal, 
   getPendingKYC, verifyRealWorldKYC, approveKYC, rejectKYC,
   updateProduct, deleteProduct,
-  getPendingAds, approveAd, rejectAd, deleteAd // EXPORTED ALL AD FUNCTIONS
+  getPendingAds, approveAd, rejectAd, deleteAd
 };
