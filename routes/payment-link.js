@@ -66,7 +66,7 @@ async function getLinks(request, reply) {
 }
 
 /**
- * 2. Create a new payment link (Storefront Product) - LEGACY JSON SUPPORT
+ * 2. Create a new payment link (Storefront Product)
  */
 async function createLink(request, reply) {
   try {
@@ -164,13 +164,14 @@ async function getLink(request, reply) {
 }
 
 /**
- * 4. Process the Link Payment (Stock Engine & Fee Preference Routing)
+ * 4. Process the Link Payment (CENTRAL FEE ENGINE APPLIED)
  */
 async function payLink(request, reply) {
   try {
     const { id } = request.params;
     const { customerName, customerEmail, gatewayReference, paymentMethod } = request.body;
     
+    // This is the GROSS amount physically paid by the buyer at checkout
     const paymentAmount = parseFloat(request.body.amount || request.body.paidAmount || 0);
     const paymentLink = await PaymentLink.findOne({ linkId: id });
     
@@ -178,37 +179,63 @@ async function payLink(request, reply) {
     if (paymentLink.status === 'paused' || paymentLink.status === 'archived') return reply.status(410).send({ success: false, message: 'Product is no longer available' });
     if (paymentLink.status === 'soldout') return reply.status(410).send({ success: false, message: 'Product sold out' });
     
-    // --- ENTERPRISE FEE ENGINE ---
-    const platformFee = paymentAmount * 0.025; 
-    let finalCredit = paymentAmount - platformFee;
+    // =====================================================================
+    // NATER-PAY CENTRAL FEE ENGINE
+    // =====================================================================
+    
+    // 1. Exact Paystack Gateway Fee extraction (To prevent platform bleed)
+    let paystackFee = 0;
+    if (paymentAmount < 2500) {
+        paystackFee = paymentAmount * 0.015;
+    } else {
+        paystackFee = (paymentAmount * 0.015) + 100;
+    }
+    if (paystackFee > 2000) paystackFee = 2000;
 
-    // If seller set fee to 'buyer', ensure they receive full exact product price
+    // 2. Platform Commission Calculation (e.g., 2.5% of Gross)
+    const platformFee = paymentAmount * 0.025; 
+    
+    // 3. Final credit to the merchant's virtual wallet
+    let finalCredit = paymentAmount - paystackFee - platformFee;
+
+    // Failsafe: If seller set fee to 'buyer', they must receive the exact base product price.
+    // The frontend checkout must have successfully grossed-up the paymentAmount.
     if (paymentLink.feePreference === 'buyer' && !paymentLink.isFlexibleAmount) {
         finalCredit = parseFloat(paymentLink.amount);
     }
-    // -----------------------------
+    
+    // Safety check to ensure no negative crediting
+    if (finalCredit < 0) finalCredit = 0;
+    // =====================================================================
 
     const wallet = await Wallet.findOne({ user: paymentLink.user });
     if (!wallet) return reply.status(404).send({ success: false, message: 'Merchant wallet not found' });
 
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
+    const currentLedger = parseFloat(wallet.balance?.toString() || '0');
+    
     wallet.availableBalance = String(currentAvail + finalCredit);
-    wallet.balance = String(parseFloat(wallet.balance?.toString() || '0') + finalCredit);
+    wallet.balance = String(currentLedger + finalCredit);
     await wallet.save();
 
     const transaction = new Transaction({
       user: paymentLink.user,
       type: 'payment_link',
-      description: `Storefront Sale: ${paymentLink.title} (Buyer: ${customerName || 'Anonymous'})`,
+      description: `Marketplace Sale: ${paymentLink.title} (Buyer: ${customerName || 'Anonymous'})`,
       amount: finalCredit,
-      fee: platformFee,
+      fee: paystackFee + platformFee, // Total transparent fees deducted
       balanceBefore: String(currentAvail),
       balanceAfter: wallet.availableBalance.toString(),
       status: 'success',
       provider: paymentMethod || 'paystack',
       providerReference: gatewayReference || 'PAY_' + Date.now(),
       idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `plink_${Date.now()}_${Math.random().toString(36).substr(2,9)}`,
-      paymentLinkDetails: { linkId: paymentLink.linkId, customerEmail: customerEmail || null, customerName: customerName || null }
+      paymentLinkDetails: { linkId: paymentLink.linkId, customerEmail: customerEmail || null, customerName: customerName || null },
+      metadata: {
+          grossPaid: paymentAmount,
+          paystackFee: paystackFee,
+          platformFee: platformFee
+      }
     });
     await transaction.save();
     
@@ -247,7 +274,6 @@ async function payLink(request, reply) {
  */
 async function getAllMarketplaceLinks(request, reply) {
   try {
-    // FIX: Included kycLevel in the populate fields list
     const links = await PaymentLink.find({ status: 'active', isActive: true })
       .populate('user', 'name email whatsapp kycLevel')
       .sort({ createdAt: -1 });
@@ -267,7 +293,6 @@ async function getAllMarketplaceLinks(request, reply) {
         productImageBase64: link.productImageBase64,
         cloudinaryUrl: link.cloudinaryUrl,
         
-        // FIX: Populated values are mapped securely to the payload
         merchantName: link.user ? link.user.name : 'Verified Merchant',
         email: link.user ? link.user.email : 'Not Provided',
         whatsapp: link.user ? link.user.whatsapp : 'Not Provided',
