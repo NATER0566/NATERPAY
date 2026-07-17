@@ -6,15 +6,20 @@ function determineCashFlow(type, description) {
     const desc = String(description || '').toLowerCase();
 
     // Specific actions that mean money physically entered the user's wallet
-    if (['funding', 'invoice', 'payment_link', 'salary', 'bonus', 'refund'].includes(txType)) {
+    if (['funding', 'invoice', 'payment_link', 'salary', 'bonus', 'refund', 'referral_bonus'].includes(txType)) {
         return 'in';
     } 
+    // Catch Admin Credits explicitly based on description
+    else if (desc.includes('admin credit')) {
+        return 'in';
+    }
     // If it's a P2P transfer, we check the description string saved in the ledger
     else if (txType === 'transfer') {
         if (desc.includes('received') || desc.includes('from')) {
             return 'in';
         }
     }
+    
     // Default to money going out (withdrawals, airtime, data, transfers sent)
     return 'out';
 }
@@ -43,6 +48,7 @@ async function getTransactions(request, reply) {
         // Safe string conversions to prevent database crash loops
         amount: tx.amount ? tx.amount.toString() : '0',
         fee: tx.fee ? tx.fee.toString() : '0',
+        totalDeduction: tx.totalDeduction ? tx.totalDeduction.toString() : '0', // FIX: Added totalDeduction extraction
         balanceBefore: tx.balanceBefore ? tx.balanceBefore.toString() : '0',
         balanceAfter: tx.balanceAfter ? tx.balanceAfter.toString() : '0',
         status: tx.status,
@@ -87,6 +93,7 @@ async function getTransaction(request, reply) {
     txObj.flow = determineCashFlow(txObj.type, txObj.description);
     if(txObj.amount) txObj.amount = txObj.amount.toString();
     if(txObj.fee) txObj.fee = txObj.fee.toString();
+    if(txObj.totalDeduction) txObj.totalDeduction = txObj.totalDeduction.toString(); // FIX: Added single transaction totalDeduction
     if(txObj.balanceBefore) txObj.balanceBefore = txObj.balanceBefore.toString();
     if(txObj.balanceAfter) txObj.balanceAfter = txObj.balanceAfter.toString();
 
