@@ -51,7 +51,7 @@
         /* NAV TABS */
         .nav-tabs-custom { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
         .nav-tabs-custom::-webkit-scrollbar { display: none; }
-        .nav-tab-btn { background: transparent; border: 1px solid #444; color: #aaa; padding: 12px 25px; border-radius: 50px; font-weight: 800; white-space: nowrap; transition: 0.3s; font-size: 0.9rem; }
+        .nav-tab-btn { background: transparent; border: 1px solid #444; color: #aaa; padding: 12px 25px; border-radius: 50px; font-weight: 800; white-space: nowrap; transition: 0.3s; font-size: 0.9rem; cursor: pointer; }
         .nav-tab-btn.active, .nav-tab-btn:hover { background: rgba(255,215,0,0.08); border-color: var(--gold); color: var(--gold); }
 
         /* STUDIO CREATOR FORM */
@@ -107,7 +107,7 @@
         .status-archived { background: rgba(100, 100, 100, 0.2); color: #aaa; border: 1px solid #666; }
 
         .link-content { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
-        .link-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.2rem; margin: 0 0 10px 0; color: #fff; line-height: 1.2; text-truncate; }
+        .link-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.2rem; margin: 0 0 10px 0; color: #fff; line-height: 1.2; }
         
         .compact-stats { background: #080808; border-radius: 10px; padding: 15px; margin-bottom: 20px; border: 1px solid #222; }
         .stat-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; font-weight: 700; color: #999; }
@@ -115,7 +115,6 @@
         .stat-line .val { color: #fff; font-weight: 900; }
         .stat-line .val.gold { color: var(--gold); font-size: 1rem; }
 
-        /* BOOTSTRAP DROPDOWN OVERRIDES FOR ACTION MENU */
         .card-actions-wrapper { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #222; padding-top: 15px; margin-top: auto; }
         .btn-copy { background: #222; color: #fff; border: 1px solid #444; padding: 8px 15px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; transition: 0.3s; flex-grow: 1; margin-right: 10px; }
         .btn-copy:hover { background: var(--gold); color: #000; border-color: var(--gold); }
@@ -126,13 +125,21 @@
         .dropdown-item i { width: 16px; text-align: center; color: #888; }
         .dropdown-item:hover i { color: var(--gold); }
         .dropdown-item.text-danger:hover { background: rgba(211,47,47,0.1); color: var(--nater-red); }
-        .dropdown-item.text-danger:hover i { color: var(--nater-red); }
 
         /* QR MODAL */
         #qrModal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; padding: 20px;}
         .qr-content { background: var(--card-bg); padding: 30px; border-radius: 20px; border: 1px solid #444; text-align: center; width: 100%; max-width: 380px; }
         #qrDisplay { background: #fff; padding: 15px; border-radius: 12px; display: inline-block; margin-bottom: 20px; border: 4px solid #000;}
-        #qrDisplay canvas, #qrDisplay img { max-width: 100% !important; height: auto !important; }
+
+        /* GUIDE / KNOWLEDGE BASE STYLES */
+        .guide-section { background: var(--card-bg); border: 1px solid #333; border-radius: 20px; padding: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.8); max-width: 1000px; margin: 0 auto; }
+        .guide-header { font-family: 'Cinzel', serif; color: var(--gold); font-size: 2rem; border-bottom: 2px solid #222; padding-bottom: 15px; margin-bottom: 30px; font-weight: 900;}
+        .guide-block { display: flex; gap: 20px; margin-bottom: 30px; align-items: flex-start; }
+        .guide-icon { background: rgba(255,215,0,0.1); border: 1px solid var(--gold); color: var(--gold); width: 60px; height: 60px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+        .guide-text h4 { color: #fff; font-weight: 800; margin-bottom: 8px; font-size: 1.2rem; }
+        .guide-text p { color: #aaa; font-weight: 500; font-size: 0.95rem; line-height: 1.6; margin-bottom: 0; }
+        .guide-alert { background: rgba(0,255,136,0.05); border-left: 4px solid var(--success); padding: 15px 20px; border-radius: 0 10px 10px 0; margin-top: 15px; font-size: 0.9rem; color: #ccc;}
+        .guide-alert strong { color: var(--success); }
     </style>
 </head>
 <body>
@@ -184,16 +191,15 @@
         <button class="nav-tab-btn active" onclick="switchView('list')"><i class="fas fa-layer-group me-2"></i> My Products</button>
         <button class="nav-tab-btn" onclick="switchView('create')"><i class="fas fa-plus-circle me-2"></i> Create New Link</button>
         <button class="nav-tab-btn" onclick="switchView('archived')"><i class="fas fa-archive me-2"></i> Archive & Drafts</button>
+        <button class="nav-tab-btn text-info" style="border-color: var(--info);" onclick="switchView('guide')"><i class="fas fa-book-open me-2"></i> Seller Guide</button>
     </div>
 
-    <!-- VIEW 1: CREATOR STUDIO (MULTIPART) -->
+    <!-- VIEW 1: CREATOR STUDIO -->
     <div id="view-create" style="display: none;">
         <form id="productForm" class="studio-grid" onsubmit="event.preventDefault();">
             
-            <!-- Media Upload (Multipart) -->
             <div class="panel p-0" style="background: transparent; border: none; box-shadow: none;">
                 <div class="image-upload-wrapper" id="uploadWrapper">
-                    <!-- Native file input for multipart/form-data -->
                     <input type="file" id="productMediaInput" accept="image/jpeg, image/png, image/webp" onchange="previewNativeImage(event)">
                     <div class="upload-placeholder" id="uploadPlaceholder">
                         <i class="fas fa-cloud-upload-alt"></i>
@@ -204,7 +210,6 @@
                 </div>
             </div>
 
-            <!-- Configuration -->
             <div class="panel">
                 <div class="panel-header"><i class="fas fa-box-open"></i> Core Configuration</div>
                 
@@ -260,18 +265,17 @@
                 </div>
 
                 <div class="panel-header"><i class="fas fa-percentage"></i> Transaction Fee Policy</div>
-                <div class="helper-text mb-3 mt-neg-2">Determine who bears the NATER-PAY processing fee.</div>
+                <div class="helper-text mb-3 mt-neg-2">Choose how the NATER-PAY Central Fee Engine handles the gateway charges.</div>
                 <div class="fee-selector mb-4">
                     <div class="fee-card selected" id="fee-buyer" onclick="selectFeeMode('buyer')">
                         <h6>Charge Buyer</h6>
-                        <p>Buyer pays price + fee. You get exactly what you priced.</p>
+                        <p>Buyer pays the fee at checkout. You receive your exact asking price.</p>
                     </div>
                     <div class="fee-card" id="fee-seller" onclick="selectFeeMode('seller')">
                         <h6>Absorb Fee</h6>
-                        <p>Buyer pays exact price. Fee is deducted from your payout.</p>
+                        <p>Buyer pays exact price. The processing fee is deducted from your payout.</p>
                     </div>
                 </div>
-                <!-- Hidden input to store fee preference state -->
                 <input type="hidden" id="feePreference" value="buyer">
 
                 <div class="action-grid mt-5 border-top border-dark pt-4">
@@ -294,6 +298,58 @@
         <div id="archivedLinksContainer" class="links-grid"></div>
     </div>
 
+    <!-- VIEW 4: SELLER KNOWLEDGE BASE -->
+    <div id="view-guide" style="display: none;">
+        <div class="guide-section">
+            <h2 class="guide-header"><i class="fas fa-book-reader me-2"></i> NATER-PAY Seller Guide</h2>
+            
+            <div class="guide-block">
+                <div class="guide-icon"><i class="fas fa-store"></i></div>
+                <div class="guide-text">
+                    <h4>1. Selling on the Global Marketplace</h4>
+                    <p>When you publish a product and set it to <strong>"Active"</strong>, it automatically appears on the NATER-PAY public marketplace. Anyone in the world can search for your product, view your cover image, and purchase it instantly using our secure Paystack checkout.</p>
+                </div>
+            </div>
+
+            <div class="guide-block">
+                <div class="guide-icon"><i class="fas fa-share-alt"></i></div>
+                <div class="guide-text">
+                    <h4>2. Direct Payment Links & QR Codes</h4>
+                    <p>Don't want to wait for marketplace traffic? Go to <strong>"My Products"</strong> and click <strong>Copy Link</strong>. You can paste this link on WhatsApp, Facebook, or Instagram. You can also click the <strong>QR Code icon</strong> to download an image that buyers can scan with their phone camera to pay you in person.</p>
+                </div>
+            </div>
+
+            <div class="guide-block">
+                <div class="guide-icon"><i class="fas fa-balance-scale"></i></div>
+                <div class="guide-text">
+                    <h4>3. Understanding the Central Fee Engine</h4>
+                    <p>To process bank and card payments securely, the system applies a processing fee (Paystack Gateway + Platform Commission). You have two choices when creating a product:</p>
+                    <div class="guide-alert">
+                        <strong>Charge Buyer (Recommended):</strong> If your product is ₦5,000, the buyer will be charged a little extra (e.g., ₦5,150) to cover the processing fees. <strong>You will receive exactly ₦5,000 in your wallet.</strong><br><br>
+                        <strong>Absorb Fee:</strong> The buyer pays exactly ₦5,000. The system deducts the processing fees, and you receive the remainder (e.g., ₦4,850) in your wallet.
+                    </div>
+                </div>
+            </div>
+
+            <div class="guide-block">
+                <div class="guide-icon"><i class="fas fa-money-check-alt"></i></div>
+                <div class="guide-text">
+                    <h4>4. Getting Paid</h4>
+                    <p>As soon as a buyer completes a purchase, the Net Revenue is instantly deposited into your <strong>NATER-PAY Wallet</strong>. You can view your funds on the main Dashboard and request a withdrawal straight to your local bank account at any time.</p>
+                </div>
+            </div>
+
+            <div class="guide-block">
+                <div class="guide-icon"><i class="fas fa-link"></i></div>
+                <div class="guide-text">
+                    <h4>5. Automated Digital Delivery (Redirect URL)</h4>
+                    <p>Selling an E-Book, Software, or private WhatsApp group link? Paste the link in the <strong>Redirect URL</strong> box when creating your product. The moment a buyer's payment is successful, our system will automatically redirect them to your file or group. You make sales while you sleep.</p>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
     <div class="text-center text-secondary small mt-5 mb-5 fw-bold pb-4 border-top border-dark pt-4">
         <i class="fas fa-shield-alt me-1"></i> Enterprise Seller Engine
     </div>
@@ -302,7 +358,6 @@
 <script>
     let globalProducts = [];
     
-    // UI Setup
     function initStars() { const c=document.getElementById('starCanvas'); c.width=window.innerWidth; c.height=window.innerHeight; const ctx=c.getContext('2d'); const s=[]; for(let i=0;i<100;i++)s.push({x:Math.random()*c.width,y:Math.random()*c.height,s:Math.random()*2+1,v:Math.random()*0.5+0.1,o:Math.random()}); function animate(){ ctx.clearRect(0,0,c.width,c.height); s.forEach(st=>{ctx.globalAlpha=st.o;ctx.fillStyle="white";ctx.beginPath();ctx.arc(st.x,st.y,st.s,0,Math.PI*2);ctx.fill();st.y+=st.v;if(st.y>c.height)st.y=-5;}); requestAnimationFrame(animate); } animate(); }
     
     function switchView(view) {
@@ -311,6 +366,7 @@
         document.getElementById('view-list').style.display = 'none';
         document.getElementById('view-create').style.display = 'none';
         document.getElementById('view-archived').style.display = 'none';
+        document.getElementById('view-guide').style.display = 'none';
         document.getElementById('view-' + view).style.display = 'block';
     }
 
@@ -321,7 +377,6 @@
         document.getElementById('feePreference').value = mode;
     }
 
-    // Native Image Preview (No Base64 Payload sent to server, just visual preview)
     let selectedFile = null;
     function previewNativeImage(event) {
         selectedFile = event.target.files[0];
@@ -336,9 +391,6 @@
         document.getElementById('uploadPlaceholder').style.display = 'none';
     }
 
-    // ==========================================
-    // 13. PERFORMANCE: MULTIPART FORM SUBMISSION
-    // ==========================================
     async function submitMultipartForm(targetStatus) {
         const title = document.getElementById('linkTitle').value.trim();
         const category = document.getElementById('linkCategory').value;
@@ -360,22 +412,20 @@
 
         Swal.fire({ title: 'Deploying...', text: 'Securing product to ledger...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
 
-        // Build Native FormData (Replaces Base64)
         const formData = new FormData();
         formData.append('title', title);
         formData.append('category', category);
         formData.append('description', description);
         formData.append('amount', amount);
         formData.append('isFlexibleAmount', isFlexibleAmount);
-        formData.append('status', targetStatus); // 'active' or 'draft'
-        formData.append('feePreference', feePreference); // 'buyer' or 'seller'
+        formData.append('status', targetStatus); 
+        formData.append('feePreference', feePreference); 
         
         if (stockLimit) formData.append('totalStock', parseInt(stockLimit));
         if (redirectUrl) formData.append('redirectUrl', redirectUrl);
-        if (selectedFile) formData.append('mediaFile', selectedFile); // The raw binary file
+        if (selectedFile) formData.append('mediaFile', selectedFile);
 
         try {
-            // Note: When using FormData, DO NOT set Content-Type header. Fetch sets it automatically with the multipart boundary.
             const res = await fetch('/api/payment-links/multipart', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${authToken}` },
@@ -391,7 +441,7 @@
                 selectedFile = null;
                 selectFeeMode('buyer');
                 loadProducts();
-                switchView('list');
+                document.querySelector('.nav-tab-btn[onclick="switchView(\'list\')"]').click();
             } else {
                 Swal.fire({ icon: 'error', title: 'Error', text: data.message, background: '#111', color: '#fff' });
             }
@@ -400,24 +450,14 @@
         }
     }
 
-    // ==========================================
-    // PRODUCT RETRIEVAL & RENDER ENGINE
-    // ==========================================
     async function loadProducts() {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
-        
         try {
             const res = await fetch('/api/payment-links/me', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
-            
-            if (data.success) {
-                globalProducts = data.links || [];
-                renderDashboards();
-            }
-        } catch (e) {
-            console.error("Failed to load products");
-        }
+            if (data.success) { globalProducts = data.links || []; renderDashboards(); }
+        } catch (e) { console.error("Failed to load products"); }
     }
 
     function renderDashboards() {
@@ -427,7 +467,6 @@
         const activeAds = globalProducts.filter(p => ['active', 'paused', 'soldout'].includes(p.status));
         const archiveAds = globalProducts.filter(p => ['draft', 'archived'].includes(p.status));
 
-        // Aggregate Metrics
         let tSales = 0, tRev = 0, tFees = 0, tCust = new Set();
         
         const generateCardHTML = (link) => {
@@ -500,20 +539,13 @@
         if(archiveAds.length > 0) archiveContainer.innerHTML = archiveAds.map(generateCardHTML).join('');
         else archiveContainer.innerHTML = `<div class="text-center py-5 w-100" style="grid-column: 1 / -1;"><h4 class="text-secondary"><i class="fas fa-archive d-block mb-3 fa-2x"></i>Archive is empty</h4></div>`;
 
-        // Update Top Metrics
         document.getElementById('m_netRev').innerText = '₦' + (tRev - tFees).toLocaleString(undefined, {minimumFractionDigits:2});
         document.getElementById('m_totalSales').innerText = tSales;
         document.getElementById('m_activeLinks').innerText = activeAds.length;
         document.getElementById('m_customers').innerText = tCust.size;
         document.getElementById('m_fees').innerText = '-₦' + tFees.toLocaleString();
-        
-        // Update user display name based on token if available (fallback UI logic)
-        setupMerchantProfile();
     }
 
-    // ==========================================
-    // ACTION CONTROLLERS
-    // ==========================================
     async function updateStatus(id, newStatus) {
         const authToken = localStorage.getItem("naterpay_token");
         try {
@@ -567,9 +599,6 @@
         });
     }
 
-    // ==========================================
-    // UTILS
-    // ==========================================
     function copyLink(linkUrl) {
         navigator.clipboard.writeText(linkUrl).then(() => {
             Swal.fire({ icon: 'success', title: 'Link Copied!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' });
