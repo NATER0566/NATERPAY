@@ -1,4 +1,4 @@
-  const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 const PaymentLink = require('../models/PaymentLink');
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
@@ -247,8 +247,9 @@ async function payLink(request, reply) {
  */
 async function getAllMarketplaceLinks(request, reply) {
   try {
+    // FIX: Included kycLevel in the populate fields list
     const links = await PaymentLink.find({ status: 'active', isActive: true })
-      .populate('user', 'name email whatsapp')
+      .populate('user', 'name email whatsapp kycLevel')
       .sort({ createdAt: -1 });
     
     reply.send({
@@ -265,9 +266,12 @@ async function getAllMarketplaceLinks(request, reply) {
         category: link.category || 'General',
         productImageBase64: link.productImageBase64,
         cloudinaryUrl: link.cloudinaryUrl,
+        
+        // FIX: Populated values are mapped securely to the payload
         merchantName: link.user ? link.user.name : 'Verified Merchant',
         email: link.user ? link.user.email : 'Not Provided',
-        whatsapp: link.user ? link.user.whatsapp : 'Not Provided'
+        whatsapp: link.user ? link.user.whatsapp : 'Not Provided',
+        kycLevel: link.user ? link.user.kycLevel : 0
       }))
     });
   } catch (error) {
@@ -394,4 +398,3 @@ module.exports = {
   updateProductStatus,
   deleteProductForever
 };
-
