@@ -129,10 +129,16 @@ async function registerRoutes() {
   
   const paymentLinkRoutes = require('./routes/payment-link');
   fastify.get('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.getLinks);
-  fastify.post('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.createLink);
+  fastify.post('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.createLink); // Legacy
   fastify.get('/api/payment-links/:id', paymentLinkRoutes.getLink);
   fastify.post('/api/payment-links/:id/pay', paymentLinkRoutes.payLink);
   fastify.get('/api/marketplace/all', paymentLinkRoutes.getAllMarketplaceLinks);
+
+  // === NEW ENTERPRISE SELLER ROUTES ===
+  fastify.get('/api/payment-links/me', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.getMyProducts);
+  fastify.post('/api/payment-links/multipart', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.createProductMultipart);
+  fastify.put('/api/payment-links/:id/status', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.updateProductStatus);
+  fastify.delete('/api/payment-links/:id', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.deleteProductForever);
 
   const adsRoutes = require('./routes/ads');
   fastify.get('/api/ads', adsRoutes.getAds);
