@@ -479,4 +479,4 @@ module.exports = {
   setPin,
   resolveBankAccount,
   handlePaystackWebhook
-};
+};  
