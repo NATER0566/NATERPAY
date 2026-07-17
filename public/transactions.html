@@ -156,7 +156,6 @@
         try {
             const queryParams = new URLSearchParams();
             if (currentFilter !== 'all') {
-                // THE FIX: Allow the filter to pull multiple types so Admin adjustments show up
                 if (currentFilter === 'funding') {
                     queryParams.append('type', 'funding');
                 } else if (currentFilter === 'withdrawal') {
@@ -165,7 +164,7 @@
                     queryParams.append('type', currentFilter);
                 }
             }
-            queryParams.append('limit', '100'); // Pull more transactions to ensure Admin ones are found
+            queryParams.append('limit', '100'); 
             
             const res = await fetch(`/api/transactions?${queryParams}`, {
                 headers: { 'Authorization': `Bearer ${authToken}` }
@@ -182,28 +181,26 @@
                         
                         const statusClass = tx.status === 'success' ? 'status-success' : (tx.status === 'pending' ? 'status-pending' : 'status-failed');
                         
-                        const rawAmount = parseDecimal(tx.amount);
                         const rawBalance = parseDecimal(tx.balanceAfter);
                         
-                        // THE FIX: Correctly identify Admin adjustments as credits or debits
-                        let isCredit = false;
-                        const txType = (tx.type || '').toLowerCase();
-                        const desc = (tx.description || '').toLowerCase();
-
-                        if (['funding', 'credit', 'invoice', 'referral_bonus'].includes(txType)) {
-                            isCredit = true;
-                        } else if (txType === 'transfer' && (desc.includes('received') || desc.includes('from'))) {
-                            isCredit = true;
-                        } else if (desc.includes('admin credit')) {
-                            isCredit = true; // Catch Admin Credits explicitly
+                        // Let backend engine dictate if it's money IN or OUT
+                        const isCredit = (tx.flow === 'in' || (tx.description || '').toLowerCase().includes('admin credit'));
+                        
+                        // If it's a debit and has a totalDeduction, show the full charge (Amount + Fee)
+                        let displayAmount = parseDecimal(tx.amount);
+                        const deduction = parseDecimal(tx.totalDeduction);
+                        if (!isCredit && deduction > 0) {
+                            displayAmount = deduction;
                         }
 
-                        const amountHTML = isCredit ? `<span class="amount-credit">+ ₦${rawAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>` : `<span class="amount-debit">- ₦${rawAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>`;
+                        const amountHTML = isCredit 
+                            ? `<span class="amount-credit">+ ₦${displayAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>` 
+                            : `<span class="amount-debit">- ₦${displayAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>`;
 
                         tbody.innerHTML += `
                             <tr>
                                 <td>${dateString}</td>
-                                <td><strong>${tx.type.replace('_', ' ').toUpperCase()}</strong></td>
+                                <td><strong>${(tx.type || 'System').replace('_', ' ').toUpperCase()}</strong></td>
                                 <td>${tx.description || 'System Transaction'}</td>
                                 <td>${amountHTML}</td>
                                 <td class="text-muted">₦${rawBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
