@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -305,48 +304,50 @@
         <button class="btn btn-light btn-sm rounded-pill fw-bold px-4 py-2" id="promoBtn" onclick="location.href='reseller.html'">UPGRADE NOW</button>
     </div>
 
+    <!-- RENAMED ECOSYSTEM BUTTONS TO CATCH TRUE MEANING -->
+
     <h5 class="ecosystem-section-title"><i class="fas fa-plug"></i> Bills & Utilities</h5>
     <div class="row g-2" id="gridUtilities">
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="data.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
-                <i class="fas fa-wifi main-icon"></i><span>Buy Data</span>
+                <i class="fas fa-wifi main-icon"></i><span>Data Top-Up</span>
             </a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="airtime.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-phone main-icon"></i><span>Airtime</span></a>
+            <a href="airtime.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-phone main-icon"></i><span>Airtime Recharge</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="power.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-bolt main-icon"></i><span>Electricity</span></a>
+            <a href="power.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-bolt main-icon"></i><span>Power Utility</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="cable.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-satellite-dish main-icon"></i><span>Cable TV</span></a>
+            <a href="cable.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-satellite-dish main-icon"></i><span>TV Subscriptions</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="exams.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-graduation-cap main-icon"></i><span>Exam Pins</span></a>
+            <a href="exams.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-graduation-cap main-icon"></i><span>Education Pins</span></a>
         </div>
     </div>
 
     <h5 class="ecosystem-section-title"><i class="fas fa-store"></i> Merchant & Business</h5>
     <div class="row g-2" id="gridBusiness">
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('POS Terminal'); return false;">
+            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('Hardware POS'); return false;">
                 <span class="position-absolute badge bg-dark border border-secondary text-warning" style="top:5px; right:5px; font-size:0.5rem; letter-spacing: 1px;">UPGRADING</span>
-                <i class="fas fa-cash-register main-icon text-secondary"></i><span class="text-secondary">POS Terminal</span>
+                <i class="fas fa-cash-register main-icon text-secondary"></i><span class="text-secondary">Hardware POS</span>
             </a>
         </div>
         
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('Bulk SMS'); return false;">
+            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('Bulk Messaging'); return false;">
                 <span class="position-absolute badge bg-dark border border-secondary text-warning" style="top:5px; right:5px; font-size:0.5rem; letter-spacing: 1px;">UPGRADING</span>
-                <i class="fas fa-paper-plane main-icon text-secondary"></i><span class="text-secondary">Bulk SMS</span>
+                <i class="fas fa-paper-plane main-icon text-secondary"></i><span class="text-secondary">Bulk Messaging</span>
             </a>
         </div>
         
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('Insurance'); return false;">
+            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('Asset Insurance'); return false;">
                 <span class="position-absolute badge bg-dark border border-secondary text-warning" style="top:5px; right:5px; font-size:0.5rem; letter-spacing: 1px;">UPGRADING</span>
-                <i class="fas fa-shield-alt main-icon text-secondary"></i><span class="text-secondary">Insurance</span>
+                <i class="fas fa-shield-alt main-icon text-secondary"></i><span class="text-secondary">Asset Insurance</span>
             </a>
         </div>
         
@@ -354,43 +355,44 @@
             <a href="merchant-dashboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-chart-line main-icon"></i><span>Biz Analytics</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="reseller.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-network-wired main-icon"></i><span>Reseller Hub</span></a>
+            <a href="reseller.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-network-wired main-icon"></i><span>Reseller Network</span></a>
         </div>
         
+        <!-- THE REFINED 'SELL PRODUCTS' BUTTON (Creates Payment/Product Links) -->
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="payment-links.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
-                <i class="fas fa-link main-icon"></i><span>Pay Links</span>
+                <i class="fas fa-box-open main-icon"></i><span>Sell Products</span>
             </a>
         </div>
         
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="qr-pay.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-qrcode main-icon"></i><span>QR Collect</span></a>
+            <a href="qr-pay.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-qrcode main-icon"></i><span>QR Payments</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="invoices.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-file-invoice-dollar main-icon"></i><span>Invoicing</span></a>
+            <a href="invoices.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-file-invoice-dollar main-icon"></i><span>Smart Invoicing</span></a>
         </div>
     </div>
 
     <h5 class="ecosystem-section-title"><i class="fas fa-rocket"></i> Rewards & Growth</h5>
     <div class="row g-2" id="gridGrowth">
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="cashback.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-undo-alt main-icon"></i><span>Cashback</span></a>
+            <a href="cashback.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-undo-alt main-icon"></i><span>Cashback Vault</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="tasks.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
-                <i class="fas fa-tasks main-icon"></i><span>Task & Earn</span>
+                <i class="fas fa-tasks main-icon"></i><span>Task Rewards</span>
             </a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="ads.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-bullhorn main-icon"></i><span>Adverts</span></a>
+            <a href="ads.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-bullhorn main-icon"></i><span>Launch Campaigns</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="marketplace.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-store-alt main-icon"></i><span>Marketplace</span></a>
+            <a href="marketplace.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-store-alt main-icon"></i><span>Global Store</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="leaderboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-trophy main-icon"></i><span>Leaderboard</span></a>
+            <a href="leaderboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-trophy main-icon"></i><span>Top Earners</span></a>
         </div>
     </div>
 
@@ -399,23 +401,23 @@
         <div class="col-4 col-md-3 service-wrapper-node">
             <a href="#" class="service-link" onclick="showNextNotification(); return false;" style="position: relative;">
                 <span class="position-absolute badge rounded-pill bg-danger" id="unreadBadge" style="display: none; top: 15px; right: 15px; font-size: 0.65rem; z-index: 5;">0</span>
-                <i class="fas fa-bell text-warning main-icon"></i><span>Alerts</span>
+                <i class="fas fa-bell text-warning main-icon"></i><span>System Alerts</span>
             </a>
         </div>
         <div class="col-4 col-md-3 service-wrapper-node">
             <a href="kyc.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
-                <i class="fas fa-id-badge text-warning main-icon"></i><span>Identity KYC</span>
+                <i class="fas fa-id-badge text-warning main-icon"></i><span>Verify Identity</span>
             </a>
         </div>
         <div class="col-4 col-md-3 service-wrapper-node">
             <a href="security.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-lock main-icon"></i><span>Vault Security</span></a>
         </div>
         <div class="col-4 col-md-3 service-wrapper-node">
-            <a href="profile.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-user-edit main-icon"></i><span>Profile Setup</span></a>
+            <a href="profile.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-user-edit main-icon"></i><span>Account Profile</span></a>
         </div>
         <div class="col-4 col-md-3 service-wrapper-node">
-            <a href="referrals.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-users main-icon"></i><span>Network Tree</span></a>
+            <a href="referrals.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-users main-icon"></i><span>Referral Tree</span></a>
         </div>
     </div>
 
@@ -442,7 +444,6 @@
     let socketConnectionLink = null;
     let unreadNotifications = [];
 
-    // THE FIX: SweetAlert function for the maintenance buttons
     function showComingSoon(serviceName) {
         Swal.fire({
             icon: 'info',
@@ -710,14 +711,15 @@
                         const txType = (tx.type || '').toLowerCase();
                         const desc = (tx.description || '').toLowerCase();
 
-                        // THE FIX: Added 'referral_bonus' and Admin credits so they appear as PLUS / GREEN
-                        if (['funding', 'invoice', 'payment_link', 'salary', 'bonus', 'refund', 'cashback', 'referral_bonus'].includes(txType)) {
+                        // --- THE COMPLETE ENTERPRISE TRANSACTION FLOW FIX ---
+                        if (['funding', 'invoice', 'payment_link', 'salary', 'bonus', 'refund', 'cashback', 'referral_bonus', 'task_reward', 'reward'].includes(txType)) {
                             isCredit = true;
                         } else if (txType === 'transfer' && (desc.includes('received') || desc.includes('from'))) {
                             isCredit = true;
-                        } else if (desc.includes('admin credit')) {
+                        } else if (desc.includes('admin credit') || desc.includes('reward') || desc.includes('task') || desc.includes('earned')) {
                             isCredit = true;
                         }
+                        // ---------------------------------------------------
 
                         const flowColor = isCredit ? 'text-success' : 'text-danger';
                         const flowSymbol = isCredit ? '+' : '-';
