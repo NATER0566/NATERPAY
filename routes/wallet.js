@@ -1,12 +1,13 @@
+const mongoose = require('mongoose');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const config = require('../config');
 const axios = require('axios');
-const crypto = require('crypto'); // Native Node.js module required for Webhook security
+const crypto = require('crypto');
 
-// Optional imports (safely loaded so they don't crash if missing)
+// Optional imports safely loaded
 let AuditLog, Notification, generateIdempotencyKey, generateTransactionReference;
 try { AuditLog = require('../models/AuditLog'); } catch(e) {}
 try { Notification = require('../models/Notification'); } catch(e) {}
@@ -30,14 +31,15 @@ async function getWallet(request, reply) {
 }
 
 /**
- * 2. Initiate Wallet Funding
+ * 2. Initiate Wallet Funding (ZERO-BLEED GROSS-UP ENGINE)
  */
 async function fundWallet(request, reply) {
   try {
     const { amount, provider } = request.body;
     const paymentProvider = String(provider || 'paystack').toLowerCase();
+    const requestedAmount = parseFloat(amount);
     
-    if (!amount || amount < (config.business?.minWithdrawal || 100)) {
+    if (!requestedAmount || requestedAmount < (config.business?.minWithdrawal || 100)) {
       return reply.status(400).send({ success: false, message: `Minimum funding amount is ₦${config.business?.minWithdrawal || 100}` });
     }
     
@@ -45,14 +47,28 @@ async function fundWallet(request, reply) {
     const user = await User.findById(request.user._id);
     if (!wallet || !user) return reply.status(404).send({ success: false, message: 'User or Wallet not found' });
     
+    // --- CENTRAL FEE ENGINE: Calculate Gateway Cost ---
+    let gatewayFee = 0;
+    if (paymentProvider === 'paystack') {
+        // Paystack Fee: 1.5% + ₦100 (if over ₦2500), Capped at ₦2000
+        if (requestedAmount < 2500) {
+            gatewayFee = (requestedAmount * 0.015) / (1 - 0.015);
+        } else {
+            gatewayFee = ((requestedAmount * 0.015) + 100) / (1 - 0.015);
+        }
+        if (gatewayFee > 2000) gatewayFee = 2000; 
+    }
+
+    // Gross amount the user's card will actually be charged
+    const totalToCharge = Math.ceil(requestedAmount + gatewayFee);
+
     const paymentReference = typeof generateTransactionReference === 'function' ? generateTransactionReference() : `FUND_${Date.now()}`;
-    
-    // CRASH-PROOF STRING CONVERSION
     const startBalance = String(wallet.availableBalance || 0);
 
+    // Save requestedAmount as principal, log the gateway fee explicitly
     const transaction = new Transaction({
       user: request.user._id, type: 'funding', description: `Wallet funding via ${paymentProvider}`,
-      amount, fee: 0, balanceBefore: startBalance, balanceAfter: startBalance,
+      amount: requestedAmount, fee: Math.ceil(gatewayFee), balanceBefore: startBalance, balanceAfter: startBalance,
       status: 'pending', provider: paymentProvider, providerReference: paymentReference,
       idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `idem_${Date.now()}`, 
       ipAddress: request.ip, userAgent: request.headers['user-agent']
@@ -60,10 +76,15 @@ async function fundWallet(request, reply) {
     await transaction.save();
     
     let checkoutUrl = '';
-    // Paystack and Monnify logic...
+    
     if (paymentProvider === 'paystack') {
       const paystackResponse = await axios.post('https://api.paystack.co/transaction/initialize',
-        { email: user.email, amount: amount * 100, reference: paymentReference, callback_url: `${request.protocol}://${request.hostname}/dashboard.html` },
+        { 
+            email: user.email, 
+            amount: totalToCharge * 100, // Charge the GROSS amount in Kobo
+            reference: paymentReference, 
+            callback_url: `${request.protocol}://${request.hostname}/dashboard.html` 
+        },
         { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' } }
       );
       checkoutUrl = paystackResponse.data.data.authorization_url;
@@ -74,7 +95,7 @@ async function fundWallet(request, reply) {
       const accessToken = authResponse.data.responseBody.accessToken;
 
       const initResponse = await axios.post(`${baseUrl}/api/v1/merchant/transactions/init-transaction`,
-        { amount: amount, customerName: user.name, customerEmail: user.email, paymentReference: paymentReference, paymentDescription: 'NATERPAY Wallet Funding', currencyCode: 'NGN', contractCode: process.env.MONNIFY_CONTRACT_CODE, redirectUrl: `${request.protocol}://${request.hostname}/dashboard.html` },
+        { amount: totalToCharge, customerName: user.name, customerEmail: user.email, paymentReference: paymentReference, paymentDescription: 'NATERPAY Wallet Funding', currencyCode: 'NGN', contractCode: process.env.MONNIFY_CONTRACT_CODE, redirectUrl: `${request.protocol}://${request.hostname}/dashboard.html` },
         { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
       );
       checkoutUrl = initResponse.data.responseBody.checkoutUrl;
@@ -84,13 +105,12 @@ async function fundWallet(request, reply) {
     
     reply.send({ success: true, message: 'Payment initialized', paymentReference, checkoutUrl, provider: paymentProvider });
   } catch (error) {
-    console.error('Funding Error:', error.message);
     reply.status(500).send({ success: false, message: 'Failed to initiate payment gateway.' });
   }
 }
 
 /**
- * 3. Verify Wallet Funding (STRICT & REAL-TIME ENGINE)
+ * 3. Verify Wallet Funding (STRICT VERIFICATION)
  */
 async function verifyFunding(request, reply) {
   try {
@@ -100,20 +120,16 @@ async function verifyFunding(request, reply) {
     const transaction = await Transaction.findOne({ providerReference: reference });
     if (!transaction) return reply.status(404).send({ success: false, message: 'Transaction not found' });
     
-    // If already processed via Webhook or previous check, stop here.
     if (transaction.status === 'success') return reply.send({ success: true, message: 'Wallet already credited' });
     if (transaction.status === 'failed') return reply.status(400).send({ success: false, message: 'Transaction was cancelled or declined.' });
 
     let gatewayStatus = 'pending';
-    let actualAmountPaid = 0;
 
-    // 1. Query the Gateways
     if (transaction.provider === 'paystack') {
       const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, { 
           headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } 
       });
-      gatewayStatus = response.data.data.status; // Paystack returns 'success', 'abandoned', or 'failed'
-      actualAmountPaid = response.data.data.amount / 100; // Convert Kobo to Naira
+      gatewayStatus = response.data.data.status; 
     } 
     else if (transaction.provider === 'monnify') {
       const baseUrl = process.env.MONNIFY_URL || 'https://sandbox.monnify.com';
@@ -128,48 +144,34 @@ async function verifyFunding(request, reply) {
       const monnifyStatus = response.data.responseBody.paymentStatus;
       if (monnifyStatus === 'PAID') gatewayStatus = 'success';
       else if (monnifyStatus === 'FAILED' || monnifyStatus === 'CANCELLED' || monnifyStatus === 'EXPIRED') gatewayStatus = 'failed';
-      
-      actualAmountPaid = response.data.responseBody.amountPaid;
     }
 
-    // ==========================================
-    // STRICT CONDITION: USER CANCELLED OR FAILED
-    // ==========================================
     if (gatewayStatus === 'abandoned' || gatewayStatus === 'failed') {
         transaction.status = 'failed';
         transaction.metadata = transaction.metadata || {};
         transaction.metadata.reason = 'User abandoned checkout or bank declined.';
         await transaction.save();
-        
         return reply.status(400).send({ success: false, message: 'Payment was cancelled or declined. Marked as failed in ledger.' });
     }
 
-    // ==========================================
-    // STRICT CONDITION: STILL PENDING
-    // ==========================================
     if (gatewayStatus !== 'success') {
         return reply.status(400).send({ success: false, message: 'Payment is still pending at the gateway. Awaiting settlement.' });
     }
 
-    // ==========================================
-    // STRICT CONDITION: SUCCESS (AUTOMATIC SETTLEMENT)
-    // ==========================================
     const wallet = await Wallet.findOne({ user: transaction.user });
     
-    // Protect against partial payments by using the exact amount the gateway reports
-    const creditAmount = actualAmountPaid > 0 ? actualAmountPaid : transaction.amount;
+    // --- CENTRAL FEE ENGINE: Credit exact requested principal ONLY ---
+    // The gateway swallowed the gross-up fee. We credit exactly what the user asked for.
+    const creditAmount = transaction.amount; 
 
-    // Crash-Proof Math
     wallet.availableBalance = String(parseFloat(wallet.availableBalance || 0) + creditAmount);
     wallet.balance = String(parseFloat(wallet.balance || 0) + creditAmount);
     await wallet.save();
     
     transaction.status = 'success';
-    transaction.amount = creditAmount; 
     transaction.balanceAfter = String(wallet.availableBalance || 0);
     await transaction.save();
     
-    // Real-Time Notifications
     if (Notification && typeof Notification.create === 'function') {
         await Notification.create({ user: transaction.user, title: 'Wallet Funded', message: `Your wallet was credited with ₦${creditAmount.toLocaleString()}`, type: 'transaction', priority: 'high' }).catch(() => {});
     }
@@ -186,7 +188,7 @@ async function verifyFunding(request, reply) {
 }
 
 /**
- * 4. Withdraw Engine (CRASH-PROOF & SECURE)
+ * 4. Withdraw Engine (DYNAMIC TIERED FEE & MANUAL CUSTODIAN)
  */
 async function withdraw(request, reply) {
   try {
@@ -221,16 +223,23 @@ async function withdraw(request, reply) {
 
     if (!isPinValid) return reply.status(401).send({ success: false, message: 'SECURITY ALERT: Incorrect Withdrawal PIN.' });
 
-    const transferFee = 50; 
-    const totalDeduction = withdrawAmount + transferFee;
+    // --- CENTRAL FEE ENGINE: Tiered Withdrawal Cost ---
+    let transferFee = 10; 
+    if (withdrawAmount > 5000 && withdrawAmount <= 50000) {
+        transferFee = 25;
+    } else if (withdrawAmount > 50000) {
+        transferFee = 50;
+    }
     
-    // CRASH-PROOF MATH
+    const totalDeduction = withdrawAmount + transferFee;
     const currentAvail = parseFloat(wallet.availableBalance || 0);
     
     if (currentAvail < totalDeduction) {
-      return reply.status(400).send({ success: false, message: `Insufficient Funds. You need ₦${totalDeduction.toLocaleString()} including fees.` });
+      return reply.status(400).send({ success: false, message: `Insufficient Funds. You need ₦${totalDeduction.toLocaleString()} including the ₦${transferFee} processing fee.` });
     }
     
+    // Deduct user wallet. 
+    // NOTE: The fee is NOT sent to a virtual admin wallet because the admin pays out manually and keeps the physical cash.
     wallet.availableBalance = String(currentAvail - totalDeduction);
     wallet.balance = String(parseFloat(wallet.balance || 0) - totalDeduction);
     await wallet.save();
@@ -238,7 +247,6 @@ async function withdraw(request, reply) {
     const safeBankName = String(bankAccount?.bankName || 'Bank').toUpperCase();
     const safeAccountNo = String(bankAccount?.accountNumber || 'Unknown');
 
-    // Save bank details explicitly for the Admin Panel
     const transaction = new Transaction({
       user: request.user._id, 
       type: 'withdrawal', 
@@ -247,13 +255,12 @@ async function withdraw(request, reply) {
       fee: transferFee, 
       balanceBefore: String(currentAvail), 
       balanceAfter: String(wallet.availableBalance || 0),
-      status: 'pending', 
+      status: 'pending', // Stays pending until Admin manually transfers physical cash
       provider: 'internal', 
       idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `wth_${Date.now()}`, 
       ipAddress: request.ip, 
       userAgent: request.headers['user-agent'],
       
-      // Flat bank details explicitly added for Admin Panel visibility
       bankName: bankAccount?.bankName || safeBankName,
       accountNumber: bankAccount?.accountNumber || safeAccountNo,
       accountName: bankAccount?.accountName || 'Unknown',
@@ -266,15 +273,14 @@ async function withdraw(request, reply) {
         request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: String(wallet.availableBalance || 0) });
     }
     
-    reply.send({ success: true, message: 'Withdrawal processed successfully', transaction });
+    reply.send({ success: true, message: 'Withdrawal processed successfully. Awaiting manual payout.', transaction });
   } catch (error) {
-    console.error('Withdrawal Server Error:', error); 
     reply.status(500).send({ success: false, message: error.message || 'System error processing transfer.' });
   }
 }
 
 /**
- * 5. Peer-to-Peer Transfer (CRASH-PROOF & SECURE)
+ * 5. Peer-to-Peer Transfer (STRICTLY FREE)
  */
 async function transfer(request, reply) {
   try {
@@ -312,12 +318,10 @@ async function transfer(request, reply) {
     const recipientWallet = await Wallet.findOne({ user: recipientUser._id });
     if (!recipientWallet) return reply.status(404).send({ success: false, message: 'Recipient wallet not configured' });
 
-    // SAFE MATH DEDUCTION
     senderWallet.availableBalance = String(currentAvail - transferAmount);
     senderWallet.balance = String(parseFloat(senderWallet.balance || 0) - transferAmount);
     await senderWallet.save();
     
-    // SAFE MATH CREDIT
     recipientWallet.availableBalance = String(parseFloat(recipientWallet.availableBalance || 0) + transferAmount);
     recipientWallet.balance = String(parseFloat(recipientWallet.balance || 0) + transferAmount);
     await recipientWallet.save();
@@ -345,15 +349,9 @@ async function transfer(request, reply) {
       request.server.io.to(`user:${recipientUser._id}`).emit('notification', { title: 'Funds Received', message: `₦${transferAmount.toLocaleString()} received from ${sender.name}` });
     }
     
-    reply.send({ 
-        success: true, 
-        message: 'Transfer successful', 
-        transaction: senderTransaction,
-        recipientName: recipientUser.name 
-    });
+    reply.send({ success: true, message: 'Transfer successful', transaction: senderTransaction, recipientName: recipientUser.name });
   } catch (error) {
-    console.error('Transfer Server Error:', error);
-    reply.status(500).send({ success: false, message: 'Failed to process transfer. Check console.' });
+    reply.status(500).send({ success: false, message: 'Failed to process transfer.' });
   }
 }
 
@@ -380,7 +378,6 @@ async function setPin(request, reply) {
     
     reply.send({ success: true, message: 'PIN set successfully' });
   } catch (error) {
-    console.error('Set PIN Error:', error);
     reply.status(500).send({ success: false, message: 'Failed to set PIN' });
   }
 }
@@ -401,7 +398,6 @@ async function resolveBankAccount(request, reply) {
 
         reply.send({ success: true, accountName: response.data.data.account_name });
     } catch (error) {
-        console.error("Bank Resolve Error:", error.response?.data || error.message);
         reply.status(400).send({ success: false, message: 'Invalid Account Details.' });
     }
 }
@@ -412,11 +408,10 @@ async function resolveBankAccount(request, reply) {
 async function handlePaystackWebhook(request, reply) {
     try {
         const secret = process.env.PAYSTACK_SECRET_KEY;
-        // Verify the request actually came from Paystack
         const hash = crypto.createHmac('sha512', secret).update(JSON.stringify(request.body)).digest('hex');
 
         if (hash !== request.headers['x-paystack-signature']) {
-            return reply.status(401).send({ success: false, message: 'Invalid Signature - Unauthorized Access' });
+            return reply.status(401).send({ success: false, message: 'Invalid Signature' });
         }
 
         const event = request.body;
@@ -425,53 +420,39 @@ async function handlePaystackWebhook(request, reply) {
             const data = event.data;
             const reference = data.reference;
             
-            // Check if transaction was already marked success
             const existingTx = await Transaction.findOne({ providerReference: reference, status: 'success' });
-            if (existingTx) {
-                return reply.code(200).send('Transaction already processed');
-            }
+            if (existingTx) return reply.code(200).send('Transaction already processed');
 
             const pendingTx = await Transaction.findOne({ providerReference: reference, status: 'pending' });
-            if (!pendingTx) {
-                return reply.code(200).send('Pending transaction record not found');
-            }
-
-            // Paystack sends data in Kobo. Divide by 100 to get Naira.
-            const actualAmountPaid = data.amount / 100;
+            if (!pendingTx) return reply.code(200).send('Pending transaction record not found');
 
             const wallet = await Wallet.findOne({ user: pendingTx.user });
             if (!wallet) return reply.code(200).send('Wallet not found');
 
+            // --- CENTRAL FEE ENGINE: Credit EXACT principal ONLY ---
+            const creditAmount = pendingTx.amount;
             const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
             
-            // CREDIT THE WALLET (Server-side authority)
-            wallet.availableBalance = String(currentAvail + actualAmountPaid);
-            wallet.balance = String(parseFloat(wallet.balance?.toString() || '0') + actualAmountPaid);
+            wallet.availableBalance = String(currentAvail + creditAmount);
+            wallet.balance = String(parseFloat(wallet.balance?.toString() || '0') + creditAmount);
             await wallet.save();
 
-            // UPDATE TRANSACTION
             pendingTx.status = 'success';
-            pendingTx.amount = actualAmountPaid;
             pendingTx.balanceBefore = String(currentAvail);
             pendingTx.balanceAfter = wallet.availableBalance;
             await pendingTx.save();
 
-            // PUSH TO FRONTEND
             if (request.server && request.server.io) {
                 request.server.io.to(`user:${pendingTx.user}`).emit('wallet:update', { balance: wallet.availableBalance });
                 request.server.io.to(`user:${pendingTx.user}`).emit('notification', { 
-                    type: 'success', 
-                    title: 'Deposit Successful', 
-                    message: `Your wallet has been funded with ₦${actualAmountPaid.toLocaleString()}` 
+                    type: 'success', title: 'Deposit Successful', message: `Your wallet has been funded with ₦${creditAmount.toLocaleString()}` 
                 });
             }
         }
 
-        // Must respond 200 to Paystack to acknowledge receipt
         reply.code(200).send('Webhook Processed');
 
     } catch (error) {
-        console.error('Webhook Error:', error);
         reply.code(500).send('Internal Server Error');
     }
 }
