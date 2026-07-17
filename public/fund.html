@@ -11,8 +11,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
-        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
-        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; }
+        :root { --gold: #FFD700; --gold-dim: #d4af37; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); --red: #d32f2f; }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
@@ -24,36 +24,45 @@
 
         .brand-text { 
             font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
-            text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start;
+            text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;
         }
-        .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
-        .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
+        .site-part-1 { color: var(--gold); font-size: 1.4rem; text-shadow: 0 0 10px var(--gold-glow); } 
+        .site-part-2 { color: var(--red); font-size: 1rem; letter-spacing: 3px; }
 
         .container { max-width: 800px; margin: 50px auto; padding: 0 20px; }
         
         .fund-card {
             background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
             padding: 40px; margin-bottom: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            position: relative; overflow: hidden;
         }
+        .fund-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
         
         .amount-input {
             background: rgba(0,0,0,0.6); border: 2px solid rgba(212,175,55,0.3); border-radius: 15px;
-            padding: 20px; font-size: 2rem; color: white; font-weight: 700; text-align: center;
+            padding: 20px; font-size: clamp(2rem, 5vw, 3rem); color: white; font-weight: 700; text-align: center;
             width: 100%; outline: none; transition: 0.3s;
         }
         .amount-input:focus { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,175,55,0.3); }
         
         .provider-card {
-            background: rgba(212,175,55,0.1); border: 1px solid var(--gold); border-radius: 15px;
-            padding: 20px; text-align: center; margin: 0 auto; max-width: 300px;
+            background: rgba(212,175,55,0.05); border: 1px dashed rgba(212,175,55,0.4); border-radius: 15px;
+            padding: 20px; text-align: center; margin: 0 auto; max-width: 300px; transition: 0.3s;
         }
+        .provider-card:hover { border-color: var(--gold); background: rgba(212,175,55,0.1); }
         
         .quick-amount-btn {
             background: rgba(0,0,0,0.6); border: 1px solid #444; color: white;
-            padding: 12px 20px; border-radius: 10px; font-weight: 600; transition: 0.3s;
+            padding: 12px 20px; border-radius: 10px; font-weight: 600; transition: 0.3s; flex: 1; min-width: 100px;
         }
-        .quick-amount-btn:hover { border-color: var(--gold); background: rgba(212,175,55,0.1); }
+        .quick-amount-btn:hover { border-color: var(--gold); background: rgba(212,175,55,0.1); color: var(--gold); }
         
+        /* LIVE CALCULATOR */
+        .live-calc-box { background: #0a0a0a; border: 1px solid #222; border-radius: 15px; padding: 20px; margin: 25px 0; }
+        .calc-line { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: 600; color: #aaa; font-size: 0.9rem; }
+        .calc-line.total { border-top: 1px dashed #444; padding-top: 15px; margin-top: 10px; font-size: 1.2rem; color: #fff; }
+        .calc-line.total span:last-child { color: var(--gold); font-family: 'Cinzel', serif; font-weight: 900; }
+
         .btn-fund {
             background: var(--gold); color: black; font-weight: 900; border-radius: 15px;
             padding: 18px; width: 100%; border: none; font-size: 1.1rem; letter-spacing: 2px;
@@ -61,6 +70,40 @@
         }
         .btn-fund:hover:not(:disabled) { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
         .btn-fund:disabled { background: #555; color: #888; cursor: not-allowed; }
+
+        /* EXTRAVAGANT REFRACTIVE GLOWING SPINNER */
+        .swal-reflective-spinner {
+            position: relative; width: 110px; height: 110px; margin: 20px auto;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, rgba(255,215,0,0.1) 0%, rgba(255,255,255,0.9) 15%, var(--gold) 30%, rgba(255,215,0,0.2) 50%, var(--gold-dim) 70%, rgba(255,255,255,0.8) 85%, rgba(255,215,0,0.1) 100%);
+            animation: spinSwalReflect 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite, flashGlow 2s alternate infinite;
+            box-shadow: 0 0 40px rgba(255,215,0,0.5);
+        }
+        .swal-reflective-spinner::before {
+            content: ''; position: absolute; top: 8px; left: 8px; right: 8px; bottom: 8px;
+            background: radial-gradient(circle at 30% 30%, #1a1a1a 0%, #050505 100%);
+            border-radius: 50%; border: 1px solid rgba(255,215,0,0.3); z-index: 1;
+        }
+        .swal-inner-icon {
+            position: absolute; z-index: 2; top: 50%; left: 50%; font-size: 2.5rem; color: var(--gold);
+            text-shadow: 0 0 20px var(--gold), 0 0 40px rgba(255,255,255,0.6);
+            animation: counterSpinSwal 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        @keyframes spinSwalReflect { 100% { transform: rotate(360deg); } }
+        @keyframes counterSpinSwal { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
+        @keyframes flashGlow { 0% { box-shadow: 0 0 20px rgba(255,215,0,0.3); filter: brightness(1); } 100% { box-shadow: 0 0 60px rgba(255,215,0,0.8); filter: brightness(1.3); } }
+
+        /* BURST STARS EFFECTS */
+        .burst-star {
+            position: fixed; top: 50%; left: 50%; z-index: 9999; pointer-events: none;
+            color: var(--gold); font-size: 1.5rem; text-shadow: 0 0 10px rgba(255,215,0,0.8);
+            animation: starExplode 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        .burst-star.failed { color: var(--red); text-shadow: 0 0 10px rgba(211,47,47,0.8); }
+        @keyframes starExplode {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 1; }
+            100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.5) rotate(var(--rot)); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -80,9 +123,9 @@
     
     <div class="fund-card" id="mainFundContainer">
         <label class="small text-muted mb-2 d-block fw-bold text-center">ENTER AMOUNT (₦)</label>
-        <input type="number" id="fundAmount" class="amount-input mb-4" placeholder="0.00" min="100">
+        <input type="number" id="fundAmount" class="amount-input mb-4" placeholder="0.00" min="100" oninput="updateCalculator()">
         
-        <div class="d-flex gap-2 mb-4 flex-wrap justify-content-center">
+        <div class="d-flex gap-2 mb-2 flex-wrap justify-content-center">
             <button class="quick-amount-btn" onclick="setAmount(100)">₦100</button>
             <button class="quick-amount-btn" onclick="setAmount(500)">₦500</button>
             <button class="quick-amount-btn" onclick="setAmount(1000)">₦1,000</button>
@@ -90,10 +133,14 @@
             <button class="quick-amount-btn" onclick="setAmount(5000)">₦5,000</button>
             <button class="quick-amount-btn" onclick="setAmount(10000)">₦10,000</button>
         </div>
+
+        <div class="live-calc-box">
+            <div class="calc-line"><span>Net Funding Amount:</span> <span id="calcPrincipal">₦0.00</span></div>
+            <div class="calc-line"><span>Gateway Processing Fee: <i class="fas fa-info-circle text-muted" title="Applied directly by Paystack (1.5% + ₦100)"></i></span> <span id="calcFee" style="color: var(--red);">₦0.00</span></div>
+            <div class="calc-line total"><span>Total Card Charge:</span> <span id="calcTotal">₦0.00</span></div>
+        </div>
         
-        <h5 class="mb-3 text-center mt-4" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900;">PAYMENT METHOD</h5>
-        
-        <div class="mb-4">
+        <div class="mb-4 mt-4">
             <div class="provider-card">
                 <i class="fas fa-credit-card fa-2x mb-2" style="color: var(--gold);"></i>
                 <div class="fw-bold">Paystack Secure Gateway</div>
@@ -106,15 +153,65 @@
         </button>
     </div>
     
-    <div class="text-center text-muted small fw-bold">
+    <div class="text-center text-muted small fw-bold mb-5">
         <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> End-to-End Encryption Powered by Paystack</p>
         <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
 
 <script>
-    const selectedProvider = 'paystack'; // Locked strictly to Paystack
+    const selectedProvider = 'paystack';
     
+    // Exact match of backend Zero-Bleed Gross-Up Math
+    function calculateGatewayFee(amount) {
+        if (!amount || amount < 100) return 0;
+        let fee = 0;
+        if (amount < 2500) {
+            fee = (amount * 0.015) / (1 - 0.015);
+        } else {
+            fee = ((amount * 0.015) + 100) / (1 - 0.015);
+        }
+        if (fee > 2000) fee = 2000;
+        return Math.ceil(fee); // Paystack operates in integers usually, backend ceils it
+    }
+
+    function updateCalculator() {
+        const amount = parseFloat(document.getElementById('fundAmount').value) || 0;
+        const fee = calculateGatewayFee(amount);
+        const totalCharge = amount + fee;
+
+        document.getElementById('calcPrincipal').innerText = '₦' + amount.toLocaleString(undefined, {minimumFractionDigits:2});
+        document.getElementById('calcFee').innerText = '₦' + fee.toLocaleString(undefined, {minimumFractionDigits:2});
+        document.getElementById('calcTotal').innerText = '₦' + totalCharge.toLocaleString(undefined, {minimumFractionDigits:2});
+    }
+    
+    function triggerStarBurst(isSuccess = true) {
+        const starCount = 40;
+        const body = document.body;
+        
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.innerHTML = '★';
+            star.className = isSuccess ? 'burst-star' : 'burst-star failed';
+            
+            // Randomize trajectory
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * 300 + 100;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+            const rot = Math.random() * 720 - 360;
+            
+            star.style.setProperty('--tx', `${tx}px`);
+            star.style.setProperty('--ty', `${ty}px`);
+            star.style.setProperty('--rot', `${rot}deg`);
+            
+            body.appendChild(star);
+            
+            // Cleanup
+            setTimeout(() => { star.remove(); }, 1000);
+        }
+    }
+
     // Ghost Transaction Prevention Engine
     window.addEventListener('pageshow', function(event) {
         if (localStorage.getItem('pending_funding_ref')) {
@@ -139,15 +236,12 @@
 
     function initStars() {
         const canvas = document.getElementById('starCanvas');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
         const ctx = canvas.getContext('2d');
         const stars = [];
-        
         for(let i = 0; i < 100; i++) {
             stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
         }
-        
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             stars.forEach(s => {
@@ -162,6 +256,7 @@
     
     function setAmount(amount) {
         document.getElementById('fundAmount').value = amount;
+        updateCalculator();
     }
     
     async function processFunding() {
@@ -177,7 +272,20 @@
         
         const btn = document.getElementById('payBtn');
         btn.disabled = true; 
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> SECURING CONNECTION...';
+        
+        Swal.fire({ 
+            title: 'Securing Gateway...', 
+            html: `
+                <div class="swal-reflective-spinner">
+                    <i class="fas fa-shield-alt swal-inner-icon"></i>
+                </div>
+                <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Encrypting payload to Paystack servers...</span>
+            `, 
+            showConfirmButton: false,
+            allowOutsideClick: false, 
+            background: '#0a0a0a', 
+            color: '#FFD700' 
+        });
         
         try {
             const res = await fetch('/api/wallet/fund', {
@@ -191,20 +299,24 @@
             if (data.success && data.checkoutUrl) {
                 localStorage.setItem('pending_funding_ref', data.paymentReference);
                 
+                // Explode Success Stars
+                triggerStarBurst(true);
+                
                 Swal.fire({
-                    icon: 'info', title: 'Redirecting...', text: 'Connecting to secure payment gateway.', showConfirmButton: false, timer: 1500, background: '#111', color: '#fff'
+                    icon: 'success', title: 'Route Secured!', text: 'Diverting to banking gateway.', showConfirmButton: false, timer: 1500, background: '#111', color: '#fff'
                 }).then(() => {
                     window.location.href = data.checkoutUrl;
                 });
             } else {
+                // Explode Red Failure Stars
+                triggerStarBurst(false);
                 Swal.fire({ icon: 'error', title: 'Initialization Failed', text: data.message || 'Could not reach the payment gateway.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-lock me-2"></i> PROCEED TO SECURE PAYMENT';
             }
         } catch (error) {
+            triggerStarBurst(false);
             Swal.fire({ icon: 'error', title: 'Network Error', text: 'Connection timed out. Please check your internet.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-lock me-2"></i> PROCEED TO SECURE PAYMENT';
         }
     }
     
