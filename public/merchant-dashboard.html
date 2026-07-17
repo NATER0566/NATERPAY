@@ -11,6 +11,7 @@
     
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 
     <style>
         :root { --red: #d32f2f; --gold: #FFD700; --bg: #030303; --card-bg: rgba(15, 15, 15, 0.9); --glass: rgba(255, 255, 255, 0.03); }
@@ -152,10 +153,12 @@
 
 <script>
     let revenueChartInstance = null;
+    let socketConnectionLink = null;
 
     // Background Animation
     function initStars() {
         const c = document.getElementById('starCanvas');
+        if(!c) return;
         c.width = window.innerWidth; c.height = window.innerHeight;
         const ctx = c.getContext('2d');
         const stars = [];
@@ -184,10 +187,10 @@
         revenueChartInstance = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: [], // Will be populated with real dates
+                labels: [], 
                 datasets: [{
                     label: 'Revenue (₦)',
-                    data: [], // Will be populated with real data
+                    data: [], 
                     borderColor: '#FFD700',
                     backgroundColor: gradient,
                     borderWidth: 3,
@@ -217,11 +220,10 @@
         });
     }
 
-    // Process real transactions into the 7-day chart
+    // Process real transactions into the 7-day chart (Case-Insensitive Fix)
     function populateChartWithRealData(transactions) {
         if(!revenueChartInstance || !transactions || transactions.length === 0) return;
 
-        // Create an array for the last 7 days
         const last7Days = [];
         const dailyRevenue = {};
 
@@ -233,9 +235,9 @@
             dailyRevenue[dateStr] = 0;
         }
 
-        // Aggregate actual revenue (only successful merchant transactions)
         transactions.forEach(tx => {
-            if (tx.status === 'success' && ['airtime', 'data', 'electricity', 'cable', 'pos', 'invoice', 'payment_link'].includes(tx.type)) {
+            const txType = (tx.type || '').toLowerCase();
+            if (tx.status === 'success' && ['airtime', 'data', 'electricity', 'cable', 'pos', 'invoice', 'payment_link', 'vtu'].includes(txType)) {
                 const txDateStr = new Date(tx.date || tx.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 if (dailyRevenue[txDateStr] !== undefined) {
                     dailyRevenue[txDateStr] += Number(tx.amount?.$numberDecimal || tx.amount || 0);
@@ -250,7 +252,7 @@
         revenueChartInstance.update();
     }
 
-    // Fetch Real Data from API
+    // Fetch Real Data from API & Integrate Client-Side Fallback Fall-through Calculations
     async function syncAnalyticsData() {
         const authToken = localStorage.getItem("naterpay_token");
         if(!authToken) { window.location.href = '/index.html'; return; }
@@ -269,18 +271,17 @@
                 document.getElementById('statVolume').innerText = '₦' + Number(safeSpent).toLocaleString(undefined, {minimumFractionDigits:2});
                 document.getElementById('statCount').innerText = data.totalLogs || 0;
                 
-                // Read REAL commission from database, default to 0.00
-                const safeCommission = data.totalCommission?.$numberDecimal || data.totalCommission || data.totalCashback || 0;
-                document.getElementById('statCommissions').innerText = '₦' + Number(safeCommission).toLocaleString(undefined, {minimumFractionDigits:2});
-
-                // Populate Table (No fake rows, strict data rendering)
+                // Parse out real commissions / task incentives cleanly
+                let dynamicCommissions = Number(data.totalCommission?.$numberDecimal || data.totalCommission || data.totalCashback || 0);
+                
+                // Populate Table (Strict Case-Insensitive Filter Mapping)
                 const tbody = document.getElementById('merchantTxBody');
                 tbody.innerHTML = '';
                 
-                // Show real merchant-related transactions
-                const merchantTx = (data.recentTransactions || []).filter(tx => 
-                    ['airtime', 'data', 'electricity', 'cable', 'pos', 'bulk_sms', 'invoice', 'payment_link'].includes(tx.type)
-                );
+                const merchantTx = (data.recentTransactions || []).filter(tx => {
+                    const type = (tx.type || '').toLowerCase();
+                    return ['airtime', 'data', 'electricity', 'cable', 'pos', 'bulk_sms', 'invoice', 'payment_link', 'vtu', 'task_reward', 'cashback', 'reward'].includes(type);
+                });
 
                 if(merchantTx.length > 0) {
                     merchantTx.forEach(tx => {
@@ -292,23 +293,28 @@
                         else if (tx.status === 'pending') statusClass = 'bg-warning text-dark';
                         
                         const amount = Number(tx.amount?.$numberDecimal || tx.amount || 0);
-                        
+                        const txType = (tx.type || '').toLowerCase();
+
+                        // Dynamic client-side mathematical backup sum if totalCommission missing from database parameters
+                        if (tx.status === 'success' && ['cashback', 'task_reward', 'reward'].includes(txType)) {
+                            dynamicCommissions += amount;
+                        }
+
                         tbody.innerHTML += `
                             <tr>
                                 <td>${dateString}</td>
-                                <td><strong class="d-block text-white">${tx.type.toUpperCase()}</strong><span class="small opacity-75">${tx.description}</span></td>
+                                <td><strong class="d-block text-white">${tx.type.toUpperCase()}</strong><span class="small opacity-75">${tx.description || 'System Log'}</span></td>
                                 <td class="fw-bold">₦${amount.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                                 <td class="text-end"><span class="status-pill ${statusClass}">${tx.status}</span></td>
                             </tr>
                         `;
                     });
 
-                    // Update chart with exact data
+                    document.getElementById('statCommissions').innerText = '₦' + dynamicCommissions.toLocaleString(undefined, {minimumFractionDigits:2});
                     populateChartWithRealData(merchantTx);
                 } else {
+                    document.getElementById('statCommissions').innerText = '₦' + dynamicCommissions.toLocaleString(undefined, {minimumFractionDigits:2});
                     tbody.innerHTML = '<tr><td colspan="4" class="text-center py-5 opacity-50"><i class="fas fa-folder-open fa-2x mb-3 d-block text-secondary"></i>No sales history available yet.</td></tr>';
-                    
-                    // Update chart with empty zeros so it looks accurate
                     populateChartWithRealData([]);
                 }
             }
@@ -317,10 +323,27 @@
         }
     }
 
+    // Connect Live Real-Time WebSockets Channel
+    function connectRealTimeWS() {
+        try {
+            socketConnectionLink = io(window.location.origin, {
+                query: { token: localStorage.getItem("naterpay_token") }
+            });
+
+            socketConnectionLink.on('wallet:update', () => { syncAnalyticsData(); });
+            socketConnectionLink.on('dashboard:refresh', () => { syncAnalyticsData(); });
+            socketConnectionLink.on('notification', () => { syncAnalyticsData(); });
+
+        } catch(err) {
+            console.warn("Real-time WebSocket data stream channel unavailable.");
+        }
+    }
+
     window.onload = () => { 
         initStars(); 
         initChart();
         syncAnalyticsData(); 
+        connectRealTimeWS();
     };
     window.onresize = initStars;
 </script>
