@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Seller Dashboard</title>
+    <title>NATER-PAY | Enterprise Seller Terminal</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -14,160 +14,124 @@
     
     <style>
         :root { 
-            --gold: #FFD700; 
-            --gold-glow: rgba(255, 215, 0, 0.4); 
-            --bg: #030303; 
-            --card-bg: rgba(12, 12, 12, 0.95); 
-            --nater-red: #d32f2f;
-            --success: #00ff88;
-            --border-color: #333;
+            --gold: #FFD700; --gold-dim: #d4af37; --gold-glow: rgba(255, 215, 0, 0.4); 
+            --bg: #030303; --card-bg: rgba(12, 12, 12, 0.95); --panel-bg: #0a0a0a;
+            --nater-red: #d32f2f; --success: #00ff88; --warning: #ff9800; --info: #00bfff;
+            --border-color: #222;
         }
         * { box-sizing: border-box; }
         
-        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; font-weight: 700; }
-        
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; font-weight: 600; }
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
         header {
-            position: sticky; top: 0; width: 100%; padding: 15px 5%;
-            background: rgba(0, 0, 0, 0.95); border-bottom: 3px solid var(--gold);
-            display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(10px);
+            position: sticky; top: 0; width: 100%; padding: 15px 3%;
+            background: rgba(0, 0, 0, 0.98); border-bottom: 3px solid var(--gold-dim);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(15px);
         }
         .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;}
-        .site-part-1 { color: var(--gold); font-size: 1.8rem; text-shadow: 0 0 10px var(--gold-glow); } 
-        .site-part-2 { color: var(--nater-red); font-size: 1.3rem; letter-spacing: 3px; }
+        .site-part-1 { color: var(--gold); font-size: 1.6rem; text-shadow: 0 0 10px var(--gold-glow); } 
+        .site-part-2 { color: var(--nater-red); font-size: 1.1rem; letter-spacing: 3px; }
 
-        /* Expands container to fit the whole screen, avoiding horizontal scroll */
-        .container { width: 100%; max-width: 100%; margin: 30px auto; padding: 0 3%; }
+        .container-fluid { max-width: 1600px; margin: 30px auto; padding: 0 2%; }
         
-        .header-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; margin-bottom: 15px; font-size: 2.8rem; text-shadow: 0 0 15px var(--gold-glow); letter-spacing: 1px;}
-        .header-subtitle { color: #fff; font-weight: 700; margin-bottom: 30px; font-size: 1.2rem; }
+        .header-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; margin-bottom: 5px; font-size: 2.2rem; text-shadow: 0 0 15px var(--gold-glow); letter-spacing: 1px;}
+        .header-subtitle { color: #aaa; font-weight: 600; margin-bottom: 30px; font-size: 1rem; }
 
-        .merchant-dashboard-top {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 40px; flex-wrap: wrap; gap: 20px; width: 100%;
-        }
+        /* ADVANCED ANALYTICS DASHBOARD GRID */
+        .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 40px; }
+        .metric-box { background: var(--panel-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; transition: 0.3s; position: relative; overflow: hidden; }
+        .metric-box:hover { border-color: var(--gold-dim); transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .metric-box::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--gold); }
+        .metric-label { font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: 800; display: block; margin-bottom: 8px;}
+        .metric-value { font-size: 1.6rem; font-weight: 900; font-family: 'Cinzel', serif; color: #fff; }
+        .metric-value.highlight { color: var(--success); }
+        .metric-value.net { color: var(--gold); }
 
-        .auth-producer-btn {
-            background: linear-gradient(145deg, #1a1a1a, #0a0a0a); border: 2px solid #444;
-            border-left: 6px solid var(--success); padding: 15px 25px; border-radius: 12px;
-            display: inline-flex; align-items: center; gap: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            flex: 1; min-width: min(100%, 300px); /* FIXED: prevents overflow */
-        }
-        
-        .auth-icon { font-size: 2rem; color: var(--success); }
-        .auth-details { display: flex; flex-direction: column; }
-        .auth-label { font-size: 0.85rem; color: #ccc; text-transform: uppercase; font-weight: 900; margin-bottom: 5px;}
-        .auth-name { font-size: 1.3rem; font-weight: 900; color: #fff; display: flex; align-items: center; gap: 8px;}
-        
-        /* Adjusted Top Metrics to fit screen and wrap properly */
-        .top-metrics { display: flex; gap: 15px; flex: 2; min-width: min(100%, 300px); flex-wrap: wrap; }
-        .metric-box { background: #111; border: 2px solid #333; padding: 20px; border-radius: 12px; text-align: right; flex: 1; min-width: min(100%, 150px); }
-        .metric-label { font-size: 0.9rem; color: #ccc; text-transform: uppercase; font-weight: 900; display: block; margin-bottom: 5px;}
-        .metric-value { font-size: 1.8rem; font-weight: 900; font-family: 'Cinzel', serif; color: #fff; }
-        .metric-value.gold { color: var(--gold); }
+        /* NAV TABS */
+        .nav-tabs-custom { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; overflow-x: auto; scrollbar-width: none; }
+        .nav-tabs-custom::-webkit-scrollbar { display: none; }
+        .nav-tab-btn { background: transparent; border: 1px solid #444; color: #aaa; padding: 12px 25px; border-radius: 50px; font-weight: 800; white-space: nowrap; transition: 0.3s; font-size: 0.9rem; }
+        .nav-tab-btn.active, .nav-tab-btn:hover { background: rgba(255,215,0,0.08); border-color: var(--gold); color: var(--gold); }
 
-        .studio-grid { display: grid; grid-template-columns: 1fr 2.5fr; gap: 30px; margin-bottom: 60px; width: 100%; }
+        /* STUDIO CREATOR FORM */
+        .studio-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; margin-bottom: 60px; }
         @media (max-width: 1024px) { .studio-grid { grid-template-columns: 1fr; } }
-
-        .panel {
-            background: var(--card-bg); border: 2px solid #333; border-radius: 20px;
-            padding: 35px; backdrop-filter: blur(15px); box-shadow: 0 15px 50px rgba(0,0,0,0.8);
-        }
-        .panel-header { font-family: 'Cinzel', serif; font-weight: 900; color: #fff; font-size: 1.5rem; margin-bottom: 25px; border-bottom: 2px solid #444; padding-bottom: 15px; display: flex; align-items: center; gap: 12px; margin-top: 30px; }
+        .panel { background: var(--card-bg); border: 1px solid #222; border-radius: 20px; padding: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
+        .panel-header { font-family: 'Cinzel', serif; font-weight: 900; color: #fff; font-size: 1.3rem; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; display: flex; align-items: center; gap: 12px; margin-top: 30px; }
         .panel-header:first-child { margin-top: 0; }
         .panel-header i { color: var(--gold); }
 
-        .input-group-custom { margin-bottom: 25px; }
-        .input-group-custom label { display: flex; justify-content: space-between; font-size: 1rem; color: #fff; font-weight: 900; margin-bottom: 10px; }
-        .input-group-custom label .req { color: #ff4d4d; font-size: 0.85rem; background: rgba(255,0,0,0.1); padding: 3px 8px; border-radius: 5px;}
-        .input-group-custom label .opt { color: #aaa; font-size: 0.85rem; background: #222; padding: 3px 8px; border-radius: 5px;}
-        
-        .input-wrapper { background: #0a0a0a; border: 2px solid #444; border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 15px; transition: 0.3s; position: relative; }
-        .input-wrapper:focus-within { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); background: #111; }
-        .input-wrapper.error { border-color: var(--nater-red); box-shadow: 0 0 15px rgba(211, 47, 47, 0.4); }
-        .input-wrapper i { color: #888; font-size: 1.3rem; }
+        .input-group-custom { margin-bottom: 20px; }
+        .input-group-custom label { display: flex; justify-content: space-between; font-size: 0.9rem; color: #ddd; font-weight: 800; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+        .input-group-custom label .req { color: #ff4d4d; font-size: 0.7rem; background: rgba(255,0,0,0.1); padding: 2px 6px; border-radius: 4px;}
+        .input-wrapper { background: #080808; border: 1.5px solid #333; border-radius: 10px; padding: 15px; display: flex; align-items: center; gap: 15px; transition: 0.3s; position: relative; }
+        .input-wrapper:focus-within { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow); background: #111; }
+        .input-wrapper i { color: #666; font-size: 1.1rem; }
         .input-wrapper:focus-within i { color: var(--gold); }
-        .input-wrapper input, .input-wrapper textarea, .input-wrapper select {
-            background: transparent; border: none; color: white; width: 100%; font-size: 1.15rem; font-weight: 800; outline: none; font-family: 'Montserrat', sans-serif;
-        }
-        .input-wrapper input::placeholder, .input-wrapper textarea::placeholder { color: #666; font-weight: 600; }
-        .input-wrapper select { cursor: pointer; appearance: none; }
-        .input-wrapper select option { background: #111; color: #fff; padding: 10px; font-weight: 800;}
-        .input-wrapper textarea { resize: vertical; min-height: 120px; padding: 5px 0; line-height: 1.6; }
-        .helper-text { font-size: 0.9rem; color: #bbb; font-weight: 700; margin-top: 10px; display: block; }
-        .select-icon { position: absolute; right: 20px; color: var(--gold); pointer-events: none; }
-
-        .toggle-row { display: flex; align-items: center; justify-content: space-between; background: #0a0a0a; border: 2px solid #444; padding: 20px; border-radius: 12px; margin-bottom: 15px; transition: 0.3s; }
-        .toggle-row:hover { border-color: var(--gold); }
-        .toggle-info { display: flex; flex-direction: column; padding-right: 20px;}
-        .toggle-title { font-size: 1.1rem; font-weight: 900; color: #fff; }
-        .toggle-desc { font-size: 0.9rem; color: #bbb; font-weight: 700; margin-top: 6px; }
+        .input-wrapper input, .input-wrapper textarea, .input-wrapper select { background: transparent; border: none; color: white; width: 100%; font-size: 1rem; font-weight: 700; outline: none; font-family: 'Montserrat', sans-serif; }
+        .input-wrapper textarea { resize: vertical; min-height: 100px; }
+        .helper-text { font-size: 0.8rem; color: #888; font-weight: 600; margin-top: 5px; display: block; }
         
-        .form-check-input { width: 60px !important; height: 30px !important; background-color: #444; border-color: #333; cursor: pointer; }
-        .form-check-input:checked { background-color: var(--gold); border-color: var(--gold); }
+        .fee-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
+        .fee-card { border: 1.5px solid #333; background: #080808; padding: 15px; border-radius: 10px; cursor: pointer; transition: 0.3s; text-align: center; }
+        .fee-card.selected { border-color: var(--gold); background: rgba(255,215,0,0.05); }
+        .fee-card h6 { font-weight: 900; color: #fff; margin-bottom: 5px; font-size: 0.95rem; }
+        .fee-card p { font-size: 0.75rem; color: #aaa; margin: 0; }
 
-        .image-upload-wrapper { border: 3px dashed #666; border-radius: 15px; padding: 40px 20px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; background: #080808; height: 100%; min-height: 350px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .image-upload-wrapper { border: 2px dashed #444; border-radius: 15px; padding: 40px 20px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; background: #080808; height: 100%; min-height: 300px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .image-upload-wrapper:hover { border-color: var(--gold); background: #111; }
         .image-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
-        .upload-placeholder { color: #fff; font-weight: 900; font-size: 1.2rem; pointer-events: none; }
-        .upload-placeholder i { font-size: 4rem; color: #444; margin-bottom: 20px; display: block; transition: 0.3s; }
-        .image-upload-wrapper:hover .upload-placeholder i { color: var(--gold); transform: translateY(-8px); }
+        .upload-placeholder i { font-size: 3rem; color: #444; margin-bottom: 15px; transition: 0.3s; }
+        .image-upload-wrapper:hover .upload-placeholder i { color: var(--gold); transform: translateY(-5px); }
         .image-preview { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 1; }
 
-        .btn-create {
-            background: var(--gold); color: black; font-weight: 900; border-radius: 12px;
-            padding: 25px; width: 100%; border: none; font-size: 1.4rem; letter-spacing: 1px; text-transform: uppercase; transition: 0.3s; margin-top: 15px; box-shadow: 0 10px 25px rgba(255, 215, 0, 0.3);
-        }
-        .btn-create:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(255, 215, 0, 0.5); background: #fff; }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .btn-create { background: var(--gold); color: black; font-weight: 900; border-radius: 10px; padding: 18px; border: none; font-size: 1.1rem; text-transform: uppercase; transition: 0.3s; width: 100%; box-shadow: 0 10px 20px rgba(255, 215, 0, 0.2); }
+        .btn-draft { background: transparent; color: #fff; border: 2px solid #555; font-weight: 900; border-radius: 10px; padding: 18px; font-size: 1.1rem; text-transform: uppercase; transition: 0.3s; width: 100%; }
+        .btn-create:hover { transform: translateY(-2px); box-shadow: 0 15px 25px rgba(255, 215, 0, 0.4); background: #fff; }
+        .btn-draft:hover { border-color: #fff; background: #222; }
 
-        .form-row { display: flex; gap: 25px; flex-wrap: wrap; }
-        .form-row .input-group-custom { flex: 1; min-width: 250px; }
+        /* ENTERPRISE PRODUCT CARDS */
+        .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; width: 100%; }
+        .link-item { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; transition: 0.3s; display: flex; flex-direction: column; position: relative; }
+        .link-item:hover { border-color: #555; box-shadow: 0 15px 30px rgba(0,0,0,0.8); transform: translateY(-4px); }
+        
+        .link-banner { height: 160px; background: #111; background-size: cover; background-position: center; position: relative; border-bottom: 1px solid #222; }
+        
+        .status-badge { position: absolute; top: 12px; right: 12px; padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
+        .status-active { background: rgba(0, 255, 136, 0.2); color: var(--success); border: 1px solid var(--success); }
+        .status-draft { background: rgba(255, 215, 0, 0.2); color: var(--gold); border: 1px solid var(--gold); }
+        .status-paused { background: rgba(255, 152, 0, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+        .status-soldout { background: rgba(211, 47, 47, 0.2); color: var(--nater-red); border: 1px solid var(--nater-red); }
+        .status-archived { background: rgba(100, 100, 100, 0.2); color: #aaa; border: 1px solid #666; }
 
-        /* FIXED: Added flex-wrap and responsive font-size to prevent text crashing/overlapping */
-        .section-title { 
-            font-family: 'Cinzel', serif; 
-            font-size: clamp(1.6rem, 6vw, 2.2rem); 
-            font-weight: 900; 
-            margin-bottom: 30px; 
-            display: flex; 
-            flex-wrap: wrap; 
-            align-items: center; 
-            gap: 12px; 
-            border-bottom: 3px solid #333; 
-            padding-bottom: 15px; 
-            text-transform: uppercase; 
-            line-height: 1.3;
-        }
-        .section-title span { color: var(--gold); }
+        .link-content { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
+        .link-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.2rem; margin: 0 0 10px 0; color: #fff; line-height: 1.2; text-truncate; }
         
-        /* FIXED: Changed to min(100%, 360px) to stop product cards from busting the mobile width limit */
-        .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 25px; width: 100%; }
-        .link-item { background: #0a0a0a; border: 2px solid #333; border-radius: 20px; overflow: hidden; transition: 0.3s; display: flex; flex-direction: column; }
-        .link-item:hover { border-color: var(--gold); box-shadow: 0 15px 40px rgba(0,0,0,0.8); transform: translateY(-5px); }
-        
-        .link-banner { height: 180px; background: #111; background-size: cover; background-position: center; position: relative; border-bottom: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 3.5rem; color: #333;}
-        .cat-badge { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.9); border: 2px solid #555; padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 900; color: #fff; }
-        .status-badge { position: absolute; top: 15px; right: 15px; background: #000; color: var(--success); padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 900; border: 2px solid var(--success); }
-        
-        .link-content { padding: 30px; flex-grow: 1; display: flex; flex-direction: column; }
-        .link-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.5rem; margin: 0 0 20px 0; color: #fff; line-height: 1.3; }
-        
-        .link-stats { background: #111; border-radius: 12px; padding: 20px; margin-bottom: 25px; border: 2px solid #333; }
-        .stat-line { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 1rem; font-weight: 900; color: #ccc; }
+        .compact-stats { background: #080808; border-radius: 10px; padding: 15px; margin-bottom: 20px; border: 1px solid #222; }
+        .stat-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; font-weight: 700; color: #999; }
         .stat-line:last-child { margin-bottom: 0; }
-        .stat-line .val { color: var(--gold); font-size: 1.2rem; }
+        .stat-line .val { color: #fff; font-weight: 900; }
+        .stat-line .val.gold { color: var(--gold); font-size: 1rem; }
 
-        .link-actions { display: flex; gap: 15px; margin-top: auto; }
-        .act-btn { flex: 1; background: #222; border: 2px solid #555; color: #fff; padding: 18px; border-radius: 12px; font-size: 1rem; font-weight: 900; transition: 0.3s; text-align: center; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px;}
-        .act-btn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
-        .act-btn.qr-btn:hover { background: #fff; color: #000; border-color: #fff; }
+        /* BOOTSTRAP DROPDOWN OVERRIDES FOR ACTION MENU */
+        .card-actions-wrapper { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #222; padding-top: 15px; margin-top: auto; }
+        .btn-copy { background: #222; color: #fff; border: 1px solid #444; padding: 8px 15px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; transition: 0.3s; flex-grow: 1; margin-right: 10px; }
+        .btn-copy:hover { background: var(--gold); color: #000; border-color: var(--gold); }
+        
+        .dropdown-menu-dark { background: #151515; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.9); border-radius: 12px; padding: 8px; }
+        .dropdown-item { font-weight: 700; font-size: 0.85rem; padding: 10px 15px; border-radius: 6px; color: #ddd; display: flex; align-items: center; gap: 10px; transition: 0.2s;}
+        .dropdown-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .dropdown-item i { width: 16px; text-align: center; color: #888; }
+        .dropdown-item:hover i { color: var(--gold); }
+        .dropdown-item.text-danger:hover { background: rgba(211,47,47,0.1); color: var(--nater-red); }
+        .dropdown-item.text-danger:hover i { color: var(--nater-red); }
 
-        /* FIXED: Updated Modal CSS to restrict size and add padding for mobile screens */
-        #qrModal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; overflow-y: auto; padding: 20px;}
-        .qr-content { background: var(--card-bg); padding: 30px 15px; border-radius: 25px; border: 2px solid #444; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,1); width: 100%; max-width: 400px; }
-        #qrDisplay { background: #fff; padding: 15px; border-radius: 15px; display: inline-block; margin-bottom: 25px; border: 5px solid #000; max-width: 100%; box-sizing: border-box;}
-        /* Ensures the generated QR Code shrinks visually on small devices */
+        /* QR MODAL */
+        #qrModal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; padding: 20px;}
+        .qr-content { background: var(--card-bg); padding: 30px; border-radius: 20px; border: 1px solid #444; text-align: center; width: 100%; max-width: 380px; }
+        #qrDisplay { background: #fff; padding: 15px; border-radius: 12px; display: inline-block; margin-bottom: 20px; border: 4px solid #000;}
         #qrDisplay canvas, #qrDisplay img { max-width: 100% !important; height: auto !important; }
     </style>
 </head>
@@ -175,435 +139,440 @@
 
 <canvas id="starCanvas"></canvas>
 
-<!-- FIXED: Updated Modal HTML layout for smaller buttons that wrap properly -->
+<!-- QR MODAL -->
 <div id="qrModal">
     <div class="qr-content">
-        <h3 class="fw-bold mb-3 text-warning" id="qrTitle" style="font-family: 'Cinzel'; font-weight: 900; font-size: 1.5rem;">Your Payment QR Code</h3>
-        <p class="fw-bold mb-4" style="font-size: 0.9rem;">Buyers can scan this image to pay you instantly.</p>
+        <h3 class="fw-bold mb-2 text-warning" id="qrTitle" style="font-family: 'Cinzel'; font-size: 1.3rem;">Payment QR</h3>
+        <p class="text-muted small mb-4 fw-bold">Buyers scan this to pay instantly.</p>
         <div id="qrDisplay"></div>
-        <div class="d-flex flex-wrap gap-2 justify-content-center">
-            <button class="btn btn-warning fw-bold px-3 py-2 rounded-pill" style="flex: 1; min-width: 140px;" onclick="downloadQR()">
-                <i class="fas fa-download me-2"></i> Download
-            </button>
-            <button class="btn btn-outline-light fw-bold px-3 py-2 rounded-pill" style="flex: 1; min-width: 120px;" onclick="document.getElementById('qrModal').style.display='none'">
-                Close
-            </button>
+        <div class="d-flex gap-2 justify-content-center">
+            <button class="btn btn-warning fw-bold px-3 py-2 rounded-pill flex-grow-1" onclick="downloadQR()"><i class="fas fa-download"></i> Save</button>
+            <button class="btn btn-outline-light fw-bold px-3 py-2 rounded-pill" onclick="document.getElementById('qrModal').style.display='none'">Close</button>
         </div>
     </div>
 </div>
 
 <header>
     <div class="brand-text">
-        <span class="site-part-1">NATER</span>
-        <span class="site-part-2">PAY</span>
+        <span class="site-part-1">NATER</span><span class="site-part-2">PAY</span>
     </div>
-    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 py-2 fw-bold" style="font-size: 1.1rem; border-width: 2px;"><i class="fas fa-arrow-left me-2"></i> Go Back Home</a>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 py-2 fw-bold"><i class="fas fa-arrow-left me-2"></i> Exit Studio</a>
 </header>
 
-<div class="container">
+<div class="container-fluid">
     
-    <div class="text-center mb-5">
-        <h1 class="header-title">Seller Dashboard</h1>
-        <p class="header-subtitle">Create your products, get your payment links, and see your sales below.</p>
-    </div>
-
-    <!-- Live Account Bar -->
-    <div class="merchant-dashboard-top">
-        <div class="auth-producer-btn">
-            <i class="fas fa-user-check auth-icon"></i>
-            <div class="auth-details">
-                <span class="auth-label">Live Account</span>
-                <span class="auth-name" id="merchantNameDisplay">
-                    Loading... <i class="fas fa-check-circle text-success" style="font-size: 1rem;"></i>
-                </span>
-            </div>
+    <div class="mb-4 text-center text-md-start d-md-flex justify-content-between align-items-end border-bottom border-dark pb-3">
+        <div>
+            <h1 class="header-title m-0">Merchant Studio</h1>
+            <p class="header-subtitle m-0 mt-2">Manage inventory, payment links, and enterprise analytics.</p>
         </div>
-        
-        <div class="top-metrics">
-            <div class="metric-box">
-                <span class="metric-label">Total Money Made</span>
-                <span class="metric-value gold" id="dashTotalRev">₦0.00</span>
-            </div>
-            <div class="metric-box">
-                <span class="metric-label">Total Sales</span>
-                <span class="metric-value" id="dashTotalTx">0</span>
-            </div>
+        <div class="mt-3 mt-md-0 fw-bold text-muted small">
+            <i class="fas fa-shield-alt text-success me-1"></i> Authenticated Node: <span id="merchantNameDisplay" class="text-white">Verified Seller</span>
         </div>
     </div>
 
-    <!-- FORM SECTION -->
-    <div class="studio-grid">
-        
-        <!-- Column 1: Image Upload -->
-        <div class="panel p-0" style="background: transparent; border: none; box-shadow: none;">
-            <div class="image-upload-wrapper" id="uploadWrapper">
-                <input type="file" id="productImageInput" accept="image/jpeg, image/png, image/webp" onchange="previewImage(event)">
-                <div class="upload-placeholder" id="uploadPlaceholder">
-                    <i class="fas fa-camera"></i>
-                    <span class="d-block mb-2">Click Here to Add a Product Image</span>
-                    <span class="badge bg-dark border border-secondary p-2 mt-2">Max Size: 2MB</span>
-                </div>
-                <img id="imagePreview" class="image-preview" src="" alt="Product Image">
-            </div>
-        </div>
+    <!-- ENTERPRISE SUMMARY GRID -->
+    <div class="analytics-grid" id="dashboardMetrics">
+        <div class="metric-box"><span class="metric-label">Net Revenue</span><span class="metric-value net" id="m_netRev">₦0.00</span></div>
+        <div class="metric-box"><span class="metric-label">Total Sales</span><span class="metric-value" id="m_totalSales">0</span></div>
+        <div class="metric-box"><span class="metric-label">Active Links</span><span class="metric-value highlight" id="m_activeLinks">0</span></div>
+        <div class="metric-box"><span class="metric-label">Total Customers</span><span class="metric-value" id="m_customers">0</span></div>
+        <div class="metric-box"><span class="metric-label">Platform Fees</span><span class="metric-value text-danger" id="m_fees">₦0.00</span></div>
+    </div>
 
-        <!-- Column 2: Data Inputs -->
-        <div class="panel">
+    <div class="nav-tabs-custom">
+        <button class="nav-tab-btn active" onclick="switchView('list')"><i class="fas fa-layer-group me-2"></i> My Products</button>
+        <button class="nav-tab-btn" onclick="switchView('create')"><i class="fas fa-plus-circle me-2"></i> Create New Link</button>
+        <button class="nav-tab-btn" onclick="switchView('archived')"><i class="fas fa-archive me-2"></i> Archive & Drafts</button>
+    </div>
+
+    <!-- VIEW 1: CREATOR STUDIO (MULTIPART) -->
+    <div id="view-create" style="display: none;">
+        <form id="productForm" class="studio-grid" onsubmit="event.preventDefault();">
             
-            <div class="panel-header">
-                <i class="fas fa-box"></i> Product Details
-            </div>
-            
-            <div class="input-group-custom">
-                <label>Name of Your Product <span class="req">REQUIRED</span></label>
-                <div class="helper-text mb-2">Type the exact name you want buyers to see when they pay.</div>
-                <div class="input-wrapper" id="wrap-title">
-                    <i class="fas fa-pen"></i>
-                    <input type="text" id="linkTitle" placeholder="Example: My New E-Book or VIP Ticket">
+            <!-- Media Upload (Multipart) -->
+            <div class="panel p-0" style="background: transparent; border: none; box-shadow: none;">
+                <div class="image-upload-wrapper" id="uploadWrapper">
+                    <!-- Native file input for multipart/form-data -->
+                    <input type="file" id="productMediaInput" accept="image/jpeg, image/png, image/webp" onchange="previewNativeImage(event)">
+                    <div class="upload-placeholder" id="uploadPlaceholder">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span class="d-block mb-1 fw-bold text-white">Upload Product Cover</span>
+                        <span class="badge bg-dark border border-secondary p-2 mt-2">Max Size: 5MB</span>
+                    </div>
+                    <img id="imagePreview" class="image-preview" src="" alt="Preview">
                 </div>
             </div>
 
-            <div class="form-row">
+            <!-- Configuration -->
+            <div class="panel">
+                <div class="panel-header"><i class="fas fa-box-open"></i> Core Configuration</div>
+                
                 <div class="input-group-custom">
-                    <label>What type of product is this? <span class="req">REQUIRED</span></label>
-                    <div class="input-wrapper">
-                        <i class="fas fa-tags"></i>
-                        <select id="linkCategory">
-                            <option value="Digital Products">Digital Product / E-Book</option>
-                            <option value="Physical Goods">Physical Item / Delivery</option>
-                            <option value="Software & Apps">Software or App</option>
-                            <option value="Professional Services">Service or Booking</option>
-                            <option value="Event Tickets">Event Ticket</option>
-                        </select>
-                        <i class="fas fa-chevron-down select-icon"></i>
+                    <label>Product / Service Title <span class="req">REQUIRED</span></label>
+                    <div class="input-wrapper"><i class="fas fa-pen"></i><input type="text" id="linkTitle" placeholder="e.g. Masterclass E-Book" required></div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="input-group-custom m-0">
+                            <label>Category <span class="req">REQUIRED</span></label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-tags"></i>
+                                <select id="linkCategory">
+                                    <option value="Digital Goods">Digital Product / E-Book</option>
+                                    <option value="Physical Goods">Physical Item</option>
+                                    <option value="Software">Software or App</option>
+                                    <option value="Services">Professional Service</option>
+                                    <option value="Tickets">Event Ticket</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group-custom m-0">
+                            <label>Price (₦) <span class="text-muted" style="font-size:0.7rem;">Leave 0 for flexible</span></label>
+                            <div class="input-wrapper"><i class="fas fa-money-bill-wave"></i><input type="number" id="linkAmount" min="0" placeholder="0.00"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="input-group-custom">
-                    <label>Price (in Naira) <span class="opt">OPTIONAL</span></label>
-                    <div class="helper-text mb-2 text-warning">Leave empty to let buyers type their own amount.</div>
-                    <div class="input-wrapper">
-                        <i class="fas fa-money-bill-wave"></i>
-                        <input type="number" id="linkAmount" min="0" placeholder="Example: 5000">
+
+                <div class="input-group-custom mt-3">
+                    <label>Description <span class="req">REQUIRED</span></label>
+                    <div class="input-wrapper align-items-start"><i class="fas fa-align-left mt-1"></i><textarea id="linkDescription" placeholder="Detail the value proposition of this product..." required></textarea></div>
+                </div>
+
+                <div class="panel-header"><i class="fas fa-sliders-h"></i> Inventory & Delivery</div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="input-group-custom m-0">
+                            <label>Stock Capacity <span class="text-muted" style="font-size:0.7rem;">Leave empty for infinite</span></label>
+                            <div class="input-wrapper"><i class="fas fa-cubes"></i><input type="number" id="stockLimit" min="1" placeholder="e.g. 100"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group-custom m-0">
+                            <label>Redirect URL (After Payment) <span class="text-muted" style="font-size:0.7rem;">Optional</span></label>
+                            <div class="input-wrapper"><i class="fas fa-link"></i><input type="url" id="linkRedirect" placeholder="https://drive.google.com/..."></div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="input-group-custom">
-                <label>Product Description <span class="req">REQUIRED</span></label>
-                <div class="helper-text mb-2">Tell your buyers what this product is and why they should buy it.</div>
-                <div class="input-wrapper" style="align-items: flex-start;" id="wrap-desc">
-                    <i class="fas fa-align-left mt-2"></i>
-                    <textarea id="linkDescription" placeholder="Type all the important details here..."></textarea>
+                <div class="panel-header"><i class="fas fa-percentage"></i> Transaction Fee Policy</div>
+                <div class="helper-text mb-3 mt-neg-2">Determine who bears the NATER-PAY processing fee.</div>
+                <div class="fee-selector mb-4">
+                    <div class="fee-card selected" id="fee-buyer" onclick="selectFeeMode('buyer')">
+                        <h6>Charge Buyer</h6>
+                        <p>Buyer pays price + fee. You get exactly what you priced.</p>
+                    </div>
+                    <div class="fee-card" id="fee-seller" onclick="selectFeeMode('seller')">
+                        <h6>Absorb Fee</h6>
+                        <p>Buyer pays exact price. Fee is deducted from your payout.</p>
+                    </div>
+                </div>
+                <!-- Hidden input to store fee preference state -->
+                <input type="hidden" id="feePreference" value="buyer">
+
+                <div class="action-grid mt-5 border-top border-dark pt-4">
+                    <button type="button" class="btn-draft" onclick="submitMultipartForm('draft')"><i class="fas fa-save me-2"></i> Save as Draft</button>
+                    <button type="button" class="btn-create" onclick="submitMultipartForm('active')"><i class="fas fa-rocket me-2"></i> Publish Product</button>
                 </div>
             </div>
+        </form>
+    </div>
 
-            <!-- SECTION: CONTACT INFO -->
-            <div class="panel-header">
-                <i class="fas fa-handshake"></i> Your Contact Info (Builds Buyer Trust)
-            </div>
-            <div class="helper-text mb-4 mt-neg-2">Buyers feel safer when they know how to contact you if they have a problem.</div>
-
-            <div class="input-group-custom">
-                <label>Your Email Address <span class="req">REQUIRED</span></label>
-                <div class="input-wrapper" id="wrap-email">
-                    <i class="fas fa-envelope"></i>
-                    <input type="email" id="supportEmail" placeholder="yourname@gmail.com">
-                </div>
-            </div>
-
-            <!-- SECTION: EXTRA SETTINGS -->
-            <div class="panel-header">
-                <i class="fas fa-sliders-h"></i> Extra Settings
-            </div>
-
-            <div class="input-group-custom">
-                <label>How many are available to buy? (Stock Limit) <span class="opt">OPTIONAL</span></label>
-                <div class="helper-text mb-2 text-warning">Leave blank if you have unlimited copies. If you type 50, the link stops working after 50 sales.</div>
-                <div class="input-wrapper" style="max-width: 300px;">
-                    <i class="fas fa-boxes"></i>
-                    <input type="number" id="stockLimit" min="1" placeholder="Example: 50">
-                </div>
-            </div>
-
-            <div class="toggle-row">
-                <div class="toggle-info">
-                    <span class="toggle-title">Ask buyers for their Phone Number</span>
-                    <span class="toggle-desc">Turn this on to force buyers to type their phone number before they pay.</span>
-                </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="reqPhone">
-                </div>
-            </div>
-
-            <div class="input-group-custom mt-4">
-                <label>Link to give buyer after they pay (Redirect URL) <span class="opt">OPTIONAL</span></label>
-                <div class="helper-text mb-2">If you have a Google Drive link, Telegram group, or website, paste it here. Buyers will be sent here immediately after paying.</div>
-                <div class="input-wrapper" id="wrap-url">
-                    <i class="fas fa-link"></i>
-                    <input type="url" id="linkRedirect" placeholder="https://drive.google.com/...">
-                </div>
-            </div>
-            
-            <button class="btn-create" onclick="createPaymentLink()">
-                <i class="fas fa-rocket me-2"></i> Create Payment Link Now
-            </button>
+    <!-- VIEW 2: ACTIVE PRODUCTS -->
+    <div id="view-list">
+        <div id="activeLinksContainer" class="links-grid">
+            <div class="text-center py-5 w-100" style="grid-column: 1 / -1;"><i class="fas fa-spinner fa-spin fa-3x text-warning"></i></div>
         </div>
     </div>
-    
-    <h2 class="section-title mt-5 pt-3"><span>Your Created</span> Products</h2>
-    
-    <div id="linksContainer" class="links-grid">
-        <div class="text-center py-5 w-100" style="grid-column: 1 / -1;">
-            <i class="fas fa-spinner fa-spin fa-4x mb-3 text-warning"></i><br>
-            <span class="fw-bold fs-3 text-white">Loading your products...</span>
-        </div>
+
+    <!-- VIEW 3: ARCHIVES & DRAFTS -->
+    <div id="view-archived" style="display: none;">
+        <div id="archivedLinksContainer" class="links-grid"></div>
     </div>
-    
-    <div class="text-center text-secondary small mt-5 mb-5 fw-bold pb-4 border-top border-dark pt-4" style="font-size: 1rem;">
-        <p class="mb-1"><i class="fas fa-shield-alt me-1"></i> Secured by NATER-PAY</p>
+
+    <div class="text-center text-secondary small mt-5 mb-5 fw-bold pb-4 border-top border-dark pt-4">
+        <i class="fas fa-shield-alt me-1"></i> Enterprise Seller Engine
     </div>
 </div>
 
 <script>
-    let base64ProductImage = null;
-    let producerName = "Verified Seller";
-
-    function initStars() {
-        const c = document.getElementById('starCanvas');
-        c.width = window.innerWidth; c.height = window.innerHeight;
-        const ctx = c.getContext('2d');
-        const stars = [];
-        for(let i = 0; i < 100; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
-        function animate() {
-            ctx.clearRect(0, 0, c.width, c.height);
-            stars.forEach(s => { ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.shadowBlur = 8; ctx.shadowColor = "white"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; s.y += s.v; if(s.y > c.height) s.y = -5; });
-            requestAnimationFrame(animate);
-        }
-        animate();
-    }
-
-    function setupMerchantProfile() {
-        const token = localStorage.getItem("naterpay_token");
-        if(token) {
-            try {
-                const base64Url = token.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                const payload = JSON.parse(jsonPayload);
-                
-                producerName = payload.name || payload.username || payload.email.split('@')[0] || "Verified Seller";
-
-                if (payload.email) {
-                    document.getElementById('supportEmail').value = payload.email;
-                }
-            } catch (e) {
-                console.log("Token error, using default name.");
-            }
-        }
-        
-        document.getElementById('merchantNameDisplay').innerHTML = `${producerName} <i class="fas fa-check-circle text-success ms-1"></i>`;
-    }
-
-    function previewImage(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        if (file.size > 2 * 1024 * 1024) {
-            Swal.fire({ icon: 'error', title: 'Image Too Large', text: 'Please choose an image smaller than 2MB.', background: '#111', color: '#fff' });
-            event.target.value = '';
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            base64ProductImage = e.target.result; 
-            const preview = document.getElementById('imagePreview');
-            const placeholder = document.getElementById('uploadPlaceholder');
-            
-            preview.src = base64ProductImage;
-            preview.style.display = 'block';
-            placeholder.style.display = 'none';
-        }
-        reader.readAsDataURL(file);
-    }
+    let globalProducts = [];
     
-    function resetErrors() {
-        document.querySelectorAll('.input-wrapper').forEach(el => el.classList.remove('error'));
+    // UI Setup
+    function initStars() { const c=document.getElementById('starCanvas'); c.width=window.innerWidth; c.height=window.innerHeight; const ctx=c.getContext('2d'); const s=[]; for(let i=0;i<100;i++)s.push({x:Math.random()*c.width,y:Math.random()*c.height,s:Math.random()*2+1,v:Math.random()*0.5+0.1,o:Math.random()}); function animate(){ ctx.clearRect(0,0,c.width,c.height); s.forEach(st=>{ctx.globalAlpha=st.o;ctx.fillStyle="white";ctx.beginPath();ctx.arc(st.x,st.y,st.s,0,Math.PI*2);ctx.fill();st.y+=st.v;if(st.y>c.height)st.y=-5;}); requestAnimationFrame(animate); } animate(); }
+    
+    function switchView(view) {
+        document.querySelectorAll('.nav-tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        document.getElementById('view-list').style.display = 'none';
+        document.getElementById('view-create').style.display = 'none';
+        document.getElementById('view-archived').style.display = 'none';
+        document.getElementById('view-' + view).style.display = 'block';
     }
 
-    function isValidURL(string) {
-        if(!string) return true; 
-        try { new URL(string); return true; } catch (_) { return false; }
-    }
-    function isValidEmail(email) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    function selectFeeMode(mode) {
+        document.getElementById('fee-buyer').classList.remove('selected');
+        document.getElementById('fee-seller').classList.remove('selected');
+        document.getElementById(`fee-${mode}`).classList.add('selected');
+        document.getElementById('feePreference').value = mode;
     }
 
-    async function createPaymentLink() {
-        resetErrors();
+    // Native Image Preview (No Base64 Payload sent to server, just visual preview)
+    let selectedFile = null;
+    function previewNativeImage(event) {
+        selectedFile = event.target.files[0];
+        if (!selectedFile) return;
+        if (selectedFile.size > 5 * 1024 * 1024) {
+            Swal.fire({ icon: 'error', title: 'File Too Large', text: 'Max size is 5MB.', background: '#111', color: '#fff' });
+            event.target.value = ''; selectedFile = null; return;
+        }
+        const preview = document.getElementById('imagePreview');
+        preview.src = URL.createObjectURL(selectedFile);
+        preview.style.display = 'block';
+        document.getElementById('uploadPlaceholder').style.display = 'none';
+    }
 
+    // ==========================================
+    // 13. PERFORMANCE: MULTIPART FORM SUBMISSION
+    // ==========================================
+    async function submitMultipartForm(targetStatus) {
         const title = document.getElementById('linkTitle').value.trim();
         const category = document.getElementById('linkCategory').value;
         const description = document.getElementById('linkDescription').value.trim();
         const rawAmount = document.getElementById('linkAmount').value;
-        
-        const supportEmail = document.getElementById('supportEmail').value.trim();
         const stockLimit = document.getElementById('stockLimit').value;
-        const reqPhone = document.getElementById('reqPhone').checked;
         const redirectUrl = document.getElementById('linkRedirect').value.trim();
-        
-        let hasError = false;
-        if (!title) { document.getElementById('wrap-title').classList.add('error'); hasError = true; }
-        if (!description) { document.getElementById('wrap-desc').classList.add('error'); hasError = true; }
-        if (!supportEmail || !isValidEmail(supportEmail)) { document.getElementById('wrap-email').classList.add('error'); hasError = true; }
-        if (redirectUrl && !isValidURL(redirectUrl)) { document.getElementById('wrap-url').classList.add('error'); hasError = true; }
+        const feePreference = document.getElementById('feePreference').value;
 
-        if (hasError) {
-            Swal.fire({ icon: 'error', title: 'Missing Information', text: 'Please fill in the red boxes correctly.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
-            return;
+        if (!title || !description) {
+            return Swal.fire({ icon: 'error', title: 'Missing Data', text: 'Title and Description are required.', background: '#111', color: '#fff' });
         }
-        
+
         const isFlexibleAmount = !rawAmount || parseFloat(rawAmount) <= 0;
         const amount = isFlexibleAmount ? 0 : parseFloat(rawAmount);
         
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) { window.location.href = '/index.html'; return; }
-        
-        try {
-            Swal.fire({ title: 'Creating Link...', text: 'Please wait while we set up your product...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
-            
-            const payload = {
-                title: title, 
-                category: category, 
-                description: description, 
-                amount: amount, 
-                currency: 'NGN', 
-                isFlexibleAmount: isFlexibleAmount,
-                productImageBase64: base64ProductImage,
-                redirectUrl: redirectUrl,
-                maxTransactions: stockLimit ? parseInt(stockLimit) : null,
-                collectCustomerPhone: reqPhone
-            };
+        if (!authToken) return window.location.href = '/index.html';
 
-            const res = await fetch('/api/payment-links', {
+        Swal.fire({ title: 'Deploying...', text: 'Securing product to ledger...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
+
+        // Build Native FormData (Replaces Base64)
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('category', category);
+        formData.append('description', description);
+        formData.append('amount', amount);
+        formData.append('isFlexibleAmount', isFlexibleAmount);
+        formData.append('status', targetStatus); // 'active' or 'draft'
+        formData.append('feePreference', feePreference); // 'buyer' or 'seller'
+        
+        if (stockLimit) formData.append('totalStock', parseInt(stockLimit));
+        if (redirectUrl) formData.append('redirectUrl', redirectUrl);
+        if (selectedFile) formData.append('mediaFile', selectedFile); // The raw binary file
+
+        try {
+            // Note: When using FormData, DO NOT set Content-Type header. Fetch sets it automatically with the multipart boundary.
+            const res = await fetch('/api/payment-links/multipart', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify(payload)
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                body: formData
             });
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Success!', text: 'Your product is now live and ready to sell.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
-                
-                document.getElementById('linkTitle').value = '';
-                document.getElementById('linkDescription').value = '';
-                document.getElementById('linkRedirect').value = '';
-                document.getElementById('linkAmount').value = '';
-                document.getElementById('stockLimit').value = '';
-                document.getElementById('reqPhone').checked = false;
-                document.getElementById('productImageInput').value = '';
+                Swal.fire({ icon: 'success', title: 'Deployed!', text: 'Product registered successfully.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
+                document.getElementById('productForm').reset();
                 document.getElementById('imagePreview').style.display = 'none';
                 document.getElementById('uploadPlaceholder').style.display = 'block';
-                base64ProductImage = null;
-                
-                loadPaymentLinks();
+                selectedFile = null;
+                selectFeeMode('buyer');
+                loadProducts();
+                switchView('list');
             } else {
-                Swal.fire({ icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'error', title: 'Error', text: data.message, background: '#111', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Please check your internet connection.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Communication failed.', background: '#111', color: '#fff' });
         }
     }
-    
-    async function loadPaymentLinks() {
+
+    // ==========================================
+    // PRODUCT RETRIEVAL & RENDER ENGINE
+    // ==========================================
+    async function loadProducts() {
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) { window.location.href = '/index.html'; return; }
+        if (!authToken) return;
         
         try {
-            const res = await fetch('/api/payment-links', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const res = await fetch('/api/payment-links/me', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
             
-            const container = document.getElementById('linksContainer');
-            
             if (data.success) {
-                if (data.links && data.links.length > 0) {
-                    let totalRev = 0;
-                    let totalTx = 0;
-
-                    container.innerHTML = data.links.map(link => {
-                        const linkUrl = `${window.location.origin}/pay.html?id=${link.linkId}`;
-                        const displayAmount = link.isFlexibleAmount ? 'BUYER CHOOSES PRICE' : `₦${Number(link.amount).toLocaleString()}`;
-                        const collected = Number(link.totalCollected || 0);
-                        const count = Number(link.transactionCount || 0);
-                        const linkCategory = link.category || 'Product';
-                        
-                        let stockDisplay = '';
-                        if(link.maxTransactions) {
-                            stockDisplay = `<div class="stat-line"><span class="text-secondary">COPIES LEFT</span> <span class="val text-white">${link.maxTransactions - count}</span></div>`;
-                        }
-
-                        totalRev += collected;
-                        totalTx += count;
-
-                        let bannerStyle = link.productImageBase64 
-                            ? `background-image: url('${link.productImageBase64}');` 
-                            : `background: #151515;`;
-                        
-                        let bannerIcon = !link.productImageBase64 ? `<i class="fas fa-box-open text-secondary"></i>` : '';
-
-                        return `
-                        <div class="link-item">
-                            <div class="link-banner" style="${bannerStyle}">
-                                ${bannerIcon}
-                                <div class="cat-badge"><i class="fas fa-tag me-1"></i> ${linkCategory}</div>
-                                <div class="status-badge"><i class="fas fa-circle text-success me-1"></i> ACTIVE</div>
-                            </div>
-                            
-                            <div class="link-content">
-                                <h3 class="link-title">${link.title}</h3>
-                                
-                                <div class="link-stats">
-                                    <div class="stat-line"><span class="text-secondary">PRICE</span> <span class="val text-white">${displayAmount}</span></div>
-                                    <div class="stat-line"><span class="text-secondary">TOTAL SALES</span> <span class="val text-white">${count}</span></div>
-                                    ${stockDisplay}
-                                    <div class="stat-line mt-3 pt-3 border-top border-dark"><span class="text-secondary">MONEY MADE</span> <span class="val text-success" style="font-size: 1.4rem;">₦${collected.toLocaleString()}</span></div>
-                                </div>
-                                
-                                <div class="link-actions">
-                                    <div class="act-btn" onclick="copyLink('${linkUrl}')"><i class="fas fa-copy"></i> COPY LINK</div>
-                                    <div class="act-btn qr-btn" onclick="showQR('${linkUrl}', '${link.title.replace(/'/g, "\\'")}')"><i class="fas fa-qrcode"></i> GET QR CODE</div>
-                                </div>
-                            </div>
-                        </div>
-                        `;
-                    }).join('');
-
-                    document.getElementById('dashTotalRev').innerText = '₦' + totalRev.toLocaleString(undefined, {minimumFractionDigits:2});
-                    document.getElementById('dashTotalTx').innerText = totalTx;
-
-                } else {
-                    container.innerHTML = `
-                        <div class="text-center py-5 w-100" style="grid-column: 1 / -1; border: 3px dashed #444; border-radius: 20px;">
-                            <i class="fas fa-folder-open fa-5x mb-4 text-secondary"></i><br>
-                            <h3 class="fw-bold text-white mb-3">You have no products yet</h3>
-                            <p class="fs-5 text-secondary fw-bold">Use the form above to create your first product.</p>
-                        </div>`;
-                    document.getElementById('dashTotalRev').innerText = '₦0.00';
-                    document.getElementById('dashTotalTx').innerText = '0';
-                }
-            } else {
-                container.innerHTML = `<div class="text-center py-5 text-danger w-100 fs-4 fw-bold" style="grid-column: 1 / -1;"><i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>${data.message || 'Error loading products'}</div>`;
+                globalProducts = data.links || [];
+                renderDashboards();
             }
         } catch (e) {
-            container.innerHTML = '<div class="text-center py-5 text-danger w-100 fs-4 fw-bold" style="grid-column: 1 / -1;"><i class="fas fa-wifi fa-2x mb-3"></i><br>Network Error. Cannot load products right now.</div>';
+            console.error("Failed to load products");
         }
     }
-    
+
+    function renderDashboards() {
+        const activeContainer = document.getElementById('activeLinksContainer');
+        const archiveContainer = document.getElementById('archivedLinksContainer');
+        
+        const activeAds = globalProducts.filter(p => ['active', 'paused', 'soldout'].includes(p.status));
+        const archiveAds = globalProducts.filter(p => ['draft', 'archived'].includes(p.status));
+
+        // Aggregate Metrics
+        let tSales = 0, tRev = 0, tFees = 0, tCust = new Set();
+        
+        const generateCardHTML = (link) => {
+            const linkUrl = `${window.location.origin}/pay.html?id=${link.linkId}`;
+            const displayAmount = link.isFlexibleAmount ? 'FLEXIBLE' : `₦${Number(link.amount).toLocaleString()}`;
+            const collected = Number(link.totalCollected || 0);
+            const count = Number(link.transactionCount || 0);
+            
+            tSales += count; tRev += collected; tFees += Number(link.feesPaid || 0);
+            if(link.customers) link.customers.forEach(c => tCust.add(c));
+
+            let statusHTML = '';
+            if(link.status === 'active') statusHTML = '<div class="status-badge status-active"><i class="fas fa-circle me-1"></i> ACTIVE</div>';
+            else if(link.status === 'draft') statusHTML = '<div class="status-badge status-draft"><i class="fas fa-pen me-1"></i> DRAFT</div>';
+            else if(link.status === 'paused') statusHTML = '<div class="status-badge status-paused"><i class="fas fa-pause me-1"></i> PAUSED</div>';
+            else if(link.status === 'soldout') statusHTML = '<div class="status-badge status-soldout"><i class="fas fa-times-circle me-1"></i> SOLD OUT</div>';
+            else statusHTML = '<div class="status-badge status-archived"><i class="fas fa-archive me-1"></i> ARCHIVED</div>';
+
+            let stockDisplay = '<div class="stat-line"><span>STOCK</span> <span class="val text-success">INFINITE</span></div>';
+            if(link.totalStock) {
+                const left = link.remainingStock !== undefined ? link.remainingStock : (link.totalStock - count);
+                const stockColor = left === 0 ? 'text-danger' : (left < 5 ? 'text-warning' : 'text-success');
+                stockDisplay = `<div class="stat-line"><span>STOCK LEFT</span> <span class="val ${stockColor}">${left} / ${link.totalStock}</span></div>`;
+            }
+
+            let bannerStyle = link.cloudinaryUrl ? `background-image: url('${link.cloudinaryUrl}');` : `background: #111;`;
+            let bannerIcon = !link.cloudinaryUrl ? `<i class="fas fa-box-open text-secondary fs-1"></i>` : '';
+
+            return `
+            <div class="link-item">
+                <div class="link-banner" style="${bannerStyle}">
+                    ${bannerIcon}
+                    ${statusHTML}
+                </div>
+                <div class="link-content">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h3 class="link-title text-truncate w-75">${link.title}</h3>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary border-0" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg">
+                                <li><a class="dropdown-item" href="#" onclick="window.open('${linkUrl}','_blank')"><i class="fas fa-external-link-alt"></i> View Public Page</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="viewAnalytics('${link._id}')"><i class="fas fa-chart-line"></i> Full Analytics</a></li>
+                                <li><hr class="dropdown-divider border-secondary"></li>
+                                ${link.status === 'active' ? `<li><a class="dropdown-item" href="#" onclick="updateStatus('${link._id}', 'paused')"><i class="fas fa-pause"></i> Pause Sales</a></li>` : ''}
+                                ${link.status === 'paused' || link.status === 'draft' ? `<li><a class="dropdown-item text-success" href="#" onclick="updateStatus('${link._id}', 'active')"><i class="fas fa-play"></i> Publish / Resume</a></li>` : ''}
+                                ${['active', 'paused', 'draft', 'soldout'].includes(link.status) ? `<li><a class="dropdown-item text-warning" href="#" onclick="updateStatus('${link._id}', 'archived')"><i class="fas fa-archive"></i> Send to Archive</a></li>` : ''}
+                                ${link.status === 'archived' ? `<li><a class="dropdown-item text-danger" href="#" onclick="permanentDelete('${link._id}')"><i class="fas fa-trash-alt"></i> Delete Forever</a></li>` : ''}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="compact-stats">
+                        <div class="stat-line"><span>PRICE</span> <span class="val">${displayAmount}</span></div>
+                        <div class="stat-line"><span>SALES</span> <span class="val">${count}</span></div>
+                        ${stockDisplay}
+                        <div class="stat-line mt-2 pt-2 border-top border-secondary"><span>NET REVENUE</span> <span class="val gold">₦${(collected - (link.feesPaid||0)).toLocaleString()}</span></div>
+                    </div>
+                    
+                    <div class="card-actions-wrapper">
+                        <button class="btn-copy" onclick="copyLink('${linkUrl}')"><i class="fas fa-copy"></i> COPY LINK</button>
+                        <button class="btn btn-dark border border-secondary text-white" onclick="showQR('${linkUrl}', '${link.title.replace(/'/g, "\\'")}')" title="QR Code"><i class="fas fa-qrcode"></i></button>
+                    </div>
+                </div>
+            </div>`;
+        };
+
+        if(activeAds.length > 0) activeContainer.innerHTML = activeAds.map(generateCardHTML).join('');
+        else activeContainer.innerHTML = `<div class="text-center py-5 w-100" style="grid-column: 1 / -1;"><h4 class="text-secondary"><i class="fas fa-box-open d-block mb-3 fa-2x"></i>No active products</h4></div>`;
+
+        if(archiveAds.length > 0) archiveContainer.innerHTML = archiveAds.map(generateCardHTML).join('');
+        else archiveContainer.innerHTML = `<div class="text-center py-5 w-100" style="grid-column: 1 / -1;"><h4 class="text-secondary"><i class="fas fa-archive d-block mb-3 fa-2x"></i>Archive is empty</h4></div>`;
+
+        // Update Top Metrics
+        document.getElementById('m_netRev').innerText = '₦' + (tRev - tFees).toLocaleString(undefined, {minimumFractionDigits:2});
+        document.getElementById('m_totalSales').innerText = tSales;
+        document.getElementById('m_activeLinks').innerText = activeAds.length;
+        document.getElementById('m_customers').innerText = tCust.size;
+        document.getElementById('m_fees').innerText = '-₦' + tFees.toLocaleString();
+        
+        // Update user display name based on token if available (fallback UI logic)
+        setupMerchantProfile();
+    }
+
+    // ==========================================
+    // ACTION CONTROLLERS
+    // ==========================================
+    async function updateStatus(id, newStatus) {
+        const authToken = localStorage.getItem("naterpay_token");
+        try {
+            Swal.fire({ title: 'Updating...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+            const res = await fetch(`/api/payment-links/${id}/status`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) { Swal.close(); loadProducts(); }
+            else Swal.fire('Error', 'Update failed.', 'error');
+        } catch(e) { Swal.fire('Error', 'Network Error.', 'error'); }
+    }
+
+    async function permanentDelete(id) {
+        const authToken = localStorage.getItem("naterpay_token");
+        if ((await Swal.fire({ title: 'Are you absolutely sure?', text: "Permanent deletion removes the product, image, QR code, and public link forever. Analytics are kept in ledger history.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' })).isConfirmed) {
+            try {
+                Swal.fire({ title: 'Purging...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+                const res = await fetch(`/api/payment-links/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authToken}` } });
+                if (res.ok) { Swal.close(); loadProducts(); }
+                else Swal.fire('Error', 'Deletion failed.', 'error');
+            } catch(e) { Swal.fire('Error', 'Network Error.', 'error'); }
+        }
+    }
+
+    function viewAnalytics(id) {
+        const p = globalProducts.find(x => x._id === id);
+        if(!p) return;
+        const net = (p.totalCollected || 0) - (p.feesPaid || 0);
+        const cvr = p.views > 0 ? (((p.transactionCount||0) / p.views) * 100).toFixed(1) : 0;
+        
+        Swal.fire({
+            title: 'Enterprise Analytics',
+            html: `
+                <div class="text-start mt-3" style="font-size: 0.9rem; font-weight: 700;">
+                    <h5 class="text-gold border-bottom border-dark pb-2 mb-3 text-uppercase">${p.title}</h5>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="d-block text-secondary">VIEWS</small><span class="fs-5">${p.views || 0}</span></div></div>
+                        <div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="d-block text-secondary">CONVERSION</small><span class="fs-5 text-info">${cvr}%</span></div></div>
+                        <div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="d-block text-secondary">SALES</small><span class="fs-5 text-success">${p.transactionCount || 0}</span></div></div>
+                        <div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="d-block text-secondary">REFUNDS</small><span class="fs-5 text-danger">${p.refundCount || 0}</span></div></div>
+                    </div>
+                    <div class="bg-black p-3 rounded border border-secondary">
+                        <div class="d-flex justify-content-between mb-2"><span>Gross Revenue:</span> <span>₦${(p.totalCollected||0).toLocaleString()}</span></div>
+                        <div class="d-flex justify-content-between mb-2 text-danger"><span>Platform Fees:</span> <span>-₦${(p.feesPaid||0).toLocaleString()}</span></div>
+                        <div class="d-flex justify-content-between mt-2 pt-2 border-top border-dark fs-5 text-gold"><span>Net Earned:</span> <span>₦${net.toLocaleString()}</span></div>
+                    </div>
+                </div>
+            `,
+            background: '#0a0a0a', color: '#fff', confirmButtonColor: '#333', confirmButtonText: 'Close Analytics'
+        });
+    }
+
+    // ==========================================
+    // UTILS
+    // ==========================================
     function copyLink(linkUrl) {
         navigator.clipboard.writeText(linkUrl).then(() => {
-            Swal.fire({ icon: 'success', title: 'Link Copied!', text: 'You can now paste it anywhere.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'success', title: 'Link Copied!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' });
         });
     }
 
@@ -612,57 +581,30 @@
         document.getElementById('qrTitle').innerText = title;
         const display = document.getElementById('qrDisplay');
         display.innerHTML = ''; 
-        
-        // FIX: Display the modal FIRST so the container has actual dimensions on the screen.
         document.getElementById('qrModal').style.display = 'flex';
-        
-        // Wait 50 milliseconds for the browser to register the modal's size, THEN generate the QR code.
         setTimeout(() => {
-            currentQrCode = new QRCode(display, {
-                text: linkUrl, 
-                width: 300, 
-                height: 300,
-                colorDark : "#000000", 
-                colorLight : "#ffffff", 
-                correctLevel : QRCode.CorrectLevel.H
-            });
+            currentQrCode = new QRCode(display, { text: linkUrl, width: 250, height: 250, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
         }, 50);
     }
 
-    // FIXED: Creating a new canvas on-the-fly to force a solid white background before downloading.
     function downloadQR() {
         const originalCanvas = document.querySelector('#qrDisplay canvas');
-        
-        if(!originalCanvas) {
-            Swal.fire({ icon: 'error', title: 'Wait a moment', text: 'QR code is not ready yet.', background: '#111', color: '#fff' });
-            return;
-        }
-
+        if(!originalCanvas) return;
         const padding = 20; 
         const newCanvas = document.createElement('canvas');
         newCanvas.width = originalCanvas.width + (padding * 2);
         newCanvas.height = originalCanvas.height + (padding * 2);
-        
         const ctx = newCanvas.getContext('2d');
-        
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, newCanvas.width, newCanvas.height);
         ctx.drawImage(originalCanvas, padding, padding);
-
         const link = document.createElement('a');
         link.href = newCanvas.toDataURL("image/png");
-        link.download = 'My_Payment_QRCode.png';
-        
-        document.body.appendChild(link);
+        link.download = 'Product_QRCode.png';
         link.click();
-        document.body.removeChild(link);
     }
     
-    window.onload = () => { 
-        initStars(); 
-        setupMerchantProfile();
-        loadPaymentLinks(); 
-    };
+    window.onload = () => { initStars(); loadProducts(); };
     window.onresize = initStars;
 </script>
 
