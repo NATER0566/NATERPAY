@@ -1,7 +1,7 @@
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
-const User = require('../models/User'); // ADDED FOR PIN CHECK
-const bcrypt = require('bcryptjs'); // ADDED FOR PIN CHECK
+const User = require('../models/User'); 
+const bcrypt = require('bcryptjs'); 
 const axios = require('axios');
 
 const variationsCache = {};
@@ -15,13 +15,17 @@ function generateVTpassRequestId() {
   return dateStr + randomSuffix;
 }
 
-// --- UNIVERSAL PIN VALIDATOR ---
+// --- UNIVERSAL PIN VALIDATOR (FIXED SCHEMA MAPPING) ---
 async function validateTransactionPin(userId, inputPin) {
     if (!inputPin) return { isValid: false, message: 'Security PIN is required.' };
     const user = await User.findById(userId);
-    if (!user.transactionPin) return { isValid: false, message: 'Please set up your security PIN in settings first.' };
-    const isMatch = await bcrypt.compare(String(inputPin), user.transactionPin);
+    
+    // THE FIX: The schema uses 'withdrawalPin', not 'transactionPin'
+    if (!user.withdrawalPin) return { isValid: false, message: 'Please set up your security PIN in settings first.' };
+    
+    const isMatch = await bcrypt.compare(String(inputPin), user.withdrawalPin);
     if (!isMatch) return { isValid: false, message: 'SECURITY ALERT: Incorrect PIN.' };
+    
     return { isValid: true };
 }
 
@@ -58,7 +62,6 @@ async function buyAirtime(request, reply) {
     const { phone, network, amount, pin } = request.body;
     if (!phone || !network || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
-    // STRICT PIN VALIDATION
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
@@ -100,7 +103,6 @@ async function buyData(request, reply) {
     const { phone, network, plan, amount, pin } = request.body;
     if (!phone || !network || !amount || !plan) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
-    // STRICT PIN VALIDATION
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
@@ -142,7 +144,6 @@ async function buyElectricity(request, reply) {
     const { meterNumber, disco, amount, meterType, pin } = request.body;
     if (!meterNumber || !disco || !amount || !meterType) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
-    // STRICT PIN VALIDATION
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
@@ -184,7 +185,6 @@ async function buyCable(request, reply) {
     const { smartcardNumber, provider, package: pkg, amount, pin } = request.body;
     if (!smartcardNumber || !provider || !amount || !pkg) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
-    // STRICT PIN VALIDATION
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
@@ -226,7 +226,6 @@ async function buyEducation(request, reply) {
     const { provider, phone, quantity, amount, pin } = request.body;
     if (!provider || !phone || !quantity || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
-    // STRICT PIN VALIDATION
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
@@ -268,7 +267,6 @@ async function buyBetting(request, reply) {
     const { provider, customerId, amount, pin } = request.body;
     if (!provider || !customerId || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
-    // STRICT PIN VALIDATION
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
@@ -309,7 +307,6 @@ async function buyInsurance(request, reply) {
     const { provider, fullName, phone, plan, amount, address, dob, occupation, vehicleDetails, pin } = request.body;
     if (!provider || !fullName || !phone || !amount || !plan) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
-    // STRICT PIN VALIDATION
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
@@ -353,7 +350,6 @@ async function sendBulkSMS(request, reply) {
         const { sender, recipient, message, pin } = request.body;
         if (!sender || !recipient || !message || !pin) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
 
-        // STRICT PIN VALIDATION
         const pinCheck = await validateTransactionPin(request.user._id, pin);
         if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
 
@@ -412,7 +408,6 @@ async function buyPOS(request, reply) {
         const { terminalId, amount, pin } = request.body;
         if (!terminalId || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
 
-        // STRICT PIN VALIDATION
         const pinCheck = await validateTransactionPin(request.user._id, pin);
         if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
 
