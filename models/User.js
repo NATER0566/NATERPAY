@@ -100,14 +100,20 @@ const userSchema = new mongoose.Schema({
     index: true
   },
   referredBy: {
-    type: String, // THE FIX: Stores the referral code of the person who invited them
+    type: String, 
     default: null,
     index: true
   },
   referralBonusPaid: {
-    type: Boolean, // THE FIX: Stays false until they make their first transaction
+    type: Boolean, 
     default: false 
   },
+  // ---> THE ENTERPRISE FIX: Tracks total user spending for milestone rewards <---
+  cumulativeSpend: {
+    type: Number,
+    default: 0
+  },
+  // -----------------------------------------------------------------------------
   referralCount: {
     type: Number,
     default: 0
@@ -321,13 +327,12 @@ userSchema.statics.findByReferralCode = function(code) {
   return this.findOne({ referralCode: code.toUpperCase() });
 };
 
-// THE FIX: Adjusted to query by the string referralCode instead of the ObjectId
 userSchema.statics.getReferralTree = async function(userId) {
   const user = await this.findById(userId);
   if (!user) return [];
   
   return this.find({ referredBy: user.referralCode })
-    .select('name email phoneNumber referralCount createdAt')
+    .select('name email phoneNumber referralCount createdAt cumulativeSpend referralBonusPaid')
     .sort({ createdAt: -1 });
 };
 
