@@ -15,8 +15,10 @@
     <style>
         :root { 
             --gold: #FFD700; 
+            --gold-dim: #d4af37;
             --bg: #000000; 
             --card-bg: #111111; 
+            --nater-red: #d32f2f;
         }
         * {
             box-sizing: border-box;
@@ -142,7 +144,7 @@
             border-radius: 10px; 
             font-weight: 800; 
             transition: 0.3s;
-            flex: 1 1 30%; /* Adapts to screen size */
+            flex: 1 1 30%;
         }
         .quick-amount-btn:hover { 
             border-color: var(--gold); 
@@ -176,6 +178,39 @@
             font-weight: 600;
             opacity: 0.7;
         }
+
+        /* ENTERPRISE REFRACTIVE SPINNER */
+        .swal-reflective-spinner {
+            position: relative; width: 90px; height: 90px; margin: 20px auto; border-radius: 50%;
+            background: conic-gradient(from 0deg, rgba(255,215,0,0.1) 0%, rgba(255,255,255,0.9) 15%, var(--gold) 30%, rgba(255,215,0,0.2) 50%, var(--gold-dim) 70%, rgba(255,255,255,0.8) 85%, rgba(255,215,0,0.1) 100%);
+            animation: spinSwalReflect 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite, flashGlow 2s alternate infinite;
+            box-shadow: 0 0 40px rgba(255,215,0,0.5);
+        }
+        .swal-reflective-spinner::before {
+            content: ''; position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px;
+            background: radial-gradient(circle at 30% 30%, #1a1a1a 0%, #050505 100%);
+            border-radius: 50%; border: 1px solid rgba(255,215,0,0.3); z-index: 1;
+        }
+        .swal-inner-icon {
+            position: absolute; z-index: 2; top: 50%; left: 50%; font-size: 2rem; color: var(--gold);
+            text-shadow: 0 0 20px var(--gold), 0 0 40px rgba(255,255,255,0.6);
+            animation: counterSpinSwal 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        @keyframes spinSwalReflect { 100% { transform: rotate(360deg); } }
+        @keyframes counterSpinSwal { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
+        @keyframes flashGlow { 0% { box-shadow: 0 0 20px rgba(255,215,0,0.3); filter: brightness(1); } 100% { box-shadow: 0 0 60px rgba(255,215,0,0.8); filter: brightness(1.3); } }
+
+        /* BURST STARS EFFECTS */
+        .burst-star {
+            position: fixed; top: 50%; left: 50%; z-index: 9999; pointer-events: none;
+            color: var(--gold); font-size: 1.5rem; text-shadow: 0 0 10px rgba(255,215,0,0.8);
+            animation: starExplode 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        .burst-star.failed { color: var(--nater-red); text-shadow: 0 0 10px rgba(211,47,47,0.8); }
+        @keyframes starExplode {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 1; }
+            100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.5) rotate(var(--rot)); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -198,25 +233,25 @@
         
         <div class="row g-2 mb-4">
             <div class="col-6 col-md-3">
-                <div class="network-btn active" onclick="selectNetwork(this, 'mtn')">
+                <div class="network-btn active" id="btn-mtn" onclick="selectNetwork(this, 'mtn')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #ffcc00;"></i>
                     <div>MTN</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="network-btn" onclick="selectNetwork(this, 'airtel')">
+                <div class="network-btn" id="btn-airtel" onclick="selectNetwork(this, 'airtel')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #ff0000;"></i>
                     <div>Airtel</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="network-btn" onclick="selectNetwork(this, 'glo')">
+                <div class="network-btn" id="btn-glo" onclick="selectNetwork(this, 'glo')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #00ff00;"></i>
                     <div>Glo</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="network-btn" onclick="selectNetwork(this, 'etisalat')">
+                <div class="network-btn" id="btn-etisalat" onclick="selectNetwork(this, 'etisalat')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #00bfff;"></i>
                     <div>9Mobile</div>
                 </div>
@@ -224,8 +259,8 @@
         </div>
         
         <div class="input-group-custom">
-            <label>PHONE NUMBER</label>
-            <input type="tel" id="phoneNumber" placeholder="e.g. 08012345678" maxlength="11">
+            <label>PHONE NUMBER <span style="font-size: 0.7rem; color: #888; text-transform: none; float: right;">Auto-detects network</span></label>
+            <input type="tel" id="phoneNumber" placeholder="e.g. 08012345678" maxlength="11" oninput="detectNetwork()">
         </div>
         
         <label class="amount-label text-center mb-2">ENTER AMOUNT (₦)</label>
@@ -240,9 +275,9 @@
             <button class="quick-amount-btn" onclick="setAmount(5000)">₦5,000</button>
         </div>
         
-        <div class="input-group-custom">
-            <label>WITHDRAWAL PIN</label>
-            <input type="password" id="withdrawalPin" placeholder="Enter 4-digit PIN" maxlength="4">
+        <div class="input-group-custom" style="border-color: #555;">
+            <label style="color: #bbb;"><i class="fas fa-lock me-1"></i> SECURITY PIN</label>
+            <input type="password" id="withdrawalPin" placeholder="Enter 4-digit PIN" maxlength="4" style="letter-spacing: 5px;">
         </div>
         
         <button class="btn-buy" id="btnBuy" onclick="buyAirtime()">
@@ -258,6 +293,41 @@
 
 <script>
     let selectedNetwork = 'mtn';
+
+    // NIGERIAN TELECOM PREFIX AUTO-DETECTOR
+    const networkPrefixes = {
+        'mtn': ['0803','0806','0703','0706','0813','0816','0810','0814','0903','0906','0913','0916'],
+        'airtel': ['0802','0808','0708','0812','0701','0902','0901','0907','0912'],
+        'glo': ['0805','0807','0705','0815','0811','0905','0915'],
+        'etisalat': ['0809','0818','0817','0909','0908']
+    };
+
+    function detectNetwork() {
+        const phoneInput = document.getElementById('phoneNumber').value;
+        if (phoneInput.length >= 4) {
+            const prefix = phoneInput.substring(0, 4);
+            let detectedNetwork = null;
+
+            for (const [network, prefixes] of Object.entries(networkPrefixes)) {
+                if (prefixes.includes(prefix)) {
+                    detectedNetwork = network;
+                    break;
+                }
+            }
+
+            if (detectedNetwork && detectedNetwork !== selectedNetwork) {
+                const btn = document.getElementById(`btn-${detectedNetwork}`);
+                if (btn) {
+                    selectNetwork(btn, detectedNetwork);
+                    Swal.fire({
+                        toast: true, position: 'top-end', showConfirmButton: false, timer: 1500,
+                        icon: 'info', title: `Network auto-switched to ${detectedNetwork.toUpperCase()}`,
+                        background: '#111', color: '#FFD700'
+                    });
+                }
+            }
+        }
+    }
     
     function initStars() {
         const canvas = document.getElementById('starCanvas');
@@ -280,6 +350,26 @@
             requestAnimationFrame(animate);
         }
         animate();
+    }
+
+    function triggerStarBurst(isSuccess = true) {
+        const starCount = 40;
+        const body = document.body;
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.innerHTML = '★';
+            star.className = isSuccess ? 'burst-star' : 'burst-star failed';
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * 300 + 100;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+            const rot = Math.random() * 720 - 360;
+            star.style.setProperty('--tx', `${tx}px`);
+            star.style.setProperty('--ty', `${ty}px`);
+            star.style.setProperty('--rot', `${rot}deg`);
+            body.appendChild(star);
+            setTimeout(() => { star.remove(); }, 1000);
+        }
     }
     
     function selectNetwork(element, network) {
@@ -317,14 +407,19 @@
 
         const btnBuy = document.getElementById('btnBuy');
         btnBuy.disabled = true;
-        btnBuy.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> PROCESSING...';
         
         try {
+            // ENTERPRISE HOLOGRAPHIC LOADER
             Swal.fire({
-                title: 'Processing Request...',
-                html: '<span style="color: #FFF; font-size: 1.1rem;">NATER-PAY is securely processing your airtime purchase...</span>',
+                title: 'Securing Protocol...',
+                html: `
+                    <div class="swal-reflective-spinner">
+                        <i class="fas fa-satellite-dish swal-inner-icon"></i>
+                    </div>
+                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Encrypting payload & transmitting to network...</span>
+                `,
                 allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
+                showConfirmButton: false,
                 background: '#111111', color: '#FFD700'
             });
             
@@ -337,12 +432,14 @@
             const data = await res.json();
             
             if (data.success) {
+                triggerStarBurst(true); // Success Stars
                 Swal.fire({
                     icon: 'success', title: 'Purchase Successful!',
                     html: `<div style="font-size: 1.1rem; color: #FFF;">₦${amount.toLocaleString()} airtime has been successfully sent to ${phoneNumber}.</div>`,
                     confirmButtonColor: '#FFD700', background: '#111111', color: '#FFFFFF'
                 }).then(() => { window.location.href = '/dashboard.html'; });
             } else {
+                triggerStarBurst(false); // Fail Stars
                 let msg = data.message || "An error occurred.";
                 if (msg.toLowerCase().includes("vtpass") || msg.toLowerCase().includes("system error") || msg.toLowerCase().includes("db error")) {
                     msg = "We encountered a temporary issue processing your purchase. Please verify your details or try again later.";
@@ -350,13 +447,12 @@
                 Swal.fire({ icon: 'error', title: 'Transaction Failed', text: msg, confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
                 
                 btnBuy.disabled = false;
-                btnBuy.innerHTML = '<i class="fas fa-phone me-2"></i> PURCHASE AIRTIME';
             }
         } catch (error) {
+            triggerStarBurst(false); // Fail Stars
             Swal.fire({ icon: 'error', title: 'Network Error', text: 'Unable to connect to NATER-PAY servers. Please check your internet connection.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             
             btnBuy.disabled = false;
-            btnBuy.innerHTML = '<i class="fas fa-phone me-2"></i> PURCHASE AIRTIME';
         }
     }
     
