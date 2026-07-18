@@ -217,24 +217,24 @@
         
         <div class="row g-3 mb-4">
             <div class="col-12 col-md-4">
-                <div class="provider-btn active" onclick="selectProvider(this, 'waec-result', 900)">
+                <div class="provider-btn active" id="btn-waec" onclick="selectProvider(this, 'waec-result')">
                     <i class="fas fa-search fa-2x" style="color: #4da6ff;"></i>
                     <div>WAEC Result</div>
-                    <span class="price-tag">₦900</span>
+                    <span class="price-tag" id="price-waec"><i class="fas fa-spinner fa-spin"></i></span>
                 </div>
             </div>
             <div class="col-12 col-md-4">
-                <div class="provider-btn" onclick="selectProvider(this, 'waec-registration', 14450)">
+                <div class="provider-btn" id="btn-waec-reg" onclick="selectProvider(this, 'waec-registration')">
                     <i class="fas fa-clipboard-check fa-2x" style="color: #2eb82e;"></i>
                     <div>WAEC Registration</div>
-                    <span class="price-tag">₦14,450</span>
+                    <span class="price-tag" id="price-waec-reg"><i class="fas fa-spinner fa-spin"></i></span>
                 </div>
             </div>
             <div class="col-12 col-md-4">
-                <div class="provider-btn" onclick="selectProvider(this, 'jamb', 6200)">
+                <div class="provider-btn" id="btn-jamb" onclick="selectProvider(this, 'jamb')">
                     <i class="fas fa-book-reader fa-2x" style="color: #ff3333;"></i>
                     <div>JAMB PIN</div>
-                    <span class="price-tag">₦6,200</span>
+                    <span class="price-tag" id="price-jamb"><i class="fas fa-spinner fa-spin"></i></span>
                 </div>
             </div>
         </div>
@@ -260,11 +260,11 @@
         
         <div class="total-box">
             <span class="amount-label" style="margin-bottom: 4px;">TOTAL AMOUNT DUE</span>
-            <div class="h2 fw-bold" style="color: #FFFFFF;" id="totalAmount">₦900</div>
+            <div class="h2 fw-bold" style="color: #FFFFFF;" id="totalAmount"><i class="fas fa-spinner fa-spin" style="font-size: 1.5rem;"></i></div>
         </div>
         
-        <button class="btn-buy" id="btnBuy" onclick="buyExamPin()">
-            <i class="fas fa-key me-2"></i> GENERATE PIN NOW
+        <button class="btn-buy" id="btnBuy" onclick="buyExamPin()" disabled>
+            <i class="fas fa-spinner fa-spin me-2"></i> SYNCING API...
         </button>
     </div>
     
@@ -275,9 +275,15 @@
 </div>
 
 <script>
-    let selectedProvider = 'waec-result';
-    let unitPrice = 900; 
+    let selectedProviderKey = 'waec-result';
+    let unitPrice = 0; 
     
+    const providerMap = {
+        'waec-result': { serviceID: 'waec', defaultVariation: 'waecdirect', priceElement: 'price-waec' },
+        'waec-registration': { serviceID: 'waec-registration', defaultVariation: 'waec-registraion', priceElement: 'price-waec-reg' },
+        'jamb': { serviceID: 'jamb', defaultVariation: 'utme-no-mock', priceElement: 'price-jamb' }
+    };
+
     function initStars() {
         const canvas = document.getElementById('starCanvas');
         canvas.width = window.innerWidth;
@@ -319,18 +325,60 @@
         }
     }
     
-    function selectProvider(element, provider, price) {
+    async function selectProvider(element, providerKey) {
         document.querySelectorAll('.provider-btn').forEach(btn => btn.classList.remove('active'));
         element.classList.add('active');
-        selectedProvider = provider;
-        unitPrice = price;
-        updateTotal();
+        selectedProviderKey = providerKey;
+        await fetchLivePrice(providerKey);
     }
     
     function updateTotal() {
         const qty = parseInt(document.getElementById('quantity').value) || 1;
         const total = unitPrice * qty;
         document.getElementById('totalAmount').innerText = '₦' + total.toLocaleString();
+    }
+
+    // --- DYNAMIC VTU API FETCHING ENGINE ---
+    async function fetchLivePrice(providerKey) {
+        const btnBuy = document.getElementById('btnBuy');
+        const priceDisplay = document.getElementById('totalAmount');
+        const providerConfig = providerMap[providerKey];
+        
+        btnBuy.disabled = true;
+        btnBuy.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> FETCHING LIVE PRICE...';
+        priceDisplay.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size: 1.5rem;"></i>';
+        unitPrice = 0;
+
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) return;
+
+        try {
+            const response = await fetch(`/api/vtu/variations?serviceID=${providerConfig.serviceID}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const data = await response.json();
+
+            if (data.success && data.variations && data.variations.length > 0) {
+                // Find specific variation or fallback to the first one available
+                let plan = data.variations.find(v => v.variation_code === providerConfig.defaultVariation) || data.variations[0];
+                
+                unitPrice = parseFloat(plan.variation_amount);
+                updateTotal();
+                
+                btnBuy.disabled = false;
+                btnBuy.innerHTML = '<i class="fas fa-key me-2"></i> GENERATE PIN NOW';
+                
+                // Update the small tag on the active button
+                document.getElementById(providerConfig.priceElement).innerText = '₦' + unitPrice.toLocaleString();
+            } else {
+                priceDisplay.innerHTML = '<span class="text-danger" style="font-size: 1.2rem;">API Unavailable</span>';
+                document.getElementById(providerConfig.priceElement).innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i>';
+                Swal.fire({ icon: 'error', title: 'API Sync Error', text: 'Could not fetch live pricing from VTpass.', background: '#111111', color: '#FFFFFF' });
+            }
+        } catch (error) {
+            priceDisplay.innerHTML = '<span class="text-danger" style="font-size: 1.2rem;">Network Error</span>';
+            document.getElementById(providerConfig.priceElement).innerHTML = '<i class="fas fa-wifi text-danger"></i>';
+        }
     }
     
     async function buyExamPin() {
@@ -339,6 +387,11 @@
         const pin = document.getElementById('withdrawalPin').value;
         const totalAmount = unitPrice * parseInt(quantity);
         
+        if (unitPrice === 0) {
+            Swal.fire({ icon: 'warning', title: 'Syncing', text: 'Please wait for the live price to load.', confirmButtonColor: '#FFD700', background: '#111111', color: '#FFFFFF' });
+            return;
+        }
+
         if (!phone || phone.length < 10) {
             Swal.fire({ icon: 'error', title: 'Invalid Entry', text: 'Please enter a valid Phone Number or JAMB Profile ID.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             return;
@@ -372,7 +425,7 @@
             const res = await fetch('/api/vtu/education', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ provider: selectedProvider, phone: phone, quantity: quantity, amount: totalAmount, pin: pin })
+                body: JSON.stringify({ provider: selectedProviderKey, phone: phone, quantity: quantity, amount: totalAmount, pin: pin })
             });
             
             const data = await res.json();
@@ -401,7 +454,11 @@
         }
     }
     
-    window.onload = initStars;
+    // Fetch the price for the default selected provider on load
+    window.onload = () => {
+        initStars();
+        fetchLivePrice(selectedProviderKey);
+    };
 </script>
 
 </body>
