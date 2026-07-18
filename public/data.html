@@ -161,25 +161,25 @@
         
         <div class="row g-2 mb-4">
             <div class="col-6 col-md-3">
-                <div class="network-btn active" onclick="selectNetwork(this, 'mtn-data')">
+                <div class="network-btn active" id="btn-mtn-data" onclick="selectNetwork(this, 'mtn-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #ffcc00;"></i>
                     <div>MTN</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="network-btn" onclick="selectNetwork(this, 'airtel-data')">
+                <div class="network-btn" id="btn-airtel-data" onclick="selectNetwork(this, 'airtel-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #ff0000;"></i>
                     <div>Airtel</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="network-btn" onclick="selectNetwork(this, 'glo-data')">
+                <div class="network-btn" id="btn-glo-data" onclick="selectNetwork(this, 'glo-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #00ff00;"></i>
                     <div>Glo</div>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="network-btn" onclick="selectNetwork(this, 'etisalat-data')">
+                <div class="network-btn" id="btn-etisalat-data" onclick="selectNetwork(this, 'etisalat-data')">
                     <i class="fas fa-signal fa-2x mb-2" style="color: #00bfff;"></i>
                     <div>9Mobile</div>
                 </div>
@@ -187,8 +187,8 @@
         </div>
         
         <div class="input-group-custom">
-            <label>PHONE NUMBER</label>
-            <input type="tel" id="phoneNumber" placeholder="e.g. 08012345678" maxlength="11">
+            <label>PHONE NUMBER <span style="font-size: 0.7rem; color: #888; text-transform: none; float: right;">Auto-detects network</span></label>
+            <input type="tel" id="phoneNumber" placeholder="e.g. 08012345678" maxlength="11" oninput="detectNetwork()">
         </div>
         
         <label class="amount-label text-center mb-3">2. Select Data Plan</label>
@@ -226,6 +226,42 @@
     let selectedPlan = null;
     let selectedAmount = 0;
     
+    // --- THE FIX: NIGERIAN TELECOM PREFIX AUTO-DETECTOR ---
+    const networkPrefixes = {
+        'mtn-data': ['0803','0806','0703','0706','0813','0816','0810','0814','0903','0906','0913','0916'],
+        'airtel-data': ['0802','0808','0708','0812','0701','0902','0901','0907','0912'],
+        'glo-data': ['0805','0807','0705','0815','0811','0905','0915'],
+        'etisalat-data': ['0809','0818','0817','0909','0908']
+    };
+
+    function detectNetwork() {
+        const phoneInput = document.getElementById('phoneNumber').value;
+        if (phoneInput.length >= 4) {
+            const prefix = phoneInput.substring(0, 4);
+            let detectedNetwork = null;
+
+            for (const [network, prefixes] of Object.entries(networkPrefixes)) {
+                if (prefixes.includes(prefix)) {
+                    detectedNetwork = network;
+                    break;
+                }
+            }
+
+            if (detectedNetwork && detectedNetwork !== selectedNetwork) {
+                const btn = document.getElementById(`btn-${detectedNetwork}`);
+                if (btn) {
+                    selectNetwork(btn, detectedNetwork);
+                    Swal.fire({
+                        toast: true, position: 'top-end', showConfirmButton: false, timer: 1500,
+                        icon: 'info', title: `Network auto-switched to ${detectedNetwork.split('-')[0].toUpperCase()}`,
+                        background: '#111', color: '#FFD700'
+                    });
+                }
+            }
+        }
+    }
+    // --------------------------------------------------------
+
     function initStars() {
         const canvas = document.getElementById('starCanvas');
         canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -388,14 +424,14 @@
             const data = await res.json();
             
             if (data.success) {
-                triggerStarBurst(true); // Success Stars
+                triggerStarBurst(true); 
                 Swal.fire({
                     icon: 'success', title: 'Transmission Successful!',
                     html: `<div style="font-size: 1.1rem; color: #FFF;">Data bundle has been successfully sent to ${phoneNumber}.</div>`,
                     confirmButtonColor: '#FFD700', background: '#111111', color: '#FFFFFF'
                 }).then(() => { window.location.href = '/dashboard.html'; });
             } else {
-                triggerStarBurst(false); // Fail Stars
+                triggerStarBurst(false); 
                 let msg = data.message || "An error occurred.";
                 if (msg.toLowerCase().includes("vtpass") || msg.toLowerCase().includes("system error") || msg.toLowerCase().includes("db error")) {
                     msg = "We encountered a temporary issue processing your purchase. Please verify your details or try again later.";
@@ -405,7 +441,7 @@
                 btnBuy.disabled = false;
             }
         } catch (error) {
-            triggerStarBurst(false); // Fail Stars
+            triggerStarBurst(false); 
             Swal.fire({ icon: 'error', title: 'Network Connection', text: 'Please check your internet connection and try again.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             btnBuy.disabled = false;
         }
