@@ -278,18 +278,21 @@ async function withdraw(request, reply) {
     const safeBankName = String(bankAccount?.bankName || 'Bank').toUpperCase();
     const safeAccountNo = String(bankAccount?.accountNumber || 'Unknown');
 
-    // --- BUG FIX 2: EXPLICITLY RECORD TOTAL DEDUCTION ---
+    // === CRITICAL BUG FIX: ISOLATING WITHDRAWALS FROM WEBHOOKS ===
+    const secureProviderRef = `MANUAL_WTH_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+
     const transaction = new Transaction({
       user: request.user._id, 
       type: 'withdrawal', 
       description: `Withdrawal to ${safeBankName} - ${safeAccountNo}`,
       amount: withdrawAmount, 
       fee: transferFee, 
-      totalDeduction: totalDeduction, // Fix added here
+      totalDeduction: totalDeduction, 
       balanceBefore: String(currentAvail), 
       balanceAfter: String(wallet.availableBalance || 0),
       status: 'pending', 
       provider: 'internal', 
+      providerReference: secureProviderRef, // This locks it away from auto-success webhooks
       idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `wth_${Date.now()}`, 
       ipAddress: request.ip, 
       userAgent: request.headers['user-agent'],
@@ -370,10 +373,11 @@ async function transfer(request, reply) {
     recipientWallet.balance = String(parseFloat(recipientWallet.balance || 0) + transferAmount);
     await recipientWallet.save();
     
+    // Adding secure references to peer-to-peer transfers
     const senderTransaction = new Transaction({
       user: request.user._id, type: 'transfer', description: `Transfer to ${recipientUser.name}`,
       amount: transferAmount, fee: 0, balanceBefore: String(currentAvail), balanceAfter: String(senderWallet.availableBalance || 0),
-      status: 'success', provider: 'internal'
+      status: 'success', provider: 'internal', providerReference: `TRF_OUT_${Date.now()}`
     });
     
     const recipientTransaction = new Transaction({
@@ -381,7 +385,7 @@ async function transfer(request, reply) {
       amount: transferAmount, fee: 0, 
       balanceBefore: String(parseFloat(recipientWallet.availableBalance || 0) - transferAmount), 
       balanceAfter: String(recipientWallet.availableBalance || 0),
-      status: 'success', provider: 'internal'
+      status: 'success', provider: 'internal', providerReference: `TRF_IN_${Date.now()}`
     });
     
     await senderTransaction.save();
@@ -445,7 +449,7 @@ async function resolveBankAccount(request, reply) {
 }
 
 /**
- * 8. PAYSTACK SECURE WEBHOOK
+ * 8. PAYSTACK SECURE WEBHOOK (BUG FIXED: IGNORES EMPTY REFERENCES)
  */
 async function handlePaystackWebhook(request, reply) {
     try {
@@ -462,6 +466,9 @@ async function handlePaystackWebhook(request, reply) {
             const data = event.data;
             const reference = data.reference;
             
+            // SECURITY LOCK: Do not process empty references
+            if (!reference) return reply.code(200).send('Webhook ignored: No reference provided');
+
             const existingTx = await Transaction.findOne({ providerReference: reference, status: 'success' });
             if (existingTx) return reply.code(200).send('Transaction already processed');
 
