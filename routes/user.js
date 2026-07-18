@@ -10,19 +10,11 @@ const bcrypt = require('bcryptjs');
  */
 async function getDashboardData(request, reply) {
   try {
-    // THE FIX: Fetch fresh user data directly from DB to guarantee we have the referral code and exact creation date
     const user = await User.findById(request.user._id);
-    
-    // Get wallet
     const wallet = await Wallet.findByUser(user._id);
-    
-    // Get recent transactions
     const recentTransactions = await Transaction.findByUser(user._id, { limit: 10 });
-    
-    // Get KYC status
     const kyc = await KYC.findByUser(user._id);
     
-    // Calculate stats
     const allTransactions = await Transaction.findByUser(user._id, { limit: 1000 });
     const totalLogs = allTransactions.length;
     const totalSpent = allTransactions.reduce((sum, tx) => {
@@ -46,12 +38,8 @@ async function getDashboardData(request, reply) {
       referralCount: user.referralCount || 0,
       referralBonus: user.referralBonus ? user.referralBonus.toString() : '0',
       hiddenWidgets: user.hiddenWidgets || [],
-      
-      // ---> THE REFERRAL FIX: Sending the real code and date to profile.html <---
       referralCode: user.referralCode,
       createdAt: user.createdAt,
-      // --------------------------------------------------------------------------
-      
       recentTransactions: recentTransactions.map(tx => ({
         _id: tx._id,
         date: tx.createdAt,
@@ -63,10 +51,7 @@ async function getDashboardData(request, reply) {
     });
   } catch (error) {
     console.error('Dashboard data error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch dashboard data'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to fetch dashboard data' });
   }
 }
 
@@ -76,27 +61,15 @@ async function getDashboardData(request, reply) {
 async function updatePreferences(request, reply) {
   try {
     const { action, target } = request.body;
-    
     if (action === 'hide') {
-      if (!request.user.hiddenWidgets.includes(target)) {
-        request.user.hiddenWidgets.push(target);
-      }
+      if (!request.user.hiddenWidgets.includes(target)) request.user.hiddenWidgets.push(target);
     } else if (action === 'show') {
       request.user.hiddenWidgets = request.user.hiddenWidgets.filter(w => w !== target);
     }
-    
     await request.user.save();
-    
-    reply.send({
-      success: true,
-      message: 'Preferences updated'
-    });
+    reply.send({ success: true, message: 'Preferences updated' });
   } catch (error) {
-    console.error('Preferences update error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to update preferences'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to update preferences' });
   }
 }
 
@@ -106,28 +79,17 @@ async function updatePreferences(request, reply) {
 async function updateProfile(request, reply) {
   try {
     const { name, phoneNumber } = request.body;
-    
     if (name) request.user.name = name;
     if (phoneNumber) request.user.phoneNumber = phoneNumber;
-    
     await request.user.save();
-    
-    reply.send({
-      success: true,
-      message: 'Profile updated',
-      user: sanitizeUser(request.user)
-    });
+    reply.send({ success: true, message: 'Profile updated', user: sanitizeUser(request.user) });
   } catch (error) {
-    console.error('Profile update error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to update profile'
-    });
+    reply.status(500).send({ success: false, message: 'Failed to update profile' });
   }
 }
 
 /**
- * Get referral tree (ENTERPRISE FIX APPLIED HERE)
+ * Get referral tree (BULLETPROOF QUERY ENGINE)
  */
 async function getReferralTree(request, reply) {
     try {
@@ -136,10 +98,17 @@ async function getReferralTree(request, reply) {
             return reply.send({ success: true, referrals: [] });
         }
 
-        // Find all users who registered using THIS user's referral code
-        const referrals = await User.find({ referredBy: user.referralCode })
-            .select('name createdAt email')
-            .sort({ createdAt: -1 });
+        // --- THE FIX: Bulletproof Matcher ---
+        // This catches Exact Case, Lowercase, Uppercase, and old ObjectId test data.
+        const referrals = await User.find({ 
+            $or: [
+                { referredBy: user.referralCode },
+                { referredBy: { $regex: new RegExp(`^${user.referralCode}$`, 'i') } },
+                { referredBy: user._id.toString() }
+            ]
+        })
+        .select('name createdAt email')
+        .sort({ createdAt: -1 });
 
         reply.send({ success: true, referrals });
     } catch (error) {
@@ -156,34 +125,22 @@ async function upgradeUser(request, reply) {
     const { role, amount, pin } = request.body;
     const user = request.user;
 
-    // 1. Validate Input & Tiers
-    if (!['agent', 'reseller'].includes(role)) {
-      return reply.status(400).send({ success: false, message: 'Invalid upgrade tier selected.' });
-    }
+    if (!['agent', 'reseller'].includes(role)) return reply.status(400).send({ success: false, message: 'Invalid upgrade tier selected.' });
     
     const expectedAmount = role === 'reseller' ? 5000 : 2000;
-    if (amount !== expectedAmount) {
-      return reply.status(400).send({ success: false, message: 'System alert: Amount mismatch detected.' });
-    }
+    if (amount !== expectedAmount) return reply.status(400).send({ success: false, message: 'System alert: Amount mismatch detected.' });
 
-    // 2. Prevent Double Upgrades
     if (user.role === 'reseller' || (user.role === 'agent' && role === 'agent')) {
       return reply.status(400).send({ success: false, message: `You are already on the ${user.role.toUpperCase()} tier or higher!` });
     }
 
-    // 3. Verify Transaction PIN Securely
-    if (!pin || pin.length !== 4) {
-      return reply.status(400).send({ success: false, message: 'A valid 4-digit PIN is required.' });
-    }
+    if (!pin || pin.length !== 4) return reply.status(400).send({ success: false, message: 'A valid 4-digit PIN is required.' });
     
     if (user.transactionPin) {
       const isMatch = await bcrypt.compare(pin.toString(), user.transactionPin);
-      if (!isMatch) {
-        return reply.status(400).send({ success: false, message: 'Incorrect Withdrawal PIN.' });
-      }
+      if (!isMatch) return reply.status(400).send({ success: false, message: 'Incorrect Withdrawal PIN.' });
     }
 
-    // 4. Wallet Checks & Deduction
     const wallet = await Wallet.findOne({ user: user._id });
     if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet infrastructure not found.' });
 
@@ -192,48 +149,27 @@ async function upgradeUser(request, reply) {
       return reply.status(400).send({ success: false, message: `Insufficient balance. You need ₦${amount.toLocaleString()} to upgrade.` });
     }
 
-    // Deduct Funds safely
     wallet.availableBalance = (currentAvail - amount).toString();
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    // 5. Log Transaction in Audit Ledger
     const transaction = new Transaction({
-      user: user._id,
-      type: 'reseller_upgrade',
-      description: `Account Upgrade to ${role.toUpperCase()} Node`,
-      amount: amount,
-      fee: 0,
-      balanceBefore: currentAvail.toString(),
-      balanceAfter: wallet.availableBalance.toString(),
-      status: 'success',
-      provider: 'internal',
-      reference: `UPG-${Date.now()}`
+      user: user._id, type: 'reseller_upgrade', description: `Account Upgrade to ${role.toUpperCase()} Node`,
+      amount: amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'success', provider: 'internal', reference: `UPG-${Date.now()}`
     });
     await transaction.save();
 
-    // 6. Update User Role
     user.role = role;
     await user.save();
 
-    // 7. Fire Real-time Socket Update to Dashboard
     if (request.server && request.server.io) {
        request.server.io.to(`user:${user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
-       request.server.io.to(`user:${user._id}`).emit('notification', { 
-           type: 'success', 
-           title: 'Upgrade Successful', 
-           message: `Welcome to the ${role.toUpperCase()} tier!` 
-       });
+       request.server.io.to(`user:${user._id}`).emit('notification', { type: 'success', title: 'Upgrade Successful', message: `Welcome to the ${role.toUpperCase()} tier!` });
     }
 
-    reply.send({
-      success: true,
-      message: `Upgrade to ${role.toUpperCase()} was incredibly successful!`,
-      user: sanitizeUser(user)
-    });
-
+    reply.send({ success: true, message: `Upgrade to ${role.toUpperCase()} was incredibly successful!`, user: sanitizeUser(user) });
   } catch (error) {
-    console.error('Upgrade Engine Error:', error);
     reply.status(500).send({ success: false, message: 'System network error during upgrade.' });
   }
 }
