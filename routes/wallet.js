@@ -198,8 +198,8 @@ async function withdraw(request, reply) {
     if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet error.' });
     if (wallet.isFrozen) return reply.status(403).send({ success: false, message: 'Wallet is frozen. Please contact support.' });
     
-    // --- ENTERPRISE RULE: DUPLICATE WITHDRAWAL PROTECTION ---
-    const pendingWithdrawal = await Transaction.findOne({ user: request.user._id, type: 'withdrawal', status: 'pending' });
+    // === THE FIX: Look for 'processing' instead of 'pending' ===
+    const pendingWithdrawal = await Transaction.findOne({ user: request.user._id, type: 'withdrawal', status: 'processing' });
     if (pendingWithdrawal) {
         return reply.status(400).send({ success: false, message: 'Duplicate Protection: You already have a pending withdrawal request. Please wait for it to be processed.' });
     }
@@ -290,9 +290,11 @@ async function withdraw(request, reply) {
       totalDeduction: totalDeduction, 
       balanceBefore: String(currentAvail), 
       balanceAfter: String(wallet.availableBalance || 0),
-      status: 'pending', 
+      // === THE FIX: Set to 'processing' instead of 'pending' to shield from cron scripts ===
+      status: 'processing', 
+      // =====================================================================================
       provider: 'internal', 
-      providerReference: secureProviderRef, // This locks it away from auto-success webhooks
+      providerReference: secureProviderRef, 
       idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `wth_${Date.now()}`, 
       ipAddress: request.ip, 
       userAgent: request.headers['user-agent'],
