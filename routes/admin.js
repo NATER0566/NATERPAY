@@ -92,7 +92,8 @@ async function getAnalytics(request, reply) {
 
 async function getPendingWithdrawals(request, reply) {
     try {
-        const pendingWithdrawals = await Transaction.find({ type: 'withdrawal', status: 'pending' })
+        // FIXED: Looks for "processing" to bypass background cron job bugs
+        const pendingWithdrawals = await Transaction.find({ type: 'withdrawal', status: 'processing' })
             .populate('user', 'name email phoneNumber') 
             .sort({ createdAt: -1 });
 
@@ -106,11 +107,12 @@ async function getPendingWithdrawals(request, reply) {
 async function processWithdrawal(request, reply) {
     try {
         const { id, action } = request.params; 
-        const { reason } = request.body || {}; // Optional reason from admin
+        const { reason } = request.body || {}; 
         
         const transaction = await Transaction.findById(id).populate('user', 'name email');
         
-        if (!transaction || transaction.type !== 'withdrawal' || transaction.status !== 'pending') {
+        // FIXED: Enforces strict checks on "processing" status
+        if (!transaction || transaction.type !== 'withdrawal' || transaction.status !== 'processing') {
             return reply.status(400).send({ success: false, message: 'Invalid or already processed transaction.' });
         }
 
@@ -120,13 +122,11 @@ async function processWithdrawal(request, reply) {
         if (action === 'approve') {
             transaction.status = 'success';
             
-            // Enterprise Audit Trail
             transaction.metadata = transaction.metadata || {};
             transaction.metadata.approvedBy = request.user?.name || 'Administrator';
             transaction.metadata.approvedAt = new Date();
             await transaction.save();
 
-            // Persistent Database Notification (Creates Unread Message Indicator)
             if (Notification && typeof Notification.create === 'function') {
                 await Notification.create({ 
                     user: transaction.user._id, 
@@ -137,7 +137,6 @@ async function processWithdrawal(request, reply) {
                 }).catch(e => console.error("Notification creation failed:", e));
             }
 
-            // Real-Time Socket Update
             if (request.server && request.server.io) {
                 request.server.io.to(`user:${transaction.user._id}`).emit('notification', { 
                     title: 'Withdrawal Approved', message: 'Your funds have been sent to your bank account!', type: 'success'
@@ -152,7 +151,6 @@ async function processWithdrawal(request, reply) {
             const wallet = await Wallet.findOne({ user: transaction.user._id });
             if (!wallet) return reply.status(404).send({ success: false, message: 'User wallet not found for refund.' });
 
-            // --- Enterprise Rule: Automatic Refund of Principal + Fee ---
             const refundAmount = parseFloat(transaction.amount?.toString() || '0') + parseFloat(transaction.fee?.toString() || '0');
             const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
             const currentTotal = parseFloat(wallet.balance?.toString() || '0');
@@ -161,7 +159,6 @@ async function processWithdrawal(request, reply) {
             wallet.balance = String(currentTotal + refundAmount);
             await wallet.save();
 
-            // Enterprise Audit Trail
             transaction.status = 'failed';
             transaction.balanceAfter = wallet.availableBalance; 
             transaction.metadata = transaction.metadata || {};
@@ -170,7 +167,6 @@ async function processWithdrawal(request, reply) {
             transaction.metadata.rejectedAt = new Date();
             await transaction.save();
 
-            // Persistent Database Notification (Creates Unread Message Indicator)
             if (Notification && typeof Notification.create === 'function') {
                 await Notification.create({ 
                     user: transaction.user._id, 
@@ -181,7 +177,6 @@ async function processWithdrawal(request, reply) {
                 }).catch(e => console.error("Notification creation failed:", e));
             }
 
-            // Real-Time Socket Update
             if (request.server && request.server.io) {
                 request.server.io.to(`user:${transaction.user._id}`).emit('wallet:update', { balance: wallet.availableBalance });
                 request.server.io.to(`user:${transaction.user._id}`).emit('notification', { 
