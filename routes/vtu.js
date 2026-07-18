@@ -39,6 +39,78 @@ async function validateTransactionPin(userId, inputPin) {
     return { isValid: true };
 }
 
+// --- ENTERPRISE REFERRAL & SPEND TRACKING ENGINE ---
+async function registerSuccessfulSpend(userId, amountSpent, io) {
+    try {
+        const user = await User.findById(userId);
+        if (!user) return;
+
+        // 1. Update the user's cumulative spend
+        user.cumulativeSpend = (user.cumulativeSpend || 0) + parseFloat(amountSpent);
+        await user.save();
+
+        // 2. Check if user is eligible for the Welcome/Referral Bonus
+        if (user.referredBy && !user.referralBonusPaid && user.cumulativeSpend >= 5000) {
+            
+            // 3. Find the Referrer
+            const referrer = await User.findOne({ referralCode: user.referredBy });
+            
+            // 4. Verify the Referrer has also met the ₦5,000 minimum spend requirement
+            if (referrer && (referrer.cumulativeSpend || 0) >= 5000) {
+                const REWARD_AMOUNT = 50; // The defined reward (₦50 each)
+
+                // --- PAYOUT REFERRER ---
+                const referrerWallet = await Wallet.findOne({ user: referrer._id });
+                if (referrerWallet) {
+                    referrerWallet.availableBalance = (parseFloat(referrerWallet.availableBalance) + REWARD_AMOUNT).toString();
+                    referrerWallet.balance = (parseFloat(referrerWallet.balance) + REWARD_AMOUNT).toString();
+                    await referrerWallet.save();
+
+                    referrer.referralCount = (referrer.referralCount || 0) + 1;
+                    referrer.referralBonus = (parseFloat(referrer.referralBonus?.toString() || 0) + REWARD_AMOUNT).toString();
+                    await referrer.save();
+
+                    await Transaction.create({
+                        user: referrer._id, type: 'referral_bonus', description: `Referral Milestone unlocked for ${user.name}`,
+                        amount: REWARD_AMOUNT, fee: 0, balanceBefore: (parseFloat(referrerWallet.availableBalance) - REWARD_AMOUNT).toString(), balanceAfter: referrerWallet.availableBalance.toString(),
+                        status: 'success', provider: 'internal', reference: `REF-${Date.now()}-A`
+                    });
+
+                    if (io) {
+                        io.to(`user:${referrer._id}`).emit('wallet:update', { balance: referrerWallet.availableBalance.toString() });
+                        io.to(`user:${referrer._id}`).emit('notification', { type: 'success', title: 'Referral Bonus Unlocked!', message: `You received ₦${REWARD_AMOUNT} because ${user.name} hit the ₦5,000 spend milestone!` });
+                    }
+                }
+
+                // --- PAYOUT NEW USER (REFEREE) ---
+                const userWallet = await Wallet.findOne({ user: user._id });
+                if (userWallet) {
+                    userWallet.availableBalance = (parseFloat(userWallet.availableBalance) + REWARD_AMOUNT).toString();
+                    userWallet.balance = (parseFloat(userWallet.balance) + REWARD_AMOUNT).toString();
+                    await userWallet.save();
+
+                    user.referralBonusPaid = true; // Lock it so it never pays twice
+                    await user.save();
+
+                    await Transaction.create({
+                        user: user._id, type: 'referral_bonus', description: `Welcome Milestone Bonus Unlocked`,
+                        amount: REWARD_AMOUNT, fee: 0, balanceBefore: (parseFloat(userWallet.availableBalance) - REWARD_AMOUNT).toString(), balanceAfter: userWallet.availableBalance.toString(),
+                        status: 'success', provider: 'internal', reference: `REF-${Date.now()}-B`
+                    });
+
+                    if (io) {
+                        io.to(`user:${user._id}`).emit('wallet:update', { balance: userWallet.availableBalance.toString() });
+                        io.to(`user:${user._id}`).emit('notification', { type: 'success', title: 'Welcome Bonus Unlocked!', message: `You received ₦${REWARD_AMOUNT} for reaching the ₦5,000 spending milestone!` });
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Tracking Engine Error:", error);
+    }
+}
+// ---------------------------------------------------
+
 async function getRates(request, reply) {
   try {
     const CMS = require('../models/CMS');
@@ -47,9 +119,6 @@ async function getRates(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch rates' }); }
 }
 
-/**
- * FETCH VARIATIONS (EXACT VTPASS PRICES - NO ARTIFICIAL MARKUP)
- */
 async function getVariations(request, reply) {
   try {
     const { serviceID } = request.query;
@@ -100,6 +169,9 @@ async function buyAirtime(request, reply) {
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
 
+      // TRACK SPEND
+      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
+
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Airtime purchase successful', transaction });
     } catch (vtuError) {
@@ -113,9 +185,6 @@ async function buyAirtime(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
-/**
- * BUY DATA (VTPASS STANDARD PRICING)
- */
 async function buyData(request, reply) {
   try {
     const { phone, network, plan, amount, pin } = request.body;
@@ -124,7 +193,6 @@ async function buyData(request, reply) {
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    // Security Check: Verify the price against VTpass to prevent frontend manipulation
     let variations = variationsCache[network]?.data || [];
     if (variations.length === 0) {
         const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
@@ -135,7 +203,6 @@ async function buyData(request, reply) {
     const selectedPlanData = variations.find(v => v.variation_code === plan);
     if (!selectedPlanData) return reply.status(400).send({ success: false, message: 'Invalid data plan selected' });
 
-    // Force the exact amount provided by VTPass for this plan
     const exactAmount = parseFloat(selectedPlanData.variation_amount);
 
     const wallet = await Wallet.findOne({ user: request.user._id });
@@ -157,6 +224,9 @@ async function buyData(request, reply) {
       transaction.status = 'success';
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
+
+      // TRACK SPEND
+      await registerSuccessfulSpend(request.user._id, exactAmount, request.server.io);
 
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Data purchase successful', transaction });
@@ -199,6 +269,9 @@ async function buyElectricity(request, reply) {
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
 
+      // TRACK SPEND
+      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
+
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Electricity payment successful', transaction, token: providerResponse.token });
     } catch (vtuError) {
@@ -239,6 +312,9 @@ async function buyCable(request, reply) {
       transaction.status = 'success';
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
+
+      // TRACK SPEND
+      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
 
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Cable subscription successful', transaction, token: providerResponse.token });
@@ -281,6 +357,9 @@ async function buyEducation(request, reply) {
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
 
+      // TRACK SPEND
+      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
+
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Exam PIN processed successfully', transaction, token: providerResponse.token });
     } catch (vtuError) {
@@ -320,6 +399,9 @@ async function buyBetting(request, reply) {
       transaction.status = 'success';
       transaction.providerReference = `PAYSTACK-${Date.now()}`;
       await transaction.save();
+
+      // TRACK SPEND
+      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
 
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Betting wallet funded successfully', transaction });
@@ -363,6 +445,9 @@ async function buyInsurance(request, reply) {
       transaction.status = 'success';
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
+
+      // TRACK SPEND
+      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
 
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Insurance policy secured successfully', transaction, token: providerResponse.token });
@@ -421,6 +506,10 @@ async function sendBulkSMS(request, reply) {
         if (response.data.responseCode === "TG00") {
             transaction.status = 'success';
             await transaction.save();
+
+            // TRACK SPEND
+            await registerSuccessfulSpend(request.user._id, smsCost, request.server.io);
+
             reply.send({ success: true, message: 'SMS Dispatched', data: response.data });
         } else {
             throw new Error(response.data.response || "Failed to dispatch SMS at gateway.");
@@ -463,6 +552,9 @@ async function buyPOS(request, reply) {
             transaction.providerReference = providerResponse.reference;
             await transaction.save();
 
+            // TRACK SPEND
+            await registerSuccessfulSpend(request.user._id, amount, request.server.io);
+
             if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
             reply.send({ success: true, message: 'Terminal Funded', transaction });
         } catch (vtuError) {
@@ -487,6 +579,8 @@ async function handleVTpassWebhook(request, reply) {
             if (transaction && transaction.status === 'pending') {
                 if (status === 'delivered') {
                     transaction.status = 'success';
+                    // TRACK SPEND IF FULFILLED LATER BY WEBHOOK
+                    await registerSuccessfulSpend(transaction.user, transaction.amount, request.server?.io);
                 } else if (status === 'reversed') {
                     transaction.status = 'failed';
                     const wallet = await Wallet.findOne({ user: transaction.user });
