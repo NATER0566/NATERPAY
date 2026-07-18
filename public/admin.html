@@ -51,7 +51,8 @@
         .admin-tab.active { border-color: var(--gold); background: rgba(212,175,55,0.15); color: var(--gold); box-shadow: 0 0 10px rgba(212,175,55,0.3); }
         .admin-tab:hover { background: rgba(50,50,50,0.9); }
         
-        .badge-dynamic { font-size: 0.7rem; padding: 3px 6px; transform: translateY(-2px); }
+        /* THE DYNAMIC RED ALERT BADGE */
+        .badge-dynamic { font-size: 0.75rem; padding: 4px 8px; transform: translateY(-2px); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
 
         .btn-gold { background: var(--gold); color: black; font-weight: 900; border: none; transition: 0.3s; }
         .btn-gold:hover { background: white; transform: translateY(-2px); }
@@ -81,21 +82,21 @@
 <div class="container-fluid">
     <h2 class="text-center mb-4 mt-2" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); word-wrap: break-word;">ENTERPRISE COMMAND CENTER</h2>
     
+    <!-- STRICTLY ACTIONABLE BADGES (Only Payouts, KYC, and Adverts show red alerts) -->
     <div class="tab-nav">
         <button class="admin-tab active" onclick="showTab('overview')"><i class="fas fa-chart-pie me-2"></i>Overview</button>
-        <button class="admin-tab" onclick="showTab('withdrawals')"><i class="fas fa-money-bill-wave me-2"></i>Payouts <span id="withdrawBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
-        <button class="admin-tab" onclick="showTab('transactions')"><i class="fas fa-server me-2"></i>Audit Log</button>
-        <button class="admin-tab" onclick="showTab('users')"><i class="fas fa-users-cog me-2"></i>Ledger <span id="usersBadge" class="badge bg-primary badge-dynamic d-none">0</span></button>
-        <button class="admin-tab" onclick="showTab('kyc')"><i class="fas fa-id-card me-2"></i>KYC <span id="kycBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
-        <button class="admin-tab" onclick="showTab('adverts')"><i class="fas fa-bullhorn me-2"></i>Adverts <span id="advertsBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
-        <button class="admin-tab" onclick="showTab('ecosystem')"><i class="fas fa-link me-2"></i>Links</button>
-        <button class="admin-tab" onclick="showTab('marketplace')"><i class="fas fa-store me-2"></i>Market Store <span id="marketBadge" class="badge bg-primary badge-dynamic d-none">0</span></button>
-        <button class="admin-tab" onclick="showTab('notifications')"><i class="fas fa-bell me-2"></i>Announce</button>
+        <button class="admin-tab" onclick="showTab('withdrawals')">Payouts <span id="withdrawBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
+        <button class="admin-tab" onclick="showTab('kyc')">KYC <span id="kycBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
+        <button class="admin-tab" onclick="showTab('adverts')">Adverts <span id="advertsBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
+        <button class="admin-tab" onclick="showTab('transactions')">Audit Log</button>
+        <button class="admin-tab" onclick="showTab('users')">Users</button>
+        <button class="admin-tab" onclick="showTab('marketplace')">Market Store</button>
+        <button class="admin-tab" onclick="showTab('notifications')">Announce</button>
     </div>
     
     <div id="tab-overview" class="tab-content">
         <div class="row g-3 mb-4">
-            <div class="col-6 col-md-3"><div class="stat-box"><div class="high-vis-label">USERS</div><div class="stat-number" id="statUsers">...</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-box"><div class="high-vis-label">TOTAL USERS</div><div class="stat-number" id="statUsers">...</div></div></div>
             <div class="col-6 col-md-3"><div class="stat-box"><div class="high-vis-label">TRANSACTIONS</div><div class="stat-number" id="statTransactions">...</div></div></div>
             <div class="col-12 col-md-6"><div class="stat-box"><div class="high-vis-label">TOTAL SYSTEM VAULT VALUE</div><div class="stat-number" id="statVault">...</div></div></div>
         </div>
@@ -110,9 +111,7 @@
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
                     <thead><tr><th>DATE & REF</th><th>USER</th><th>BANK DETAILS</th><th>AMOUNT + FEE</th><th class="text-end">ACTION</th></tr></thead>
-                    <tbody id="withdrawalsTable">
-                        <tr><td colspan="5" class="text-center opacity-50 py-4">Loading pending payouts...</td></tr>
-                    </tbody>
+                    <tbody id="withdrawalsTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading pending payouts...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -127,9 +126,7 @@
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
                     <thead><tr><th>DATE & REF</th><th>TYPE</th><th>USER</th><th>AMOUNT</th><th>STATUS</th><th class="text-end">ACTION</th></tr></thead>
-                    <tbody id="transactionsTable">
-                        <tr><td colspan="6" class="text-center opacity-50 py-4">Loading audit log...</td></tr>
-                    </tbody>
+                    <tbody id="transactionsTable"><tr><td colspan="6" class="text-center opacity-50 py-4">Loading audit log...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -137,10 +134,6 @@
 
     <div id="tab-users" class="tab-content" style="display: none;">
         <div class="admin-card">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h5 class="text-gold fw-bold m-0">USER LEDGER CONTROL</h5>
-                <button class="btn btn-sm btn-outline-light" onclick="loadAdminEcosystem()"><i class="fas fa-sync-alt me-1"></i> Sync DB</button>
-            </div>
             <div class="table-responsive">
                 <table class="table table-dark">
                     <thead><tr><th>NAME / ID</th><th>CONTACT</th><th>BALANCE</th><th>ROLE / KYC</th><th class="text-end">ACTIONS</th></tr></thead>
@@ -152,16 +145,10 @@
 
     <div id="tab-kyc" class="tab-content" style="display: none;">
         <div class="admin-card">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h5 class="text-gold fw-bold m-0">PENDING IDENTITY VERIFICATIONS</h5>
-                <button class="btn btn-sm btn-outline-light" onclick="fetchKYC()"><i class="fas fa-sync-alt me-1"></i> Sync KYC</button>
-            </div>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
                     <thead><tr><th>USER</th><th>TIER REQUEST</th><th>SUMMARY</th><th class="text-end">ACTION</th></tr></thead>
-                    <tbody id="kycTable">
-                        <tr><td colspan="4" class="text-center opacity-50 py-4">Loading KYC applications...</td></tr>
-                    </tbody>
+                    <tbody id="kycTable"><tr><td colspan="4" class="text-center opacity-50 py-4">Loading KYC applications...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -169,32 +156,10 @@
 
     <div id="tab-adverts" class="tab-content" style="display: none;">
         <div class="admin-card">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <div>
-                    <h5 class="text-gold fw-bold m-0">ADVERTS MODERATION</h5>
-                </div>
-                <button class="btn btn-sm btn-outline-light" onclick="fetchAdverts()"><i class="fas fa-sync-alt me-1"></i> Sync Ads</button>
-            </div>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
                     <thead><tr><th>FORMAT/MEDIA</th><th>CAMPAIGN DETAILS</th><th>PACKAGE & BUDGET</th><th>STATUS</th><th class="text-end">ACTIONS</th></tr></thead>
-                    <tbody id="advertsTable">
-                        <tr><td colspan="5" class="text-center opacity-50 py-4">Loading adverts...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    
-    <div id="tab-ecosystem" class="tab-content" style="display: none;">
-        <div class="admin-card">
-            <h5 class="mb-2 text-gold fw-bold">ECOSYSTEM: PAYMENT LINKS & INVOICES</h5>
-            <div class="table-responsive">
-                <table class="table table-dark">
-                    <thead><tr><th>DATE</th><th>MERCHANT</th><th>TYPE</th><th>DESCRIPTION</th><th>AMOUNT</th><th>STATUS</th></tr></thead>
-                    <tbody id="ecosystemTable">
-                        <tr><td colspan="6" class="text-center opacity-50 py-4">Loading ecosystem data...</td></tr>
-                    </tbody>
+                    <tbody id="advertsTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading adverts...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -202,18 +167,10 @@
 
     <div id="tab-marketplace" class="tab-content" style="display: none;">
         <div class="admin-card">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <div>
-                    <h5 class="text-gold fw-bold m-0">MARKETPLACE MODERATION</h5>
-                </div>
-                <button class="btn btn-sm btn-outline-light" onclick="fetchMarketplace()"><i class="fas fa-sync-alt me-1"></i> Sync Store</button>
-            </div>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
                     <thead><tr><th>PRODUCT</th><th>MERCHANT INFO</th><th>PRICE</th><th>SALES</th><th class="text-end">ACTIONS</th></tr></thead>
-                    <tbody id="marketplaceTable">
-                        <tr><td colspan="5" class="text-center opacity-50 py-4">Loading marketplace products...</td></tr>
-                    </tbody>
+                    <tbody id="marketplaceTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading marketplace products...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -235,13 +192,10 @@
             </div>
             <div class="col-lg-8 mb-3">
                 <div class="admin-card h-100">
-                    <h5 class="mb-3 text-gold fw-bold">ACTIVE ANNOUNCEMENTS</h5>
                     <div class="table-responsive">
                         <table class="table table-dark">
                             <thead><tr><th>DATE</th><th>TITLE & MESSAGE</th><th>TARGET</th></tr></thead>
-                            <tbody id="notificationsTable">
-                                <tr><td colspan="3" class="text-center opacity-50 py-4">No active announcements.</td></tr>
-                            </tbody>
+                            <tbody id="notificationsTable"><tr><td colspan="3" class="text-center opacity-50 py-4">No active announcements.</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -251,6 +205,7 @@
 </div>
 
 <script>
+    // Visual Effects
     function initStars() { 
         const c = document.getElementById('starCanvas'); c.width = window.innerWidth; c.height = window.innerHeight; 
         const ctx = c.getContext('2d'); const s = []; 
@@ -269,60 +224,31 @@
     window.globalSystemUsers = [];
 
     // ==========================================
-    // ALL-SYNC ENGINE: Fills badges dynamically
+    // ALL-SYNC ENGINE (RUNS EVERY 30 SECONDS)
     // ==========================================
     async function syncAllBadges() {
-        await Promise.all([
-            loadAdminEcosystem(),
-            fetchWithdrawals(),
-            fetchKYC(),
-            fetchAdverts(),
-            fetchMarketplace()
-        ]);
-    }
-
-    function viewTxDossier(encodedData) {
         try {
-            const tx = JSON.parse(decodeURIComponent(encodedData));
-            let metaHtml = '';
-            if (tx.metadata) { metaHtml = `<h6 class="text-gold mt-3 mb-1"><i class="fas fa-database me-1"></i> Raw Metadata Payload</h6><div class="p-2 bg-black rounded border border-secondary" style="font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; color: #00ff88;">${JSON.stringify(tx.metadata, null, 2)}</div>`; }
-
-            let bankDetailsHtml = '';
-            if (tx.type === 'withdrawal') {
-                let bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
-                let bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || 'Unknown Account';
-                let bUser = tx.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
-                
-                if (bName === 'Unknown Bank' && tx.description && tx.description.includes(' - ')) {
-                    const parts = tx.description.replace('Withdrawal to ', '').replace('Transfer to ', '').split(' - '); bName = parts[0] || bName; bAcc = parts[1] || bAcc;
-                }
-                bankDetailsHtml = `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--gold);"><h6 class="text-gold mb-2 fw-bold"><i class="fas fa-university me-1"></i> Destination Bank Details</h6><p class="mb-1 text-white"><strong class="text-secondary">Bank:</strong> ${bName}</p><p class="mb-1 text-white"><strong class="text-secondary">Account No:</strong> <span class="text-warning fs-6 fw-bold" style="letter-spacing: 1px;">${bAcc}</span></p><p class="mb-0 text-white"><strong class="text-secondary">Account Name:</strong> ${bUser}</p></div>`;
-            }
-
-            Swal.fire({
-                title: 'Transaction Dossier',
-                html: `<div class="text-start mt-2" style="font-size: 0.9rem;">
-                        <p class="mb-1"><strong class="text-gold">Sys ID:</strong> <span class="text-secondary" style="font-size: 0.8rem;">${tx._id}</span></p>
-                        <p class="mb-1"><strong class="text-gold">Type:</strong> <span class="text-uppercase badge bg-secondary">${tx.type.replace('_', ' ')}</span></p>
-                        <p class="mb-1"><strong class="text-gold">Amount:</strong> <span class="text-warning fw-bold fs-5">₦${parseNum(tx.amount).toLocaleString()}</span></p>
-                        <p class="mb-1"><strong class="text-gold">Fee:</strong> <span class="text-danger fw-bold">₦${parseNum(tx.fee).toLocaleString()}</span></p>
-                        <p class="mb-1"><strong class="text-gold">User:</strong> ${tx.userEmail || tx.user?.email || 'Unknown User'}</p>
-                        <p class="mb-1"><strong class="text-gold">Status:</strong> <span class="text-uppercase fw-bold">${tx.status}</span></p>
-                        <p class="mt-2 mb-1"><strong class="text-gold">Date:</strong> ${new Date(tx.createdAt || tx.date).toLocaleString()}</p>
-                        ${bankDetailsHtml}
-                        <div class="p-2 mt-2 bg-dark rounded border border-secondary"><strong class="text-gold d-block mb-1">Description log:</strong><span class="text-white">${tx.description || 'System Record'}</span></div>
-                        ${metaHtml}
-                    </div>`,
-                background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444'
-            });
-        } catch (e) { Swal.fire('Error', 'Could not parse transaction data', 'error'); }
+            await Promise.all([
+                loadAdminEcosystem(),
+                fetchWithdrawals(),
+                fetchKYC(),
+                fetchAdverts(),
+                fetchMarketplace()
+            ]);
+        } catch (e) { console.log('Background Sync Delay'); }
     }
 
+    // Auto-refresh the entire dashboard every 30 seconds so it's a real-time monitor
+    setInterval(syncAllBadges, 30000); 
+
+    // ==========================================
+    // OVERVIEW, TRANSACTIONS & USERS
+    // ==========================================
     async function loadAdminEcosystem() {
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
-
         try {
+            // Analytics
             const statRes = await fetch('/api/admin/analytics', { headers: { 'Authorization': `Bearer ${token}` } });
             const stats = await statRes.json();
             if(stats.success) {
@@ -331,89 +257,118 @@
                 document.getElementById('statVault').innerText = '₦' + parseNum(stats.summary?.totalVaultBalance).toLocaleString();
             }
 
+            // Users
             const userRes = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
             const usersData = await userRes.json();
             if(usersData.users) {
                 window.globalSystemUsers = usersData.users;
-                // UPDATE USER BADGE
-                const uBadge = document.getElementById('usersBadge');
-                uBadge.innerText = usersData.users.length; uBadge.classList.remove('d-none');
+                document.getElementById('usersTable').innerHTML = usersData.users.map(u => `
+                    <tr>
+                        <td><div class="fw-bold">${u.name}</div><small class="text-secondary">${u._id}</small></td>
+                        <td><div class="text-white">${u.email}</div><small class="text-muted">${u.phoneNumber}</small></td>
+                        <td class="text-warning fw-bold fs-5">₦${parseNum(u.walletBalance).toLocaleString()}</td>
+                        <td><span class="status-pill bg-dark border">${u.role.toUpperCase()}</span><br><span class="status-pill ${u.kycLevel > 0 ? 'bg-success' : 'bg-danger'} mt-1 d-inline-block">KYC LVL ${u.kycLevel || 0}</span></td>
+                        <td class="text-end"><div class="action-btns"><button class="btn btn-success fw-bold" onclick="modifyUserBalance('${u._id}', 'credit', null, '${u.name}')" title="Add Money"><i class="fas fa-plus"></i></button><button class="btn btn-danger fw-bold" onclick="modifyUserBalance('${u._id}', 'debit', null, '${u.name}')" title="Deduct Money"><i class="fas fa-minus"></i></button></div></td>
+                    </tr>
+                `).join('');
             }
 
-            document.getElementById('usersTable').innerHTML = usersData.users.map(u => `
-                <tr>
-                    <td><div class="fw-bold">${u.name}</div><small class="text-secondary">${u._id}</small></td>
-                    <td><div class="text-white">${u.email}</div><small class="text-muted">${u.phoneNumber}</small></td>
-                    <td class="text-warning fw-bold fs-5">₦${parseNum(u.walletBalance).toLocaleString()}</td>
-                    <td><span class="status-pill bg-dark border">${u.role.toUpperCase()}</span><br><span class="status-pill ${u.kycLevel > 0 ? 'bg-success' : 'bg-danger'} mt-1 d-inline-block">KYC LVL ${u.kycLevel || 0}</span></td>
-                    <td class="text-end"><div class="action-btns"><button class="btn btn-success fw-bold" onclick="modifyUserBalance('${u._id}', 'credit', null, '${u.name}')" title="Add Money"><i class="fas fa-plus"></i></button><button class="btn btn-danger fw-bold" onclick="modifyUserBalance('${u._id}', 'debit', null, '${u.name}')" title="Deduct Money"><i class="fas fa-minus"></i></button></div></td>
-                </tr>
-            `).join('');
-
+            // Transactions
             const txRes = await fetch('/api/admin/transactions?limit=100', { headers: { 'Authorization': `Bearer ${token}` } });
             const txData = await txRes.json();
-            let txHtml = ''; let ecoHtml = '';
+            let txHtml = ''; 
             
             txData.transactions.forEach(tx => {
                 const date = new Date(tx.createdAt || tx.date).toLocaleDateString();
                 const amt = parseNum(tx.amount);
                 const encodedTx = encodeURIComponent(JSON.stringify(tx));
                 
-                let actionBtns = `<button class="btn btn-sm btn-info text-white rounded" onclick="viewTxDossier('${encodedTx}')" title="View Full Data / Bank Details"><i class="fas fa-eye"></i></button>`;
-
-                if (tx.status === 'pending') {
-                    if (tx.type === 'withdrawal') {
-                        actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="processWithdrawal('${tx._id}', 'approve')" title="Approve & Settle"><i class="fas fa-check"></i></button><button class="btn btn-sm btn-danger rounded fw-bold ms-1" onclick="processWithdrawal('${tx._id}', 'reject')" title="Reject & Refund"><i class="fas fa-times"></i></button>`;
-                    } else {
-                        actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="forceVerifyTransaction('${tx._id}')" title="Force Success"><i class="fas fa-check"></i></button>`;
-                    }
-                } else if (tx.status === 'failed') { actionBtns += `<button class="btn btn-sm btn-gold rounded fw-bold ms-1" onclick="forceVerifyTransaction('${tx._id}')" title="Force Clear">Clear</button>`; }
+                let actionBtns = `<button class="btn btn-sm btn-info text-white rounded" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button>`;
+                
+                if (tx.status === 'processing' && tx.type === 'withdrawal') {
+                    actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="processWithdrawal('${tx._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-sm btn-danger rounded fw-bold ms-1" onclick="processWithdrawal('${tx._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>`;
+                } else if (tx.status === 'pending') {
+                    actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="forceVerifyTransaction('${tx._id}')" title="Force Success"><i class="fas fa-check"></i></button>`;
+                } else if (tx.status === 'failed') { 
+                    actionBtns += `<button class="btn btn-sm btn-gold rounded fw-bold ms-1" onclick="forceVerifyTransaction('${tx._id}')" title="Force Clear">Clear</button>`; 
+                }
 
                 txHtml += `<tr><td><div class="fw-bold">${date}</div><small class="text-secondary">${tx.reference || tx._id}</small></td><td><span class="status-pill bg-secondary">${tx.type.replace('_', ' ')}</span></td><td><div class="text-truncate text-white" style="max-width: 150px;">${tx.userEmail || 'Unknown'}</div></td><td class="fw-bold text-gold fs-5">₦${amt.toLocaleString()}</td><td><span class="status-pill ${tx.status==='success'?'bg-success':(tx.status==='failed'?'bg-danger':'bg-warning text-dark')}">${tx.status}</span></td><td class="text-end"><div class="action-btns justify-content-end">${actionBtns}</div></td></tr>`;
-
-                if(['invoice', 'payment_link'].includes(tx.type)) { ecoHtml += `<tr><td>${date}</td><td class="fw-bold text-warning">${tx.userEmail || 'Unknown'}</td><td><span class="status-pill bg-primary">${tx.type}</span></td><td>${tx.description || 'N/A'}</td><td class="fw-bold fs-5">₦${amt.toLocaleString()}</td><td><span class="status-pill ${tx.status==='success'?'bg-success':'bg-warning text-dark'}">${tx.status}</span></td></tr>`; }
             });
             document.getElementById('transactionsTable').innerHTML = txHtml;
-            document.getElementById('ecosystemTable').innerHTML = ecoHtml || '<tr><td colspan="6" class="text-center opacity-50 py-4">No Invoices or Links generated yet.</td></tr>';
         } catch (e) {}
     }
 
+    function viewTxDossier(encodedData) {
+        try {
+            const tx = JSON.parse(decodeURIComponent(encodedData));
+            let bankDetailsHtml = '';
+            if (tx.type === 'withdrawal') {
+                let bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
+                let bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || 'Unknown Account';
+                let bUser = tx.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
+                bankDetailsHtml = `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--gold);"><h6 class="text-gold mb-2 fw-bold"><i class="fas fa-university me-1"></i> Destination Bank Details</h6><p class="mb-1 text-white"><strong class="text-secondary">Bank:</strong> ${bName}</p><p class="mb-1 text-white"><strong class="text-secondary">Account No:</strong> <span class="text-warning fs-6 fw-bold" style="letter-spacing: 1px;">${bAcc}</span></p><p class="mb-0 text-white"><strong class="text-secondary">Account Name:</strong> ${bUser}</p></div>`;
+            }
+
+            Swal.fire({
+                title: 'Transaction Dossier',
+                html: `<div class="text-start mt-2" style="font-size: 0.9rem;">
+                        <p class="mb-1"><strong class="text-gold">Type:</strong> <span class="text-uppercase badge bg-secondary">${tx.type.replace('_', ' ')}</span></p>
+                        <p class="mb-1"><strong class="text-gold">Amount:</strong> <span class="text-warning fw-bold fs-5">₦${parseNum(tx.amount).toLocaleString()}</span></p>
+                        <p class="mb-1"><strong class="text-gold">Fee:</strong> <span class="text-danger fw-bold">₦${parseNum(tx.fee).toLocaleString()}</span></p>
+                        <p class="mb-1"><strong class="text-gold">Status:</strong> <span class="text-uppercase fw-bold">${tx.status}</span></p>
+                        ${bankDetailsHtml}
+                        <div class="p-2 mt-2 bg-dark rounded border border-secondary"><strong class="text-gold d-block mb-1">Description log:</strong><span class="text-white">${tx.description || 'System Record'}</span></div>
+                    </div>`,
+                background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444'
+            });
+        } catch (e) {}
+    }
+
+    async function modifyUserBalance(userId, actionType, amountVal, reasonText) {
+        if (!amountVal || !reasonText) {
+            const { value: formValues } = await Swal.fire({ title: actionType.toUpperCase() + ' WALLET', text: `Target: ${reasonText || userId}`, html: `<input id="swal-amt" type="number" class="swal2-input bg-dark text-white" placeholder="Amount (₦)"><input id="swal-rsn" type="text" class="swal2-input bg-dark text-white" placeholder="Audit Reason">`, background: '#0a0a0a', color: '#fff', showCancelButton: true, preConfirm: () => { const amt = document.getElementById('swal-amt').value; if(!amt || isNaN(amt) || Number(amt) <= 0) { Swal.showValidationMessage('Enter a valid amount'); return false; } return [amt, document.getElementById('swal-rsn').value]; } });
+            if (formValues && formValues[0]) { amountVal = Number(formValues[0]); reasonText = formValues[1] || 'Manual Adjustment'; } else return;
+        }
+        Swal.fire({title:'Processing...', allowOutsideClick: false, didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+        try { const response = await fetch(`/api/admin/users/${userId}/balance`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ action: actionType, amount: amountVal, reason: reasonText }) }); const data = await response.json(); if (response.ok && data.success) Swal.fire({title: 'Success', text: 'Ledger successfully updated.', icon: 'success', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem()); else Swal.fire({icon: 'warning', title: 'Action Failed', text: data.message || 'Could not modify balance.', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem()); } catch (error) {}
+    }
+
+    async function forceVerifyTransaction(txId) {
+        if ((await Swal.fire({ title: `Force Clear Verification?`, icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff' })).isConfirmed) {
+            Swal.fire({title:'Verifying...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try { const response = await fetch('/api/admin/transactions/verify', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ transactionId: txId }) }); if (response.ok && (await response.json()).success) Swal.fire({title: 'Verified!', icon: 'success', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem()); else Swal.fire({title: 'Failed', icon: 'error', background: '#0a0a0a', color: '#fff'}); } catch (err) {}
+        }
+    }
+
+    // ==========================================
+    // WITHDRAWALS
+    // ==========================================
     async function fetchWithdrawals() {
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
         try {
             const res = await fetch('/api/admin/withdrawals/pending', { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
-            const badge = document.getElementById('withdrawBadge'); const tbody = document.getElementById('withdrawalsTable');
+            const badge = document.getElementById('withdrawBadge'); 
+            const tbody = document.getElementById('withdrawalsTable');
             const pending = data.pendingWithdrawals || [];
+            
+            // STRICT RED BADGE: Only show if there are actual items
             if(data.success && pending.length > 0) {
-                badge.innerText = pending.length; badge.classList.remove('d-none');
+                badge.innerText = pending.length; 
+                badge.classList.remove('d-none');
                 tbody.innerHTML = pending.map(tx => {
                     const encodedTx = encodeURIComponent(JSON.stringify(tx));
                     const bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
                     const bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || 'Unknown Account';
-                    const baseAmt = parseNum(tx.amount); const feeAmt = parseNum(tx.fee); const totalDeduction = baseAmt + feeAmt;
-                    
-                    return `
-                        <tr>
-                            <td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td>
-                            <td><div class="text-white">${tx.user?.name || 'Unknown'}</div><small class="text-muted">${tx.user?.email || ''}</small></td>
-                            <td><div class="text-warning fw-bold">${bName}</div><small class="text-white" style="letter-spacing:1px;">${bAcc}</small></td>
-                            <td>
-                                <div class="fw-bold text-gold fs-5">₦${baseAmt.toLocaleString()}</div>
-                                <small class="text-danger">Fee: ₦${feeAmt.toLocaleString()}</small>
-                            </td>
-                            <td class="text-end">
-                                <div class="action-btns justify-content-end">
-                                    <button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button>
-                                    <button class="btn btn-success fw-bold" onclick="processWithdrawal('${tx._id}', 'approve')" title="Approve & Settle"><i class="fas fa-check"></i></button>
-                                    <button class="btn btn-danger fw-bold" onclick="processWithdrawal('${tx._id}', 'reject')" title="Reject & Refund"><i class="fas fa-times"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
+                    const baseAmt = parseNum(tx.amount); const feeAmt = parseNum(tx.fee);
+                    return `<tr><td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td><td><div class="text-white">${tx.user?.name || 'Unknown'}</div><small class="text-muted">${tx.user?.email || ''}</small></td><td><div class="text-warning fw-bold">${bName}</div><small class="text-white" style="letter-spacing:1px;">${bAcc}</small></td><td><div class="fw-bold text-gold fs-5">₦${baseAmt.toLocaleString()}</div><small class="text-danger">Fee: ₦${feeAmt.toLocaleString()}</small></td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="processWithdrawal('${tx._id}', 'approve')" title="Approve & Settle"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="processWithdrawal('${tx._id}', 'reject')" title="Reject & Refund"><i class="fas fa-times"></i></button></div></td></tr>`;
                 }).join('');
-            } else { badge.classList.add('d-none'); tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No pending withdrawals in queue.</td></tr>'; }
+            } else { 
+                badge.classList.add('d-none'); 
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No pending withdrawals in queue.</td></tr>'; 
+            }
         } catch(e) {}
     }
 
@@ -430,14 +385,21 @@
         }
     }
 
+    // ==========================================
+    // KYC
+    // ==========================================
     async function fetchKYC() {
         try {
             const res = await fetch('/api/admin/kyc/pending', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
             const data = await res.json();
-            const badge = document.getElementById('kycBadge'); const kycTable = document.getElementById('kycTable');
+            const badge = document.getElementById('kycBadge'); 
+            const kycTable = document.getElementById('kycTable');
             const pendingList = data.kycRequests || data.pendingKYC || [];
+            
+            // STRICT RED BADGE: Only show if there are actual items
             if(data.success && pendingList.length > 0) {
-                badge.innerText = pendingList.length; badge.classList.remove('d-none');
+                badge.innerText = pendingList.length; 
+                badge.classList.remove('d-none');
                 kycTable.innerHTML = pendingList.map(k => {
                     const encodedKyc = encodeURIComponent(JSON.stringify(k));
                     let summaryHtml = '';
@@ -446,39 +408,119 @@
                     else if (k.currentLevel === 3) summaryHtml = `<span class="text-success fw-bold"><i class="fas fa-home me-1"></i> Address Verification</span>`;
                     return `<tr><td><div class="fw-bold">${k.user?.name || 'Unknown'}</div><small>${k.user?.email || ''}</small></td><td><span class="status-pill bg-warning text-dark">TIER ${k.currentLevel || 1}</span></td><td>${summaryHtml}</td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewKycDossier('${encodedKyc}')" title="View Full Documents"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="processKYC('${k._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="processKYC('${k._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button></div></td></tr>`;
                 }).join('');
-            } else { badge.classList.add('d-none'); kycTable.innerHTML = '<tr><td colspan="4" class="text-center opacity-50 py-4">No pending KYC applications.</td></tr>'; }
+            } else { 
+                badge.classList.add('d-none'); 
+                kycTable.innerHTML = '<tr><td colspan="4" class="text-center opacity-50 py-4">No pending KYC applications.</td></tr>'; 
+            }
         } catch(e) {}
     }
 
+    function viewKycDossier(encodedData) {
+        try {
+            const k = JSON.parse(decodeURIComponent(encodedData));
+            let bvnSection = '';
+            if (k.level1 && (k.level1.bvn || k.level1.nin)) {
+                bvnSection = `<h6 class="text-gold mt-3 border-bottom border-secondary pb-1"><i class="fas fa-fingerprint"></i> Identity Numbers</h6>${k.level1.bvn ? `<p class="mb-1 text-white"><strong class="text-secondary">BVN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">${k.level1.bvn}</span></p>` : ''}${k.level1.nin ? `<p class="mb-1 text-white"><strong class="text-secondary">NIN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">${k.level1.nin}</span></p>` : ''}${k.level1.bvn ? `<button class="btn btn-sm btn-outline-info w-100 mt-3 py-2 fw-bold" onclick="verifyPaystackBVN('${k._id}')"><i class="fas fa-shield-alt"></i> VERIFY VIA PAYSTACK API</button>` : ''}`;
+            }
+
+            let docSection = '';
+            if (k.level2 && (k.level2.idImage || k.level2.selfieImage)) {
+                docSection = `<h6 class="text-gold mt-4 border-bottom border-secondary pb-1"><i class="fas fa-passport"></i> Uploaded Documents</h6><p class="mb-1 text-white"><strong class="text-secondary">Type:</strong> <span class="text-uppercase fw-bold">${(k.level2.idType || '').replace('_', ' ')}</span></p><p class="mb-3 text-white"><strong class="text-secondary">Doc Number:</strong> ${k.level2.idNumber || 'N/A'}</p><div class="row g-3">${k.level2.idImage ? `<div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="text-gold d-block mb-2 fw-bold">ID Card Image</small><img src="${k.level2.idImage}" class="img-fluid rounded" style="max-height: 200px; cursor: pointer;" onclick="window.open('${k.level2.idImage}')"></div></div>` : ''}${k.level2.selfieImage ? `<div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="text-gold d-block mb-2 fw-bold">User Selfie</small><img src="${k.level2.selfieImage}" class="img-fluid rounded" style="max-height: 200px; cursor: pointer;" onclick="window.open('${k.level2.selfieImage}')"></div></div>` : ''}</div>`;
+            }
+
+            let addressSection = '';
+            if (k.level3 && k.level3.address) {
+                addressSection = `<h6 class="text-gold mt-4 border-bottom border-secondary pb-1"><i class="fas fa-home"></i> Address Proof</h6><p class="mb-1 text-white"><strong class="text-secondary">Street:</strong> ${k.level3.address}</p><p class="mb-1 text-white"><strong class="text-secondary">City:</strong> ${k.level3.city}</p><p class="mb-1 text-white"><strong class="text-secondary">State:</strong> ${k.level3.state}</p>`;
+            }
+
+            Swal.fire({
+                title: `Tier ${k.currentLevel} KYC Dossier`,
+                html: `<div class="text-start mt-2" style="font-size: 0.9rem;"><div class="p-3 bg-dark rounded border border-secondary mb-3"><h5 class="mb-1 text-white">${k.user?.name}</h5><span class="text-muted">${k.user?.email}</span></div>${bvnSection}${docSection}${addressSection}</div>`,
+                background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444', width: '600px'
+            });
+        } catch(e) {}
+    }
+
+    async function verifyPaystackBVN(kycId) {
+        Swal.fire({title: 'Connecting...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+        try { const res = await fetch(`/api/admin/kyc/${kycId}/verify`, { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); const data = await res.json(); if(data.success) { Swal.fire({title: 'Paystack Match', html: `<div style="text-align: left; font-size: 0.9rem;"><p><strong class="text-gold">System Name:</strong> ${data.systemName}</p><hr style="border-color: #444;"><p><strong>First Name:</strong> ${data.paystackDetails.firstName}</p><p><strong>Last Name:</strong> ${data.paystackDetails.lastName}</p><p><strong>Phone:</strong> ${data.paystackDetails.phone}</p></div>`, icon: 'info', background: '#0a0a0a', color: '#fff'}); } else Swal.fire('Error', data.message, 'error'); } catch(e) { Swal.fire('Error', 'Failed to reach server.', 'error'); }
+    }
+
+    async function processKYC(kycId, action) {
+        const actionWord = action === 'approve' ? 'Approve' : 'Reject';
+        if((await Swal.fire({title:`Confirm ${actionWord}?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
+            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
+            try { const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); if ((await res.json()).success) { Swal.fire('Success', '', 'success'); syncAllBadges(); } } catch (err) {}
+        }
+    }
+
+    // ==========================================
+    // ADVERTS
+    // ==========================================
     async function fetchAdverts() {
         try {
             const res = await fetch('/api/admin/ads', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
             const data = await res.json(); const ads = data.ads || [];
             const pendingAds = ads.filter(a => a.status === 'pending');
             const badge = document.getElementById('advertsBadge');
-            if (pendingAds.length > 0) { badge.innerText = pendingAds.length; badge.classList.remove('d-none'); } else { badge.classList.add('d-none'); }
+            
+            // STRICT RED BADGE: Only show if there are actual items
+            if (pendingAds.length > 0) { 
+                badge.innerText = pendingAds.length; 
+                badge.classList.remove('d-none'); 
+            } else { 
+                badge.classList.add('d-none'); 
+            }
+            
             const tbody = document.getElementById('advertsTable');
             if(ads.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No adverts found.</td></tr>'; return; }
+            
             tbody.innerHTML = ads.map(ad => {
                 const statusColor = ad.status === 'approved' ? 'success' : (ad.status === 'pending' ? 'warning text-dark' : 'danger');
                 const encodedAd = encodeURIComponent(JSON.stringify(ad));
+                
                 let mediaThumb = ad.adType === 'Video' ? `<div style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #444; display:flex; align-items:center; justify-content:center; background:#111; cursor:pointer;" onclick="viewAdDossier('${encodedAd}')"><i class="fas fa-video fa-2x text-info"></i></div>` : (ad.adType === 'Text' || ad.adType === 'PDF' ? `<div style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #444; display:flex; align-items:center; justify-content:center; background:#111; cursor:pointer;" onclick="viewAdDossier('${encodedAd}')"><i class="fas fa-file-alt fa-2x text-danger"></i></div>` : `<img src="${ad.mediaUrl || 'https://via.placeholder.com/60/111/d4af37?text=Ad'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #444; cursor: pointer;" onclick="viewAdDossier('${encodedAd}')">`);
+                
                 return `<tr><td>${mediaThumb}</td><td><div class="fw-bold text-white text-truncate" style="max-width: 200px;">${ad.title}</div><small class="text-gold"><i class="fas fa-store"></i> ${ad.businessName}</small><br><small class="text-muted"><i class="fas fa-tag"></i> ${ad.adType || 'Ad'} | ${ad.category}</small></td><td><span class="badge bg-secondary text-uppercase">${ad.packageType || 'BASIC'}</span><br><small class="text-warning">₦${ad.packageCost || 0} / ${ad.maxRewardedViews || 0} Views</small></td><td><span class="status-pill bg-${statusColor}">${ad.status}</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewAdDossier('${encodedAd}')" title="View Details"><i class="fas fa-eye"></i></button>${ad.status === 'pending' ? `<button class="btn btn-success" onclick="processAd('${ad._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-warning text-dark fw-bold" onclick="processAd('${ad._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>` : `<button class="btn btn-outline-warning" onclick="processAd('${ad._id}', 'reject')" title="Revoke"><i class="fas fa-ban"></i></button>`}<button class="btn btn-danger" onclick="deleteAdForever('${ad._id}')" title="Delete"><i class="fas fa-trash"></i></button></div></td></tr>`;
             }).join('');
         } catch (error) {}
     }
 
+    function viewAdDossier(encodedData) {
+        const ad = JSON.parse(decodeURIComponent(encodedData));
+        let mediaDisplay = '';
+        if (ad.adType === 'Video') mediaDisplay = `<video src="${ad.mediaUrl}" controls class="w-100 rounded mb-3" style="max-height: 250px; background: #000;"></video>`;
+        else if (ad.adType === 'PDF' || ad.adType === 'Text') mediaDisplay = `<div class="bg-dark p-4 text-center mb-3 rounded border border-secondary"><i class="fas fa-file-alt fa-3x text-muted mb-2"></i><br><a href="${ad.mediaUrl}" target="_blank" class="text-warning text-decoration-none fw-bold"><i class="fas fa-external-link-alt me-1"></i> Open Asset Document</a></div>`;
+        else mediaDisplay = `<img src="${ad.mediaUrl || 'https://via.placeholder.com/400x250/111/d4af37?text=Image'}" class="w-100 rounded mb-3" style="max-height: 250px; object-fit: contain; border: 1px solid var(--gold);">`;
+
+        Swal.fire({ title: 'Campaign Dossier', html: `<div class="text-start mt-2" style="font-size: 0.9rem;">${mediaDisplay}<p class="mb-1"><strong class="text-gold">Format:</strong> <span class="badge bg-dark border">${ad.adType || 'Ad'}</span></p><p class="mb-1"><strong class="text-gold">Headline:</strong> ${ad.title}</p><p class="mb-1"><strong class="text-gold">Entity:</strong> ${ad.businessName}</p><p class="mb-1"><strong class="text-gold">Category:</strong> ${ad.category}</p><p class="mb-1"><strong class="text-gold">Package:</strong> <span class="badge bg-secondary text-uppercase">${ad.packageType || 'basic'}</span> (₦${ad.packageCost || 0})</p><p class="mb-1"><strong class="text-gold">Views Budget:</strong> ${ad.maxRewardedViews || 0} Unique Views</p><p class="mb-1"><strong class="text-gold">Contact:</strong> <i class="fas fa-phone"></i> ${ad.phoneNumber} | <i class="fab fa-whatsapp text-success"></i> ${ad.whatsappNumber}</p><p class="mb-1"><strong class="text-gold">Target:</strong> ${ad.targetLocation || 'Global'} / ${ad.targetDevice || 'All'}</p><div class="mt-3 p-3 bg-dark rounded border border-secondary text-white" style="line-height: 1.6;">${ad.description}</div></div>`, background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444' });
+    }
+
+    async function processAd(adId, action) {
+        if((await Swal.fire({title: `Confirm Action?`, showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
+            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try { const res = await fetch(`/api/admin/ads/${adId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); if((await res.json()).success) { Swal.fire('Success', '', 'success'); syncAllBadges(); } } catch (err) {}
+        }
+    }
+
+    async function deleteAdForever(adId) {
+        if((await Swal.fire({title: 'Wipe Permanently?', icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
+            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try { const res = await fetch(`/api/admin/ads/${adId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); if((await res.json()).success) { Swal.fire('Erased', '', 'success'); fetchAdverts(); } } catch(e) {}
+        }
+    }
+
+    // ==========================================
+    // MARKETPLACE
+    // ==========================================
     async function fetchMarketplace() {
         try {
             const res = await fetch('/api/payment-links', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
             const data = await res.json(); const products = data.links ? data.links : (Array.isArray(data) ? data : []);
             
-            // UPDATE MARKET BADGE
-            const mBadge = document.getElementById('marketBadge');
-            mBadge.innerText = products.length; mBadge.classList.remove('d-none');
-
             const tbody = document.getElementById('marketplaceTable');
             if (products.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No products found.</td></tr>'; return; }
+            
             tbody.innerHTML = products.map(p => {
                 const priceDisplay = p.isFlexibleAmount ? 'Flexible' : `₦${Number(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
                 let imgHtml = p.productImageBase64 ? `<img src="${p.productImageBase64}" class="product-img-thumb me-3">` : `<div class="product-img-thumb me-3"><i class="fas fa-box text-secondary fs-5"></i></div>`;
@@ -490,35 +532,44 @@
         } catch (error) {}
     }
 
-    async function forceVerifyTransaction(txId) {
-        if ((await Swal.fire({ title: `Force Clear Verification?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', confirmButtonText: 'Yes, Force It', background: '#0a0a0a', color: '#fff' })).isConfirmed) {
-            Swal.fire({title:'Verifying...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-            try { const response = await fetch('/api/admin/transactions/verify', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ transactionId: txId }) }); if (response.ok && (await response.json()).success) Swal.fire({title: 'Verified!', icon: 'success', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem()); else Swal.fire({title: 'Failed', icon: 'error', background: '#0a0a0a', color: '#fff'}); } catch (err) { Swal.fire({title: 'Error', icon: 'error', background: '#0a0a0a', color: '#fff'}); }
+    function viewProductDetails(encodedData) {
+        const p = JSON.parse(decodeURIComponent(encodedData));
+        const imageBlock = p.productImageBase64 ? `<div class="mb-3 text-center"><img src="${p.productImageBase64}" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 2px solid var(--gold);"></div>` : `<div class="mb-3 text-center py-4 bg-dark rounded border"><i class="fas fa-box fa-3x text-secondary"></i><p class="mt-2 text-muted small">No Image Uploaded</p></div>`;
+        Swal.fire({ title: 'Full Product Dossier', html: `<div class="text-start mt-3" style="font-size: 0.95rem; line-height: 1.6;">${imageBlock}<h5 class="text-gold fw-bold mb-3 border-bottom pb-2"><i class="fas fa-info-circle"></i> Item Data</h5><p class="mb-1"><strong>Title:</strong> ${p.title}</p><p class="mb-1"><strong>Category:</strong> ${p.category || 'N/A'}</p><p class="mb-1"><strong>Price:</strong> <span class="text-warning fw-bold">₦${p.amount}</span></p><p class="mb-3"><strong>Description:</strong> <br><span class="text-white bg-black p-2 rounded d-block mt-1">${p.description || 'No description provided.'}</span></p><h5 class="text-danger fw-bold mb-3 border-bottom pb-2 mt-4"><i class="fas fa-user-shield"></i> Owner Information</h5><p class="mb-1"><strong>Merchant Name:</strong> ${p.displayMerchantName}</p><p class="mb-1"><strong>Registered Email:</strong> ${p.displayEmail}</p></div>`, background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Dossier', confirmButtonColor: '#444' });
+    }
+
+    async function editProduct(encodedData) {
+        const product = JSON.parse(decodeURIComponent(encodedData));
+        const productId = product._id || product.linkId;
+        const { value: formValues } = await Swal.fire({ title: 'Edit Product details', html: `<div style="text-align: left;"><label class="high-vis-label mt-2">Title</label><input id="swal-title" class="swal2-input bg-dark text-white w-100 m-0" value="${product.title || ''}"><label class="high-vis-label mt-3">Price (₦)</label><input id="swal-price" type="number" class="swal2-input bg-dark text-white w-100 m-0" value="${product.amount || ''}" ${product.isFlexibleAmount ? 'disabled' : ''}><label class="high-vis-label mt-3">Category</label><input id="swal-category" class="swal2-input bg-dark text-white w-100 m-0" value="${product.category || ''}"><label class="high-vis-label mt-3">Description</label><textarea id="swal-desc" class="swal2-textarea bg-dark text-white w-100 m-0" rows="3">${product.description || ''}</textarea></div>`, background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Save Changes', preConfirm: () => ({ title: document.getElementById('swal-title').value, amount: document.getElementById('swal-price').value, category: document.getElementById('swal-category').value, description: document.getElementById('swal-desc').value }) });
+        if (formValues) {
+            Swal.fire({title:'Saving Modifications...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try { const res = await fetch(`/api/admin/products/${productId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify(formValues) }); if(res.ok || (await res.json()).success) { await Swal.fire({title: 'Updated!', icon: 'success', background: '#0a0a0a', color: '#fff'}); fetchMarketplace(); } else Swal.fire('Failed', 'Update failed', 'error'); } catch(e) {}
         }
     }
 
-    async function modifyUserBalance(userId, actionType, amountVal, reasonText) {
-        if (!amountVal || !reasonText) {
-            const { value: formValues } = await Swal.fire({ title: actionType.toUpperCase() + ' WALLET', text: `Target: ${reasonText || userId}`, html: `<input id="swal-amt" type="number" class="swal2-input bg-dark text-white" placeholder="Amount (₦)"><input id="swal-rsn" type="text" class="swal2-input bg-dark text-white" placeholder="Audit Reason">`, background: '#0a0a0a', color: '#fff', showCancelButton: true, preConfirm: () => { const amt = document.getElementById('swal-amt').value; if(!amt || isNaN(amt) || Number(amt) <= 0) { Swal.showValidationMessage('Enter a valid amount'); return false; } return [amt, document.getElementById('swal-rsn').value]; } });
-            if (formValues && formValues[0]) { amountVal = Number(formValues[0]); reasonText = formValues[1] || 'Manual Adjustment'; } else return;
+    async function deleteProduct(productId) {
+        if((await Swal.fire({ title: 'Wipe Product?', icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff' })).isConfirmed) {
+            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try { const res = await fetch(`/api/admin/products/${productId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); if(res.ok) { Swal.fire('Deleted!', '', 'success'); fetchMarketplace(); } } catch (e) {}
         }
-        Swal.fire({title:'Processing...', allowOutsideClick: false, didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-        try { const response = await fetch(`/api/admin/users/${userId}/balance`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ action: actionType, amount: amountVal, reason: reasonText }) }); const data = await response.json(); if (response.ok && data.success) Swal.fire({title: 'Success', text: 'Ledger successfully updated.', icon: 'success', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem()); else Swal.fire({icon: 'warning', title: 'Action Failed', text: data.message || 'Could not modify balance.', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem()); } catch (error) { Swal.fire({title: 'Network Error', text: 'Could not communicate with the server.', icon: 'error', background: '#0a0a0a', color: '#fff'}).then(() => loadAdminEcosystem()); }
     }
 
-    function viewKycDossier(encodedData) { /* Logic kept in original for brevity */ }
-    async function processKYC(kycId, action) { /* Logic kept in original for brevity */ }
-    function viewAdDossier(encodedData) { /* Logic kept in original for brevity */ }
-    async function processAd(adId, action) { /* Logic kept in original for brevity */ }
-    async function deleteAdForever(adId) { /* Logic kept in original for brevity */ }
-    function viewProductDetails(encodedData) { /* Logic kept in original for brevity */ }
-    async function editProduct(encodedData) { /* Logic kept in original for brevity */ }
-    async function deleteProduct(productId) { /* Logic kept in original for brevity */ }
+    // ==========================================
+    // NOTIFICATIONS
+    // ==========================================
+    async function fetchNotifications() {
+        try { const res = await fetch('/api/admin/notifications', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); document.getElementById('notificationsTable').innerHTML = ((await res.json()).notifications || []).map(n => `<tr><td>${new Date(n.createdAt).toLocaleDateString()}</td><td><div class="fw-bold">${n.title}</div><small class="text-secondary">${n.message}</small></td><td><span class="status-pill bg-dark border">${n.target || 'ALL USERS'}</span></td></tr>`).join('') || '<tr><td colspan="3" class="text-center opacity-50 py-4">No active announcements.</td></tr>'; } catch(e) {}
+    }
+    
+    async function sendPushNotification() {
+        const target = document.getElementById('notifyTarget').value; const title = document.getElementById('notifyTitle').value; const body = document.getElementById('notifyBody').value;
+        if(!title || !body) return Swal.fire('Error', 'Title and body required', 'error');
+        Swal.fire({title:'Broadcasting...', didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
+        try { const res = await fetch('/api/admin/notifications/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ targetEmail: target, title, message: body }) }); if((await res.json()).success) { Swal.fire('Sent', '', 'success'); fetchNotifications(); } } catch(e) { Swal.fire('Error', 'Broadcast failed', 'error'); }
+    }
 
-    window.onload = () => { 
-        initStars(); 
-        syncAllBadges(); // FEEDS ALL BADGES IMMEDIATELY ON LOAD
-    };
+    window.onload = () => { initStars(); syncAllBadges(); };
     window.onresize = initStars;
 </script>
 </body>
