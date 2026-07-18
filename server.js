@@ -44,7 +44,7 @@ async function registerPlugins() {
     skipOnError: true
   });
   
-  // Static files server (Serves images like logopay.jpg.jpg securely)
+  // Static files server (Serves images like logopay.jpg securely)
   await fastify.register(require('@fastify/static'), {
     root: __dirname + '/public',
     prefix: '/'
@@ -182,6 +182,11 @@ async function registerRoutes() {
   fastify.get('/api/admin/transactions', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getTransactions);
   fastify.get('/api/admin/analytics', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getAnalytics);
   
+  // === THIS IS THE FIX: ADMIN WITHDRAWAL ROUTES ADDED HERE ===
+  fastify.get('/api/admin/withdrawals/pending', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingWithdrawals);
+  fastify.put('/api/admin/withdrawals/:id/:action', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.processWithdrawal);
+  // ============================================================
+
   fastify.get('/api/admin/kyc/pending', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingKYC);
   fastify.get('/api/admin/kyc/:kycId/verify', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.verifyRealWorldKYC);
   fastify.put('/api/admin/kyc/:kycId/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.approveKYC);
