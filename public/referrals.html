@@ -1,61 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Network Tree</title>
+    <title>NATER-PAY | Enterprise Network Tree</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
-        :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
-        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; }
+        :root { 
+            --gold: #FFD700; --gold-dim: #d4af37; --gold-glow: rgba(255, 215, 0, 0.4); 
+            --bg: #030303; --card-bg: rgba(15, 15, 15, 0.95); --success: #00ff88;
+        }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden;}
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
         header {
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
             background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
-            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(10px);
         }
 
-        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; }
-        .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;}
+        .site-part-1 { color: var(--gold); font-size: 1.5rem; text-shadow: 0 0 10px var(--gold-glow);} 
         .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
 
-        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
         
         .stats-card {
             background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
-            padding: 30px; margin-bottom: 30px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            padding: 35px 30px; margin-bottom: 30px; text-align: center; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            position: relative; overflow: hidden;
         }
+        .stats-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
         
         .referral-box {
-            background: rgba(0,0,0,0.6); border: 1.5px dashed var(--gold);
-            border-radius: 15px; padding: 20px; margin: 20px auto; max-width: 500px;
+            background: rgba(0,0,0,0.8); border: 2px dashed var(--gold);
+            border-radius: 15px; padding: 20px; margin: 25px auto; max-width: 500px;
             display: flex; justify-content: space-between; align-items: center;
+            box-shadow: inset 0 0 20px rgba(255,215,0,0.1);
         }
-        .referral-code { font-size: 1.8rem; font-weight: 900; color: var(--gold); letter-spacing: 3px; font-family: monospace;}
+        .referral-code { font-size: 2rem; font-weight: 900; color: var(--gold); letter-spacing: 4px; font-family: 'Cinzel', serif; text-shadow: 0 0 10px var(--gold-glow);}
         
         .network-list {
             background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
-            padding: 30px;
+            padding: 35px 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         
         .user-node {
-            background: rgba(30,30,30,0.8); border: 1px solid #444; border-radius: 12px;
-            padding: 15px 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;
-            transition: 0.3s;
+            background: #0a0a0a; border: 1px solid #222; border-radius: 15px;
+            padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;
+            transition: 0.3s; position: relative; overflow: hidden;
         }
-        .user-node:hover { border-color: var(--gold); transform: translateX(5px); }
-        .node-icon { width: 45px; height: 45px; background: rgba(212,175,55,0.1); color: var(--gold); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; }
+        .user-node::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 4px; background: #333; transition: 0.3s;}
+        .user-node:hover { border-color: var(--gold-dim); transform: translateX(5px); box-shadow: 0 5px 15px rgba(0,0,0,0.8);}
+        .user-node:hover::before { background: var(--gold); }
         
-        .btn-copy { background: var(--gold); color: black; font-weight: 800; border: none; padding: 10px 20px; border-radius: 10px; transition: 0.3s; }
-        .btn-copy:hover { background: white; }
+        .node-icon { width: 50px; height: 50px; background: rgba(255,215,0,0.05); color: var(--gold); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.4rem; border: 1px solid rgba(255,215,0,0.2);}
+        
+        .btn-copy { background: linear-gradient(90deg, #111, #222); border: 1px solid var(--gold); color: var(--gold); font-weight: 900; padding: 12px 25px; border-radius: 10px; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;}
+        .btn-copy:hover { background: var(--gold); color: #000; box-shadow: 0 0 15px var(--gold-glow);}
+
+        /* ENTERPRISE REFRACTIVE SPINNER */
+        .swal-reflective-spinner {
+            position: relative; width: 80px; height: 80px; margin: 20px auto; border-radius: 50%;
+            background: conic-gradient(from 0deg, rgba(255,215,0,0.1) 0%, rgba(255,255,255,0.9) 15%, var(--gold) 30%, rgba(255,215,0,0.2) 50%, var(--gold-dim) 70%, rgba(255,255,255,0.8) 85%, rgba(255,215,0,0.1) 100%);
+            animation: spinSwalReflect 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            box-shadow: 0 0 30px rgba(255,215,0,0.4);
+        }
+        .swal-reflective-spinner::before {
+            content: ''; position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px;
+            background: radial-gradient(circle at 30% 30%, #1a1a1a 0%, #050505 100%);
+            border-radius: 50%; border: 1px solid rgba(255,215,0,0.2); z-index: 1;
+        }
+        .swal-inner-icon {
+            position: absolute; z-index: 2; top: 50%; left: 50%; font-size: 1.8rem; color: var(--gold);
+            text-shadow: 0 0 15px var(--gold); animation: counterSpinSwal 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        @keyframes spinSwalReflect { 100% { transform: rotate(360deg); } }
+        @keyframes counterSpinSwal { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
     </style>
 </head>
 <body>
@@ -71,40 +98,46 @@
 </header>
 
 <div class="container">
-    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);">NETWORK TREE</h1>
+    <div class="text-center mb-4">
+        <h1 style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); text-shadow: 0 0 15px var(--gold-glow); margin-bottom: 5px;">NETWORK TREE</h1>
+        <p class="text-secondary fw-bold">Enterprise Affiliate Ledger</p>
+    </div>
     
     <div class="stats-card">
-        <h5 class="text-muted mb-2 fw-bold">YOUR UNIQUE INVITE CODE</h5>
+        <h6 class="text-muted mb-2 fw-bold" style="letter-spacing: 2px;">YOUR UNIQUE INVITE CODE</h6>
         
         <div class="referral-box">
-            <span class="referral-code" id="myRefCode">Loading...</span>
-            <button class="btn-copy" onclick="copyRef()"><i class="fas fa-copy"></i> COPY</button>
+            <span class="referral-code" id="myRefCode">...</span>
+            <button class="btn-copy" onclick="copyRef()"><i class="fas fa-copy"></i></button>
         </div>
         
         <div class="row mt-4">
             <div class="col-6">
-                <h6 class="text-muted">TOTAL INVITES</h6>
-                <h3 class="fw-bold text-white" id="totalInvites">0</h3>
+                <h6 class="text-muted" style="letter-spacing: 1px;">TOTAL DOWNLINES</h6>
+                <h2 class="fw-bold text-white mb-0" id="totalInvites" style="font-family: 'Cinzel';">0</h2>
             </div>
             <div class="col-6" style="border-left: 1px solid #444;">
-                <h6 class="text-muted">BONUS EARNED</h6>
-                <h3 class="fw-bold" style="color: #00ff88;" id="totalBonus">₦0.00</h3>
+                <h6 class="text-muted" style="letter-spacing: 1px;">TOTAL YIELD</h6>
+                <h2 class="fw-bold mb-0" style="color: var(--success); font-family: 'Cinzel'; text-shadow: 0 0 15px rgba(0,255,136,0.3);" id="totalBonus">₦0.00</h2>
             </div>
         </div>
     </div>
     
     <div class="network-list">
-        <h5 class="mb-4" style="font-family: 'Cinzel'; color: var(--gold);"><i class="fas fa-users me-2"></i> YOUR DOWNLINE</h5>
+        <h4 class="mb-4 pb-3 border-bottom border-dark" style="font-family: 'Cinzel'; color: #fff; font-weight: 900;"><i class="fas fa-project-diagram me-2" style="color: var(--gold);"></i> ACTIVE DOWNLINES</h4>
         
         <div id="treeContainer">
-            <div class="text-center py-5 opacity-50">
-                <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing network data...
+            <div class="text-center py-5">
+                <div class="swal-reflective-spinner mx-auto mb-4">
+                    <i class="fas fa-network-wired swal-inner-icon"></i>
+                </div>
+                <div class="fw-bold text-warning" style="letter-spacing: 1px;">SYNCING LEDGER...</div>
             </div>
         </div>
     </div>
     
-    <div class="text-center text-muted small mt-4 fw-bold">
-        <p>Earn ₦500 instantly for every friend who registers with your code!</p>
+    <div class="text-center text-muted small mt-5 fw-bold mb-5 pb-5">
+        <p class="mb-1"><i class="fas fa-gift text-gold me-1"></i> Earn ₦500 instantly for every verified registration!</p>
         <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
@@ -131,7 +164,6 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            // Fetch basic stats from dashboard endpoint
             const dashRes = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const dashData = await dashRes.json();
             
@@ -140,49 +172,54 @@
                 document.getElementById('myRefCode').innerText = myCode;
                 document.getElementById('totalInvites').innerText = dashData.referralCount || "0";
                 
-                // Safe parsing for Decimal128 values from MongoDB
                 const rawBonus = dashData.referralBonus?.$numberDecimal || dashData.referralBonus || 0;
                 document.getElementById('totalBonus').innerText = `₦${Number(rawBonus).toLocaleString(undefined, {minimumFractionDigits:2})}`;
             }
 
-            // Fetch the actual list of people they invited
             const treeRes = await fetch('/api/user/referral-tree', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const treeData = await treeRes.json();
             
             const container = document.getElementById('treeContainer');
             
-            if (treeData.success && treeData.referrals.length > 0) {
-                container.innerHTML = treeData.referrals.map(user => `
+            // HYPER-RESILIENT ARRAY PARSING: Checks all possible backend array names
+            const referralList = treeData.referrals || treeData.network || treeData.data || [];
+            
+            if (treeData.success && referralList.length > 0) {
+                container.innerHTML = referralList.map(user => {
+                    // Safe Date Parsing
+                    const joinDate = user.joinedAt || user.createdAt || new Date();
+                    return `
                     <div class="user-node">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="node-icon"><i class="fas fa-user"></i></div>
+                            <div class="node-icon"><i class="fas fa-user-check"></i></div>
                             <div>
-                                <h6 class="mb-0 fw-bold text-white">${user.name}</h6>
-                                <small class="text-muted">Joined: ${new Date(user.joinedAt).toLocaleDateString()}</small>
+                                <h6 class="mb-1 fw-bold text-white fs-5" style="text-transform: capitalize;">${user.name || 'Verified User'}</h6>
+                                <small class="text-secondary fw-bold"><i class="far fa-calendar-alt me-1"></i> Joined: ${new Date(joinDate).toLocaleDateString()}</small>
                             </div>
                         </div>
                         <div class="text-end">
-                            <span class="badge bg-success opacity-75">Active</span>
+                            <span class="badge bg-transparent border border-success text-success px-3 py-2 rounded-pill"><i class="fas fa-circle me-1" style="font-size: 0.6rem;"></i> ACTIVE</span>
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
             } else {
                 container.innerHTML = `
-                    <div class="text-center py-5 opacity-50">
-                        <i class="fas fa-user-plus fa-3x mb-3 text-secondary"></i><br>
-                        You haven't invited anyone yet.<br>Share your code to start earning!
+                    <div class="text-center py-5 opacity-75">
+                        <div class="node-icon mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem; border-style: dashed;"><i class="fas fa-user-plus text-secondary"></i></div>
+                        <h5 class="fw-bold text-white">Network Empty</h5>
+                        <p class="text-secondary">You haven't invited anyone yet.<br>Share your unique code to build your downline.</p>
                     </div>
                 `;
             }
         } catch (error) {
-            document.getElementById('treeContainer').innerHTML = '<div class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to sync network tree.</div>';
+            document.getElementById('treeContainer').innerHTML = '<div class="text-center py-5 text-danger fw-bold"><i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i> Failed to sync network tree. Check your connection.</div>';
         }
     }
 
     function copyRef() {
-        if (myCode && myCode !== "N/A") {
+        if (myCode && myCode !== "N/A" && myCode !== "...") {
             navigator.clipboard.writeText(myCode).then(() => {
-                Swal.fire({ icon: 'success', title: 'Copied!', text: 'Code copied to clipboard.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'success', title: 'Code Secured!', text: `${myCode} copied to clipboard.`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' });
             });
         }
     }
