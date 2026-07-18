@@ -11,40 +11,34 @@ const config = require('./config');
 const fastify = Fastify({
   logger: true,
   trustProxy: true,
-  bodyLimit: 15 * 1024 * 1024 // 15MB limit allows large CMS Slides to upload safely
+  bodyLimit: 15 * 1024 * 1024 
 });
 
-// Initialize Global Cache
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
 // ============================================================================
 // PLUGIN REGISTRATION (Security, CORS, Static Files)
 // ============================================================================
 async function registerPlugins() {
-  // CORS - Fully opened to ensure Socket.io and frontend interactions flow perfectly
   await fastify.register(require('@fastify/cors'), {
     origin: '*',
     credentials: true
   });
 
-  // File Upload Support (Required for Direct Cloudinary Stream Uploads)
   await fastify.register(require('@fastify/multipart'), {
-    limits: { fileSize: 25 * 1024 * 1024 } // 25MB max limit for Videos/Images
+    limits: { fileSize: 25 * 1024 * 1024 } 
   });
   
-  // Helmet - CSP disabled to allow your custom frontend inline CSS/JS to run
   await fastify.register(require('@fastify/helmet'), {
     contentSecurityPolicy: false
   });
   
-  // Anti-DDoS Rate Limiting
   await fastify.register(require('@fastify/rate-limit'), {
     max: config.rateLimit.max,
     timeWindow: config.rateLimit.windowMs,
     skipOnError: true
   });
   
-  // Static files server (Serves images like logopay.jpg securely)
   await fastify.register(require('@fastify/static'), {
     root: __dirname + '/public',
     prefix: '/'
@@ -129,12 +123,11 @@ async function registerRoutes() {
   
   const paymentLinkRoutes = require('./routes/payment-link');
   fastify.get('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.getLinks);
-  fastify.post('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.createLink); // Legacy
+  fastify.post('/api/payment-links', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.createLink); 
   fastify.get('/api/payment-links/:id', paymentLinkRoutes.getLink);
   fastify.post('/api/payment-links/:id/pay', paymentLinkRoutes.payLink);
   fastify.get('/api/marketplace/all', paymentLinkRoutes.getAllMarketplaceLinks);
 
-  // === NEW ENTERPRISE SELLER ROUTES ===
   fastify.get('/api/payment-links/me', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.getMyProducts);
   fastify.post('/api/payment-links/multipart', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.createProductMultipart);
   fastify.put('/api/payment-links/:id/status', { preHandler: require('./middleware/auth').authenticate }, paymentLinkRoutes.updateProductStatus);
@@ -144,15 +137,12 @@ async function registerRoutes() {
   fastify.get('/api/ads', adsRoutes.getAds);
   fastify.post('/api/ads/:id/click', adsRoutes.registerClick);
   fastify.get('/api/ads/me', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.getUserAds);
-  // Support both legacy endpoint mapping and explicit multipart endpoint mappings
   fastify.post('/api/ads', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.createAd);
   fastify.post('/api/ads/create-multipart', { preHandler: require('./middleware/auth').authenticate }, adsRoutes.createAd);
   
-  // === NEW: CLICK & EARN TASK ROUTES ===
   const tasksRoutes = require('./routes/tasks');
   fastify.post('/api/tasks/claim-ad', { preHandler: require('./middleware/auth').authenticate }, tasksRoutes.claimAd);
   fastify.post('/api/tasks/claim-profile', { preHandler: require('./middleware/auth').authenticate }, tasksRoutes.claimProfileReward);
-  // =====================================
   
   const leaderboardRoutes = require('./routes/leaderboard');
   fastify.get('/api/leaderboard', { preHandler: require('./middleware/auth').authenticate }, leaderboardRoutes.getLeaderboard);
@@ -182,10 +172,8 @@ async function registerRoutes() {
   fastify.get('/api/admin/transactions', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getTransactions);
   fastify.get('/api/admin/analytics', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getAnalytics);
   
-  // === THIS IS THE FIX: ADMIN WITHDRAWAL ROUTES ADDED HERE ===
   fastify.get('/api/admin/withdrawals/pending', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingWithdrawals);
   fastify.put('/api/admin/withdrawals/:id/:action', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.processWithdrawal);
-  // ============================================================
 
   fastify.get('/api/admin/kyc/pending', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingKYC);
   fastify.get('/api/admin/kyc/:kycId/verify', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.verifyRealWorldKYC);
@@ -260,10 +248,7 @@ async function registerRoutes() {
 // ============================================================================
 function setupSocketIO(server) {
   const io = socketIo(server, {
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST']
-    }
+    cors: { origin: '*', methods: ['GET', 'POST'] }
   });
   
   io.use(async (socket, next) => {
@@ -306,11 +291,9 @@ function setupSocketIO(server) {
 function startCronJobs() {
   const cron = require('node-cron');
   
-  // === NEW: AUTOMATIC AD EXPIRATION ENGINE ===
   cron.schedule('0 0 * * *', async () => {
     try {
       const Ad = require('./models/Ad');
-      // Automatically flip approved ads to 'expired' if their runtime is over
       const expiredResult = await Ad.updateMany(
         { status: 'approved', expiryDate: { $lt: new Date() } },
         { status: 'expired' }
@@ -320,11 +303,16 @@ function startCronJobs() {
       console.error('[CRON ERROR] Ad campaign automatic expiration failed:', error);
     }
   });
-  // ===========================================
 
-  cron.schedule(config.cron.reconciliation, async () => {
-    try { const { reconcileTransactions } = require('./services/reconciliation'); await reconcileTransactions(); } catch (error) {}
-  });
+  // ==============================================================
+  // CRITICAL SECURITY PATCH: DISABLED AUTO-RECONCILIATION
+  // This was the "Ghost Script" auto-approving your pending transactions!
+  // ==============================================================
+  // cron.schedule(config.cron.reconciliation, async () => {
+  //   try { const { reconcileTransactions } = require('./services/reconciliation'); await reconcileTransactions(); } catch (error) {}
+  // });
+  // ==============================================================
+
   cron.schedule('0 0 * * *', async () => {
     try { const Analytics = require('./models/Analytics'); await Analytics.recordDaily(); } catch (error) {}
   });
