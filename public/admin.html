@@ -81,6 +81,7 @@
     
     <div class="tab-nav">
         <button class="admin-tab active" onclick="showTab('overview')"><i class="fas fa-chart-pie me-2"></i>Overview</button>
+        <button class="admin-tab" onclick="showTab('withdrawals')"><i class="fas fa-money-bill-wave me-2"></i>Payouts <span id="withdrawBadge" class="badge bg-danger ms-1 d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('transactions')"><i class="fas fa-server me-2"></i>Audit Log</button>
         <button class="admin-tab" onclick="showTab('users')"><i class="fas fa-users-cog me-2"></i>Ledger</button>
         <button class="admin-tab" onclick="showTab('kyc')"><i class="fas fa-id-card me-2"></i>KYC <span id="kycBadge" class="badge bg-danger ms-1 d-none">0</span></button>
@@ -98,6 +99,23 @@
         </div>
     </div>
     
+    <div id="tab-withdrawals" class="tab-content" style="display: none;">
+        <div class="admin-card">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <h5 class="text-gold fw-bold m-0">PENDING PAYOUT QUEUE</h5>
+                <button class="btn btn-sm btn-outline-light" onclick="fetchWithdrawals()"><i class="fas fa-sync-alt me-1"></i> Sync Queue</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark align-middle">
+                    <thead><tr><th>DATE & REF</th><th>USER</th><th>BANK DETAILS</th><th>AMOUNT</th><th class="text-end">ACTION</th></tr></thead>
+                    <tbody id="withdrawalsTable">
+                        <tr><td colspan="5" class="text-center opacity-50 py-4">Loading pending payouts...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div id="tab-transactions" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -259,6 +277,7 @@
         if(t==='marketplace') fetchMarketplace();
         if(t==='adverts') fetchAdverts();
         if(t==='transactions') loadAdminEcosystem(); 
+        if(t==='withdrawals') fetchWithdrawals();
     }
 
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
@@ -402,8 +421,51 @@
             document.getElementById('transactionsTable').innerHTML = txHtml;
             document.getElementById('ecosystemTable').innerHTML = ecoHtml || '<tr><td colspan="6" class="text-center opacity-50 py-4">No Invoices or Links generated yet.</td></tr>';
 
-            fetchKYC(); fetchAdverts();
+            fetchKYC(); fetchAdverts(); fetchWithdrawals();
         } catch (e) { console.error("Admin load error", e); }
+    }
+
+    async function fetchWithdrawals() {
+        const token = localStorage.getItem("naterpay_token");
+        if(!token) return;
+        
+        try {
+            const res = await fetch('/api/admin/withdrawals/pending', { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            const badge = document.getElementById('withdrawBadge');
+            const tbody = document.getElementById('withdrawalsTable');
+            
+            const pending = data.pendingWithdrawals || [];
+            if(data.success && pending.length > 0) {
+                badge.innerText = pending.length; badge.classList.remove('d-none');
+                
+                tbody.innerHTML = pending.map(tx => {
+                    const encodedTx = encodeURIComponent(JSON.stringify(tx));
+                    const bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
+                    const bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || 'Unknown Account';
+                    const amount = Number(tx.amount?.$numberDecimal || tx.amount || 0);
+                    
+                    return `
+                        <tr>
+                            <td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td>
+                            <td><div class="text-white">${tx.user?.name || 'Unknown'}</div><small class="text-muted">${tx.user?.email || ''}</small></td>
+                            <td><div class="text-warning fw-bold">${bName}</div><small class="text-white" style="letter-spacing:1px;">${bAcc}</small></td>
+                            <td class="fw-bold text-gold fs-5">₦${amount.toLocaleString()}</td>
+                            <td class="text-end">
+                                <div class="action-btns justify-content-end">
+                                    <button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button>
+                                    <button class="btn btn-success fw-bold" onclick="processWithdrawal('${tx._id}', 'approve')" title="Approve & Settle"><i class="fas fa-check"></i></button>
+                                    <button class="btn btn-danger fw-bold" onclick="processWithdrawal('${tx._id}', 'reject')" title="Reject & Refund"><i class="fas fa-times"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                badge.classList.add('d-none');
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No pending withdrawals in queue.</td></tr>';
+            }
+        } catch(e) { console.error("Withdrawal fetch error", e); }
     }
 
     async function processWithdrawal(txId, action) {
@@ -413,7 +475,11 @@
             try {
                 const res = await fetch(`/api/admin/withdrawals/${txId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
                 const data = await res.json();
-                if(data.success) { Swal.fire('Success', data.message || 'Operation successful', 'success'); loadAdminEcosystem(); } 
+                if(data.success) { 
+                    Swal.fire('Success', data.message || 'Operation successful', 'success'); 
+                    loadAdminEcosystem(); 
+                    fetchWithdrawals(); 
+                } 
                 else { Swal.fire('Failed', data.message || 'Operation failed', 'error'); }
             } catch (err) { Swal.fire('Error', 'Server communication failed.', 'error'); }
         }
