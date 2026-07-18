@@ -127,30 +127,25 @@ async function updateProfile(request, reply) {
 }
 
 /**
- * Get referral tree
+ * Get referral tree (ENTERPRISE FIX APPLIED HERE)
  */
 async function getReferralTree(request, reply) {
-  try {
-    const referrals = await User.getReferralTree(request.user._id);
-    
-    reply.send({
-      success: true,
-      referrals: referrals.map(r => ({
-        id: r._id,
-        name: r.name,
-        email: r.email,
-        phoneNumber: r.phoneNumber,
-        referralCount: r.referralCount,
-        joinedAt: r.createdAt
-      }))
-    });
-  } catch (error) {
-    console.error('Referral tree error:', error);
-    reply.status(500).send({
-      success: false,
-      message: 'Failed to fetch referral tree'
-    });
-  }
+    try {
+        const user = await User.findById(request.user._id);
+        if (!user || !user.referralCode) {
+            return reply.send({ success: true, referrals: [] });
+        }
+
+        // Find all users who registered using THIS user's referral code
+        const referrals = await User.find({ referredBy: user.referralCode })
+            .select('name createdAt email')
+            .sort({ createdAt: -1 });
+
+        reply.send({ success: true, referrals });
+    } catch (error) {
+        console.error("Referral Tree Error:", error);
+        reply.status(500).send({ success: false, message: 'Failed to fetch network tree' });
+    }
 }
 
 /**
