@@ -14,8 +14,10 @@
     <style>
         :root { 
             --gold: #FFD700; 
+            --gold-dim: #d4af37;
             --bg: #000000; 
             --card-bg: #111111; 
+            --nater-red: #d32f2f;
         }
         body { 
             background: var(--bg); 
@@ -23,6 +25,7 @@
             font-family: 'Montserrat', sans-serif; 
             margin: 0; 
             min-height: 100vh; 
+            overflow-x: hidden;
         }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
@@ -51,7 +54,7 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
         
-        /* RESPONSIVE BUTTONS: Fully contained text, flexible height */
+        /* RESPONSIVE BUTTONS */
         .provider-btn {
             background: #1A1A1A; 
             border: 2.5px solid #444; 
@@ -60,7 +63,7 @@
             cursor: pointer; 
             transition: 0.3s; 
             text-align: center;
-            min-height: 130px; /* Allows box to grow if needed */
+            min-height: 130px; 
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -76,7 +79,7 @@
             margin-top: 5px;
             font-weight: 800;
             word-wrap: break-word;
-            word-break: break-word; /* Forces strict containment */
+            word-break: break-word; 
             white-space: normal;
             width: 100%;
         }
@@ -143,11 +146,12 @@
             text-transform: uppercase;
             transition: 0.3s;
         }
-        .btn-buy:hover { 
+        .btn-buy:hover:not(:disabled) { 
             background: #FFFFFF; 
             transform: translateY(-3px); 
             box-shadow: 0 10px 20px rgba(255,255,255,0.3); 
         }
+        .btn-buy:disabled { background: #555; color: #888; transform: none; box-shadow: none; cursor: not-allowed; }
 
         .total-box {
             background: #1A1A1A;
@@ -158,6 +162,39 @@
         }
         
         .footer-text { color: #FFFFFF; font-size: 0.9rem; font-weight: 600; opacity: 0.7; }
+
+        /* ENTERPRISE REFRACTIVE SPINNER */
+        .swal-reflective-spinner {
+            position: relative; width: 90px; height: 90px; margin: 20px auto; border-radius: 50%;
+            background: conic-gradient(from 0deg, rgba(255,215,0,0.1) 0%, rgba(255,255,255,0.9) 15%, var(--gold) 30%, rgba(255,215,0,0.2) 50%, var(--gold-dim) 70%, rgba(255,255,255,0.8) 85%, rgba(255,215,0,0.1) 100%);
+            animation: spinSwalReflect 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite, flashGlow 2s alternate infinite;
+            box-shadow: 0 0 40px rgba(255,215,0,0.5);
+        }
+        .swal-reflective-spinner::before {
+            content: ''; position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px;
+            background: radial-gradient(circle at 30% 30%, #1a1a1a 0%, #050505 100%);
+            border-radius: 50%; border: 1px solid rgba(255,215,0,0.3); z-index: 1;
+        }
+        .swal-inner-icon {
+            position: absolute; z-index: 2; top: 50%; left: 50%; font-size: 2rem; color: var(--gold);
+            text-shadow: 0 0 20px var(--gold), 0 0 40px rgba(255,255,255,0.6);
+            animation: counterSpinSwal 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        @keyframes spinSwalReflect { 100% { transform: rotate(360deg); } }
+        @keyframes counterSpinSwal { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
+        @keyframes flashGlow { 0% { box-shadow: 0 0 20px rgba(255,215,0,0.3); filter: brightness(1); } 100% { box-shadow: 0 0 60px rgba(255,215,0,0.8); filter: brightness(1.3); } }
+
+        /* BURST STARS EFFECTS */
+        .burst-star {
+            position: fixed; top: 50%; left: 50%; z-index: 9999; pointer-events: none;
+            color: var(--gold); font-size: 1.5rem; text-shadow: 0 0 10px rgba(255,215,0,0.8);
+            animation: starExplode 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        .burst-star.failed { color: var(--nater-red); text-shadow: 0 0 10px rgba(211,47,47,0.8); }
+        @keyframes starExplode {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); opacity: 1; }
+            100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.5) rotate(var(--rot)); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -216,9 +253,9 @@
             </select>
         </div>
         
-        <div class="input-group-custom">
-            <label>WITHDRAWAL PIN</label>
-            <input type="password" id="withdrawalPin" placeholder="Enter 4-digit PIN" maxlength="4">
+        <div class="input-group-custom" style="border-color: #555;">
+            <label style="color: #bbb;"><i class="fas fa-lock me-1"></i> SECURITY PIN</label>
+            <input type="password" id="withdrawalPin" placeholder="Enter 4-digit PIN" maxlength="4" style="letter-spacing: 5px;">
         </div>
         
         <div class="total-box">
@@ -226,7 +263,7 @@
             <div class="h2 fw-bold" style="color: #FFFFFF;" id="totalAmount">₦900</div>
         </div>
         
-        <button class="btn-buy" onclick="buyExamPin()">
+        <button class="btn-buy" id="btnBuy" onclick="buyExamPin()">
             <i class="fas fa-key me-2"></i> GENERATE PIN NOW
         </button>
     </div>
@@ -261,6 +298,26 @@
         }
         animate();
     }
+
+    function triggerStarBurst(isSuccess = true) {
+        const starCount = 40;
+        const body = document.body;
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.innerHTML = '★';
+            star.className = isSuccess ? 'burst-star' : 'burst-star failed';
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * 300 + 100;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+            const rot = Math.random() * 720 - 360;
+            star.style.setProperty('--tx', `${tx}px`);
+            star.style.setProperty('--ty', `${ty}px`);
+            star.style.setProperty('--rot', `${rot}deg`);
+            body.appendChild(star);
+            setTimeout(() => { star.remove(); }, 1000);
+        }
+    }
     
     function selectProvider(element, provider, price) {
         document.querySelectorAll('.provider-btn').forEach(btn => btn.classList.remove('active'));
@@ -294,12 +351,21 @@
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) { window.location.href = '/index.html'; return; }
         
+        const btnBuy = document.getElementById('btnBuy');
+        btnBuy.disabled = true;
+
         try {
+            // ENTERPRISE HOLOGRAPHIC LOADER
             Swal.fire({
-                title: 'Processing Request...',
-                html: '<span style="color: #FFF; font-size: 1.1rem;">NATER-PAY is securely generating your PIN...</span>',
+                title: 'Securing Protocol...',
+                html: `
+                    <div class="swal-reflective-spinner">
+                        <i class="fas fa-satellite-dish swal-inner-icon"></i>
+                    </div>
+                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Encrypting payload & generating PIN...</span>
+                `,
                 allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
+                showConfirmButton: false,
                 background: '#111111', color: '#FFD700'
             });
             
@@ -312,21 +378,26 @@
             const data = await res.json();
             
             if (data.success) {
+                triggerStarBurst(true); // Success Stars
                 Swal.fire({
                     icon: 'success', title: 'Successful!',
                     html: `<div style="font-size: 1.1rem; color: #FFF;">Your PIN has been generated.<br><br><strong style="color: #FFD700; font-size: 1.2rem;">${data.token || 'Sent via SMS'}</strong></div>`,
                     confirmButtonColor: '#FFD700', background: '#111111', color: '#FFFFFF'
                 }).then(() => { window.location.href = '/dashboard.html'; });
             } else {
+                triggerStarBurst(false); // Fail Stars
                 // Hiding scary DB or VTpass API errors from the user
                 let msg = data.message || "An error occurred.";
                 if (msg.toLowerCase().includes("vtpass") || msg.toLowerCase().includes("db error")) {
                     msg = "We encountered a temporary issue generating your PIN. Please try again later.";
                 }
                 Swal.fire({ icon: 'error', title: 'Transaction Failed', text: msg, confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+                btnBuy.disabled = false;
             }
         } catch (error) {
+            triggerStarBurst(false); // Fail Stars
             Swal.fire({ icon: 'error', title: 'Network Connection', text: 'Please check your internet connection and try again.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+            btnBuy.disabled = false;
         }
     }
     
