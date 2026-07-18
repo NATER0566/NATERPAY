@@ -1,5 +1,7 @@
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
+const User = require('../models/User'); // ADDED FOR PIN CHECK
+const bcrypt = require('bcryptjs'); // ADDED FOR PIN CHECK
 const axios = require('axios');
 
 const variationsCache = {};
@@ -11,6 +13,16 @@ function generateVTpassRequestId() {
   const dateStr = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}`;
   const randomSuffix = Math.random().toString(36).substring(2, 10);
   return dateStr + randomSuffix;
+}
+
+// --- UNIVERSAL PIN VALIDATOR ---
+async function validateTransactionPin(userId, inputPin) {
+    if (!inputPin) return { isValid: false, message: 'Security PIN is required.' };
+    const user = await User.findById(userId);
+    if (!user.transactionPin) return { isValid: false, message: 'Please set up your security PIN in settings first.' };
+    const isMatch = await bcrypt.compare(String(inputPin), user.transactionPin);
+    if (!isMatch) return { isValid: false, message: 'SECURITY ALERT: Incorrect PIN.' };
+    return { isValid: true };
 }
 
 async function getRates(request, reply) {
@@ -45,6 +57,10 @@ async function buyAirtime(request, reply) {
   try {
     const { phone, network, amount, pin } = request.body;
     if (!phone || !network || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    // STRICT PIN VALIDATION
+    const pinCheck = await validateTransactionPin(request.user._id, pin);
+    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
     const wallet = await Wallet.findOne({ user: request.user._id });
     if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
@@ -84,6 +100,10 @@ async function buyData(request, reply) {
     const { phone, network, plan, amount, pin } = request.body;
     if (!phone || !network || !amount || !plan) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
+    // STRICT PIN VALIDATION
+    const pinCheck = await validateTransactionPin(request.user._id, pin);
+    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
+    
     const wallet = await Wallet.findOne({ user: request.user._id });
     if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
 
@@ -121,6 +141,10 @@ async function buyElectricity(request, reply) {
   try {
     const { meterNumber, disco, amount, meterType, pin } = request.body;
     if (!meterNumber || !disco || !amount || !meterType) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    // STRICT PIN VALIDATION
+    const pinCheck = await validateTransactionPin(request.user._id, pin);
+    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
     const wallet = await Wallet.findOne({ user: request.user._id });
     if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
@@ -160,6 +184,10 @@ async function buyCable(request, reply) {
     const { smartcardNumber, provider, package: pkg, amount, pin } = request.body;
     if (!smartcardNumber || !provider || !amount || !pkg) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
+    // STRICT PIN VALIDATION
+    const pinCheck = await validateTransactionPin(request.user._id, pin);
+    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
+    
     const wallet = await Wallet.findOne({ user: request.user._id });
     if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
 
@@ -197,6 +225,10 @@ async function buyEducation(request, reply) {
   try {
     const { provider, phone, quantity, amount, pin } = request.body;
     if (!provider || !phone || !quantity || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    // STRICT PIN VALIDATION
+    const pinCheck = await validateTransactionPin(request.user._id, pin);
+    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
     const wallet = await Wallet.findOne({ user: request.user._id });
     if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
@@ -236,6 +268,10 @@ async function buyBetting(request, reply) {
     const { provider, customerId, amount, pin } = request.body;
     if (!provider || !customerId || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
+    // STRICT PIN VALIDATION
+    const pinCheck = await validateTransactionPin(request.user._id, pin);
+    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
+    
     const wallet = await Wallet.findOne({ user: request.user._id });
     if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
 
@@ -272,6 +308,10 @@ async function buyInsurance(request, reply) {
   try {
     const { provider, fullName, phone, plan, amount, address, dob, occupation, vehicleDetails, pin } = request.body;
     if (!provider || !fullName || !phone || !amount || !plan) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    // STRICT PIN VALIDATION
+    const pinCheck = await validateTransactionPin(request.user._id, pin);
+    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
     const wallet = await Wallet.findOne({ user: request.user._id });
     if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
@@ -312,6 +352,10 @@ async function sendBulkSMS(request, reply) {
     try {
         const { sender, recipient, message, pin } = request.body;
         if (!sender || !recipient || !message || !pin) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+
+        // STRICT PIN VALIDATION
+        const pinCheck = await validateTransactionPin(request.user._id, pin);
+        if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
 
         const wallet = await Wallet.findOne({ user: request.user._id });
         const smsCost = 4.00 * recipient.split(',').length; 
@@ -367,6 +411,10 @@ async function buyPOS(request, reply) {
     try {
         const { terminalId, amount, pin } = request.body;
         if (!terminalId || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+
+        // STRICT PIN VALIDATION
+        const pinCheck = await validateTransactionPin(request.user._id, pin);
+        if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
 
         const wallet = await Wallet.findOne({ user: request.user._id });
         if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
@@ -506,20 +554,20 @@ async function processVTURequest(type, data) {
   } else if (type === 'insurance') {
       payload.serviceID = data.provider.toLowerCase(); 
       payload.billersCode = isSandbox ? 'ATU480ER' : (data.vehicleDetails?.plateNumber || data.phone);
-      payload.variation_code = parseInt(data.plan) || 1; // VTpass strictly requires this as a number
+      payload.variation_code = parseInt(data.plan) || 1; 
       
       if (payload.serviceID === 'ui-insure') {
           payload.phone = isSandbox ? '08111111111' : (data.phone || '08111111111');
           payload.Insured_Name = data.fullName || 'Mr Ajanlekoko';
-          payload.engine_capacity = 1; // Strict integer
+          payload.engine_capacity = 1; 
           payload.Chasis_Number = isSandbox ? 'S12332323FRHJJ433434J' : data.vehicleDetails?.chassisNumber;
           payload.Plate_Number = isSandbox ? 'ATU480ER' : data.vehicleDetails?.plateNumber;
-          payload.vehicle_make = 335; // Strict integer
-          payload.vehicle_color = 20; // Strict integer
-          payload.vehicle_model = 745; // Strict integer
-          payload.YearofMake = 2009; // Strict integer
-          payload.state = 1; // Strict integer
-          payload.lga = 770; // Strict integer
+          payload.vehicle_make = 335; 
+          payload.vehicle_color = 20; 
+          payload.vehicle_model = 745; 
+          payload.YearofMake = 2009; 
+          payload.state = 1; 
+          payload.lga = 770; 
           payload.email = 'sandbox@vtpass.com';
       }
   } else if (type === 'pos') {
