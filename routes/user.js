@@ -37,6 +37,12 @@ async function getDashboardData(request, reply) {
       totalSpent,
       referralCount: user.referralCount || 0,
       referralBonus: user.referralBonus ? user.referralBonus.toString() : '0',
+      
+      // ---> ENTERPRISE REFERRAL TRACKERS <---
+      cumulativeSpend: user.cumulativeSpend || 0,
+      referralBonusPaid: user.referralBonusPaid || false,
+      // --------------------------------------
+
       hiddenWidgets: user.hiddenWidgets || [],
       referralCode: user.referralCode,
       createdAt: user.createdAt,
@@ -89,7 +95,7 @@ async function updateProfile(request, reply) {
 }
 
 /**
- * Get referral tree (BULLETPROOF QUERY ENGINE)
+ * Get referral tree (BULLETPROOF QUERY ENGINE WITH MILESTONE TRACKING)
  */
 async function getReferralTree(request, reply) {
     try {
@@ -98,8 +104,6 @@ async function getReferralTree(request, reply) {
             return reply.send({ success: true, referrals: [] });
         }
 
-        // --- THE FIX: Bulletproof Matcher ---
-        // This catches Exact Case, Lowercase, Uppercase, and old ObjectId test data.
         const referrals = await User.find({ 
             $or: [
                 { referredBy: user.referralCode },
@@ -107,7 +111,8 @@ async function getReferralTree(request, reply) {
                 { referredBy: user._id.toString() }
             ]
         })
-        .select('name createdAt email')
+        // THE FIX: Added 'cumulativeSpend' and 'referralBonusPaid' so the frontend can display progress
+        .select('name createdAt email cumulativeSpend referralBonusPaid')
         .sort({ createdAt: -1 });
 
         reply.send({ success: true, referrals });
@@ -136,8 +141,12 @@ async function upgradeUser(request, reply) {
 
     if (!pin || pin.length !== 4) return reply.status(400).send({ success: false, message: 'A valid 4-digit PIN is required.' });
     
+    // Check against the User collection PIN (or Wallet PIN if you prefer standardizing it)
     if (user.transactionPin) {
       const isMatch = await bcrypt.compare(pin.toString(), user.transactionPin);
+      if (!isMatch) return reply.status(400).send({ success: false, message: 'Incorrect Withdrawal PIN.' });
+    } else if (user.withdrawalPin) {
+      const isMatch = await bcrypt.compare(pin.toString(), user.withdrawalPin);
       if (!isMatch) return reply.status(400).send({ success: false, message: 'Incorrect Withdrawal PIN.' });
     }
 
