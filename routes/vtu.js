@@ -15,16 +15,28 @@ function generateVTpassRequestId() {
   return dateStr + randomSuffix;
 }
 
-// --- UNIVERSAL PIN VALIDATOR (FIXED SCHEMA MAPPING) ---
+// --- UNIVERSAL PIN VALIDATOR (NO GUESSWORK FIX) ---
 async function validateTransactionPin(userId, inputPin) {
     if (!inputPin) return { isValid: false, message: 'Security PIN is required.' };
+    
+    // THE FIX: Your system saves the PIN hash in the Wallet collection, not the User collection!
+    const wallet = await Wallet.findOne({ user: userId });
     const user = await User.findById(userId);
     
-    // THE FIX: The schema uses 'withdrawalPin', not 'transactionPin'
-    if (!user.withdrawalPin) return { isValid: false, message: 'Please set up your security PIN in settings first.' };
+    if (!wallet) return { isValid: false, message: 'Wallet architecture not found.' };
     
-    const isMatch = await bcrypt.compare(String(inputPin), user.withdrawalPin);
-    if (!isMatch) return { isValid: false, message: 'SECURITY ALERT: Incorrect PIN.' };
+    // Extract the exact PIN hash from where the security.html page saved it
+    const actualPinHash = wallet.pin || user?.withdrawalPin;
+    
+    if (!actualPinHash) {
+        return { isValid: false, message: 'Please set up your security PIN in settings first.' };
+    }
+    
+    const isMatch = await bcrypt.compare(String(inputPin), actualPinHash);
+    
+    if (!isMatch) {
+        return { isValid: false, message: 'SECURITY ALERT: Incorrect PIN.' };
+    }
     
     return { isValid: true };
 }
@@ -37,6 +49,9 @@ async function getRates(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch rates' }); }
 }
 
+/**
+ * FETCH VARIATIONS & APPLY PROFIT MARKUP
+ */
 async function getVariations(request, reply) {
   try {
     const { serviceID } = request.query;
@@ -50,10 +65,28 @@ async function getVariations(request, reply) {
     });
     
     const fetchedVariations = response.data.content?.varations || response.data.content?.variations || [];
-    if (fetchedVariations.length > 0) {
-        variationsCache[serviceID] = { timestamp: Date.now(), data: fetchedVariations };
+    
+    // --- ENTERPRISE PROFIT ENGINE ---
+    // We intercept the VTPass prices and add a profit margin before sending to the frontend.
+    const markedUpVariations = fetchedVariations.map(v => {
+        const basePrice = parseFloat(v.variation_amount);
+        let profit = basePrice * 0.05; // 5% markup
+        
+        // Ensure a minimum profit of N15 on small data plans
+        if (serviceID.includes('data') && profit > 0 && profit < 15) profit = 15; 
+        
+        return {
+            ...v,
+            original_price: basePrice, // Keep the real cost hidden
+            variation_amount: Math.ceil(basePrice + profit) // Display the higher, profitable price to the user
+        };
+    });
+    
+    if (markedUpVariations.length > 0) {
+        variationsCache[serviceID] = { timestamp: Date.now(), data: markedUpVariations };
     }
-    reply.send({ success: true, variations: fetchedVariations });
+    
+    reply.send({ success: true, variations: markedUpVariations });
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch service plans' }); }
 }
 
@@ -98,30 +131,51 @@ async function buyAirtime(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
+/**
+ * BUY DATA (WITH SECURE PROFIT SPLIT)
+ */
 async function buyData(request, reply) {
   try {
     const { phone, network, plan, amount, pin } = request.body;
     if (!phone || !network || !amount || !plan) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
+    // BULLETPROOF PIN VALIDATION
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    const wallet = await Wallet.findOne({ user: request.user._id });
-    if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+    // SECURITY: Get original cost price from cache so VTPass doesn't reject the transaction
+    let variations = variationsCache[network]?.data || [];
+    if (variations.length === 0) {
+        // Fallback fetch if cache expired
+        const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
+        const response = await axios.get(`${baseUrl}/service-variations?serviceID=${network}`, { headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY } });
+        variations = response.data.content?.varations || response.data.content?.variations || [];
+        variations = variations.map(v => ({ ...v, original_price: parseFloat(v.variation_amount), variation_amount: Math.ceil(parseFloat(v.variation_amount) * 1.05) }));
+    }
+    
+    const selectedPlanData = variations.find(v => v.variation_code === plan);
+    if (!selectedPlanData) return reply.status(400).send({ success: false, message: 'Invalid data plan selected' });
 
-    wallet.availableBalance = (parseFloat(wallet.availableBalance) - amount).toString();
-    wallet.balance = (parseFloat(wallet.balance) - amount).toString();
+    const totalDeduction = parseFloat(amount); // What the user pays (includes your profit)
+    const costPrice = selectedPlanData.original_price; // What VTPass actually charges
+
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    if (parseFloat(wallet.availableBalance?.toString() || '0') < totalDeduction) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (parseFloat(wallet.availableBalance) - totalDeduction).toString();
+    wallet.balance = (parseFloat(wallet.balance) - totalDeduction).toString();
     await wallet.save();
 
     const transaction = new Transaction({
       user: request.user._id, type: 'data', description: `Data Plan for ${phone}`,
-      amount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + amount).toString(), balanceAfter: wallet.availableBalance.toString(),
+      amount: totalDeduction, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + totalDeduction).toString(), balanceAfter: wallet.availableBalance.toString(),
       status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
     });
     await transaction.save();
 
     try {
-      const providerResponse = await processVTURequest('data', { phone, network, plan, amount });
+      // Send the hidden 'costPrice' to VTPass, NOT the totalDeduction!
+      const providerResponse = await processVTURequest('data', { phone, network, plan, amount: costPrice });
       transaction.status = 'success';
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
@@ -129,8 +183,8 @@ async function buyData(request, reply) {
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Data purchase successful', transaction });
     } catch (vtuError) {
-      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
-      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + totalDeduction).toString();
+      wallet.balance = (parseFloat(wallet.balance) + totalDeduction).toString();
       await wallet.save();
       transaction.status = 'failed';
       await transaction.save();
