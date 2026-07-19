@@ -188,6 +188,8 @@
             backdrop-filter: blur(15px); animation: slideUpNotif 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         @keyframes slideUpNotif { from { transform: translateY(150px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .fee-badge-small { display: inline-block; background: rgba(255, 68, 68, 0.15); color: #ff4444; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-top: 4px; font-weight: bold; border: 1px solid rgba(255, 68, 68, 0.3); }
     </style>
 </head>
 <body>
@@ -304,8 +306,6 @@
         <button class="btn btn-light btn-sm rounded-pill fw-bold px-4 py-2" id="promoBtn" onclick="location.href='reseller.html'">UPGRADE NOW</button>
     </div>
 
-    <!-- RENAMED ECOSYSTEM BUTTONS TO CATCH TRUE MEANING -->
-
     <h5 class="ecosystem-section-title"><i class="fas fa-plug"></i> Bills & Utilities</h5>
     <div class="row g-2" id="gridUtilities">
         <div class="col-4 col-md-2 service-wrapper-node">
@@ -358,7 +358,6 @@
             <a href="reseller.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-network-wired main-icon"></i><span>Reseller Network</span></a>
         </div>
         
-        <!-- THE REFINED 'SELL PRODUCTS' BUTTON (Creates Payment/Product Links) -->
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="payment-links.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
@@ -707,38 +706,34 @@
                         const rawDate = tx.createdAt || tx.date || new Date().toISOString();
                         const dateString = new Date(rawDate).toLocaleDateString() + ' <span class="ms-2 opacity-50">' + new Date(rawDate).toLocaleTimeString() + '</span>';
                         
-                        let isCredit = false; 
-                        const txType = (tx.type || '').toLowerCase();
-                        const desc = (tx.description || '').toLowerCase();
-
-                        // --- THE COMPLETE ENTERPRISE TRANSACTION FLOW FIX ---
-                        if (['funding', 'invoice', 'payment_link', 'salary', 'bonus', 'refund', 'cashback', 'referral_bonus', 'task_reward', 'reward'].includes(txType)) {
-                            isCredit = true;
-                        } else if (txType === 'transfer' && (desc.includes('received') || desc.includes('from'))) {
-                            isCredit = true;
-                        } else if (desc.includes('admin credit') || desc.includes('reward') || desc.includes('task') || desc.includes('earned')) {
-                            isCredit = true;
-                        }
-                        // ---------------------------------------------------
+                        // === NEW DASHBOARD TRANSACTION LOGIC (FEES & PROCESSING DETECTED) ===
+                        const isCredit = tx.isCredit; 
+                        const baseAmount = Number(tx.amount || 0);
+                        const feeAmount = Number(tx.fee || 0);
+                        const totalDeducted = Number(tx.totalDeduction || (baseAmount + feeAmount));
 
                         const flowColor = isCredit ? 'text-success' : 'text-danger';
                         const flowSymbol = isCredit ? '+' : '-';
-                        const statusClass = tx.status === 'success' ? 'bg-success' : (tx.status === 'pending' ? 'bg-warning text-dark' : 'bg-danger');
-                        const amount = Number(tx.amount?.$numberDecimal || tx.amount || 0);
+                        const statusClass = tx.status === 'success' ? 'bg-success' : (tx.status === 'pending' || tx.status === 'processing' ? 'bg-warning text-dark' : 'bg-danger');
                         
+                        let displayAmount = isCredit ? baseAmount : totalDeducted;
+                        let feeBadge = (!isCredit && feeAmount > 0) ? `<div class="fee-badge-small">Fee: ₦${feeAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>` : '';
+
                         tbody.innerHTML += `
                             <div class="transaction-row">
                                 <div class="tx-left">
-                                    <div class="tx-type">${tx.type}</div>
+                                    <div class="tx-type">${tx.type.replace('_', ' ')}</div>
                                     <div class="tx-desc">${tx.description || 'System Log'}</div>
                                     <div class="tx-date">${dateString}</div>
                                 </div>
                                 <div class="tx-right">
-                                    <div class="tx-amount ${flowColor}">${flowSymbol}₦${amount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                                    <div class="tx-amount ${flowColor}">${flowSymbol}₦${displayAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                                    ${feeBadge}
                                     <div class="status-pill text-white ${statusClass}">${tx.status}</div>
                                 </div>
                             </div>
                         `;
+                        // ====================================================================
                     });
                 } else {
                     tbody.innerHTML = '<div class="text-center py-5 opacity-50">No transaction logs found.</div>';
