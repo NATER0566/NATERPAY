@@ -98,10 +98,10 @@ async function claimAd(request, reply) {
         let adName = `Sponsored Campaign #${adId}`;
 
         if (AdModel) {
-            // THE FIX: Atomically increment views and decrement remaining views in one action
+            // THE FIX: Atomically increment IMPRESSIONS and decrement remaining views in one action
             const adData = await AdModel.findOneAndUpdate(
                 { _id: adId, remainingViews: { $gt: 0 } },
-                { $inc: { views: 1, remainingViews: -1 } },
+                { $inc: { impressions: 1, remainingViews: -1 } },
                 { new: true } // Returns the updated document
             );
 
