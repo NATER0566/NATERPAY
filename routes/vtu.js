@@ -32,8 +32,8 @@ function applyEnterpriseDiscount(originalAmount, serviceType, userRole) {
         cable: 0.015,       
         electricity: 0.015, 
         betting: 0.01,
-        insurance: 0.015,
-        sms: 0.01,          // SMS margin included
+        insurance: 0.015,   
+        sms: 0.01,          
         education: 0        
     };
 
@@ -59,8 +59,10 @@ function applyEnterpriseDiscount(originalAmount, serviceType, userRole) {
 
     return parseFloat(discountedPrice.toFixed(2));
 }
-// =====================================================================
 
+// =====================================================================
+// SECURE TRANSACTION PIN VALIDATOR
+// =====================================================================
 async function validateTransactionPin(userId, inputPin) {
     if (!inputPin || inputPin.length !== 4) return { isValid: false, message: 'A valid 4-digit PIN is required.' };
     
@@ -79,7 +81,9 @@ async function validateTransactionPin(userId, inputPin) {
     return { isValid: true };
 }
 
-// --- ENTERPRISE REFERRAL & SPEND TRACKING ENGINE ---
+// =====================================================================
+// ENTERPRISE REFERRAL & SPEND TRACKING ENGINE
+// =====================================================================
 async function registerSuccessfulSpend(userId, amountSpent, io) {
     try {
         const user = await User.findById(userId);
@@ -143,76 +147,131 @@ async function registerSuccessfulSpend(userId, amountSpent, io) {
     }
 }
 
-// =====================================================================
-// LIVE VTPASS API INTEGRATION
-// =====================================================================
-async function processVTURequest(type, payload) {
-    const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
-    const requestId = generateVTpassRequestId();
+// ==================================================================
+// REAL VTPASS INTEGRATION CORE (RESTORED TO ORIGINAL WORKING LOGIC)
+// ==================================================================
+async function processVTURequest(type, data) {
+  if (!process.env.VTPASS_API_KEY || !process.env.VTPASS_SECRET_KEY) {
+      throw new Error("VTpass API Keys are missing from server configurations.");
+  }
+
+  const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
+  const isSandbox = baseUrl.includes('sandbox');
+
+  const headers = { 
+      'api-key': process.env.VTPASS_API_KEY, 
+      'secret-key': process.env.VTPASS_SECRET_KEY, 
+      'Content-Type': 'application/json' 
+  };
+
+  // Build payload parameters dynamically
+  let payload = { 
+      request_id: generateVTpassRequestId(), 
+      amount: data.amount
+  };
+
+  if (type === 'airtime') {
+      payload.phone = isSandbox ? '08011111111' : data.phone;
+      payload.serviceID = data.network; 
+  } 
+  else if (type === 'data') { 
+      payload.phone = isSandbox ? '08011111111' : data.phone;
+      payload.serviceID = data.network; 
+      payload.billersCode = isSandbox ? '08011111111' : data.phone; 
+      payload.variation_code = data.plan; 
+  } 
+  else if (type === 'electricity') {
+      payload.phone = '08000000000'; 
+      payload.serviceID = data.disco;
+      payload.variation_code = data.meterType; 
+      
+      if (isSandbox) {
+          payload.billersCode = data.meterType === 'prepaid' ? '1111111111111' : '1010101010101';
+      } else {
+          payload.billersCode = data.meterNumber;
+      }
+  } 
+  else if (type === 'cable') {
+      // VTPASS CABLE TV DOCS FIX
+      payload.phone = '08000000000';
+      payload.serviceID = data.provider;
+      payload.variation_code = data.package;
+      
+      if (data.provider === 'showmax') {
+          payload.billersCode = isSandbox ? '08011111111' : data.smartcardNumber; // Showmax uses phone number
+      } else {
+          // DSTV, GOTV, and Startimes use 1212121212 for Sandbox
+          payload.billersCode = isSandbox ? '1212121212' : data.smartcardNumber; 
+          payload.subscription_type = 'change'; // Required parameter for changing/applying bouquets
+      }
+  } 
+  else if (type === 'education') {
+      payload.phone = isSandbox ? '08011111111' : data.phone;
+      payload.serviceID = data.provider;
+      payload.quantity = parseInt(data.quantity) || 1;
+
+      if (data.provider === 'waec') {
+          payload.variation_code = 'waecdirect'; 
+      } else if (data.provider === 'jamb') {
+          payload.variation_code = 'utme-no-mock'; 
+          payload.billersCode = isSandbox ? '0123456789' : data.phone; 
+      } else if (data.provider === 'neco') {
+          payload.variation_code = 'neco-biller'; 
+      } else {
+          payload.variation_code = 'default';
+      }
+  } 
+  else if (type === 'betting') {
+      payload.phone = '08000000000';
+      payload.serviceID = data.provider;
+      payload.billersCode = isSandbox ? '08011111111' : data.customerId;
+  }
+  else if (type === 'insurance') {
+      payload.phone = isSandbox ? '08011111111' : data.phone;
+      payload.serviceID = data.provider;
+  }
+  else if (type === 'sms') {
+      payload.phone = data.phone;
+      payload.serviceID = data.provider || 'bulk-sms';
+  }
+
+  try {
+    const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
     
-    let endpoint = '/pay';
-    let apiPayload = {
-        request_id: requestId,
-        amount: payload.amount
-    };
+    if (response.data.code === '000') {
+      // DYNAMIC TOKEN EXTRACTION FOR ALL PROVIDERS
+      let extractedToken = response.data.purchased_code || response.data.token || response.data.Pin || null;
 
-    if (type === 'airtime') {
-        apiPayload.serviceID = payload.network;
-        apiPayload.phone = payload.phone;
-    } else if (type === 'data') {
-        apiPayload.serviceID = payload.network;
-        apiPayload.billersCode = payload.phone;
-        apiPayload.variation_code = payload.plan;
-        apiPayload.phone = payload.phone;
-    } else if (type === 'electricity') {
-        apiPayload.serviceID = payload.disco;
-        apiPayload.billersCode = payload.meterNumber;
-        apiPayload.variation_code = payload.meterType;
-        apiPayload.phone = payload.phone || "08000000000";
-    } else if (type === 'cable') {
-        apiPayload.serviceID = payload.provider;
-        apiPayload.billersCode = payload.smartcardNumber;
-        apiPayload.variation_code = payload.package;
-        apiPayload.phone = payload.phone || "08000000000";
-    } else if (type === 'education') {
-        apiPayload.serviceID = payload.provider;
-        apiPayload.variation_code = payload.provider;
-        apiPayload.phone = payload.phone || "08000000000";
-    } else if (type === 'betting') {
-        apiPayload.serviceID = payload.provider;
-        apiPayload.billersCode = payload.customerId;
-        apiPayload.phone = payload.phone || "08000000000";
-    } else if (type === 'insurance') { 
-        apiPayload.serviceID = payload.provider;
-        apiPayload.phone = payload.phone;
-    } else if (type === 'sms') { // Routing for SMS
-        apiPayload.serviceID = payload.provider || 'bulk-sms';
-        apiPayload.phone = payload.phone || "08000000000";
+      // SPECIFIC FIX: WAEC returns a "cards" array with Pin and Serial
+      if (response.data.cards && Array.isArray(response.data.cards) && response.data.cards.length > 0) {
+          extractedToken = `PIN: ${response.data.cards[0].Pin} | Serial: ${response.data.cards[0].Serial}`;
+      } 
+      // Fallback for generic token arrays
+      else if (response.data.tokens && Array.isArray(response.data.tokens) && response.data.tokens.length > 0) {
+          extractedToken = `Token: ${response.data.tokens[0]}`;
+      }
+      // SPECIFIC FIX: Showmax returns a "Voucher" array
+      else if (response.data.Voucher && Array.isArray(response.data.Voucher) && response.data.Voucher.length > 0) {
+          extractedToken = `Voucher: ${response.data.Voucher[0]}`;
+      }
+
+      return { 
+          reference: response.data.content?.transactions?.transactionId || response.data.content?.transactions?.transaction_id || `REF-${Date.now()}`, 
+          token: extractedToken,
+          status: 'success', 
+          raw: response.data 
+      };
+    } else {
+      throw new Error(`VTpass Error (${response.data.code}): ${response.data.response_description || response.data.message}`);
     }
-
-    try {
-        const response = await axios.post(`${baseUrl}${endpoint}`, apiPayload, {
-            headers: {
-                'api-key': process.env.VTPASS_API_KEY,
-                'secret-key': process.env.VTPASS_SECRET_KEY || process.env.VTPASS_API_KEY,
-                'public-key': process.env.VTPASS_PUBLIC_KEY
-            }
-        });
-
-        if (response.data && (response.data.code === '000' || response.data.code === '099')) {
-            return {
-                reference: response.data.content?.transactions?.transactionId || requestId,
-                token: response.data.purchased_code || response.data.token || response.data.cards?.[0]?.Serial || null,
-                raw: response.data
-            };
-        } else {
-            throw new Error(response.data.response_description || 'Transaction failed at provider.');
-        }
-    } catch (error) {
-        throw new Error(error.response?.data?.response_description || error.message || 'Provider connection failed');
-    }
+  } catch (error) {
+    const apiErrorMessage = error.response?.data?.response_description || error.response?.data?.message || error.message;
+    throw new Error(apiErrorMessage);
+  }
 }
 
+// ---------------------------------------------------------------------
+// ROUTE HANDLERS
 // ---------------------------------------------------------------------
 
 async function getRates(request, reply) {
@@ -572,7 +631,6 @@ async function buyInsurance(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
-// THE FIX: ADDED SMS FUNCTION
 async function buySms(request, reply) {
   try {
     const { provider, phone, amount, pin } = request.body;
@@ -628,5 +686,5 @@ module.exports = {
   buyEducation,
   buyBetting,
   buyInsurance,
-  buySms // THE FIX: EXPORTED SMS MODULE
+  buySms
 };
