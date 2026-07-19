@@ -137,45 +137,37 @@ async function upgradeUser(request, reply) {
 
     if (amount !== expectedAmount) return reply.status(400).send({ success: false, message: 'System alert: Amount mismatch detected.' });
 
-    // THE FIX: We must query the DB directly to get the hidden PINs.
-    // Auth middleware (request.user) strips out sensitive data like passwords and PINs for security!
-    const dbUser = await User.findById(userId).select('+transactionPin +withdrawalPin');
-    if (!dbUser) return reply.status(404).send({ success: false, message: 'User record not found.' });
-
-    // 3. Prevent Double Upgrades
-    if (dbUser.role === 'vip' || (dbUser.role === 'reseller' && role === 'reseller')) {
-        return reply.status(400).send({ success: false, message: `You are already on the ${dbUser.role.toUpperCase()} tier or higher!` });
+    // Prevent Double Upgrades
+    if (request.user.role === 'vip' || (request.user.role === 'reseller' && role === 'reseller')) {
+        return reply.status(400).send({ success: false, message: `You are already on the ${request.user.role.toUpperCase()} tier or higher!` });
     }
+
+    // 3. FETCH WALLET & PIN DIRECTLY FROM WALLET SCHEMA
+    // We explicitly use .select('+pin') because your Wallet schema hides it by default
+    const wallet = await Wallet.findOne({ user: userId }).select('+pin');
+    if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet infrastructure not found.' });
 
     // 4. STRICT PIN VALIDATION ENGINE
     if (!pin || pin.length !== 4) {
         return reply.status(400).send({ success: false, message: 'A valid 4-digit PIN is required.' });
     }
     
-    // Grab the PIN hash from the full database record
-    const userPinHash = dbUser.transactionPin || dbUser.withdrawalPin;
-    
-    // If the database has NO PIN for this user, completely block them
-    if (!userPinHash) {
-        return reply.status(400).send({ success: false, message: 'Security Alert: You have not set up a Transaction PIN yet. Please go to your Profile settings to create one.' });
+    // If the Wallet database has NO PIN for this user, completely block them
+    if (!wallet.pin) {
+        return reply.status(400).send({ success: false, message: 'Security Alert: You have not set up a Transaction PIN yet. Please go to your Security settings to create one.' });
     }
 
-    // Securely compare the typed PIN against the database hash
-    const isMatch = await bcrypt.compare(pin.toString(), userPinHash);
+    // Securely compare the typed PIN against the Wallet database hash
+    const isMatch = await bcrypt.compare(String(pin), wallet.pin);
     if (!isMatch) {
         return reply.status(400).send({ success: false, message: 'Incorrect 4-Digit PIN. Upgrade aborted.' });
     }
 
-    // 5. Wallet Check
-    const wallet = await Wallet.findOne({ user: userId });
-    if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet infrastructure not found.' });
-
+    // 5. Balance Check
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
     if (currentAvail < amount) return reply.status(400).send({ success: false, message: `Insufficient balance. You need ₦${amount.toLocaleString()} to upgrade.` });
 
-    // =========================================================================
-    // THE FAILSAFE: Validate the transaction schema BEFORE deducting money
-    // =========================================================================
+    // 6. Failsafe Transaction Check
     const transaction = new Transaction({ 
         user: userId, 
         type: 'withdrawal', 
@@ -195,18 +187,18 @@ async function upgradeUser(request, reply) {
         return reply.status(500).send({ success: false, message: 'Schema validation blocked the transaction. No money deducted. Error: ' + valError.message });
     }
 
-    // 6. It is now 100% safe to deduct the upgrade fee
+    // 7. It is now 100% safe to deduct the upgrade fee
     wallet.availableBalance = (currentAvail - amount).toString();
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    // 7. Save the pre-validated transaction
+    // 8. Save the pre-validated transaction
     await transaction.save();
 
-    // 8. Update User Role
+    // 9. Update User Role
     await User.findByIdAndUpdate(userId, { role: role });
 
-    // 9. Emit Sockets
+    // 10. Emit Sockets
     if (request.server && request.server.io) {
        request.server.io.to(`user:${userId}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
        request.server.io.to(`user:${userId}`).emit('notification', { type: 'success', title: 'Upgrade Successful', message: `Welcome to the ${role.toUpperCase()} tier!` });
