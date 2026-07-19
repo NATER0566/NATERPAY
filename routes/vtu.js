@@ -15,26 +15,73 @@ function generateVTpassRequestId() {
   return dateStr + randomSuffix;
 }
 
-// --- UNIVERSAL PIN VALIDATOR ---
-async function validateTransactionPin(userId, inputPin) {
-    if (!inputPin) return { isValid: false, message: 'Security PIN is required.' };
+// =====================================================================
+// NATER-PAY ENTERPRISE DISCOUNT ENGINE
+// Maximum Profitability & Margin Protection Enabled
+// =====================================================================
+function applyEnterpriseDiscount(originalAmount, serviceType, userRole) {
+    const role = (userRole || 'user').toLowerCase();
     
-    const wallet = await Wallet.findOne({ user: userId });
-    const user = await User.findById(userId);
-    
-    if (!wallet) return { isValid: false, message: 'Wallet architecture not found.' };
-    
-    const actualPinHash = wallet.pin || user?.withdrawalPin;
-    
-    if (!actualPinHash) {
-        return { isValid: false, message: 'Please set up your security PIN in settings first.' };
+    // 1. Normal users pay the exact original amount
+    if (role !== 'reseller' && role !== 'agent' && role !== 'vip') {
+        return originalAmount; 
     }
+
+    // 2. Define standard VTPass commission margins for NATER-PAY
+    // Education is strictly set to 0 to prevent ANY discounts on WAEC/NECO/JAMB
+    const commissionRates = { 
+        airtime: 0.03,      // 3% margin
+        data: 0.03,         // 3% margin
+        cable: 0.015,       // 1.5% margin
+        electricity: 0.015, // 1.5% margin
+        betting: 0.01,      // 1% margin
+        education: 0        // 0% margin (NO DISCOUNT RULE ENFORCED)
+    };
+
+    const rate = commissionRates[serviceType] || 0;
+    const platformCommission = originalAmount * rate;
+    
+    // If the provider gives zero commission, no discount is applied.
+    if (platformCommission <= 0) return originalAmount;
+
+    let discount = 0;
+
+    // 3. Apply Strict Profit-Protecting Policy Rules
+    if (role === 'reseller' || role === 'agent') {
+        // Reseller receives 15% of NATER-PAY's commission (Platform keeps 85%)
+        discount = platformCommission * 0.15; 
+    } else if (role === 'vip') {
+        // VIP receives 25% of NATER-PAY's commission (Platform keeps 75%)
+        discount = platformCommission * 0.25; 
+    }
+
+    const discountedPrice = originalAmount - discount;
+    const actualCostPrice = originalAmount - platformCommission;
+    
+    // 4. Absolute Failsafe: Never sell below actual provider cost
+    if (discountedPrice < actualCostPrice) {
+        return actualCostPrice; 
+    }
+
+    // Return safely rounded discounted price
+    return parseFloat(discountedPrice.toFixed(2));
+}
+// =====================================================================
+
+async function validateTransactionPin(userId, inputPin) {
+    if (!inputPin || inputPin.length !== 4) return { isValid: false, message: 'A valid 4-digit PIN is required.' };
+    
+    const wallet = await Wallet.findOne({ user: userId }).select('+pin');
+    const user = await User.findById(userId).select('+pin +transactionPin +withdrawalPin');
+    
+    if (!wallet || !user) return { isValid: false, message: 'Wallet architecture not found.' };
+    
+    const actualPinHash = wallet.pin || user.pin || user.transactionPin || user.withdrawalPin;
+    
+    if (!actualPinHash) return { isValid: false, message: 'Security Alert: You have not set up a Transaction PIN yet. Please configure it in your Profile settings.' };
     
     const isMatch = await bcrypt.compare(String(inputPin), actualPinHash);
-    
-    if (!isMatch) {
-        return { isValid: false, message: 'SECURITY ALERT: Incorrect PIN.' };
-    }
+    if (!isMatch) return { isValid: false, message: 'Incorrect 4-Digit PIN. Transaction aborted.' };
     
     return { isValid: true };
 }
@@ -45,21 +92,15 @@ async function registerSuccessfulSpend(userId, amountSpent, io) {
         const user = await User.findById(userId);
         if (!user) return;
 
-        // 1. Update the user's cumulative spend
         user.cumulativeSpend = (user.cumulativeSpend || 0) + parseFloat(amountSpent);
         await user.save();
 
-        // 2. Check if user is eligible for the Welcome/Referral Bonus
         if (user.referredBy && !user.referralBonusPaid && user.cumulativeSpend >= 5000) {
-            
-            // 3. Find the Referrer
             const referrer = await User.findOne({ referralCode: user.referredBy });
             
-            // 4. Verify the Referrer has also met the ₦5,000 minimum spend requirement
             if (referrer && (referrer.cumulativeSpend || 0) >= 5000) {
-                const REWARD_AMOUNT = 50; // The defined reward (₦50 each)
+                const REWARD_AMOUNT = 50; 
 
-                // --- PAYOUT REFERRER ---
                 const referrerWallet = await Wallet.findOne({ user: referrer._id });
                 if (referrerWallet) {
                     referrerWallet.availableBalance = (parseFloat(referrerWallet.availableBalance) + REWARD_AMOUNT).toString();
@@ -82,14 +123,13 @@ async function registerSuccessfulSpend(userId, amountSpent, io) {
                     }
                 }
 
-                // --- PAYOUT NEW USER (REFEREE) ---
                 const userWallet = await Wallet.findOne({ user: user._id });
                 if (userWallet) {
                     userWallet.availableBalance = (parseFloat(userWallet.availableBalance) + REWARD_AMOUNT).toString();
                     userWallet.balance = (parseFloat(userWallet.balance) + REWARD_AMOUNT).toString();
                     await userWallet.save();
 
-                    user.referralBonusPaid = true; // Lock it so it never pays twice
+                    user.referralBonusPaid = true; 
                     await user.save();
 
                     await Transaction.create({
@@ -109,7 +149,72 @@ async function registerSuccessfulSpend(userId, amountSpent, io) {
         console.error("Tracking Engine Error:", error);
     }
 }
-// ---------------------------------------------------
+
+// =====================================================================
+// LIVE VTPASS API INTEGRATION
+// =====================================================================
+async function processVTURequest(type, payload) {
+    const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
+    const requestId = generateVTpassRequestId();
+    
+    let endpoint = '/pay';
+    let apiPayload = {
+        request_id: requestId,
+        amount: payload.amount
+    };
+
+    if (type === 'airtime') {
+        apiPayload.serviceID = payload.network;
+        apiPayload.phone = payload.phone;
+    } else if (type === 'data') {
+        apiPayload.serviceID = payload.network;
+        apiPayload.billersCode = payload.phone;
+        apiPayload.variation_code = payload.plan;
+        apiPayload.phone = payload.phone;
+    } else if (type === 'electricity') {
+        apiPayload.serviceID = payload.disco;
+        apiPayload.billersCode = payload.meterNumber;
+        apiPayload.variation_code = payload.meterType;
+        apiPayload.phone = payload.phone || "08000000000";
+    } else if (type === 'cable') {
+        apiPayload.serviceID = payload.provider;
+        apiPayload.billersCode = payload.smartcardNumber;
+        apiPayload.variation_code = payload.package;
+        apiPayload.phone = payload.phone || "08000000000";
+    } else if (type === 'education') {
+        apiPayload.serviceID = payload.provider;
+        apiPayload.variation_code = payload.provider;
+        apiPayload.phone = payload.phone || "08000000000";
+    } else if (type === 'betting') {
+        apiPayload.serviceID = payload.provider;
+        apiPayload.billersCode = payload.customerId;
+        apiPayload.phone = payload.phone || "08000000000";
+    }
+
+    try {
+        const response = await axios.post(`${baseUrl}${endpoint}`, apiPayload, {
+            headers: {
+                'api-key': process.env.VTPASS_API_KEY,
+                'secret-key': process.env.VTPASS_SECRET_KEY || process.env.VTPASS_API_KEY,
+                'public-key': process.env.VTPASS_PUBLIC_KEY
+            }
+        });
+
+        if (response.data && (response.data.code === '000' || response.data.code === '099')) {
+            return {
+                reference: response.data.content?.transactions?.transactionId || requestId,
+                token: response.data.purchased_code || response.data.token || response.data.cards?.[0]?.Serial || null,
+                raw: response.data
+            };
+        } else {
+            throw new Error(response.data.response_description || 'Transaction failed at provider.');
+        }
+    } catch (error) {
+        throw new Error(error.response?.data?.response_description || error.message || 'Provider connection failed');
+    }
+}
+
+// ---------------------------------------------------------------------
 
 async function getRates(request, reply) {
   try {
@@ -149,16 +254,19 @@ async function buyAirtime(request, reply) {
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    const wallet = await Wallet.findOne({ user: request.user._id });
-    if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+    // APPLY DISCOUNT
+    const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'airtime', request.user.role);
 
-    wallet.availableBalance = (parseFloat(wallet.availableBalance) - amount).toString();
-    wallet.balance = (parseFloat(wallet.balance) - amount).toString();
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    if (parseFloat(wallet.availableBalance?.toString() || '0') < payableAmount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (parseFloat(wallet.availableBalance) - payableAmount).toString();
+    wallet.balance = (parseFloat(wallet.balance) - payableAmount).toString();
     await wallet.save();
 
     const transaction = new Transaction({
       user: request.user._id, type: 'airtime', description: `${network.toUpperCase()} Airtime for ${phone}`,
-      amount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + amount).toString(), balanceAfter: wallet.availableBalance.toString(),
+      amount: payableAmount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + payableAmount).toString(), balanceAfter: wallet.availableBalance.toString(),
       status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
     });
     await transaction.save();
@@ -169,14 +277,13 @@ async function buyAirtime(request, reply) {
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
 
-      // TRACK SPEND
-      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
+      await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
 
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Airtime purchase successful', transaction });
     } catch (vtuError) {
-      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
-      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + payableAmount).toString();
+      wallet.balance = (parseFloat(wallet.balance) + payableAmount).toString();
       await wallet.save();
       transaction.status = 'failed';
       await transaction.save();
@@ -205,16 +312,19 @@ async function buyData(request, reply) {
 
     const exactAmount = parseFloat(selectedPlanData.variation_amount);
 
-    const wallet = await Wallet.findOne({ user: request.user._id });
-    if (parseFloat(wallet.availableBalance?.toString() || '0') < exactAmount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+    // APPLY DISCOUNT
+    const payableAmount = applyEnterpriseDiscount(exactAmount, 'data', request.user.role);
 
-    wallet.availableBalance = (parseFloat(wallet.availableBalance) - exactAmount).toString();
-    wallet.balance = (parseFloat(wallet.balance) - exactAmount).toString();
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    if (parseFloat(wallet.availableBalance?.toString() || '0') < payableAmount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (parseFloat(wallet.availableBalance) - payableAmount).toString();
+    wallet.balance = (parseFloat(wallet.balance) - payableAmount).toString();
     await wallet.save();
 
     const transaction = new Transaction({
       user: request.user._id, type: 'data', description: `Data Plan for ${phone}`,
-      amount: exactAmount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + exactAmount).toString(), balanceAfter: wallet.availableBalance.toString(),
+      amount: payableAmount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + payableAmount).toString(), balanceAfter: wallet.availableBalance.toString(),
       status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
     });
     await transaction.save();
@@ -225,14 +335,13 @@ async function buyData(request, reply) {
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
 
-      // TRACK SPEND
-      await registerSuccessfulSpend(request.user._id, exactAmount, request.server.io);
+      await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
 
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Data purchase successful', transaction });
     } catch (vtuError) {
-      wallet.availableBalance = (parseFloat(wallet.availableBalance) + exactAmount).toString();
-      wallet.balance = (parseFloat(wallet.balance) + exactAmount).toString();
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + payableAmount).toString();
+      wallet.balance = (parseFloat(wallet.balance) + payableAmount).toString();
       await wallet.save();
       transaction.status = 'failed';
       await transaction.save();
@@ -249,16 +358,19 @@ async function buyElectricity(request, reply) {
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    const wallet = await Wallet.findOne({ user: request.user._id });
-    if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+    // APPLY DISCOUNT
+    const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'electricity', request.user.role);
 
-    wallet.availableBalance = (parseFloat(wallet.availableBalance) - amount).toString();
-    wallet.balance = (parseFloat(wallet.balance) - amount).toString();
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    if (parseFloat(wallet.availableBalance?.toString() || '0') < payableAmount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (parseFloat(wallet.availableBalance) - payableAmount).toString();
+    wallet.balance = (parseFloat(wallet.balance) - payableAmount).toString();
     await wallet.save();
 
     const transaction = new Transaction({
       user: request.user._id, type: 'electricity', description: `Electricity (${disco.toUpperCase()}) - Meter: ${meterNumber}`,
-      amount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + amount).toString(), balanceAfter: wallet.availableBalance.toString(),
+      amount: payableAmount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + payableAmount).toString(), balanceAfter: wallet.availableBalance.toString(),
       status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
     });
     await transaction.save();
@@ -269,14 +381,13 @@ async function buyElectricity(request, reply) {
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
 
-      // TRACK SPEND
-      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
+      await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
 
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Electricity payment successful', transaction, token: providerResponse.token });
     } catch (vtuError) {
-      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
-      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + payableAmount).toString();
+      wallet.balance = (parseFloat(wallet.balance) + payableAmount).toString();
       await wallet.save();
       transaction.status = 'failed';
       await transaction.save();
@@ -293,16 +404,19 @@ async function buyCable(request, reply) {
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    const wallet = await Wallet.findOne({ user: request.user._id });
-    if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+    // APPLY DISCOUNT
+    const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'cable', request.user.role);
 
-    wallet.availableBalance = (parseFloat(wallet.availableBalance) - amount).toString();
-    wallet.balance = (parseFloat(wallet.balance) - amount).toString();
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    if (parseFloat(wallet.availableBalance?.toString() || '0') < payableAmount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (parseFloat(wallet.availableBalance) - payableAmount).toString();
+    wallet.balance = (parseFloat(wallet.balance) - payableAmount).toString();
     await wallet.save();
 
     const transaction = new Transaction({
       user: request.user._id, type: 'cable', description: `Cable (${provider.toUpperCase()}) for ${smartcardNumber}`,
-      amount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + amount).toString(), balanceAfter: wallet.availableBalance.toString(),
+      amount: payableAmount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + payableAmount).toString(), balanceAfter: wallet.availableBalance.toString(),
       status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
     });
     await transaction.save();
@@ -313,14 +427,13 @@ async function buyCable(request, reply) {
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
 
-      // TRACK SPEND
-      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
+      await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
 
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Cable subscription successful', transaction, token: providerResponse.token });
     } catch (vtuError) {
-      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
-      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + payableAmount).toString();
+      wallet.balance = (parseFloat(wallet.balance) + payableAmount).toString();
       await wallet.save();
       transaction.status = 'failed';
       await transaction.save();
@@ -337,16 +450,19 @@ async function buyEducation(request, reply) {
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    const wallet = await Wallet.findOne({ user: request.user._id });
-    if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+    // APPLY DISCOUNT
+    const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'education', request.user.role);
 
-    wallet.availableBalance = (parseFloat(wallet.availableBalance) - amount).toString();
-    wallet.balance = (parseFloat(wallet.balance) - amount).toString();
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    if (parseFloat(wallet.availableBalance?.toString() || '0') < payableAmount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (parseFloat(wallet.availableBalance) - payableAmount).toString();
+    wallet.balance = (parseFloat(wallet.balance) - payableAmount).toString();
     await wallet.save();
 
     const transaction = new Transaction({
       user: request.user._id, type: 'education', description: `${provider.toUpperCase()} PIN sent to ${phone}`,
-      amount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + amount).toString(), balanceAfter: wallet.availableBalance.toString(),
+      amount: payableAmount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + payableAmount).toString(), balanceAfter: wallet.availableBalance.toString(),
       status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
     });
     await transaction.save();
@@ -357,14 +473,13 @@ async function buyEducation(request, reply) {
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
 
-      // TRACK SPEND
-      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
+      await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
 
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
       reply.send({ success: true, message: 'Exam PIN processed successfully', transaction, token: providerResponse.token });
     } catch (vtuError) {
-      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
-      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + payableAmount).toString();
+      wallet.balance = (parseFloat(wallet.balance) + payableAmount).toString();
       await wallet.save();
       transaction.status = 'failed';
       await transaction.save();
@@ -381,361 +496,51 @@ async function buyBetting(request, reply) {
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
+    // APPLY DISCOUNT
+    const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'betting', request.user.role);
+
     const wallet = await Wallet.findOne({ user: request.user._id });
-    if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+    if (parseFloat(wallet.availableBalance?.toString() || '0') < payableAmount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
 
-    wallet.availableBalance = (parseFloat(wallet.availableBalance) - amount).toString();
-    wallet.balance = (parseFloat(wallet.balance) - amount).toString();
-    await wallet.save();
-
-    let transaction = new Transaction({
-      user: request.user._id, type: 'betting', description: `Fund ${provider.toUpperCase()} account ID: ${customerId}`,
-      amount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + amount).toString(), balanceAfter: wallet.availableBalance.toString(),
-      status: 'pending', provider: 'paystack', reference: `BET-${Date.now()}`
-    });
-    await transaction.save();
-
-    try {
-      transaction.status = 'success';
-      transaction.providerReference = `PAYSTACK-${Date.now()}`;
-      await transaction.save();
-
-      // TRACK SPEND
-      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
-
-      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
-      reply.send({ success: true, message: 'Betting wallet funded successfully', transaction });
-    } catch (apiError) {
-      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
-      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
-      await wallet.save();
-      transaction.status = 'failed';
-      await transaction.save();
-      return reply.status(500).send({ success: false, message: 'Failed to fund betting account' });
-    }
-  } catch (error) { reply.status(500).send({ success: false, message: 'System error' }); }
-}
-
-async function buyInsurance(request, reply) {
-  try {
-    const { provider, fullName, phone, plan, amount, address, dob, occupation, vehicleDetails, pin } = request.body;
-    if (!provider || !fullName || !phone || !amount || !plan) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
-    
-    const pinCheck = await validateTransactionPin(request.user._id, pin);
-    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
-    
-    const wallet = await Wallet.findOne({ user: request.user._id });
-    if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
-
-    wallet.availableBalance = (parseFloat(wallet.availableBalance) - amount).toString();
-    wallet.balance = (parseFloat(wallet.balance) - amount).toString();
+    wallet.availableBalance = (parseFloat(wallet.availableBalance) - payableAmount).toString();
+    wallet.balance = (parseFloat(wallet.balance) - payableAmount).toString();
     await wallet.save();
 
     const transaction = new Transaction({
-      user: request.user._id, type: 'insurance', description: `${provider.toUpperCase()} Policy for ${fullName}`,
-      amount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + amount).toString(), balanceAfter: wallet.availableBalance.toString(),
-      status: 'pending', provider: 'vtpass', reference: `INS-${Date.now()}`
+      user: request.user._id, type: 'betting', description: `Betting Wallet Funding (${provider.toUpperCase()}) for ${customerId}`,
+      amount: payableAmount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + payableAmount).toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
     });
     await transaction.save();
 
     try {
-      const providerResponse = await processVTURequest('insurance', { 
-          provider, fullName, phone, plan, amount, address, dob, occupation, vehicleDetails 
-      });
+      const providerResponse = await processVTURequest('betting', { provider, customerId, amount });
       transaction.status = 'success';
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
 
-      // TRACK SPEND
-      await registerSuccessfulSpend(request.user._id, amount, request.server.io);
+      await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
 
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
-      reply.send({ success: true, message: 'Insurance policy secured successfully', transaction, token: providerResponse.token });
+      reply.send({ success: true, message: 'Betting wallet funded successfully', transaction });
     } catch (vtuError) {
-      wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
-      wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + payableAmount).toString();
+      wallet.balance = (parseFloat(wallet.balance) + payableAmount).toString();
       await wallet.save();
       transaction.status = 'failed';
       await transaction.save();
       return reply.status(500).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { reply.status(500).send({ success: false, message: 'System error processing insurance' }); }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
-async function sendBulkSMS(request, reply) {
-    try {
-        const { sender, recipient, message, pin } = request.body;
-        if (!sender || !recipient || !message || !pin) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
-
-        const pinCheck = await validateTransactionPin(request.user._id, pin);
-        if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
-
-        const wallet = await Wallet.findOne({ user: request.user._id });
-        const smsCost = 4.00 * recipient.split(',').length; 
-        
-        if (parseFloat(wallet.availableBalance) < smsCost) {
-            return reply.status(400).send({ success: false, message: 'Insufficient balance for SMS dispatch.' });
-        }
-
-        wallet.availableBalance = (parseFloat(wallet.availableBalance) - smsCost).toString();
-        wallet.balance = (parseFloat(wallet.balance) - smsCost).toString();
-        await wallet.save();
-
-        const transaction = new Transaction({
-          user: request.user._id, type: 'bulk_sms', description: `Bulk SMS Dispatch from ${sender}`,
-          amount: smsCost, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + smsCost).toString(), 
-          balanceAfter: wallet.availableBalance.toString(),
-          status: 'pending', provider: 'vtpass', reference: `SMS-${Date.now()}`
-        });
-        await transaction.save();
-
-        if (!process.env.VTPASS_MESSAGING_PUBLIC_KEY || !process.env.VTPASS_MESSAGING_SECRET_KEY) {
-            throw new Error("Missing VTpass Messaging API Keys in environment variables.");
-        }
-
-        const url = 'https://messaging.vtpass.com/v2/api/sms/sendsms';
-        const headers = { 
-            'X-Token': process.env.VTPASS_MESSAGING_PUBLIC_KEY, 
-            'X-Secret': process.env.VTPASS_MESSAGING_SECRET_KEY,
-            'Content-Type': 'application/x-www-form-urlencoded'
-        };
-
-        const payload = new URLSearchParams({ sender, recipient, message, responsetype: 'json' });
-        const response = await axios.post(url, payload.toString(), { headers });
-        
-        if (response.data.responseCode === "TG00") {
-            transaction.status = 'success';
-            await transaction.save();
-
-            // TRACK SPEND
-            await registerSuccessfulSpend(request.user._id, smsCost, request.server.io);
-
-            reply.send({ success: true, message: 'SMS Dispatched', data: response.data });
-        } else {
-            throw new Error(response.data.response || "Failed to dispatch SMS at gateway.");
-        }
-    } catch (error) {
-        const wallet = await Wallet.findOne({ user: request.user._id });
-        const smsCost = 4.00 * request.body.recipient.split(',').length; 
-        wallet.availableBalance = (parseFloat(wallet.availableBalance) + smsCost).toString();
-        wallet.balance = (parseFloat(wallet.balance) + smsCost).toString();
-        await wallet.save();
-        reply.status(500).send({ success: false, message: error.message || 'Failed to dispatch SMS messages.' });
-    }
-}
-
-async function buyPOS(request, reply) {
-    try {
-        const { terminalId, amount, pin } = request.body;
-        if (!terminalId || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
-
-        const pinCheck = await validateTransactionPin(request.user._id, pin);
-        if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
-
-        const wallet = await Wallet.findOne({ user: request.user._id });
-        if (parseFloat(wallet.availableBalance?.toString() || '0') < amount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
-
-        wallet.availableBalance = (parseFloat(wallet.availableBalance) - amount).toString();
-        wallet.balance = (parseFloat(wallet.balance) - amount).toString();
-        await wallet.save();
-
-        const transaction = new Transaction({
-          user: request.user._id, type: 'pos', description: `POS Terminal Funding for ${terminalId}`,
-          amount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + amount).toString(), balanceAfter: wallet.availableBalance.toString(),
-          status: 'pending', provider: 'vtpass', reference: `POS-${Date.now()}`
-        });
-        await transaction.save();
-
-        try {
-            const providerResponse = await processVTURequest('pos', { terminalId, amount });
-            transaction.status = 'success';
-            transaction.providerReference = providerResponse.reference;
-            await transaction.save();
-
-            // TRACK SPEND
-            await registerSuccessfulSpend(request.user._id, amount, request.server.io);
-
-            if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
-            reply.send({ success: true, message: 'Terminal Funded', transaction });
-        } catch (vtuError) {
-            wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(amount)).toString();
-            wallet.balance = (parseFloat(wallet.balance) + parseFloat(amount)).toString();
-            await wallet.save();
-
-            transaction.status = 'failed';
-            await transaction.save();
-            return reply.status(500).send({ success: false, message: vtuError.message });
-        }
-    } catch (error) { reply.status(500).send({ success: false, message: 'System error processing POS funding.' }); }
-}
-
-async function handleVTpassWebhook(request, reply) {
-    try {
-        const { type, data, summary, actionRequired } = request.body;
-        if (type === 'transaction-update') {
-            const { transactionId, status } = data.content.transactions;
-            const transaction = await Transaction.findOne({ providerReference: transactionId });
-
-            if (transaction && transaction.status === 'pending') {
-                if (status === 'delivered') {
-                    transaction.status = 'success';
-                    // TRACK SPEND IF FULFILLED LATER BY WEBHOOK
-                    await registerSuccessfulSpend(transaction.user, transaction.amount, request.server?.io);
-                } else if (status === 'reversed') {
-                    transaction.status = 'failed';
-                    const wallet = await Wallet.findOne({ user: transaction.user });
-                    wallet.availableBalance = (parseFloat(wallet.availableBalance) + parseFloat(transaction.amount)).toString();
-                    wallet.balance = (parseFloat(wallet.balance) + parseFloat(transaction.amount)).toString();
-                    await wallet.save();
-                }
-                await transaction.save();
-            }
-        } else if (type === 'variations-update') {
-            const { serviceID } = request.body;
-            if (variationsCache[serviceID]) {
-                delete variationsCache[serviceID];
-            }
-        }
-        reply.send({ response: "success" });
-    } catch (error) { reply.status(500).send({ response: "error" }); }
-}
-
-async function processVTURequest(type, data) {
-  if (!process.env.VTPASS_API_KEY || !process.env.VTPASS_SECRET_KEY) {
-      throw new Error("Provider API Key Missing in environment variables.");
-  }
-
-  const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
-  const isSandbox = baseUrl.includes('sandbox');
-
-  let targetIdentifier = data.phone || data.meterNumber || data.smartcardNumber || data.customerId;
-  
-  if (isSandbox) {
-      if (type === 'electricity') targetIdentifier = data.meterType === 'postpaid' ? '1010101010101' : '1111111111111';
-      else if (type === 'cable') targetIdentifier = '1212121212';     
-      else targetIdentifier = '08011111111';   
-  }
-
-  const headers = { 
-      'api-key': process.env.VTPASS_API_KEY, 
-      'secret-key': process.env.VTPASS_SECRET_KEY, 
-      'Content-Type': 'application/json' 
-  };
-
-  let payload = { 
-      request_id: generateVTpassRequestId(), 
-      amount: data.amount,
-      phone: isSandbox ? '08011111111' : (data.phone || '08000000000') 
-  };
-
-  if (type === 'airtime') {
-      payload.serviceID = data.network; 
-  } else if (type === 'data') { 
-      payload.serviceID = data.network; 
-      payload.billersCode = isSandbox ? '08011111111' : data.phone; 
-      payload.variation_code = data.plan; 
-  } else if (type === 'electricity') {
-      payload.serviceID = data.disco;
-      payload.billersCode = isSandbox ? (data.meterType === 'postpaid' ? '1010101010101' : '1111111111111') : data.meterNumber; 
-      payload.variation_code = data.meterType;
-  } else if (type === 'cable') {
-      payload.serviceID = data.provider.toLowerCase();
-      let mappedCode = data.package; 
-      if (isSandbox) {
-          if (payload.serviceID === 'dstv') mappedCode = 'dstv79';
-          else if (payload.serviceID === 'gotv') mappedCode = 'gotv-lite';
-          else if (payload.serviceID === 'startimes') mappedCode = 'nova';
-          else if (payload.serviceID === 'showmax') mappedCode = 'full_3';
-      }
-      payload.variation_code = mappedCode;
-
-      if (payload.serviceID === 'showmax') {
-          payload.billersCode = isSandbox ? '08011111111' : data.smartcardNumber;
-      } else {
-          payload.billersCode = isSandbox ? '1212121212' : data.smartcardNumber; 
-          payload.subscription_type = 'change'; 
-      }
-  } else if (type === 'education') {
-      const providerInput = data.provider.toLowerCase().trim();
-      if (providerInput === 'waec-registration') {
-          payload.serviceID = 'waec-registration';
-          payload.variation_code = 'waec-registraion';
-      } else if (providerInput === 'waec-result' || providerInput === 'waec') {
-          payload.serviceID = 'waec';
-          payload.variation_code = 'waecdirect';
-      } else if (providerInput === 'jamb') {
-          payload.serviceID = 'jamb';
-          payload.variation_code = 'utme-no-mock';
-          payload.billersCode = isSandbox ? '0123456789' : data.phone; 
-      } else {
-          payload.serviceID = providerInput;
-          payload.variation_code = 'default';
-      }
-      if (payload.serviceID !== 'jamb') payload.billersCode = isSandbox ? '08011111111' : data.phone;
-  } else if (type === 'insurance') {
-      payload.serviceID = data.provider.toLowerCase(); 
-      payload.billersCode = isSandbox ? 'ATU480ER' : (data.vehicleDetails?.plateNumber || data.phone);
-      payload.variation_code = parseInt(data.plan) || 1; 
-      
-      if (payload.serviceID === 'ui-insure') {
-          payload.phone = isSandbox ? '08111111111' : (data.phone || '08111111111');
-          payload.Insured_Name = data.fullName || 'Mr Ajanlekoko';
-          payload.engine_capacity = 1; 
-          payload.Chasis_Number = isSandbox ? 'S12332323FRHJJ433434J' : data.vehicleDetails?.chassisNumber;
-          payload.Plate_Number = isSandbox ? 'ATU480ER' : data.vehicleDetails?.plateNumber;
-          payload.vehicle_make = 335; 
-          payload.vehicle_color = 20; 
-          payload.vehicle_model = 745; 
-          payload.YearofMake = 2009; 
-          payload.state = 1; 
-          payload.lga = 770; 
-          payload.email = 'sandbox@vtpass.com';
-      }
-  } else if (type === 'pos') {
-      payload.serviceID = 'vtpass-pos'; 
-      payload.billersCode = data.terminalId;
-      payload.variation_code = 'default';
-  }
-
-  try {
-    const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
-    
-    if (response.data.code === '000') {
-      let extractedToken = response.data.purchased_code || response.data.token || response.data.Pin || response.data.certUrl || null;
-      if (response.data.cards && Array.isArray(response.data.cards) && response.data.cards.length > 0) {
-          extractedToken = `PIN: ${response.data.cards[0].Pin} | Serial: ${response.data.cards[0].Serial}`;
-      } else if (response.data.tokens && Array.isArray(response.data.tokens) && response.data.tokens.length > 0) {
-          extractedToken = `Token: ${response.data.tokens[0]}`;
-      } else if (response.data.Voucher && Array.isArray(response.data.Voucher) && response.data.Voucher.length > 0) {
-          extractedToken = `Voucher: ${response.data.Voucher[0]}`;
-      }
-
-      return { 
-          reference: response.data.content?.transactions?.transactionId || response.data.content?.transactions?.transaction_id || `REF-${Date.now()}`, 
-          token: extractedToken,
-          status: 'success', 
-          raw: response.data 
-      };
-    } else {
-      throw new Error(`Provider API Error (${response.data.code}): ${response.data.response_description || response.data.message}`);
-    }
-  } catch (error) {
-    const apiErrorMessage = error.response?.data?.response_description || error.response?.data?.message || error.message;
-    throw new Error(apiErrorMessage);
-  }
-}
-
-module.exports = { 
-  getRates, 
-  getVariations, 
-  buyAirtime, 
-  buyData, 
-  buyElectricity, 
-  buyCable, 
-  buyEducation, 
-  buyBetting, 
-  buyInsurance, 
-  sendBulkSMS, 
-  buyPOS,
-  handleVTpassWebhook 
+module.exports = {
+  getRates,
+  getVariations,
+  buyAirtime,
+  buyData,
+  buyElectricity,
+  buyCable,
+  buyEducation,
+  buyBetting
 };
