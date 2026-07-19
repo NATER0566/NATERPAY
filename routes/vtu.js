@@ -22,48 +22,40 @@ function generateVTpassRequestId() {
 function applyEnterpriseDiscount(originalAmount, serviceType, userRole) {
     const role = (userRole || 'user').toLowerCase();
     
-    // 1. Normal users pay the exact original amount
     if (role !== 'reseller' && role !== 'agent' && role !== 'vip') {
         return originalAmount; 
     }
 
-    // 2. Define standard VTPass commission margins for NATER-PAY
-    // Education is strictly set to 0 to prevent ANY discounts on WAEC/NECO/JAMB
     const commissionRates = { 
-        airtime: 0.03,      // 3% margin
-        data: 0.03,         // 3% margin
-        cable: 0.015,       // 1.5% margin
-        electricity: 0.015, // 1.5% margin
-        betting: 0.01,      // 1% margin
-        education: 0        // 0% margin (NO DISCOUNT RULE ENFORCED)
+        airtime: 0.03,      
+        data: 0.03,         
+        cable: 0.015,       
+        electricity: 0.015, 
+        betting: 0.01,
+        insurance: 0.015,   // Added Insurance margin
+        education: 0        
     };
 
     const rate = commissionRates[serviceType] || 0;
     const platformCommission = originalAmount * rate;
     
-    // If the provider gives zero commission, no discount is applied.
     if (platformCommission <= 0) return originalAmount;
 
     let discount = 0;
 
-    // 3. Apply Strict Profit-Protecting Policy Rules
     if (role === 'reseller' || role === 'agent') {
-        // Reseller receives 15% of NATER-PAY's commission (Platform keeps 85%)
         discount = platformCommission * 0.15; 
     } else if (role === 'vip') {
-        // VIP receives 25% of NATER-PAY's commission (Platform keeps 75%)
         discount = platformCommission * 0.25; 
     }
 
     const discountedPrice = originalAmount - discount;
     const actualCostPrice = originalAmount - platformCommission;
     
-    // 4. Absolute Failsafe: Never sell below actual provider cost
     if (discountedPrice < actualCostPrice) {
         return actualCostPrice; 
     }
 
-    // Return safely rounded discounted price
     return parseFloat(discountedPrice.toFixed(2));
 }
 // =====================================================================
@@ -189,6 +181,9 @@ async function processVTURequest(type, payload) {
         apiPayload.serviceID = payload.provider;
         apiPayload.billersCode = payload.customerId;
         apiPayload.phone = payload.phone || "08000000000";
+    } else if (type === 'insurance') { 
+        apiPayload.serviceID = payload.provider;
+        apiPayload.phone = payload.phone;
     }
 
     try {
@@ -254,7 +249,6 @@ async function buyAirtime(request, reply) {
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    // APPLY DISCOUNT
     const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'airtime', request.user.role);
 
     const wallet = await Wallet.findOne({ user: request.user._id });
@@ -312,7 +306,6 @@ async function buyData(request, reply) {
 
     const exactAmount = parseFloat(selectedPlanData.variation_amount);
 
-    // APPLY DISCOUNT
     const payableAmount = applyEnterpriseDiscount(exactAmount, 'data', request.user.role);
 
     const wallet = await Wallet.findOne({ user: request.user._id });
@@ -358,7 +351,6 @@ async function buyElectricity(request, reply) {
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    // APPLY DISCOUNT
     const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'electricity', request.user.role);
 
     const wallet = await Wallet.findOne({ user: request.user._id });
@@ -404,7 +396,6 @@ async function buyCable(request, reply) {
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    // APPLY DISCOUNT
     const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'cable', request.user.role);
 
     const wallet = await Wallet.findOne({ user: request.user._id });
@@ -450,7 +441,6 @@ async function buyEducation(request, reply) {
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    // APPLY DISCOUNT
     const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'education', request.user.role);
 
     const wallet = await Wallet.findOne({ user: request.user._id });
@@ -496,7 +486,6 @@ async function buyBetting(request, reply) {
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    // APPLY DISCOUNT
     const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'betting', request.user.role);
 
     const wallet = await Wallet.findOne({ user: request.user._id });
@@ -534,6 +523,51 @@ async function buyBetting(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
+async function buyInsurance(request, reply) {
+  try {
+    const { provider, phone, amount, pin } = request.body;
+    if (!provider || !phone || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    const pinCheck = await validateTransactionPin(request.user._id, pin);
+    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
+    
+    const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'insurance', request.user.role);
+
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    if (parseFloat(wallet.availableBalance?.toString() || '0') < payableAmount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (parseFloat(wallet.availableBalance) - payableAmount).toString();
+    wallet.balance = (parseFloat(wallet.balance) - payableAmount).toString();
+    await wallet.save();
+
+    const transaction = new Transaction({
+      user: request.user._id, type: 'insurance', description: `Insurance (${provider.toUpperCase()}) for ${phone}`,
+      amount: payableAmount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + payableAmount).toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
+
+    try {
+      const providerResponse = await processVTURequest('insurance', { provider, phone, amount });
+      transaction.status = 'success';
+      transaction.providerReference = providerResponse.reference;
+      await transaction.save();
+
+      await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
+
+      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+      reply.send({ success: true, message: 'Insurance purchased successfully', transaction });
+    } catch (vtuError) {
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + payableAmount).toString();
+      wallet.balance = (parseFloat(wallet.balance) + payableAmount).toString();
+      await wallet.save();
+      transaction.status = 'failed';
+      await transaction.save();
+      return reply.status(500).send({ success: false, message: vtuError.message });
+    }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error' }); }
+}
+
 module.exports = {
   getRates,
   getVariations,
@@ -542,5 +576,6 @@ module.exports = {
   buyElectricity,
   buyCable,
   buyEducation,
-  buyBetting
+  buyBetting,
+  buyInsurance
 };
