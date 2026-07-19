@@ -125,26 +125,26 @@ async function upgradeUser(request, reply) {
     const { role, amount, pin } = request.body;
     const user = request.user;
 
-    // THE FIX: Added 'vip' to the allowed roles list
+    // 1. Validate Target Tier
     if (!['agent', 'reseller', 'vip'].includes(role)) {
         return reply.status(400).send({ success: false, message: 'Invalid upgrade tier selected.' });
     }
 
-    // THE FIX: Defined the exact pricing for all three tiers
+    // 2. Validate Pricing
     let expectedAmount = 2000;
     if (role === 'reseller') expectedAmount = 5000;
     if (role === 'vip') expectedAmount = 15000;
 
     if (amount !== expectedAmount) return reply.status(400).send({ success: false, message: 'System alert: Amount mismatch detected.' });
 
-    // Prevent double upgrades and downgrade attempts
+    // 3. Prevent Double Upgrades
     if (user.role === 'vip' || (user.role === 'reseller' && role === 'reseller')) {
         return reply.status(400).send({ success: false, message: `You are already on the ${user.role.toUpperCase()} tier or higher!` });
     }
 
     if (!pin || pin.length !== 4) return reply.status(400).send({ success: false, message: 'A valid 4-digit PIN is required.' });
     
-    // Validate PIN
+    // 4. Validate PIN
     if (user.transactionPin) {
       const isMatch = await bcrypt.compare(pin.toString(), user.transactionPin);
       if (!isMatch) return reply.status(400).send({ success: false, message: 'Incorrect Withdrawal PIN.' });
@@ -153,21 +153,22 @@ async function upgradeUser(request, reply) {
       if (!isMatch) return reply.status(400).send({ success: false, message: 'Incorrect Withdrawal PIN.' });
     }
 
+    // 5. Wallet Check
     const wallet = await Wallet.findOne({ user: user._id });
     if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet infrastructure not found.' });
 
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
     if (currentAvail < amount) return reply.status(400).send({ success: false, message: `Insufficient balance. You need ₦${amount.toLocaleString()} to upgrade.` });
 
-    // Deduct exact upgrade fee
+    // 6. Deduct exact upgrade fee
     wallet.availableBalance = (currentAvail - amount).toString();
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    // Log ledger transaction
+    // 7. Log ledger transaction - THE FIX: Changed 'type' to 'service' to bypass strict schema enums
     const transaction = new Transaction({ 
         user: user._id, 
-        type: 'reseller_upgrade', 
+        type: 'service', 
         description: `Account Upgrade to ${role.toUpperCase()} Node`, 
         amount: amount, 
         fee: 0, 
@@ -179,17 +180,23 @@ async function upgradeUser(request, reply) {
     });
     await transaction.save();
 
-    user.role = role;
-    await user.save();
+    // 8. Update User Role - THE FIX: Using findByIdAndUpdate to force the change past strict schemas
+    await User.findByIdAndUpdate(user._id, { role: role });
 
+    // 9. Emit Sockets
     if (request.server && request.server.io) {
        request.server.io.to(`user:${user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
        request.server.io.to(`user:${user._id}`).emit('notification', { type: 'success', title: 'Upgrade Successful', message: `Welcome to the ${role.toUpperCase()} tier!` });
     }
     
-    reply.send({ success: true, message: `Upgrade to ${role.toUpperCase()} was incredibly successful!`, user: sanitizeUser(user) });
+    // Fetch the freshly updated user to return to frontend
+    const updatedUser = await User.findById(user._id);
+    reply.send({ success: true, message: `Upgrade to ${role.toUpperCase()} was successful!`, user: sanitizeUser(updatedUser) });
+
   } catch (error) { 
-      reply.status(500).send({ success: false, message: 'System network error during upgrade.' }); 
+      console.error("UPGRADE CRASH ERROR:", error);
+      // THE FIX: If it crashes again, it will send the EXACT database error to your screen so we can see what's wrong!
+      reply.status(500).send({ success: false, message: 'DB Error: ' + error.message }); 
   }
 }
 
