@@ -28,10 +28,10 @@ const userSchema = new mongoose.Schema({
     trim: true
   },
   
-  // Role and permissions
+  // THE FIX: Added 'reseller' and 'vip' to the allowed enum list!
   role: {
     type: String,
-    enum: ['user', 'agent', 'merchant', 'admin', 'superadmin'],
+    enum: ['user', 'agent', 'reseller', 'vip', 'merchant', 'admin', 'superadmin'],
     default: 'user'
   },
   
