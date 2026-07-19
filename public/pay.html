@@ -131,11 +131,13 @@
         .creator-name i { color: #fff; }
         .creator-email i { color: var(--gold); }
         
+        /* THE FIX: white-space: pre-wrap makes line-breaks and WhatsApp details format perfectly */
         .product-desc { 
-            color: #ddd; font-size: 1rem; font-weight: 900; margin-bottom: 25px; 
+            color: #ddd; font-size: 0.95rem; font-weight: 600; margin-bottom: 25px; 
             line-height: 1.6; background: rgba(0, 0, 0, 0.5); border: 2px solid #333;
-            padding: 18px; border-radius: 12px; max-height: 120px; overflow-y: auto;
+            padding: 18px; border-radius: 12px; max-height: 200px; overflow-y: auto;
             word-wrap: break-word; width: 100%; box-shadow: inset 0 3px 10px rgba(0,0,0,0.5);
+            white-space: pre-wrap; text-align: left;
         }
         .product-desc::-webkit-scrollbar { width: 4px; }
         .product-desc::-webkit-scrollbar-track { background: transparent; }
@@ -158,6 +160,11 @@
         .input-group-custom label { display: block; font-size: 0.8rem; color: var(--gold); font-weight: 900; text-transform: uppercase; margin-bottom: 8px; }
         .input-group-custom input { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 900; outline: none; font-family: 'Montserrat', sans-serif;}
         
+        /* FEE BREAKDOWN UI */
+        .fee-breakdown { background: rgba(255,215,0,0.05); border: 1px dashed var(--gold-dim); padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: left; }
+        .fee-row { display: flex; justify-content: space-between; font-size: 0.9rem; color: #bbb; margin-bottom: 5px; font-weight: 700; }
+        .fee-row.total { border-top: 1px solid #444; padding-top: 8px; margin-top: 8px; color: var(--gold); font-size: 1.1rem; font-weight: 900; }
+
         .btn-pay {
             background: linear-gradient(90deg, #111, #222); color: #fff; font-weight: 900; border-radius: 12px;
             padding: 18px; width: 100%; border: 2px solid var(--gold); font-size: 1.1rem;
@@ -175,7 +182,6 @@
         .modal-header { border-bottom: none; }
         #fullSizeImage { width: 100%; max-height: 85vh; object-fit: contain; border-radius: 10px; }
 
-        /* EXTRAVAGANT SWEETALERT MODAL REFRACTIVE LOADERS */
         .swal-reflective-spinner {
             position: relative; width: 110px; height: 110px; margin: 20px auto;
             border-radius: 50%;
@@ -197,7 +203,6 @@
         @keyframes counterSpinSwal { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
         @keyframes flashGlow { 0% { box-shadow: 0 0 20px rgba(255,215,0,0.3); filter: brightness(1); } 100% { box-shadow: 0 0 60px rgba(255,215,0,0.8); filter: brightness(1.3); } }
 
-        /* BURST STARS EFFECTS */
         .burst-star {
             position: fixed; top: 50%; left: 50%; z-index: 9999; pointer-events: none;
             color: var(--gold); font-size: 1.5rem; text-shadow: 0 0 10px rgba(255,215,0,0.8);
@@ -234,7 +239,6 @@
     </div>
 </div>
 
-<!-- FULL SCREEN UNRESTRICTED IMAGE VIEWER MODAL -->
 <div class="modal fade" id="imageViewerModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -254,34 +258,30 @@
 <script>
     let globalLinkData = null;
     let dynamicPaystackKey = null;
+    let finalGrossAmount = 0; // The total amount the buyer will actually be charged
 
     function triggerStarBurst(isSuccess = true) {
         const starCount = 40;
         const body = document.body;
-        
         for (let i = 0; i < starCount; i++) {
             const star = document.createElement('div');
             star.innerHTML = '★';
             star.className = isSuccess ? 'burst-star' : 'burst-star failed';
-            
             const angle = Math.random() * Math.PI * 2;
             const distance = Math.random() * 300 + 100;
             const tx = Math.cos(angle) * distance;
             const ty = Math.sin(angle) * distance;
             const rot = Math.random() * 720 - 360;
-            
             star.style.setProperty('--tx', `${tx}px`);
             star.style.setProperty('--ty', `${ty}px`);
             star.style.setProperty('--rot', `${rot}deg`);
-            
             body.appendChild(star);
-            
             setTimeout(() => { star.remove(); }, 1000);
         }
     }
 
-    function viewFullImage(base64String) {
-        document.getElementById('fullSizeImage').src = base64String;
+    function viewFullImage(imgUrl) {
+        document.getElementById('fullSizeImage').src = imgUrl;
         const modal = new bootstrap.Modal(document.getElementById('imageViewerModal'));
         modal.show();
     }
@@ -303,7 +303,6 @@
                 globalLinkData = data.link;
                 dynamicPaystackKey = data.paystackPublicKey;
                 
-                // Add default data for display safety
                 globalLinkData.merchantName = data.link.merchantName || data.link.creatorName || 'Verified Merchant';
                 globalLinkData.email = data.link.email || data.link.creatorEmail || (data.link.merchantSupport && data.link.merchantSupport.email) || 'Not Provided';
                 globalLinkData.category = data.link.category || 'General';
@@ -319,6 +318,43 @@
         }
     }
 
+    // THE FIX: Paystack Fee Mathematical Engine
+    function calculateFees() {
+        let baseAmount = globalLinkData.isFlexibleAmount ? parseFloat(document.getElementById('customAmount')?.value || 0) : Number(globalLinkData.amount);
+        
+        if (baseAmount < 100) baseAmount = 0;
+        
+        let fee = 0;
+        finalGrossAmount = baseAmount;
+
+        // If merchant requested "Charge Buyer", calculate the exact gross amount needed to yield the baseAmount
+        if (globalLinkData.feePreference === 'buyer' && baseAmount > 0) {
+            let gross = baseAmount < 2500 ? (baseAmount / 0.985) : ((baseAmount + 100) / 0.985);
+            fee = gross - baseAmount;
+            
+            // Paystack fee cap is ₦2000
+            if (fee > 2000) {
+                fee = 2000;
+            }
+            finalGrossAmount = Math.ceil(baseAmount + fee);
+            fee = finalGrossAmount - baseAmount; // Adjust fee slightly due to ceiling
+        }
+
+        const feeBlock = document.getElementById('dynamicFeeBlock');
+        if (feeBlock && globalLinkData.feePreference === 'buyer' && baseAmount > 0) {
+            feeBlock.innerHTML = `
+                <div class="fee-breakdown">
+                    <div class="fee-row"><span>Product Price:</span> <span>₦${baseAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                    <div class="fee-row"><span>Processing Fee:</span> <span>₦${fee.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                    <div class="fee-row total"><span>Total to Pay:</span> <span>₦${finalGrossAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
+                </div>
+            `;
+            feeBlock.style.display = 'block';
+        } else if (feeBlock) {
+            feeBlock.style.display = 'none';
+        }
+    }
+
     function renderCheckout(link) {
         const displayPrice = link.isFlexibleAmount ? 'Flexible' : `₦${Number(link.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
         
@@ -327,15 +363,17 @@
             amountHTML = `
                 <div class="input-group-custom">
                     <label>Enter Amount to Pay (₦)</label>
-                    <input type="number" id="customAmount" placeholder="0.00" min="100">
+                    <input type="number" id="customAmount" placeholder="0.00" min="100" onkeyup="calculateFees()">
                 </div>
             `;
         }
 
+        // THE FIX: Pull the Cloudinary image URL properly
+        const imageUrl = link.cloudinaryUrl || link.productImageBase64;
         let mediaHeaderHTML = '';
-        if (link.productImageBase64) {
+        if (imageUrl) {
             mediaHeaderHTML = `
-                <div class="product-image-header" onclick="viewFullImage('${link.productImageBase64}')" style="background-image: url('${link.productImageBase64}');">
+                <div class="product-image-header" onclick="viewFullImage('${imageUrl}')" style="background-image: url('${imageUrl}');">
                     <div class="badge-category"><i class="fas fa-tag me-1"></i> ${link.category}</div>
                     <div class="badge-verified"><i class="fas fa-circle text-success me-1"></i> VERIFIED</div>
                     <div class="click-to-view"><i class="fas fa-search-plus"></i> Click image to view</div>
@@ -357,7 +395,7 @@
                 
                 <div class="creator-info-box">
                     <div class="owner-header"><i class="fas fa-crown"></i> Product Owner Details</div>
-                    <div class="owner-sub">Contact him/her through the email if needed</div>
+                    <div class="owner-sub">Contact the seller for support</div>
                     <div class="contact-row creator-name"><i class="fas fa-user-circle"></i> ${link.merchantName}</div>
                     <div class="contact-row creator-email"><i class="fas fa-envelope"></i> ${link.email}</div>
                 </div>
@@ -376,6 +414,10 @@
                 
                 <div class="checkout-form-area">
                     ${amountHTML}
+                    
+                    <!-- Dynamic Fee Container -->
+                    <div id="dynamicFeeBlock" style="display: none;"></div>
+
                     <div class="input-group-custom">
                         <label>Your Full Name</label>
                         <input type="text" id="customerName" placeholder="e.g. John Doe">
@@ -395,20 +437,20 @@
                 </div>
             </div>
         `;
+
+        // Calculate initial fees if the amount is not flexible
+        if (!link.isFlexibleAmount) calculateFees();
     }
 
     function payWithPaystack() {
         const name = document.getElementById('customerName').value.trim();
         const email = document.getElementById('customerEmail').value.trim();
         
-        let finalAmount = globalLinkData.amount;
+        let baseAmount = globalLinkData.isFlexibleAmount ? parseFloat(document.getElementById('customAmount').value) : globalLinkData.amount;
         
-        if (globalLinkData.isFlexibleAmount) {
-            finalAmount = parseFloat(document.getElementById('customAmount').value);
-            if (!finalAmount || finalAmount < 100) {
-                Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'Minimum payment is ₦100', background: '#111', color: '#fff' });
-                return;
-            }
+        if (!baseAmount || baseAmount < 100) {
+            Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'Minimum payment is ₦100', background: '#111', color: '#fff' });
+            return;
         }
 
         if (!name || !email) {
@@ -421,7 +463,8 @@
             return;
         }
 
-        const amountInKobo = Math.round(finalAmount * 100);
+        // Use the mathematically generated finalGrossAmount (converted to kobo)
+        const amountInKobo = Math.round(finalGrossAmount * 100);
 
         let handler = PaystackPop.setup({
             key: dynamicPaystackKey, 
@@ -430,7 +473,8 @@
             currency: 'NGN',
             ref: 'PAY_' + Math.floor((Math.random() * 1000000000) + 1),
             callback: function(response) {
-                verifyPayment(response.reference, finalAmount, name, email);
+                // Pass the BASE amount back to the server so it knows exactly what the product price was
+                verifyPayment(response.reference, baseAmount, name, email);
             },
             onClose: function() {
                 Swal.fire({ icon: 'info', title: 'Cancelled', text: 'Payment window closed.', background: '#111', color: '#fff' });
@@ -440,8 +484,7 @@
         handler.openIframe();
     }
 
-    async function verifyPayment(reference, amountPaid, customerName, customerEmail) {
-        // Updated Extravagant Loader
+    async function verifyPayment(reference, baseAmount, customerName, customerEmail) {
         Swal.fire({ 
             title: 'Verifying...', 
             html: `
@@ -460,13 +503,12 @@
             const res = await fetch(`/api/payment-links/${globalLinkData.linkId}/pay`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ gatewayReference: reference, amount: amountPaid, customerName, customerEmail })
+                body: JSON.stringify({ gatewayReference: reference, amount: baseAmount, customerName, customerEmail })
             });
             
             const data = await res.json();
             
             if (data.success) {
-                // Trigger Success Starburst
                 triggerStarBurst(true);
 
                 let redirectMessage = '';
@@ -491,12 +533,10 @@
                 }
 
             } else {
-                // Trigger Failed Starburst
                 triggerStarBurst(false);
                 Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             }
         } catch (err) {
-            // Trigger Failed Starburst
             triggerStarBurst(false);
             Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to communicate with server.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
         }
