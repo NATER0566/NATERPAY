@@ -100,10 +100,11 @@
         }
         
         .badge-verified {
-            position: absolute; top: 15px; right: 15px; background: #000;
-            border: 2px solid var(--green); color: var(--green); padding: 8px 16px;
-            border-radius: 50px; font-size: 0.85rem; font-weight: 900; letter-spacing: 0.5px; z-index: 2;
+            position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.9);
+            padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 900; letter-spacing: 0.5px; z-index: 2;
         }
+        .badge-verified.verified { border: 2px solid var(--green); color: var(--green); }
+        .badge-verified.unverified { border: 2px solid var(--nater-red); color: var(--nater-red); }
 
         @media (max-width: 600px) {
             .badge-verified { top: 60px; }
@@ -362,13 +363,19 @@
             `;
         }
 
+        // THE FIX: Strict Dynamic Badge Engine for KYC
+        const isVerified = link.kycLevel && link.kycLevel >= 1;
+        const verifiedBadgeHTML = isVerified 
+            ? `<div class="badge-verified verified"><i class="fas fa-check-circle me-1"></i> VERIFIED</div>`
+            : `<div class="badge-verified unverified"><i class="fas fa-exclamation-triangle me-1"></i> UNVERIFIED</div>`;
+
         const imageUrl = link.cloudinaryUrl || link.productImageBase64;
         let mediaHeaderHTML = '';
         if (imageUrl) {
             mediaHeaderHTML = `
                 <div class="product-image-header" onclick="viewFullImage('${imageUrl}')" style="background-image: url('${imageUrl}');">
                     <div class="badge-category"><i class="fas fa-tag me-1"></i> ${link.category}</div>
-                    <div class="badge-verified"><i class="fas fa-circle text-success me-1"></i> VERIFIED</div>
+                    ${verifiedBadgeHTML}
                     <div class="click-to-view"><i class="fas fa-search-plus"></i> Click image to view</div>
                 </div>`;
         } else {
@@ -376,13 +383,10 @@
                 <div class="store-icon-fallback" title="No image uploaded">
                     <i class="fas fa-box-open text-secondary"></i>
                     <div class="badge-category"><i class="fas fa-tag me-1"></i> ${link.category}</div>
-                    <div class="badge-verified"><i class="fas fa-circle text-success me-1"></i> VERIFIED</div>
+                    ${verifiedBadgeHTML}
                 </div>`;
         }
 
-        // ==========================================
-        // DATA EXTRACTOR: Parse WhatsApp & Email out of Description
-        // ==========================================
         let rawDesc = link.shortDesc || '';
         let cleanDesc = rawDesc;
         let whatsappNum = '';
@@ -471,6 +475,18 @@
     }
 
     function payWithPaystack() {
+        // THE FIX: Strict Check for the Paystack Gateway Key!
+        if (!dynamicPaystackKey || dynamicPaystackKey.trim() === '' || dynamicPaystackKey === 'undefined') {
+            Swal.fire({ 
+                icon: 'error', 
+                title: 'Gateway Offline', 
+                text: 'The payment system is currently unavailable. (Error: Missing Paystack Public Key from Server). Please contact support.', 
+                background: '#111', 
+                color: '#fff' 
+            });
+            return;
+        }
+
         const name = document.getElementById('customerName').value.trim();
         const email = document.getElementById('customerEmail').value.trim();
         
@@ -483,11 +499,6 @@
 
         if (!name || !email) {
             Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please provide your name and email so the merchant can contact you.', background: '#111', color: '#fff' });
-            return;
-        }
-
-        if (!dynamicPaystackKey) {
-            Swal.fire({ icon: 'error', title: 'Gateway Error', text: 'Payment system offline.', background: '#111', color: '#fff' });
             return;
         }
 
