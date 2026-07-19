@@ -72,7 +72,6 @@
         .btn-fund:hover:not(:disabled) { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
         .btn-fund:disabled { background: #555; color: #888; cursor: not-allowed; }
 
-        /* EXTRAVAGANT REFRACTIVE GLOWING SPINNER */
         .swal-reflective-spinner {
             position: relative; width: 110px; height: 110px; margin: 20px auto;
             border-radius: 50%;
@@ -94,7 +93,6 @@
         @keyframes counterSpinSwal { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
         @keyframes flashGlow { 0% { box-shadow: 0 0 20px rgba(255,215,0,0.3); filter: brightness(1); } 100% { box-shadow: 0 0 60px rgba(255,215,0,0.8); filter: brightness(1.3); } }
 
-        /* BURST STARS EFFECTS (Only used for failures now) */
         .burst-star {
             position: fixed; top: 50%; left: 50%; z-index: 9999; pointer-events: none;
             color: var(--gold); font-size: 1.5rem; text-shadow: 0 0 10px rgba(255,215,0,0.8);
@@ -182,32 +180,35 @@
         updateCalculator();
     }
     
-    // Exact match of backend Zero-Bleed Gross-Up Math for Paystack
-    function calculateGatewayFee(amount) {
+    // Exact match of backend Zero-Bleed Gross-Up Math
+    function calculateGatewayFee(amount, provider) {
         if (!amount || amount < 100) return 0;
         let fee = 0;
-        if (amount < 2500) {
+        
+        if (provider === 'paystack') {
+            if (amount < 2500) {
+                fee = (amount * 0.015) / (1 - 0.015);
+            } else {
+                fee = ((amount * 0.015) + 100) / (1 - 0.015);
+            }
+        } else if (provider === 'monnify') {
             fee = (amount * 0.015) / (1 - 0.015);
-        } else {
-            fee = ((amount * 0.015) + 100) / (1 - 0.015);
         }
+        
         if (fee > 2000) fee = 2000;
         return Math.ceil(fee); 
     }
 
     function updateCalculator() {
         const amount = parseFloat(document.getElementById('fundAmount').value) || 0;
-        let fee = 0;
-        
-        // Only Paystack has the aggressive extra gateway fee in your current backend setup
+        const fee = calculateGatewayFee(amount, selectedProvider);
+        const totalCharge = amount + fee;
+
         if (selectedProvider === 'paystack') {
-            fee = calculateGatewayFee(amount);
             document.getElementById('feeInfoText').innerText = "Applied directly by Paystack (1.5% + ₦100)";
         } else {
-            document.getElementById('feeInfoText').innerText = "Monnify standard routing (No extra gateway fee applied)";
+            document.getElementById('feeInfoText').innerText = "Applied directly by Monnify (1.5% Processing Fee)";
         }
-
-        const totalCharge = amount + fee;
 
         document.getElementById('calcPrincipal').innerText = '₦' + amount.toLocaleString(undefined, {minimumFractionDigits:2});
         document.getElementById('calcFee').innerText = '₦' + fee.toLocaleString(undefined, {minimumFractionDigits:2});
