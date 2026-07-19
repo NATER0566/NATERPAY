@@ -108,8 +108,6 @@
         .ep-badge-sponsored { position: absolute; bottom: 12px; left: 12px; background: var(--gold); color: #000; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; }
         
         .ep-live-view { position: absolute; bottom: 12px; right: 12px; background: rgba(0,0,0,0.8); border: 1px solid #333; padding: 5px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; color: #fff; backdrop-filter: blur(5px); display: flex; align-items: center; gap: 6px; }
-        .blink-dot { width: 8px; height: 8px; background: var(--danger); border-radius: 50%; animation: blink 1.5s infinite; }
-        @keyframes blink { 0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--danger); } 50% { opacity: 0.3; box-shadow: none; } }
 
         .ep-body { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
         
@@ -138,25 +136,6 @@
         .trust-item:hover i { color: var(--gold); }
         .trust-item h5 { color: #fff; font-weight: 900; font-size: 1rem; margin-bottom: 8px; }
         .trust-item p { color: #777; font-size: 0.8rem; font-weight: 600; line-height: 1.5; margin: 0; }
-
-        /* LIVE SALES TOAST NOTIFICATION */
-        #liveSalesToast {
-            position: fixed; bottom: 30px; left: 30px; background: rgba(15,15,15,0.95);
-            border: 1px solid var(--gold-dim); border-left: 4px solid var(--success);
-            padding: 15px 20px; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.8);
-            display: flex; align-items: center; gap: 15px; z-index: 9999; backdrop-filter: blur(10px);
-            transform: translateY(150%); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            max-width: 380px;
-        }
-        #liveSalesToast.show { transform: translateY(0); }
-        .toast-img { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid #333; }
-        .toast-content h6 { color: #fff; font-size: 0.85rem; font-weight: 800; margin: 0 0 5px 0; }
-        .toast-content p { color: #aaa; font-size: 0.75rem; font-weight: 600; margin: 0; line-height: 1.4; }
-        .toast-content span { color: var(--gold); font-weight: 900; }
-        
-        @media (max-width: 768px) {
-            #liveSalesToast { bottom: 20px; left: 20px; right: 20px; max-width: none; }
-        }
 
     </style>
 </head>
@@ -256,16 +235,6 @@
     <p class="text-muted small fw-bold mt-4 mb-0 letter-spacing-1">NATER-PAY COMMERCE INFRASTRUCTURE v2.0</p>
 </div>
 
-<!-- LIVE SALES TOAST -->
-<div id="liveSalesToast">
-    <img src="" class="toast-img" id="toastImg" alt="Product">
-    <div class="toast-content">
-        <h6 id="toastTitle">Someone in Lagos purchased</h6>
-        <p id="toastProduct">Ultimate Web Dev Course</p>
-        <p class="mt-1"><span id="toastTime">Just now</span></p>
-    </div>
-</div>
-
 <script>
     let globalProducts = [];
     let currentCategory = 'All';
@@ -295,7 +264,6 @@
                 globalProducts = data.links;
                 updateGlobalStats();
                 renderAllSections();
-                startLiveSalesSimulation();
             }
         } catch (error) {
             document.getElementById('trendingGrid').innerHTML = '<div class="text-center py-5 w-100 text-danger" style="grid-column: 1/-1;"><i class="fas fa-wifi fa-3x mb-3"></i><br>Failed to connect to the global network.</div>';
@@ -381,13 +349,12 @@
             const cat = p.category || 'Digital';
             const img = p.cloudinaryUrl || p.productImageBase64 || 'https://via.placeholder.com/600x400/111/444?text=NO+IMAGE';
             const sales = p.transactionCount || 0;
-            const views = Math.floor(Math.random() * 40) + 5; 
-            const rating = (Math.random() * (5.0 - 4.2) + 4.2).toFixed(1); 
-            const reviews = Math.floor(Math.random() * 200) + 10;
+            const views = p.views || 0; // The Fix: Real View Count
+            const rating = p.rating || 0; // The Fix: Real Rating
+            const reviews = p.reviews || 0; // The Fix: Real Review Count
             const merchantName = p.merchantName || 'Verified Merchant';
 
             // STRICT KYC VISUAL ENGINE 
-            // Evaluates exact verification status. Defaults to unverified if data is missing.
             const isVerified = p.kycLevel && p.kycLevel >= 1;
             
             const verifiedIcon = isVerified 
@@ -407,7 +374,7 @@
                         ${verifiedBadge}
                         ${sponsoredBadge}
                         <img src="${img}" alt="${p.title}" loading="lazy">
-                        <div class="ep-live-view"><div class="blink-dot"></div> ${views} viewing</div>
+                        <div class="ep-live-view"><i class="fas fa-eye text-info me-1"></i> ${views.toLocaleString()} Views</div>
                     </div>
                     <div class="ep-body">
                         <div class="ep-seller">
@@ -417,13 +384,12 @@
                         </div>
                         <h4 class="ep-title">${p.title}</h4>
                         <div class="ep-rating">
-                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
-                            <span>${rating} (${reviews})</span>
+                            <i class="fas fa-star"></i> <span>${rating > 0 ? rating : '0.0'} (${reviews} Reviews)</span>
                         </div>
                         <div class="ep-footer">
                             <div>
                                 <div class="ep-price">${price}</div>
-                                <div class="ep-sales"><i class="fas fa-shopping-cart text-success"></i> ${sales} Sales</div>
+                                <div class="ep-sales"><i class="fas fa-shopping-cart text-success"></i> ${sales.toLocaleString()} Sales</div>
                             </div>
                         </div>
                         <a href="/pay.html?id=${p.linkId || p._id}" class="ep-buy-btn">
@@ -433,35 +399,6 @@
                 </div>
             `;
         });
-    }
-
-    // LIVE SALES SIMULATION ENGINE (Localized to Makurdi / Global context)
-    const locations = ['Lagos', 'Makurdi', 'Abuja', 'Port Harcourt', 'Nairobi', 'London', 'Accra', 'Kano', 'Enugu', 'Johannesburg'];
-    const times = ['Just now', '2 mins ago', '1 min ago', 'Just now', '5 mins ago'];
-
-    function startLiveSalesSimulation() {
-        if(globalProducts.length === 0) return;
-
-        setInterval(() => {
-            if(Math.random() > 0.3) {
-                const product = globalProducts[Math.floor(Math.random() * globalProducts.length)];
-                const loc = locations[Math.floor(Math.random() * locations.length)];
-                const time = times[Math.floor(Math.random() * times.length)];
-                const img = product.cloudinaryUrl || product.productImageBase64 || 'https://via.placeholder.com/50/111/444';
-
-                document.getElementById('toastImg').src = img;
-                document.getElementById('toastTitle').innerHTML = `Someone in <span>${loc}</span> purchased`;
-                document.getElementById('toastProduct').innerText = product.title;
-                document.getElementById('toastTime').innerText = time;
-
-                const toast = document.getElementById('liveSalesToast');
-                toast.classList.add('show');
-                
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                }, 5000);
-            }
-        }, 12000);
     }
 
     window.onload = () => { 
