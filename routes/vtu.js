@@ -32,7 +32,8 @@ function applyEnterpriseDiscount(originalAmount, serviceType, userRole) {
         cable: 0.015,       
         electricity: 0.015, 
         betting: 0.01,
-        insurance: 0.015,   // Added Insurance margin
+        insurance: 0.015,
+        sms: 0.01,          // THE FIX: Added SMS margin
         education: 0        
     };
 
@@ -184,6 +185,9 @@ async function processVTURequest(type, payload) {
     } else if (type === 'insurance') { 
         apiPayload.serviceID = payload.provider;
         apiPayload.phone = payload.phone;
+    } else if (type === 'sms') { // THE FIX: Added SMS routing
+        apiPayload.serviceID = payload.provider || 'bulk-sms';
+        apiPayload.phone = payload.phone || "08000000000";
     }
 
     try {
@@ -568,6 +572,52 @@ async function buyInsurance(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
+// THE FIX: ADDED MISSING SMS FUNCTION
+async function buySms(request, reply) {
+  try {
+    const { provider, phone, amount, pin } = request.body;
+    if (!phone || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    const pinCheck = await validateTransactionPin(request.user._id, pin);
+    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
+    
+    const payableAmount = applyEnterpriseDiscount(parseFloat(amount), 'sms', request.user.role);
+
+    const wallet = await Wallet.findOne({ user: request.user._id });
+    if (parseFloat(wallet.availableBalance?.toString() || '0') < payableAmount) return reply.status(400).send({ success: false, message: 'Insufficient balance' });
+
+    wallet.availableBalance = (parseFloat(wallet.availableBalance) - payableAmount).toString();
+    wallet.balance = (parseFloat(wallet.balance) - payableAmount).toString();
+    await wallet.save();
+
+    const transaction = new Transaction({
+      user: request.user._id, type: 'sms', description: `Bulk SMS units purchased`,
+      amount: payableAmount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + payableAmount).toString(), balanceAfter: wallet.availableBalance.toString(),
+      status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+    });
+    await transaction.save();
+
+    try {
+      const providerResponse = await processVTURequest('sms', { provider: provider || 'bulk-sms', phone, amount });
+      transaction.status = 'success';
+      transaction.providerReference = providerResponse.reference;
+      await transaction.save();
+
+      await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
+
+      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+      reply.send({ success: true, message: 'SMS units purchased successfully', transaction });
+    } catch (vtuError) {
+      wallet.availableBalance = (parseFloat(wallet.availableBalance) + payableAmount).toString();
+      wallet.balance = (parseFloat(wallet.balance) + payableAmount).toString();
+      await wallet.save();
+      transaction.status = 'failed';
+      await transaction.save();
+      return reply.status(500).send({ success: false, message: vtuError.message });
+    }
+  } catch (error) { reply.status(500).send({ success: false, message: 'System error' }); }
+}
+
 module.exports = {
   getRates,
   getVariations,
@@ -577,5 +627,6 @@ module.exports = {
   buyCable,
   buyEducation,
   buyBetting,
-  buyInsurance
+  buyInsurance,
+  buySms // THE FIX: EXPORTED SMS MODULE
 };
