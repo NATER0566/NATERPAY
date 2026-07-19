@@ -375,39 +375,9 @@
                 `;
             });
 
-            // Run structural life checking. If user claimed all rendered items, hide them and spawn the empty state.
-            await cleanClaimedAds(data.ads);
-
         } catch (error) {
             container.innerHTML = `<div class="col-12 text-center py-5 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Failed to secure connection with ad servers.</div>`;
         }
-    }
-
-    async function cleanClaimedAds(adsArray) {
-        const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) return;
-        
-        let dailyLimitHit = false;
-
-        for (let ad of adsArray) {
-            try {
-                const res = await fetch('/api/tasks/claim-ad', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                    body: JSON.stringify({ adId: ad._id, verifyOnly: true }) 
-                });
-                const data = await res.json();
-                
-                if(data.message && data.message.includes('limit reached')) dailyLimitHit = true;
-
-                if(data.message && (data.message.includes('already claimed') || data.message.includes('limit reached'))) {
-                    const slot = document.getElementById(`ad_slot_${ad._id}`);
-                    if(slot) slot.style.display = 'none';
-                }
-            } catch(e) {}
-        }
-        
-        checkIfAllHidden(dailyLimitHit);
     }
 
     function dismissAd(adId) {
@@ -423,7 +393,7 @@
         }).then((result) => {
             if(result.isConfirmed) {
                 document.getElementById(`ad_slot_${adId}`).style.display = 'none';
-                checkIfAllHidden(false); // Check if they manually closed the very last visible ad
+                checkIfAllHidden(false); 
             }
         });
     }
@@ -433,7 +403,6 @@
         let anyVisible = false;
         slots.forEach(slot => { if (slot.style.display !== 'none') anyVisible = true; });
         
-        // If no ads are visible on the screen, summon the Refractive Empty State!
         if (!anyVisible) showEmptyState(isLimitReached);
     }
 
@@ -536,7 +505,7 @@
             if (data.success) {
                 Swal.fire({ icon: 'success', title: 'Task Completed!', text: `You earned ₦${rewardAmount}. This ad has now been marked as completed.`, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff', toast: true, position: 'top-end', showConfirmButton: false, timer: 4000 });
                 document.getElementById(`ad_slot_${adId}`).style.display = 'none';
-                checkIfAllHidden(false); // Check if they just claimed the last visible ad
+                checkIfAllHidden(false); 
             } else {
                 let isLimit = false;
                 if(data.message.includes('already claimed')) {
@@ -549,7 +518,7 @@
                     btnElement.innerHTML = `<i class="fas fa-check me-2"></i> Completed`;
                 }
                 
-                checkIfAllHidden(isLimit); // Re-check visibility state
+                checkIfAllHidden(isLimit); 
 
                 if(!isLimit) {
                     Swal.fire({ icon: 'info', title: 'Notice', text: data.message, confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
