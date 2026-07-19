@@ -46,10 +46,11 @@
         .amount-input:focus { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,175,55,0.3); }
         
         .provider-card {
-            background: rgba(212,175,55,0.05); border: 1px dashed rgba(212,175,55,0.4); border-radius: 15px;
-            padding: 20px; text-align: center; margin: 0 auto; max-width: 300px; transition: 0.3s;
+            background: rgba(212,175,55,0.05); border: 1.5px solid rgba(212,175,55,0.2); border-radius: 15px;
+            padding: 20px 10px; text-align: center; transition: 0.3s; cursor: pointer; height: 100%;
         }
-        .provider-card:hover { border-color: var(--gold); background: rgba(212,175,55,0.1); }
+        .provider-card:hover, .provider-card.active { border-color: var(--gold); background: rgba(212,175,55,0.15); transform: translateY(-3px); }
+        .provider-card.active { box-shadow: 0 0 20px rgba(212,175,55,0.3); }
         
         .quick-amount-btn {
             background: rgba(0,0,0,0.6); border: 1px solid #444; color: white;
@@ -93,7 +94,7 @@
         @keyframes counterSpinSwal { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
         @keyframes flashGlow { 0% { box-shadow: 0 0 20px rgba(255,215,0,0.3); filter: brightness(1); } 100% { box-shadow: 0 0 60px rgba(255,215,0,0.8); filter: brightness(1.3); } }
 
-        /* BURST STARS EFFECTS */
+        /* BURST STARS EFFECTS (Only used for failures now) */
         .burst-star {
             position: fixed; top: 50%; left: 50%; z-index: 9999; pointer-events: none;
             color: var(--gold); font-size: 1.5rem; text-shadow: 0 0 10px rgba(255,215,0,0.8);
@@ -122,6 +123,25 @@
     <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold);"><i class="fas fa-shield-alt me-2"></i> SECURE DEPOSIT</h1>
     
     <div class="fund-card" id="mainFundContainer">
+        
+        <label class="small text-muted mb-2 d-block fw-bold text-center">SELECT PAYMENT GATEWAY</label>
+        <div class="row g-3 mb-4 justify-content-center">
+            <div class="col-6">
+                <div class="provider-card active" onclick="selectProvider(this, 'paystack')">
+                    <i class="fas fa-credit-card fa-2x mb-2" style="color: #00bfff;"></i>
+                    <div class="fw-bold">Paystack</div>
+                    <small class="text-muted">Instant Card & Transfer</small>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="provider-card" onclick="selectProvider(this, 'monnify')">
+                    <i class="fas fa-building fa-2x mb-2" style="color: #00ff88;"></i>
+                    <div class="fw-bold">Monnify</div>
+                    <small class="text-muted">Bank Transfer & USSD</small>
+                </div>
+            </div>
+        </div>
+
         <label class="small text-muted mb-2 d-block fw-bold text-center">ENTER AMOUNT (₦)</label>
         <input type="number" id="fundAmount" class="amount-input mb-4" placeholder="0.00" min="100" oninput="updateCalculator()">
         
@@ -136,16 +156,9 @@
 
         <div class="live-calc-box">
             <div class="calc-line"><span>Net Funding Amount:</span> <span id="calcPrincipal">₦0.00</span></div>
-            <div class="calc-line"><span>Gateway Processing Fee: <i class="fas fa-info-circle text-muted" title="Applied directly by Paystack (1.5% + ₦100)"></i></span> <span id="calcFee" style="color: var(--red);">₦0.00</span></div>
-            <div class="calc-line total"><span>Total Card Charge:</span> <span id="calcTotal">₦0.00</span></div>
-        </div>
-        
-        <div class="mb-4 mt-4">
-            <div class="provider-card">
-                <i class="fas fa-credit-card fa-2x mb-2" style="color: var(--gold);"></i>
-                <div class="fw-bold">Paystack Secure Gateway</div>
-                <small class="text-muted">Instant Card & Bank Transfer</small>
-            </div>
+            <div class="calc-line"><span>Gateway Processing Fee: <i class="fas fa-info-circle text-muted" id="feeInfoIcon"></i></span> <span id="calcFee" style="color: var(--red);">₦0.00</span></div>
+            <div class="text-muted mb-2" style="font-size: 0.7rem; text-align: right; margin-top: -8px;" id="feeInfoText">Applied directly by Paystack (1.5% + ₦100)</div>
+            <div class="calc-line total"><span>Total Expected Charge:</span> <span id="calcTotal">₦0.00</span></div>
         </div>
         
         <button class="btn-fund" id="payBtn" onclick="processFunding()">
@@ -154,15 +167,22 @@
     </div>
     
     <div class="text-center text-muted small fw-bold mb-5">
-        <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> End-to-End Encryption Powered by Paystack</p>
+        <p class="mb-1"><i class="fas fa-check-circle text-success me-1"></i> End-to-End Encryption Powered by Paystack & Monnify</p>
         <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
 
 <script>
-    const selectedProvider = 'paystack';
+    let selectedProvider = 'paystack';
+
+    function selectProvider(element, provider) {
+        document.querySelectorAll('.provider-card').forEach(c => c.classList.remove('active'));
+        element.classList.add('active');
+        selectedProvider = provider;
+        updateCalculator();
+    }
     
-    // Exact match of backend Zero-Bleed Gross-Up Math
+    // Exact match of backend Zero-Bleed Gross-Up Math for Paystack
     function calculateGatewayFee(amount) {
         if (!amount || amount < 100) return 0;
         let fee = 0;
@@ -172,12 +192,21 @@
             fee = ((amount * 0.015) + 100) / (1 - 0.015);
         }
         if (fee > 2000) fee = 2000;
-        return Math.ceil(fee); // Paystack operates in integers usually, backend ceils it
+        return Math.ceil(fee); 
     }
 
     function updateCalculator() {
         const amount = parseFloat(document.getElementById('fundAmount').value) || 0;
-        const fee = calculateGatewayFee(amount);
+        let fee = 0;
+        
+        // Only Paystack has the aggressive extra gateway fee in your current backend setup
+        if (selectedProvider === 'paystack') {
+            fee = calculateGatewayFee(amount);
+            document.getElementById('feeInfoText').innerText = "Applied directly by Paystack (1.5% + ₦100)";
+        } else {
+            document.getElementById('feeInfoText').innerText = "Monnify standard routing (No extra gateway fee applied)";
+        }
+
         const totalCharge = amount + fee;
 
         document.getElementById('calcPrincipal').innerText = '₦' + amount.toLocaleString(undefined, {minimumFractionDigits:2});
@@ -194,7 +223,6 @@
             star.innerHTML = '★';
             star.className = isSuccess ? 'burst-star' : 'burst-star failed';
             
-            // Randomize trajectory
             const angle = Math.random() * Math.PI * 2;
             const distance = Math.random() * 300 + 100;
             const tx = Math.cos(angle) * distance;
@@ -206,8 +234,6 @@
             star.style.setProperty('--rot', `${rot}deg`);
             
             body.appendChild(star);
-            
-            // Cleanup
             setTimeout(() => { star.remove(); }, 1000);
         }
     }
@@ -279,7 +305,7 @@
                 <div class="swal-reflective-spinner">
                     <i class="fas fa-shield-alt swal-inner-icon"></i>
                 </div>
-                <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Encrypting payload to Paystack servers...</span>
+                <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Encrypting payload to banking servers...</span>
             `, 
             showConfirmButton: false,
             allowOutsideClick: false, 
@@ -299,11 +325,9 @@
             if (data.success && data.checkoutUrl) {
                 localStorage.setItem('pending_funding_ref', data.paymentReference);
                 
-                // Explode Success Stars
-                triggerStarBurst(true);
-                
+                // NO MORE GOLD STARS HERE! It just redirects smoothly.
                 Swal.fire({
-                    icon: 'success', title: 'Route Secured!', text: 'Diverting to banking gateway.', showConfirmButton: false, timer: 1500, background: '#111', color: '#fff'
+                    icon: 'info', title: 'Redirecting', text: 'Opening secure payment gateway...', showConfirmButton: false, timer: 1500, background: '#111', color: '#fff'
                 }).then(() => {
                     window.location.href = data.checkoutUrl;
                 });
