@@ -3,7 +3,7 @@ const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 
 // ============================================================================
-// PROFILE COMPLETION REWARD ENGINE (KYC FOCUSED)
+// PROFILE COMPLETION REWARD ENGINE (STRICT KYC LEVEL 3 REQUIRED)
 // ============================================================================
 async function claimProfileReward(request, reply) {
     const userId = request.user._id;
@@ -18,9 +18,10 @@ async function claimProfileReward(request, reply) {
         const User = mongoose.models.User || mongoose.model('User');
         const user = await User.findById(userId);
 
-        const isKycApproved = user && (user.kycStatus === 'approved' || user.kycLevel >= 1 || user.kycTier >= 1);
+        // STRICT ENTERPRISE RULE: Backend now mathematically forces KYC Level 3
+        const isKycApproved = user && (user.kycLevel >= 3);
         if (!isKycApproved) {
-            return reply.status(400).send({ success: false, message: 'Please complete your KYC Identity Verification to unlock this reward.' });
+            return reply.status(400).send({ success: false, message: 'Please complete all 3 levels of KYC Identity & Address Verification to unlock this reward.' });
         }
 
         const wallet = await Wallet.findOne({ user: userId });
@@ -54,7 +55,7 @@ async function claimProfileReward(request, reply) {
 }
 
 // ============================================================================
-// STRICT ONCE-IN-A-LIFETIME CLICK & EARN AD ENGINE
+// STRICT ONCE-IN-A-LIFETIME CLICK & EARN AD ENGINE (WITH ACTIVE VIEW COUNTING)
 // ============================================================================
 async function claimAd(request, reply) {
     const { adId } = request.body;
@@ -91,20 +92,25 @@ async function claimAd(request, reply) {
             });
         }
 
-        // 4. FETCH REAL AD FROM DATABASE
+        // 4. FETCH REAL AD & DYNAMICALLY UPDATE VIEWS
         const AdModel = mongoose.models.Ad;
         let rewardAmount = 5; 
         let adName = `Sponsored Campaign #${adId}`;
 
         if (AdModel) {
-            const adData = await AdModel.findById(adId);
-            if (!adData) return reply.status(404).send({ success: false, message: 'Ad campaign has expired or does not exist.' });
-            
-            // Deduct from remaining views (If you have this field in your schema)
-            // if (adData.remainingViews !== undefined && adData.remainingViews <= 0) {
-            //     return reply.status(400).send({ success: false, message: 'This campaign has reached its maximum views.' });
-            // }
-            // if(adData.remainingViews !== undefined) { adData.remainingViews -= 1; await adData.save(); }
+            // THE FIX: Atomically increment views and decrement remaining views in one action
+            const adData = await AdModel.findOneAndUpdate(
+                { _id: adId, remainingViews: { $gt: 0 } },
+                { $inc: { views: 1, remainingViews: -1 } },
+                { new: true } // Returns the updated document
+            );
+
+            // If it returns null, it means remainingViews hit 0, or it was deleted
+            if (!adData) {
+                const exists = await AdModel.findById(adId);
+                if (!exists) return reply.status(404).send({ success: false, message: 'Ad campaign has expired or does not exist.' });
+                return reply.status(400).send({ success: false, message: 'limit reached' }); // Tell frontend to hide it
+            }
 
             rewardAmount = parseFloat(adData.rewardAmount || 5);
             adName = `Ad Reward: ${adData.title || 'Sponsored Link'}`;
