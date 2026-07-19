@@ -197,7 +197,7 @@ async function processWithdrawal(request, reply) {
 }
 
 // ============================================================================
-// DUAL-GATEWAY KYC VERIFICATION ENGINE
+// DIRECT PAYSTACK KYC VERIFICATION ENGINE
 // ============================================================================
 
 async function getPendingKYC(request, reply) {
@@ -212,6 +212,7 @@ async function getPendingKYC(request, reply) {
     }
 }
 
+// === CRITICAL BUG FIX: Monnify fallback removed, catches exact Paystack errors ===
 async function verifyRealWorldKYC(request, reply) {
     try {
         const { kycId } = request.params;
@@ -223,6 +224,7 @@ async function verifyRealWorldKYC(request, reply) {
         if (!bvn) return reply.status(400).send({ success: false, message: 'No BVN provided by user to verify.' });
 
         try {
+            // Attempt to verify directly with Paystack
             const paystackResponse = await axios.get(`https://api.paystack.co/bank/resolve_bvn/${bvn}`, {
                 headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
             });
@@ -240,57 +242,18 @@ async function verifyRealWorldKYC(request, reply) {
                     phone: paystackData.mobile
                 }
             });
+
         } catch (paystackError) {
-            console.warn("Paystack offline or failed. Initiating Monnify Fallback...");
-
-            try {
-                const baseUrl = process.env.MONNIFY_URL || 'https://sandbox.monnify.com';
-                const encodedKeys = Buffer.from(`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`).toString('base64');
-                
-                const authResponse = await axios.post(`${baseUrl}/api/v1/auth/login`, {}, { 
-                    headers: { Authorization: `Basic ${encodedKeys}` } 
-                });
-                const accessToken = authResponse.data.responseBody.accessToken;
-
-                const monnifyResponse = await axios.post(`${baseUrl}/api/v1/vas/bvn-details-match`, {
-                    bvn: bvn,
-                    name: kycRecord.user.name,
-                    dateOfBirth: "01-Jan-1990", 
-                    mobileNo: "08000000000"     
-                }, {
-                    headers: { Authorization: `Bearer ${accessToken}` }
-                });
-
-                const matchData = monnifyResponse.data.responseBody.name;
-                const isMatch = matchData.matchStatus === 'FULL_MATCH' || matchData.matchStatus === 'PARTIAL_MATCH';
-
-                return reply.send({
-                    success: true,
-                    message: 'Verified via Monnify API (Fallback)',
-                    systemName: kycRecord.user.name,
-                    paystackDetails: {
-                        firstName: isMatch ? "NAME MATCH: YES" : "NAME MATCH: NO",
-                        lastName: `Accuracy Score: ${matchData.matchPercentage}%`,
-                        dob: "Hidden (Monnify Privacy Policy)",
-                        phone: "Hidden (Monnify Privacy Policy)"
-                    }
-                });
-
-            } catch (monnifyError) {
-                console.error("Monnify Fallback also failed:", monnifyError.response?.data || monnifyError.message);
-                return reply.send({
-                    success: true,
-                    message: 'Note: NIBSS is currently offline. Both APIs failed. Manual verification required.',
-                    systemName: kycRecord.user.name,
-                    paystackDetails: {
-                        firstName: "NIBSS OFFLINE",
-                        lastName: "SERVICE UNAVAILABLE",
-                        dob: "N/A",
-                        phone: "N/A"
-                    }
-                });
-            }
+            // IF PAYSTACK FAILS: Catch the exact error so the Admin knows why
+            const errorMessage = paystackError.response?.data?.message || 'Paystack BVN service is offline or rejected the request.';
+            console.error('Paystack API Error:', errorMessage);
+            
+            return reply.status(400).send({ 
+                success: false, 
+                message: `Paystack Error: ${errorMessage}` 
+            });
         }
+
     } catch (error) {
         console.error('System API Error:', error.message);
         reply.status(500).send({ success: false, message: 'Server error during verification.' });
