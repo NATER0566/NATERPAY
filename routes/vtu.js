@@ -33,7 +33,7 @@ function applyEnterpriseDiscount(originalAmount, serviceType, userRole) {
         electricity: 0.015, 
         betting: 0.01,
         insurance: 0.015,
-        sms: 0.01,          // THE FIX: Added SMS margin
+        sms: 0.01,          // SMS margin included
         education: 0        
     };
 
@@ -185,7 +185,7 @@ async function processVTURequest(type, payload) {
     } else if (type === 'insurance') { 
         apiPayload.serviceID = payload.provider;
         apiPayload.phone = payload.phone;
-    } else if (type === 'sms') { // THE FIX: Added SMS routing
+    } else if (type === 'sms') { // Routing for SMS
         apiPayload.serviceID = payload.provider || 'bulk-sms';
         apiPayload.phone = payload.phone || "08000000000";
     }
@@ -572,7 +572,7 @@ async function buyInsurance(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
-// THE FIX: ADDED MISSING SMS FUNCTION
+// THE FIX: ADDED SMS FUNCTION
 async function buySms(request, reply) {
   try {
     const { provider, phone, amount, pin } = request.body;
