@@ -46,14 +46,29 @@ async function getDashboardData(request, reply) {
       hiddenWidgets: user.hiddenWidgets || [],
       referralCode: user.referralCode,
       createdAt: user.createdAt,
-      recentTransactions: recentTransactions.map(tx => ({
-        _id: tx._id,
-        date: tx.createdAt,
-        type: tx.type,
-        description: tx.description,
-        amount: tx.amount.toString(),
-        status: tx.status
-      }))
+      
+      // === CRITICAL DASHBOARD FIX: SEND FULL FEE MATH TO UI ===
+      recentTransactions: recentTransactions.map(tx => {
+        const baseAmt = parseFloat(tx.amount?.toString() || '0');
+        const feeAmt = parseFloat(tx.fee?.toString() || '0');
+        // Calculate total deduction strictly
+        const totalDed = tx.totalDeduction ? parseFloat(tx.totalDeduction.toString()) : (baseAmt + feeAmt);
+        
+        // Define if money is coming IN or OUT
+        const isCredit = ['funding', 'referral_bonus', 'cashback'].includes(tx.type) || (tx.description || '').toLowerCase().includes('admin credit');
+
+        return {
+          _id: tx._id,
+          date: tx.createdAt,
+          type: tx.type,
+          description: tx.description,
+          amount: baseAmt.toString(),
+          fee: feeAmt.toString(),
+          totalDeduction: totalDed.toString(),
+          isCredit: isCredit,
+          status: tx.status
+        };
+      })
     });
   } catch (error) {
     console.error('Dashboard data error:', error);
@@ -111,7 +126,6 @@ async function getReferralTree(request, reply) {
                 { referredBy: user._id.toString() }
             ]
         })
-        // THE FIX: Added 'cumulativeSpend' and 'referralBonusPaid' so the frontend can display progress
         .select('name createdAt email cumulativeSpend referralBonusPaid')
         .sort({ createdAt: -1 });
 
@@ -141,7 +155,6 @@ async function upgradeUser(request, reply) {
 
     if (!pin || pin.length !== 4) return reply.status(400).send({ success: false, message: 'A valid 4-digit PIN is required.' });
     
-    // Check against the User collection PIN (or Wallet PIN if you prefer standardizing it)
     if (user.transactionPin) {
       const isMatch = await bcrypt.compare(pin.toString(), user.transactionPin);
       if (!isMatch) return reply.status(400).send({ success: false, message: 'Incorrect Withdrawal PIN.' });
