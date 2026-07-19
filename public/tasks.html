@@ -286,7 +286,6 @@
         }
     }
 
-    // THE FIX: Perfected Empty State Text Logging
     function showEmptyState(isLimitReached) {
         const container = document.getElementById('dynamicAdsContainer');
         const headingText = isLimitReached ? 'Daily limit reached' : 'No Tasks Available';
@@ -313,7 +312,6 @@
             const data = await response.json();
 
             if (!data.success || !data.ads || data.ads.length === 0) {
-                // FORCE IT TO FALSE HERE: If there are physically no ads, it's NOT because of a daily limit.
                 showEmptyState(false);
                 return;
             }
@@ -332,9 +330,10 @@
 
                 const mediaUrl = ad.mediaUrl || 'https://via.placeholder.com/1200x400/050505/d4af37?text=ADVERTISEMENT';
                 
+                // THE FIX: Added 'controls' to the video tag so users can unmute
                 let mediaHtml = '';
                 if (ad.adType === 'Video') {
-                    mediaHtml = `<video src="${mediaUrl}" class="ad-banner-media" autoplay muted loop playsinline></video>`;
+                    mediaHtml = `<video src="${mediaUrl}" class="ad-banner-media" autoplay muted loop playsinline controls></video>`;
                 } else if (ad.adType === 'Text') {
                     mediaHtml = `<div class="ad-banner-media"><i class="fas fa-bullhorn fa-4x text-muted opacity-50"></i></div>`;
                 } else if (ad.adType === 'PDF') {
@@ -366,7 +365,6 @@
                 `;
             });
 
-            // THE FIX APPLIED: Force 'false' so it displays "No Tasks Available" instead of a false "Daily Limit Reached"
             if (renderedCount === 0) showEmptyState(false);
 
         } catch (error) {
@@ -451,7 +449,6 @@
                 }
                 
                 document.getElementById(`ad_slot_${adId}`).style.display = 'none';
-                // Only trigger the specific limit message if the backend definitively said "limit reached"
                 checkIfAllHidden(data.message && data.message.includes('limit reached')); 
                 
                 if (data.success) {
