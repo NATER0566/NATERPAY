@@ -177,7 +177,6 @@
         animate();
     }
 
-    // Initialize Empty Chart.js
     function initChart() {
         const ctx = document.getElementById('revenueChart').getContext('2d');
         let gradient = ctx.createLinearGradient(0, 0, 0, 300);
@@ -220,7 +219,6 @@
         });
     }
 
-    // Process real transactions into the 7-day chart (Case-Insensitive Fix)
     function populateChartWithRealData(transactions) {
         if(!revenueChartInstance || !transactions || transactions.length === 0) return;
 
@@ -252,29 +250,30 @@
         revenueChartInstance.update();
     }
 
-    // Fetch Real Data from API & Integrate Client-Side Fallback Fall-through Calculations
     async function syncAnalyticsData() {
         const authToken = localStorage.getItem("naterpay_token");
         if(!authToken) { window.location.href = '/index.html'; return; }
 
         try {
+            // Because we upgraded the backend, this single call now returns 100% lifetime accurate data
             const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
 
             if(data.success) {
-                // Update Badge
                 const role = data.userRole || 'Standard';
                 document.getElementById('merchantTier').innerText = role.toUpperCase();
 
-                // Aggregate Data Safely
+                // 1. LIFETIME TRUE SPENT
                 const safeSpent = data.totalSpent?.$numberDecimal || data.totalSpent || 0;
                 document.getElementById('statVolume').innerText = '₦' + Number(safeSpent).toLocaleString(undefined, {minimumFractionDigits:2});
+                
+                // 2. TOTAL LIFETIME TRANSACTIONS
                 document.getElementById('statCount').innerText = data.totalLogs || 0;
                 
-                // Parse out real commissions / task incentives cleanly
-                let dynamicCommissions = Number(data.totalCommission?.$numberDecimal || data.totalCommission || data.totalCashback || 0);
+                // 3. LIFETIME COMMISSIONS (Direct from Backend Database Scan!)
+                const trueCommissions = Number(data.totalCommission || 0);
+                document.getElementById('statCommissions').innerText = '₦' + trueCommissions.toLocaleString(undefined, {minimumFractionDigits:2});
                 
-                // Populate Table (Strict Case-Insensitive Filter Mapping)
                 const tbody = document.getElementById('merchantTxBody');
                 tbody.innerHTML = '';
                 
@@ -293,12 +292,6 @@
                         else if (tx.status === 'pending') statusClass = 'bg-warning text-dark';
                         
                         const amount = Number(tx.amount?.$numberDecimal || tx.amount || 0);
-                        const txType = (tx.type || '').toLowerCase();
-
-                        // Dynamic client-side mathematical backup sum if totalCommission missing from database parameters
-                        if (tx.status === 'success' && ['cashback', 'task_reward', 'reward'].includes(txType)) {
-                            dynamicCommissions += amount;
-                        }
 
                         tbody.innerHTML += `
                             <tr>
@@ -310,10 +303,8 @@
                         `;
                     });
 
-                    document.getElementById('statCommissions').innerText = '₦' + dynamicCommissions.toLocaleString(undefined, {minimumFractionDigits:2});
                     populateChartWithRealData(merchantTx);
                 } else {
-                    document.getElementById('statCommissions').innerText = '₦' + dynamicCommissions.toLocaleString(undefined, {minimumFractionDigits:2});
                     tbody.innerHTML = '<tr><td colspan="4" class="text-center py-5 opacity-50"><i class="fas fa-folder-open fa-2x mb-3 d-block text-secondary"></i>No sales history available yet.</td></tr>';
                     populateChartWithRealData([]);
                 }
@@ -323,7 +314,6 @@
         }
     }
 
-    // Connect Live Real-Time WebSockets Channel
     function connectRealTimeWS() {
         try {
             socketConnectionLink = io(window.location.origin, {
