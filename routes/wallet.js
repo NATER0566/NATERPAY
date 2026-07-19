@@ -15,26 +15,17 @@ try {
     generateTransactionReference = authUtils.generateTransactionReference;
 } catch(e) {}
 
-/**
- * 1. Get Wallet
- */
 async function getWallet(request, reply) {
   try {
     const wallet = await Wallet.findOne({ user: request.user._id });
     if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet not found' });
     reply.send({ success: true, wallet });
-  } catch (error) { 
-      reply.status(500).send({ success: false, message: 'Failed to fetch wallet' }); 
-  }
+  } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch wallet' }); }
 }
 
-/**
- * 2. Initiate Wallet Funding
- */
 async function fundWallet(request, reply) {
   try {
-    const { amount, provider } = request.body;
-    const paymentProvider = String(provider || 'paystack').toLowerCase();
+    const { amount } = request.body;
     const requestedAmount = parseFloat(amount);
     const minFunding = config.business?.minFunding || 100;
     const maxFunding = config.business?.maxFunding || 10000000;
@@ -46,64 +37,38 @@ async function fundWallet(request, reply) {
     const user = await User.findById(request.user._id);
     if (!wallet || !user) return reply.status(404).send({ success: false, message: 'User or Wallet not found' });
     
-    // ========================================================
-    // THE EXACT ZERO-BLEED GROSS-UP MATH (Passes fee to user)
-    // ========================================================
+    // Exact Zero-Bleed Gross-Up Math for Paystack
     let gatewayFee = 0;
-    if (paymentProvider === 'paystack') {
-        if (requestedAmount < 2500) gatewayFee = (requestedAmount * 0.015) / (1 - 0.015);
-        else gatewayFee = ((requestedAmount * 0.015) + 100) / (1 - 0.015);
-        if (gatewayFee > 2000) gatewayFee = 2000; 
-    } else if (paymentProvider === 'monnify') {
-        // Monnify standard fee passed to user (1.5% capped at 2000)
+    if (requestedAmount < 2500) {
         gatewayFee = (requestedAmount * 0.015) / (1 - 0.015);
-        if (gatewayFee > 2000) gatewayFee = 2000;
+    } else {
+        gatewayFee = ((requestedAmount * 0.015) + 100) / (1 - 0.015);
     }
+    if (gatewayFee > 2000) gatewayFee = 2000; 
 
     const totalToCharge = Math.ceil(requestedAmount + gatewayFee);
     const paymentReference = typeof generateTransactionReference === 'function' ? generateTransactionReference() : `FUND_${Date.now()}`;
     const startBalance = String(wallet.availableBalance || 0);
 
     const transaction = new Transaction({
-      user: request.user._id, type: 'funding', description: `Wallet funding via ${paymentProvider}`,
+      user: request.user._id, type: 'funding', description: `Wallet funding via Paystack`,
       amount: requestedAmount, fee: Math.ceil(gatewayFee), balanceBefore: startBalance, balanceAfter: startBalance,
-      status: 'pending', provider: paymentProvider, providerReference: paymentReference,
+      status: 'pending', provider: 'paystack', providerReference: paymentReference,
       idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `idem_${Date.now()}`, 
       ipAddress: request.ip, userAgent: request.headers['user-agent']
     });
     await transaction.save();
     
-    let checkoutUrl = '';
-    
-    if (paymentProvider === 'paystack') {
-      const paystackResponse = await axios.post('https://api.paystack.co/transaction/initialize',
-        { email: user.email, amount: totalToCharge * 100, reference: paymentReference, callback_url: `${request.protocol}://${request.hostname}/dashboard.html` },
-        { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' } }
-      );
-      checkoutUrl = paystackResponse.data.data.authorization_url;
-    } else if (paymentProvider === 'monnify') {
-      const baseUrl = process.env.MONNIFY_URL || 'https://sandbox.monnify.com';
-      const encodedKeys = Buffer.from(`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`).toString('base64');
-      const authResponse = await axios.post(`${baseUrl}/api/v1/auth/login`, {}, { headers: { Authorization: `Basic ${encodedKeys}` } });
-      const accessToken = authResponse.data.responseBody.accessToken;
+    const paystackResponse = await axios.post('https://api.paystack.co/transaction/initialize',
+      { email: user.email, amount: totalToCharge * 100, reference: paymentReference, callback_url: `${request.protocol}://${request.hostname}/dashboard.html` },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' } }
+    );
+    const checkoutUrl = paystackResponse.data.data.authorization_url;
 
-      const initResponse = await axios.post(`${baseUrl}/api/v1/merchant/transactions/init-transaction`,
-        { amount: totalToCharge, customerName: user.name, customerEmail: user.email, paymentReference: paymentReference, paymentDescription: 'NATERPAY Wallet Funding', currencyCode: 'NGN', contractCode: process.env.MONNIFY_CONTRACT_CODE, redirectUrl: `${request.protocol}://${request.hostname}/dashboard.html` },
-        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
-      );
-      checkoutUrl = initResponse.data.responseBody.checkoutUrl;
-    } else {
-      return reply.status(400).send({ success: false, message: 'Unsupported payment provider' });
-    }
-    reply.send({ success: true, message: 'Payment initialized', paymentReference, checkoutUrl, provider: paymentProvider });
-  } catch (error) { 
-      reply.status(500).send({ success: false, message: 'Failed to initiate payment gateway.' }); 
-  }
+    reply.send({ success: true, message: 'Payment initialized', paymentReference, checkoutUrl, provider: 'paystack' });
+  } catch (error) { reply.status(500).send({ success: false, message: 'Failed to initiate payment gateway.' }); }
 }
 
-/**
- * 3. Verify Wallet Funding
- */
 async function verifyFunding(request, reply) {
   try {
     const { reference } = request.body;
@@ -115,24 +80,8 @@ async function verifyFunding(request, reply) {
     if (transaction.status === 'success') return reply.send({ success: true, message: 'Wallet already credited' });
     if (transaction.status === 'failed') return reply.status(400).send({ success: false, message: 'Transaction was cancelled or declined.' });
 
-    let gatewayStatus = 'pending';
-
-    if (transaction.provider === 'paystack') {
-      const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } });
-      gatewayStatus = response.data.data.status; 
-    } 
-    else if (transaction.provider === 'monnify') {
-      const baseUrl = process.env.MONNIFY_URL || 'https://sandbox.monnify.com';
-      const encodedKeys = Buffer.from(`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`).toString('base64');
-      const authResponse = await axios.post(`${baseUrl}/api/v1/auth/login`, {}, { headers: { Authorization: `Basic ${encodedKeys}` } });
-      const accessToken = authResponse.data.responseBody.accessToken;
-      
-      const response = await axios.get(`${baseUrl}/api/v1/merchant/transactions/query?paymentReference=${reference}`, { headers: { Authorization: `Bearer ${accessToken}` } });
-      
-      const monnifyStatus = response.data.responseBody.paymentStatus;
-      if (monnifyStatus === 'PAID') gatewayStatus = 'success';
-      else if (monnifyStatus === 'FAILED' || monnifyStatus === 'CANCELLED' || monnifyStatus === 'EXPIRED') gatewayStatus = 'failed';
-    }
+    const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } });
+    const gatewayStatus = response.data.data.status; 
 
     if (gatewayStatus === 'abandoned' || gatewayStatus === 'failed') {
         transaction.status = 'failed';
@@ -159,14 +108,9 @@ async function verifyFunding(request, reply) {
         request.server.io.to(`user:${transaction.user}`).emit('wallet:update', { balance: String(wallet.availableBalance || 0) });
     }
     reply.send({ success: true, message: 'Payment verified and wallet credited!' });
-  } catch (error) { 
-      reply.status(500).send({ success: false, message: 'Failed to verify payment.' }); 
-  }
+  } catch (error) { reply.status(500).send({ success: false, message: 'Failed to verify payment.' }); }
 }
 
-/**
- * 4. Withdraw Engine (AUTO-SUCCESS BUG FIXED)
- */
 async function withdraw(request, reply) {
   try {
     const { amount, bankAccount, pin, otp } = request.body;
@@ -178,7 +122,6 @@ async function withdraw(request, reply) {
     if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet error.' });
     if (wallet.isFrozen) return reply.status(403).send({ success: false, message: 'Wallet is frozen. Please contact support.' });
     
-    // === CRITICAL BUG FIX: Look for 'processing' instead of 'pending' ===
     const pendingWithdrawal = await Transaction.findOne({ user: request.user._id, type: 'withdrawal', status: 'processing' });
     if (pendingWithdrawal) {
         return reply.status(400).send({ success: false, message: 'Duplicate Protection: You already have a withdrawal processing.' });
@@ -223,10 +166,7 @@ async function withdraw(request, reply) {
       totalDeduction: totalDeduction, 
       balanceBefore: String(currentAvail), 
       balanceAfter: String(wallet.availableBalance || 0),
-      
-      // === CRITICAL BUG FIX: Set to 'processing' to shield from cron scripts ===
       status: 'processing', 
-      
       provider: 'internal', 
       providerReference: secureProviderRef,
       idempotencyKey: typeof generateIdempotencyKey === 'function' ? generateIdempotencyKey() : `wth_${Date.now()}`, 
@@ -240,14 +180,9 @@ async function withdraw(request, reply) {
     
     await transaction.save();
     reply.send({ success: true, message: 'Withdrawal request submitted. Awaiting manual payout.', transaction });
-  } catch (error) { 
-      reply.status(500).send({ success: false, message: error.message || 'System error processing transfer.' }); 
-  }
+  } catch (error) { reply.status(500).send({ success: false, message: error.message || 'System error processing transfer.' }); }
 }
 
-/**
- * 5. Peer-to-Peer Transfer (STRICTLY FREE)
- */
 async function transfer(request, reply) {
   try {
     const { amount, recipient, pin } = request.body; 
@@ -309,14 +244,9 @@ async function transfer(request, reply) {
       request.server.io.to(`user:${recipientUser._id}`).emit('wallet:update', { balance: String(recipientWallet.availableBalance || 0) });
     }
     reply.send({ success: true, message: 'Transfer successful', transaction: senderTransaction, recipientName: recipientUser.name });
-  } catch (error) { 
-      reply.status(500).send({ success: false, message: 'Failed to process transfer.' }); 
-  }
+  } catch (error) { reply.status(500).send({ success: false, message: 'Failed to process transfer.' }); }
 }
 
-/**
- * 6. Set PIN
- */
 async function setPin(request, reply) {
   try {
     const { pin, confirmPin } = request.body;
@@ -332,14 +262,9 @@ async function setPin(request, reply) {
     user.isSecured = true;
     await user.save();
     reply.send({ success: true, message: 'PIN set successfully' });
-  } catch (error) { 
-      reply.status(500).send({ success: false, message: 'Failed to set PIN' }); 
-  }
+  } catch (error) { reply.status(500).send({ success: false, message: 'Failed to set PIN' }); }
 }
 
-/**
- * 7. Resolve Bank Account
- */
 async function resolveBankAccount(request, reply) {
     try {
         const { accountNumber, bankCode } = request.body;
@@ -347,14 +272,9 @@ async function resolveBankAccount(request, reply) {
             headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
         });
         reply.send({ success: true, accountName: response.data.data.account_name });
-    } catch (error) { 
-        reply.status(400).send({ success: false, message: 'Invalid Account Details.' }); 
-    }
+    } catch (error) { reply.status(400).send({ success: false, message: 'Invalid Account Details.' }); }
 }
 
-/**
- * 8. PAYSTACK SECURE WEBHOOK
- */
 async function handlePaystackWebhook(request, reply) {
     try {
         const secret = process.env.PAYSTACK_SECRET_KEY;
@@ -382,9 +302,7 @@ async function handlePaystackWebhook(request, reply) {
             await pendingTx.save();
         }
         reply.code(200).send('Processed');
-    } catch (error) { 
-        reply.code(500).send('Internal Server Error'); 
-    }
+    } catch (error) { reply.code(500).send('Internal Server Error'); }
 }
 
 module.exports = { getWallet, fundWallet, verifyFunding, withdraw, transfer, setPin, resolveBankAccount, handlePaystackWebhook };
