@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Enterprise Seller Terminal</title>
+    <title>NATER-PAY | Enterprise Global Marketplace</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
@@ -123,7 +123,6 @@
         .dropdown-item { font-weight: 700; font-size: 0.85rem; padding: 10px 15px; border-radius: 6px; color: #ddd; display: flex; align-items: center; gap: 10px; transition: 0.2s;}
         .dropdown-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
         .dropdown-item i { width: 16px; text-align: center; color: #888; }
-        .dropdown-item:hover i { color: var(--gold); }
         .dropdown-item.text-danger:hover { background: rgba(211,47,47,0.1); color: var(--nater-red); }
 
         /* QR MODAL */
@@ -196,6 +195,12 @@
 
     <!-- VIEW 1: CREATOR STUDIO -->
     <div id="view-create" style="display: none;">
+        
+        <!-- STRICT KYC ALERT -->
+        <div class="alert alert-warning border-warning bg-dark text-white fw-bold mb-4" style="box-shadow: 0 0 15px rgba(255, 152, 0, 0.2);">
+            <i class="fas fa-exclamation-triangle text-warning me-2"></i> Notice: If you have not completed KYC Level 3, your products will display a strict "UNVERIFIED" badge to buyers on the marketplace. <a href="kyc.html" class="text-gold text-decoration-none ms-2 border-bottom border-warning">Complete KYC here.</a>
+        </div>
+
         <form id="productForm" class="studio-grid" onsubmit="event.preventDefault();">
             
             <div class="panel p-0" style="background: transparent; border: none; box-shadow: none;">
@@ -245,6 +250,24 @@
                 <div class="input-group-custom mt-3">
                     <label>Description <span class="req">REQUIRED</span></label>
                     <div class="input-wrapper align-items-start"><i class="fas fa-align-left mt-1"></i><textarea id="linkDescription" placeholder="Detail the value proposition of this product..." required></textarea></div>
+                </div>
+
+                <div class="panel-header"><i class="fas fa-headset"></i> Support & Contact Info</div>
+                <div class="helper-text mb-3 mt-neg-2">Provide contact details so buyers can reach you for support. This will be automatically added to your product listing.</div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="input-group-custom m-0">
+                            <label>Support WhatsApp <span class="req">REQUIRED</span></label>
+                            <div class="input-wrapper"><i class="fab fa-whatsapp"></i><input type="tel" id="supportWhatsapp" placeholder="+234 800 000 0000" required></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group-custom m-0">
+                            <label>Support Email <span class="text-muted" style="font-size:0.7rem;">Optional</span></label>
+                            <div class="input-wrapper"><i class="fas fa-envelope"></i><input type="email" id="supportEmail" placeholder="support@brand.com"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="panel-header"><i class="fas fa-sliders-h"></i> Inventory & Delivery</div>
@@ -394,15 +417,29 @@
     async function submitMultipartForm(targetStatus) {
         const title = document.getElementById('linkTitle').value.trim();
         const category = document.getElementById('linkCategory').value;
-        const description = document.getElementById('linkDescription').value.trim();
         const rawAmount = document.getElementById('linkAmount').value;
         const stockLimit = document.getElementById('stockLimit').value;
         const redirectUrl = document.getElementById('linkRedirect').value.trim();
         const feePreference = document.getElementById('feePreference').value;
+        
+        // Grab descriptions and contact details
+        const baseDescription = document.getElementById('linkDescription').value.trim();
+        const supportWhatsapp = document.getElementById('supportWhatsapp').value.trim();
+        const supportEmail = document.getElementById('supportEmail').value.trim();
 
-        if (!title || !description) {
+        if (!title || !baseDescription) {
             return Swal.fire({ icon: 'error', title: 'Missing Data', text: 'Title and Description are required.', background: '#111', color: '#fff' });
         }
+        
+        if (!supportWhatsapp) {
+            return Swal.fire({ icon: 'error', title: 'Missing Contact', text: 'Please provide a Support WhatsApp number so buyers can reach you.', background: '#111', color: '#fff' });
+        }
+
+        // Dynamically inject contact details into the description to ensure buyers always see it
+        let finalDescription = baseDescription;
+        finalDescription += "\n\n━━━━━━━━━━━━━━━━━━━━\nMERCHANT SUPPORT CONTACT\n━━━━━━━━━━━━━━━━━━━━\n";
+        finalDescription += `💬 WhatsApp: ${supportWhatsapp}\n`;
+        if (supportEmail) finalDescription += `📧 Email: ${supportEmail}`;
 
         const isFlexibleAmount = !rawAmount || parseFloat(rawAmount) <= 0;
         const amount = isFlexibleAmount ? 0 : parseFloat(rawAmount);
@@ -415,7 +452,7 @@
         const formData = new FormData();
         formData.append('title', title);
         formData.append('category', category);
-        formData.append('description', description);
+        formData.append('description', finalDescription); // Send the injected description
         formData.append('amount', amount);
         formData.append('isFlexibleAmount', isFlexibleAmount);
         formData.append('status', targetStatus); 
@@ -575,7 +612,6 @@
         const p = globalProducts.find(x => x._id === id);
         if(!p) return;
         const net = (p.totalCollected || 0) - (p.feesPaid || 0);
-        const cvr = p.views > 0 ? (((p.transactionCount||0) / p.views) * 100).toFixed(1) : 0;
         
         Swal.fire({
             title: 'Enterprise Analytics',
@@ -583,8 +619,6 @@
                 <div class="text-start mt-3" style="font-size: 0.9rem; font-weight: 700;">
                     <h5 class="text-gold border-bottom border-dark pb-2 mb-3 text-uppercase">${p.title}</h5>
                     <div class="row g-2 mb-3">
-                        <div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="d-block text-secondary">VIEWS</small><span class="fs-5">${p.views || 0}</span></div></div>
-                        <div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="d-block text-secondary">CONVERSION</small><span class="fs-5 text-info">${cvr}%</span></div></div>
                         <div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="d-block text-secondary">SALES</small><span class="fs-5 text-success">${p.transactionCount || 0}</span></div></div>
                         <div class="col-6"><div class="bg-dark p-2 rounded border border-secondary text-center"><small class="d-block text-secondary">REFUNDS</small><span class="fs-5 text-danger">${p.refundCount || 0}</span></div></div>
                     </div>
