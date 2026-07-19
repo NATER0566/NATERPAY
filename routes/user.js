@@ -123,7 +123,7 @@ async function getReferralTree(request, reply) {
 async function upgradeUser(request, reply) {
   try {
     const { role, amount, pin } = request.body;
-    const user = request.user;
+    const userId = request.user._id;
 
     // 1. Validate Target Tier
     if (!['agent', 'reseller', 'vip'].includes(role)) {
@@ -137,9 +137,14 @@ async function upgradeUser(request, reply) {
 
     if (amount !== expectedAmount) return reply.status(400).send({ success: false, message: 'System alert: Amount mismatch detected.' });
 
+    // THE FIX: We must query the DB directly to get the hidden PINs.
+    // Auth middleware (request.user) strips out sensitive data like passwords and PINs for security!
+    const dbUser = await User.findById(userId).select('+transactionPin +withdrawalPin');
+    if (!dbUser) return reply.status(404).send({ success: false, message: 'User record not found.' });
+
     // 3. Prevent Double Upgrades
-    if (user.role === 'vip' || (user.role === 'reseller' && role === 'reseller')) {
-        return reply.status(400).send({ success: false, message: `You are already on the ${user.role.toUpperCase()} tier or higher!` });
+    if (dbUser.role === 'vip' || (dbUser.role === 'reseller' && role === 'reseller')) {
+        return reply.status(400).send({ success: false, message: `You are already on the ${dbUser.role.toUpperCase()} tier or higher!` });
     }
 
     // 4. STRICT PIN VALIDATION ENGINE
@@ -147,8 +152,8 @@ async function upgradeUser(request, reply) {
         return reply.status(400).send({ success: false, message: 'A valid 4-digit PIN is required.' });
     }
     
-    // Grab the PIN hash from the database
-    const userPinHash = user.transactionPin || user.withdrawalPin;
+    // Grab the PIN hash from the full database record
+    const userPinHash = dbUser.transactionPin || dbUser.withdrawalPin;
     
     // If the database has NO PIN for this user, completely block them
     if (!userPinHash) {
@@ -162,7 +167,7 @@ async function upgradeUser(request, reply) {
     }
 
     // 5. Wallet Check
-    const wallet = await Wallet.findOne({ user: user._id });
+    const wallet = await Wallet.findOne({ user: userId });
     if (!wallet) return reply.status(404).send({ success: false, message: 'Wallet infrastructure not found.' });
 
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
@@ -172,7 +177,7 @@ async function upgradeUser(request, reply) {
     // THE FAILSAFE: Validate the transaction schema BEFORE deducting money
     // =========================================================================
     const transaction = new Transaction({ 
-        user: user._id, 
+        user: userId, 
         type: 'withdrawal', 
         description: `Account Upgrade to ${role.toUpperCase()} Node`, 
         amount: amount, 
@@ -199,15 +204,15 @@ async function upgradeUser(request, reply) {
     await transaction.save();
 
     // 8. Update User Role
-    await User.findByIdAndUpdate(user._id, { role: role });
+    await User.findByIdAndUpdate(userId, { role: role });
 
     // 9. Emit Sockets
     if (request.server && request.server.io) {
-       request.server.io.to(`user:${user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
-       request.server.io.to(`user:${user._id}`).emit('notification', { type: 'success', title: 'Upgrade Successful', message: `Welcome to the ${role.toUpperCase()} tier!` });
+       request.server.io.to(`user:${userId}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
+       request.server.io.to(`user:${userId}`).emit('notification', { type: 'success', title: 'Upgrade Successful', message: `Welcome to the ${role.toUpperCase()} tier!` });
     }
     
-    const updatedUser = await User.findById(user._id);
+    const updatedUser = await User.findById(userId);
     reply.send({ success: true, message: `Upgrade to ${role.toUpperCase()} was successful!`, user: sanitizeUser(updatedUser) });
 
   } catch (error) { 
