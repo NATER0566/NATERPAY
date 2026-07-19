@@ -87,7 +87,7 @@
 
 <div class="container">
     <h1 class="header-title"><i class="fas fa-crown me-2"></i> PREMIUM TIERS</h1>
-    <p class="header-subtitle">Unlock wholesale pricing, maximum margins, and powerful business tools.</p>
+    <p class="header-subtitle">Upgrade your account for priority support, exclusive profile badges, and service discounts.</p>
 
     <div class="status-box">
         <span>Your Current Rank</span>
@@ -105,10 +105,11 @@
                     <small class="text-secondary fw-bold">One-Time Upgrade Fee</small>
                 </div>
                 <ul class="feature-list">
-                    <li><i class="fas fa-check-circle"></i> Unlock Reseller Wholesale Data Pricing</li>
-                    <li><i class="fas fa-check-circle"></i> Higher Margins on Cable & Electricity</li>
-                    <li><i class="fas fa-check-circle"></i> Exclusive "Verified Reseller" Profile Badge</li>
-                    <li><i class="fas fa-check-circle"></i> Priority Customer Support</li>
+                    <li><i class="fas fa-check-circle"></i> Discounts on selected commission-based services only.</li>
+                    <li><i class="fas fa-check-circle"></i> Verified Sub-Agent Badge on your profile.</li>
+                    <li><i class="fas fa-check-circle"></i> Priority customer support.</li>
+                    <li><i class="fas fa-check-circle"></i> Early access to promotions and new platform features.</li>
+                    <li><i class="fas fa-check-circle"></i> Lifetime one-time upgrade. No yearly renewal.</li>
                 </ul>
                 <button class="btn-upgrade btn-reseller" id="btnUpgradeReseller" onclick="processUpgrade('reseller', 5000)">
                     <i class="fas fa-unlock me-2"></i> UPGRADE TO AGENT
@@ -125,11 +126,12 @@
                     <small class="text-secondary fw-bold">One-Time Upgrade Fee</small>
                 </div>
                 <ul class="feature-list">
-                    <li><i class="fas fa-check-circle"></i> Maximum Bottom-Floor Wholesale Pricing</li>
-                    <li><i class="fas fa-check-circle"></i> Developer API Access (Build your own app)</li>
-                    <li><i class="fas fa-check-circle"></i> Generate Custom Payment Links & Invoices</li>
-                    <li><i class="fas fa-check-circle"></i> Gold "VIP Partner" Profile Badge</li>
-                    <li><i class="fas fa-check-circle"></i> Direct WhatsApp Line to Tech Support</li>
+                    <li><i class="fas fa-check-circle"></i> Higher discounts on selected commission-based services only.</li>
+                    <li><i class="fas fa-check-circle"></i> Gold VIP Partner Badge.</li>
+                    <li><i class="fas fa-check-circle"></i> Highest priority customer support.</li>
+                    <li><i class="fas fa-check-circle"></i> Early access to future business tools and platform updates.</li>
+                    <li><i class="fas fa-check-circle"></i> Eligible for future premium features at no additional upgrade fee.</li>
+                    <li><i class="fas fa-check-circle"></i> Lifetime one-time upgrade. No yearly renewal.</li>
                 </ul>
                 <button class="btn-upgrade btn-vip" id="btnUpgradeVip" onclick="processUpgrade('vip', 15000)">
                     <i class="fas fa-rocket me-2"></i> BECOME A VIP
@@ -216,7 +218,6 @@
             return; 
         }
 
-        // THE FIX: Prompt for PIN and capture it
         const { value: pinCode } = await Swal.fire({
             title: `Upgrade to ${tierName}?`,
             html: `This will securely deduct <strong>₦${feeAmount.toLocaleString()}</strong> from your NATERPAY wallet.<br><br>Please enter your 4-digit PIN to confirm:`,
@@ -240,7 +241,6 @@
             }
         });
 
-        // If user entered a PIN, send the exact payload the backend expects
         if (pinCode) {
             const authToken = localStorage.getItem("naterpay_token");
             Swal.fire({ title: 'Processing...', text: 'Authenticating upgrade...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#FFD700' });
@@ -249,7 +249,6 @@
                 const res = await fetch('/api/user/upgrade', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                    // THE FIX: Sending role, amount, and pin EXACTLY as the backend requests
                     body: JSON.stringify({ role: targetTier, amount: feeAmount, pin: pinCode }) 
                 });
                 
