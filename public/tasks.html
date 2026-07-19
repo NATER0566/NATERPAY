@@ -205,7 +205,8 @@
 </footer>
 
 <script>
-    let globalUserKycLevel = 0; // Tracks their true KYC tier
+    let globalUserKycLevel = 0; 
+    let globalUserId = 'guest'; // We will lock the cache strictly to the User's ID
 
     function initStars() {
         const canvas = document.getElementById('starCanvas');
@@ -225,14 +226,8 @@
         animate();
     }
 
-    // --- STRICT KYC & MEMORY SHIELD ---
+    // --- STRICT KYC & UNIQUE DEVICE MEMORY SHIELD ---
     async function checkProfileTaskState() {
-        // 1. Check local device memory first. If claimed, permanently hide it immediately.
-        if(localStorage.getItem('naterpay_profile_claimed') === 'true') {
-            document.getElementById('profileTaskWrapper').style.display = 'none';
-            return; 
-        }
-
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
         
@@ -242,11 +237,17 @@
             
             if (data.success) {
                 globalUserKycLevel = data.kycLevel || 0;
+                globalUserId = data.userEmail || 'guest'; // Using email or ID as unique cache key
+                
+                // 1. Check local device memory uniquely tied to THIS user.
+                const profileCacheKey = `naterpay_profile_claimed_${globalUserId}`;
+                if(localStorage.getItem(profileCacheKey) === 'true' || globalUserKycLevel >= 3) {
+                    document.getElementById('profileTaskWrapper').style.display = 'none';
+                    return; 
+                }
+                
+                document.getElementById('profileTaskWrapper').style.display = 'block';
             }
-            
-            // Show the card ONLY if we don't have proof it's claimed yet
-            document.getElementById('profileTaskWrapper').style.display = 'block';
-            
         } catch(e) {}
     }
 
@@ -273,8 +274,8 @@
             const data = await response.json();
 
             if (data.success || (data.message && data.message.includes('already claimed'))) {
-                // Permanently lock into memory
-                localStorage.setItem('naterpay_profile_claimed', 'true');
+                // Permanently lock into memory FOR THIS SPECIFIC USER
+                localStorage.setItem(`naterpay_profile_claimed_${globalUserId}`, 'true');
                 document.getElementById('profileTaskWrapper').style.display = 'none';
                 
                 if (data.success) {
@@ -291,7 +292,7 @@
         }
     }
 
-    // --- ADS MEMORY SHIELD ---
+    // --- ADS MULTI-USER MEMORY SHIELD & MEDIA RESTORATION ---
     function showEmptyState(isLimitReached) {
         const container = document.getElementById('dynamicAdsContainer');
         const headingText = isLimitReached ? 'Daily limit reached' : 'No daily task yet';
@@ -308,7 +309,9 @@
 
     async function loadDynamicAds() {
         const container = document.getElementById('dynamicAdsContainer');
-        const claimedAdsMemory = JSON.parse(localStorage.getItem('naterpay_claimed_ads_vault')) || [];
+        // Fetch the unique cache for THIS specific logged-in user
+        const cacheKey = `naterpay_claimed_ads_vault_${globalUserId}`;
+        const claimedAdsMemory = JSON.parse(localStorage.getItem(cacheKey)) || [];
         
         try {
             const response = await fetch('/api/ads'); 
@@ -323,7 +326,7 @@
             let renderedCount = 0;
 
             data.ads.forEach(ad => {
-                // EXTREME STRICT SHIELD: If this Ad ID is in the device's claimed memory, DO NOT RENDER IT AT ALL!
+                // EXTREME STRICT SHIELD: If this Ad ID is in THIS USER'S claimed memory, skip rendering.
                 if (claimedAdsMemory.includes(ad._id)) return; 
                 
                 renderedCount++;
@@ -332,7 +335,20 @@
                 let primaryLink = '';
                 if (rawWeb) primaryLink = rawWeb.startsWith('http') ? rawWeb : 'https://' + rawWeb;
 
-                let mediaHtml = `<img src="${ad.mediaUrl || 'https://via.placeholder.com/1200x400/050505/d4af37?text=ADVERTISEMENT'}" class="ad-banner-media" alt="Ad">`;
+                const mediaUrl = ad.mediaUrl || 'https://via.placeholder.com/1200x400/050505/d4af37?text=ADVERTISEMENT';
+                
+                // RESTORED: Multi-Format Media Interpreter (Fixes the Blank Video Issue)
+                let mediaHtml = '';
+                if (ad.adType === 'Video') {
+                    mediaHtml = `<video src="${mediaUrl}" class="ad-banner-media" autoplay muted loop playsinline></video>`;
+                } else if (ad.adType === 'Text') {
+                    mediaHtml = `<div class="ad-banner-media"><i class="fas fa-bullhorn fa-4x text-muted opacity-50"></i></div>`;
+                } else if (ad.adType === 'PDF') {
+                    mediaHtml = `<div class="ad-banner-media"><i class="fas fa-file-pdf fa-4x text-danger opacity-50"></i></div>`;
+                } else {
+                    mediaHtml = `<img src="${mediaUrl}" class="ad-banner-media" alt="Ad Visual">`;
+                }
+
                 const reward = ad.rewardAmount || 5;
                 
                 container.innerHTML += `
@@ -343,6 +359,7 @@
                             <div class="ad-body-content">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <span class="reward-badge mb-0">Reward: ₦${reward}</span>
+                                    <span class="text-muted small fw-bold"><i class="fas fa-bolt text-warning me-1"></i> ${ad.adType || 'Image'}</span>
                                 </div>
                                 <h3 class="ad-title">${ad.title || 'Sponsored Campaign'}</h3>
                                 <p class="ad-desc text-truncate-3">${ad.description || 'View this enterprise campaign allocation.'}</p>
@@ -376,7 +393,7 @@
 
     let trackingAdId = null, trackingReward = 0, trackingBtn = null, timeAwayStarted = 0, hasLeftTab = false;
 
-    function startAbsoluteTrackingTask(adId, adUrl, rewardAmount) {
+    async function startAbsoluteTrackingTask(adId, adUrl, rewardAmount) {
         trackingBtn = document.getElementById(`btn_ad_${adId}`);
         if(trackingBtn.disabled) return;
         if (!adUrl || adUrl.trim() === '') return Swal.fire({ icon: 'error', title: 'Invalid Link', text: 'No URL provided.', background: '#0a0a0a', color: '#fff' });
@@ -385,6 +402,13 @@
         trackingAdId = adId; trackingReward = rewardAmount; hasLeftTab = false; 
 
         window.open(adUrl, '_blank');
+        
+        // FIX: FORCE A CLICK EVENT TO THE BACKEND SO ADVERTISERS SEE THEIR CTR COUNT UP!
+        try {
+            const authToken = localStorage.getItem("naterpay_token");
+            fetch(`/api/ads/${adId}/click`, { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` } });
+        } catch(e) {}
+
         trackingBtn.innerHTML = `<i class="fas fa-eye-slash me-2"></i> VIEWING...`;
         
         Swal.fire({ title: 'Task Started!', text: 'Stay on the page for exactly 20 seconds.', icon: 'info', toast: true, position: 'top-end', showConfirmButton: false, timer: 4000, background: '#0a0a0a', color: '#fff' });
@@ -423,10 +447,15 @@
             const response = await fetch('/api/tasks/claim-ad', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ adId: adId }) });
             const data = await response.json();
 
-            // IF SUCCESS OR ALREADY CLAIMED: Add to local memory permanently and hide!
+            // IF SUCCESS OR ALREADY CLAIMED: Add to THIS USER'S local memory permanently and hide!
             if (data.success || (data.message && data.message.includes('already claimed'))) {
-                let claimedAdsMemory = JSON.parse(localStorage.getItem('naterpay_claimed_ads_vault')) || [];
-                if (!claimedAdsMemory.includes(adId)) { claimedAdsMemory.push(adId); localStorage.setItem('naterpay_claimed_ads_vault', JSON.stringify(claimedAdsMemory)); }
+                const cacheKey = `naterpay_claimed_ads_vault_${globalUserId}`;
+                let claimedAdsMemory = JSON.parse(localStorage.getItem(cacheKey)) || [];
+                
+                if (!claimedAdsMemory.includes(adId)) { 
+                    claimedAdsMemory.push(adId); 
+                    localStorage.setItem(cacheKey, JSON.stringify(claimedAdsMemory)); 
+                }
                 
                 document.getElementById(`ad_slot_${adId}`).style.display = 'none';
                 checkIfAllHidden(data.message && data.message.includes('limit reached')); 
@@ -447,7 +476,12 @@
         }
     }
 
-    window.onload = () => { initStars(); checkProfileTaskState(); loadDynamicAds(); };
+    // Critical order of operations: Authenticate/get UserId FIRST, then load ads.
+    window.onload = async () => { 
+        initStars(); 
+        await checkProfileTaskState(); 
+        loadDynamicAds(); 
+    };
     window.onresize = initStars;
 </script>
 
