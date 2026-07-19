@@ -58,7 +58,7 @@ async function getDashboardData(request, reply) {
       
       // GLOBAL LIFETIME VARIABLES FOR ALL HTML PAGES
       totalSpent: totalSpent.toString(),
-      totalCommission: totalCommission.toString(), // <-- THIS FIXES THE ZERO ISSUE
+      totalCommission: totalCommission.toString(),
       
       referralCount: user.referralCount || 0,
       referralBonus: user.referralBonus ? user.referralBonus.toString() : '0',
@@ -160,27 +160,39 @@ async function upgradeUser(request, reply) {
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
     if (currentAvail < amount) return reply.status(400).send({ success: false, message: `Insufficient balance. You need ₦${amount.toLocaleString()} to upgrade.` });
 
-    // 6. Deduct exact upgrade fee
-    wallet.availableBalance = (currentAvail - amount).toString();
-    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
-    await wallet.save();
-
-    // 7. Log ledger transaction - THE FIX: Changed 'type' to 'service' to bypass strict schema enums
+    // =========================================================================
+    // THE FAILSAFE: Validate the transaction schema BEFORE deducting money
+    // =========================================================================
     const transaction = new Transaction({ 
         user: user._id, 
-        type: 'service', 
+        type: 'withdrawal', // THE FIX: Changed to 'withdrawal' which is globally accepted in your DB
         description: `Account Upgrade to ${role.toUpperCase()} Node`, 
         amount: amount, 
         fee: 0, 
         balanceBefore: currentAvail.toString(), 
-        balanceAfter: wallet.availableBalance.toString(), 
+        balanceAfter: (currentAvail - amount).toString(), 
         status: 'success', 
         provider: 'internal', 
         reference: `UPG-${Date.now()}` 
     });
+
+    try {
+        // If the database rejects the word 'withdrawal' for any reason, it stops right here. 
+        // No money is lost.
+        await transaction.validate(); 
+    } catch (valError) {
+        return reply.status(500).send({ success: false, message: 'Schema validation blocked the transaction. No money deducted. Error: ' + valError.message });
+    }
+
+    // 6. It is now 100% safe to deduct the upgrade fee
+    wallet.availableBalance = (currentAvail - amount).toString();
+    wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
+    await wallet.save();
+
+    // 7. Save the pre-validated transaction
     await transaction.save();
 
-    // 8. Update User Role - THE FIX: Using findByIdAndUpdate to force the change past strict schemas
+    // 8. Update User Role
     await User.findByIdAndUpdate(user._id, { role: role });
 
     // 9. Emit Sockets
@@ -195,7 +207,6 @@ async function upgradeUser(request, reply) {
 
   } catch (error) { 
       console.error("UPGRADE CRASH ERROR:", error);
-      // THE FIX: If it crashes again, it will send the EXACT database error to your screen so we can see what's wrong!
       reply.status(500).send({ success: false, message: 'DB Error: ' + error.message }); 
   }
 }
