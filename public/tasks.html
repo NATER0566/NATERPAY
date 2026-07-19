@@ -35,7 +35,6 @@
             margin-bottom: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(255,215,0,0.05); position: relative; overflow: hidden;
         }
 
-        /* PREMIUM APP CARDS */
         .info-card {
             background: var(--card-bg); border: 1.5px solid #222; border-radius: 18px;
             padding: 30px; height: 100%; transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); display: flex; flex-direction: column;
@@ -58,7 +57,6 @@
         .btn-task:hover:not(:disabled) { background: var(--gold-dim); color: black; box-shadow: 0 5px 20px rgba(215,175,55,0.4); transform: translateY(-2px); }
         .btn-task:disabled { border-color: #333; color: #555; cursor: not-allowed; background: #111; }
 
-        /* PREMIUM SPONSORED CAMPAIGN CARDS */
         .sponsored-ad-card {
             background: var(--card-bg); border: 1.5px solid #252525; border-radius: 20px; 
             overflow: hidden; margin-bottom: 30px; transition: 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); display: flex; flex-direction: column; position: relative;
@@ -206,7 +204,7 @@
 
 <script>
     let globalUserKycLevel = 0; 
-    let globalUserId = 'guest'; // We will lock the cache strictly to the User's ID
+    let globalUserId = 'guest';
 
     function initStars() {
         const canvas = document.getElementById('starCanvas');
@@ -226,7 +224,6 @@
         animate();
     }
 
-    // --- STRICT KYC & UNIQUE DEVICE MEMORY SHIELD ---
     async function checkProfileTaskState() {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
@@ -237,9 +234,8 @@
             
             if (data.success) {
                 globalUserKycLevel = data.kycLevel || 0;
-                globalUserId = data.userEmail || 'guest'; // Using email or ID as unique cache key
+                globalUserId = data.userEmail || 'guest';
                 
-                // 1. Check local device memory uniquely tied to THIS user.
                 const profileCacheKey = `naterpay_profile_claimed_${globalUserId}`;
                 if(localStorage.getItem(profileCacheKey) === 'true' || globalUserKycLevel >= 3) {
                     document.getElementById('profileTaskWrapper').style.display = 'none';
@@ -252,7 +248,6 @@
     }
 
     async function claimProfileReward() {
-        // STRICT BLOCK: Must be level 3
         if (globalUserKycLevel < 3) {
             Swal.fire({ 
                 icon: 'warning', 
@@ -274,7 +269,6 @@
             const data = await response.json();
 
             if (data.success || (data.message && data.message.includes('already claimed'))) {
-                // Permanently lock into memory FOR THIS SPECIFIC USER
                 localStorage.setItem(`naterpay_profile_claimed_${globalUserId}`, 'true');
                 document.getElementById('profileTaskWrapper').style.display = 'none';
                 
@@ -292,12 +286,14 @@
         }
     }
 
-    // --- ADS MULTI-USER MEMORY SHIELD & MEDIA RESTORATION ---
+    // THE FIX: Perfected Empty State Text Logging
     function showEmptyState(isLimitReached) {
         const container = document.getElementById('dynamicAdsContainer');
-        const headingText = isLimitReached ? 'Daily limit reached' : 'No daily task yet';
-        const subText = isLimitReached ? 'Come back tomorrow to earn more from our premium advertising partners.' : 'The advertiser vault is currently settling balances. Check back shortly for new dynamic allocations.';
-        const coreIcon = isLimitReached ? 'fa-check-double' : 'fa-hourglass-half text-secondary';
+        const headingText = isLimitReached ? 'Daily limit reached' : 'No Tasks Available';
+        const subText = isLimitReached 
+            ? 'You have completed your 20 rewarded ads for today. Check back tomorrow to earn more.' 
+            : 'You have viewed all available campaigns for now. The vault is settling balances. Check back shortly for new dynamic allocations!';
+        const coreIcon = isLimitReached ? 'fa-check-double text-success' : 'fa-hourglass-half text-secondary';
         
         container.innerHTML = `
             <div class="premium-empty-container col-12">
@@ -309,7 +305,6 @@
 
     async function loadDynamicAds() {
         const container = document.getElementById('dynamicAdsContainer');
-        // Fetch the unique cache for THIS specific logged-in user
         const cacheKey = `naterpay_claimed_ads_vault_${globalUserId}`;
         const claimedAdsMemory = JSON.parse(localStorage.getItem(cacheKey)) || [];
         
@@ -318,6 +313,7 @@
             const data = await response.json();
 
             if (!data.success || !data.ads || data.ads.length === 0) {
+                // FORCE IT TO FALSE HERE: If there are physically no ads, it's NOT because of a daily limit.
                 showEmptyState(false);
                 return;
             }
@@ -326,7 +322,6 @@
             let renderedCount = 0;
 
             data.ads.forEach(ad => {
-                // EXTREME STRICT SHIELD: If this Ad ID is in THIS USER'S claimed memory, skip rendering.
                 if (claimedAdsMemory.includes(ad._id)) return; 
                 
                 renderedCount++;
@@ -337,7 +332,6 @@
 
                 const mediaUrl = ad.mediaUrl || 'https://via.placeholder.com/1200x400/050505/d4af37?text=ADVERTISEMENT';
                 
-                // RESTORED: Multi-Format Media Interpreter (Fixes the Blank Video Issue)
                 let mediaHtml = '';
                 if (ad.adType === 'Video') {
                     mediaHtml = `<video src="${mediaUrl}" class="ad-banner-media" autoplay muted loop playsinline></video>`;
@@ -372,7 +366,8 @@
                 `;
             });
 
-            if (renderedCount === 0) showEmptyState(true);
+            // THE FIX APPLIED: Force 'false' so it displays "No Tasks Available" instead of a false "Daily Limit Reached"
+            if (renderedCount === 0) showEmptyState(false);
 
         } catch (error) {
             container.innerHTML = `<div class="col-12 text-center py-5 text-danger">Failed to connect to ad servers.</div>`;
@@ -403,7 +398,6 @@
 
         window.open(adUrl, '_blank');
         
-        // FIX: FORCE A CLICK EVENT TO THE BACKEND SO ADVERTISERS SEE THEIR CTR COUNT UP!
         try {
             const authToken = localStorage.getItem("naterpay_token");
             fetch(`/api/ads/${adId}/click`, { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` } });
@@ -447,7 +441,6 @@
             const response = await fetch('/api/tasks/claim-ad', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ adId: adId }) });
             const data = await response.json();
 
-            // IF SUCCESS OR ALREADY CLAIMED: Add to THIS USER'S local memory permanently and hide!
             if (data.success || (data.message && data.message.includes('already claimed'))) {
                 const cacheKey = `naterpay_claimed_ads_vault_${globalUserId}`;
                 let claimedAdsMemory = JSON.parse(localStorage.getItem(cacheKey)) || [];
@@ -458,6 +451,7 @@
                 }
                 
                 document.getElementById(`ad_slot_${adId}`).style.display = 'none';
+                // Only trigger the specific limit message if the backend definitively said "limit reached"
                 checkIfAllHidden(data.message && data.message.includes('limit reached')); 
                 
                 if (data.success) {
@@ -476,7 +470,6 @@
         }
     }
 
-    // Critical order of operations: Authenticate/get UserId FIRST, then load ads.
     window.onload = async () => { 
         initStars(); 
         await checkProfileTaskState(); 
