@@ -124,12 +124,27 @@ async function upgradeUser(request, reply) {
   try {
     const { role, amount, pin } = request.body;
     const user = request.user;
-    if (!['agent', 'reseller'].includes(role)) return reply.status(400).send({ success: false, message: 'Invalid upgrade tier selected.' });
-    const expectedAmount = role === 'reseller' ? 5000 : 2000;
+
+    // THE FIX: Added 'vip' to the allowed roles list
+    if (!['agent', 'reseller', 'vip'].includes(role)) {
+        return reply.status(400).send({ success: false, message: 'Invalid upgrade tier selected.' });
+    }
+
+    // THE FIX: Defined the exact pricing for all three tiers
+    let expectedAmount = 2000;
+    if (role === 'reseller') expectedAmount = 5000;
+    if (role === 'vip') expectedAmount = 15000;
+
     if (amount !== expectedAmount) return reply.status(400).send({ success: false, message: 'System alert: Amount mismatch detected.' });
-    if (user.role === 'reseller' || (user.role === 'agent' && role === 'agent')) return reply.status(400).send({ success: false, message: `You are already on the ${user.role.toUpperCase()} tier or higher!` });
+
+    // Prevent double upgrades and downgrade attempts
+    if (user.role === 'vip' || (user.role === 'reseller' && role === 'reseller')) {
+        return reply.status(400).send({ success: false, message: `You are already on the ${user.role.toUpperCase()} tier or higher!` });
+    }
+
     if (!pin || pin.length !== 4) return reply.status(400).send({ success: false, message: 'A valid 4-digit PIN is required.' });
     
+    // Validate PIN
     if (user.transactionPin) {
       const isMatch = await bcrypt.compare(pin.toString(), user.transactionPin);
       if (!isMatch) return reply.status(400).send({ success: false, message: 'Incorrect Withdrawal PIN.' });
@@ -144,11 +159,24 @@ async function upgradeUser(request, reply) {
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
     if (currentAvail < amount) return reply.status(400).send({ success: false, message: `Insufficient balance. You need ₦${amount.toLocaleString()} to upgrade.` });
 
+    // Deduct exact upgrade fee
     wallet.availableBalance = (currentAvail - amount).toString();
     wallet.balance = (parseFloat(wallet.balance?.toString() || '0') - amount).toString();
     await wallet.save();
 
-    const transaction = new Transaction({ user: user._id, type: 'reseller_upgrade', description: `Account Upgrade to ${role.toUpperCase()} Node`, amount: amount, fee: 0, balanceBefore: currentAvail.toString(), balanceAfter: wallet.availableBalance.toString(), status: 'success', provider: 'internal', reference: `UPG-${Date.now()}` });
+    // Log ledger transaction
+    const transaction = new Transaction({ 
+        user: user._id, 
+        type: 'reseller_upgrade', 
+        description: `Account Upgrade to ${role.toUpperCase()} Node`, 
+        amount: amount, 
+        fee: 0, 
+        balanceBefore: currentAvail.toString(), 
+        balanceAfter: wallet.availableBalance.toString(), 
+        status: 'success', 
+        provider: 'internal', 
+        reference: `UPG-${Date.now()}` 
+    });
     await transaction.save();
 
     user.role = role;
@@ -158,8 +186,11 @@ async function upgradeUser(request, reply) {
        request.server.io.to(`user:${user._id}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
        request.server.io.to(`user:${user._id}`).emit('notification', { type: 'success', title: 'Upgrade Successful', message: `Welcome to the ${role.toUpperCase()} tier!` });
     }
+    
     reply.send({ success: true, message: `Upgrade to ${role.toUpperCase()} was incredibly successful!`, user: sanitizeUser(user) });
-  } catch (error) { reply.status(500).send({ success: false, message: 'System network error during upgrade.' }); }
+  } catch (error) { 
+      reply.status(500).send({ success: false, message: 'System network error during upgrade.' }); 
+  }
 }
 
 module.exports = { getDashboardData, updatePreferences, updateProfile, getReferralTree, upgradeUser };
