@@ -142,15 +142,23 @@ async function upgradeUser(request, reply) {
         return reply.status(400).send({ success: false, message: `You are already on the ${user.role.toUpperCase()} tier or higher!` });
     }
 
-    if (!pin || pin.length !== 4) return reply.status(400).send({ success: false, message: 'A valid 4-digit PIN is required.' });
+    // 4. STRICT PIN VALIDATION ENGINE
+    if (!pin || pin.length !== 4) {
+        return reply.status(400).send({ success: false, message: 'A valid 4-digit PIN is required.' });
+    }
     
-    // 4. Validate PIN
-    if (user.transactionPin) {
-      const isMatch = await bcrypt.compare(pin.toString(), user.transactionPin);
-      if (!isMatch) return reply.status(400).send({ success: false, message: 'Incorrect Withdrawal PIN.' });
-    } else if (user.withdrawalPin) {
-      const isMatch = await bcrypt.compare(pin.toString(), user.withdrawalPin);
-      if (!isMatch) return reply.status(400).send({ success: false, message: 'Incorrect Withdrawal PIN.' });
+    // Grab the PIN hash from the database
+    const userPinHash = user.transactionPin || user.withdrawalPin;
+    
+    // If the database has NO PIN for this user, completely block them
+    if (!userPinHash) {
+        return reply.status(400).send({ success: false, message: 'Security Alert: You have not set up a Transaction PIN yet. Please go to your Profile settings to create one.' });
+    }
+
+    // Securely compare the typed PIN against the database hash
+    const isMatch = await bcrypt.compare(pin.toString(), userPinHash);
+    if (!isMatch) {
+        return reply.status(400).send({ success: false, message: 'Incorrect 4-Digit PIN. Upgrade aborted.' });
     }
 
     // 5. Wallet Check
@@ -165,7 +173,7 @@ async function upgradeUser(request, reply) {
     // =========================================================================
     const transaction = new Transaction({ 
         user: user._id, 
-        type: 'withdrawal', // THE FIX: Changed to 'withdrawal' which is globally accepted in your DB
+        type: 'withdrawal', 
         description: `Account Upgrade to ${role.toUpperCase()} Node`, 
         amount: amount, 
         fee: 0, 
@@ -177,8 +185,6 @@ async function upgradeUser(request, reply) {
     });
 
     try {
-        // If the database rejects the word 'withdrawal' for any reason, it stops right here. 
-        // No money is lost.
         await transaction.validate(); 
     } catch (valError) {
         return reply.status(500).send({ success: false, message: 'Schema validation blocked the transaction. No money deducted. Error: ' + valError.message });
@@ -201,7 +207,6 @@ async function upgradeUser(request, reply) {
        request.server.io.to(`user:${user._id}`).emit('notification', { type: 'success', title: 'Upgrade Successful', message: `Welcome to the ${role.toUpperCase()} tier!` });
     }
     
-    // Fetch the freshly updated user to return to frontend
     const updatedUser = await User.findById(user._id);
     reply.send({ success: true, message: `Upgrade to ${role.toUpperCase()} was successful!`, user: sanitizeUser(updatedUser) });
 
