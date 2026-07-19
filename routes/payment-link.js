@@ -124,7 +124,8 @@ async function createLink(request, reply) {
 async function getLink(request, reply) {
   try {
     const { id } = request.params;
-    const paymentLink = await PaymentLink.findOne({ linkId: id }).populate('user', 'name email whatsapp');
+    // THE FIX: Added 'kycLevel' to the database populate command so the frontend can read it!
+    const paymentLink = await PaymentLink.findOne({ linkId: id }).populate('user', 'name email whatsapp kycLevel');
     
     if (!paymentLink) return reply.status(404).send({ success: false, message: 'Payment link not found' });
     
@@ -151,6 +152,7 @@ async function getLink(request, reply) {
         collectCustomerPhone: paymentLink.collectCustomerPhone,
         merchantName: paymentLink.user ? paymentLink.user.name : 'Merchant',
         merchantWhatsApp: paymentLink.user ? (paymentLink.user.whatsapp || '') : '', 
+        kycLevel: paymentLink.user ? paymentLink.user.kycLevel : 0, // THE FIX: Send KYC level to pay.html
         category: paymentLink.category || 'General',
         redirectUrl: paymentLink.redirectUrl,
         productImageBase64: paymentLink.productImageBase64,
