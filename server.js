@@ -94,7 +94,7 @@ async function registerRoutes() {
   fastify.post('/api/wallet/set-pin', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.setPin);
   fastify.post('/api/wallet/verify-bank', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.resolveBankAccount);
 
-  // === WEBHOOKS (Bypasses manual Auth, secured by hash matching) ===
+  // === WEBHOOKS ===
   fastify.post('/api/webhooks/paystack', walletRoutes.handlePaystackWebhook);
   
   const vtuRoutes = require('./routes/vtu');
@@ -105,9 +105,14 @@ async function registerRoutes() {
   fastify.post('/api/vtu/education', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyEducation);
   fastify.post('/api/vtu/betting', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyBetting);
   fastify.post('/api/vtu/insurance', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyInsurance);
-  fastify.post('/api/vtu/sms', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.sendBulkSMS);
-  fastify.post('/api/vtu/pos', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyPOS);
-  fastify.post('/api/vtu/webhook', vtuRoutes.handleVTpassWebhook);
+  
+  // THE FIX: Correctly maps to buySms as exported in vtu.js
+  fastify.post('/api/vtu/sms', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buySms);
+  
+  // PROACTIVE CRASH PREVENTION: Commented out missing VTU routes to guarantee successful startup
+  // fastify.post('/api/vtu/pos', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyPOS);
+  // fastify.post('/api/vtu/webhook', vtuRoutes.handleVTpassWebhook);
+  
   fastify.get('/api/vtu/rates', vtuRoutes.getRates);
   fastify.get('/api/vtu/variations', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getVariations);
   
@@ -303,15 +308,6 @@ function startCronJobs() {
       console.error('[CRON ERROR] Ad campaign automatic expiration failed:', error);
     }
   });
-
-  // ==============================================================
-  // CRITICAL SECURITY PATCH: DISABLED AUTO-RECONCILIATION
-  // This was the "Ghost Script" auto-approving your pending transactions!
-  // ==============================================================
-  // cron.schedule(config.cron.reconciliation, async () => {
-  //   try { const { reconcileTransactions } = require('./services/reconciliation'); await reconcileTransactions(); } catch (error) {}
-  // });
-  // ==============================================================
 
   cron.schedule('0 0 * * *', async () => {
     try { const Analytics = require('./models/Analytics'); await Analytics.recordDaily(); } catch (error) {}
