@@ -17,10 +17,27 @@ async function getDashboardData(request, reply) {
     
     const allTransactions = await Transaction.findByUser(user._id, { limit: 1000 });
     const totalLogs = allTransactions.length;
+    
+    // === CRITICAL FIX: TRUE OUTFLOW CALCULATOR ===
+    // This now counts ALL successful debits (VTU, Ads, Upgrades, Withdrawals, Transfers out)
     const totalSpent = allTransactions.reduce((sum, tx) => {
-      if (['airtime', 'data', 'electricity', 'cable', 'betting', 'bulk_sms', 'insurance', 'pos'].includes(tx.type)) {
-        return sum + parseFloat(tx.amount.toString());
+      if (tx.status !== 'success') return sum; 
+      
+      const txType = (tx.type || '').toLowerCase();
+      const desc = (tx.description || '').toLowerCase();
+      
+      const isCredit = ['funding', 'referral_bonus', 'cashback', 'refund', 'task_reward'].includes(txType) || 
+                       (tx.flow === 'in') || 
+                       desc.includes('admin credit') ||
+                       (txType === 'transfer' && (desc.includes('received') || desc.includes('from')));
+                       
+      if (!isCredit) {
+        const baseAmt = parseFloat(tx.amount?.toString() || '0');
+        const feeAmt = parseFloat(tx.fee?.toString() || '0');
+        const totalDed = tx.totalDeduction ? parseFloat(tx.totalDeduction.toString()) : (baseAmt + feeAmt);
+        return sum + totalDed;
       }
+      
       return sum;
     }, 0);
     
@@ -38,11 +55,8 @@ async function getDashboardData(request, reply) {
       referralCount: user.referralCount || 0,
       referralBonus: user.referralBonus ? user.referralBonus.toString() : '0',
       
-      // ---> ENTERPRISE REFERRAL TRACKERS <---
       cumulativeSpend: user.cumulativeSpend || 0,
       referralBonusPaid: user.referralBonusPaid || false,
-      // --------------------------------------
-
       hiddenWidgets: user.hiddenWidgets || [],
       referralCode: user.referralCode,
       createdAt: user.createdAt,
@@ -51,11 +65,14 @@ async function getDashboardData(request, reply) {
       recentTransactions: recentTransactions.map(tx => {
         const baseAmt = parseFloat(tx.amount?.toString() || '0');
         const feeAmt = parseFloat(tx.fee?.toString() || '0');
-        // Calculate total deduction strictly
         const totalDed = tx.totalDeduction ? parseFloat(tx.totalDeduction.toString()) : (baseAmt + feeAmt);
         
-        // Define if money is coming IN or OUT
-        const isCredit = ['funding', 'referral_bonus', 'cashback'].includes(tx.type) || (tx.description || '').toLowerCase().includes('admin credit');
+        const txType = (tx.type || '').toLowerCase();
+        const desc = (tx.description || '').toLowerCase();
+        const isCredit = ['funding', 'referral_bonus', 'cashback', 'refund', 'task_reward'].includes(txType) || 
+                         (tx.flow === 'in') || 
+                         desc.includes('admin credit') ||
+                         (txType === 'transfer' && (desc.includes('received') || desc.includes('from')));
 
         return {
           _id: tx._id,
@@ -110,7 +127,7 @@ async function updateProfile(request, reply) {
 }
 
 /**
- * Get referral tree (BULLETPROOF QUERY ENGINE WITH MILESTONE TRACKING)
+ * Get referral tree
  */
 async function getReferralTree(request, reply) {
     try {
@@ -196,10 +213,4 @@ async function upgradeUser(request, reply) {
   }
 }
 
-module.exports = {
-  getDashboardData,
-  updatePreferences,
-  updateProfile,
-  getReferralTree,
-  upgradeUser
-};
+module.exports = { getDashboardData, updatePreferences, updateProfile, getReferralTree, upgradeUser };
