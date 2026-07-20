@@ -82,6 +82,9 @@
             font-size: 0.8rem; font-weight: bold;
         }
         .copy-btn:hover { background: var(--gold); color: black; }
+        
+        .status-verified { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff88; padding: 3px 8px; border-radius: 6px; }
+        .status-unverified { background: rgba(211, 47, 47, 0.2); color: #ff4d4d; border: 1px solid #ff4d4d; padding: 3px 8px; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -93,7 +96,7 @@
         <span class="site-part-1">NATER</span>
         <span class="site-part-2">PAY</span>
     </div>
-    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4">Back to Dashboard</a>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold">Back to Hub</a>
 </header>
 
 <div class="container">
@@ -108,7 +111,7 @@
             <div class="mt-2">
                 <span class="kyc-badge kyc-0" id="kycBadge">UNVERIFIED</span>
             </div>
-            <p class="text-muted mt-2" id="profileEmail">Loading...</p>
+            <p class="text-muted mt-2 mb-0" id="profileEmail">Loading...</p>
         </div>
         
         <form onsubmit="updateProfile(event)">
@@ -117,9 +120,18 @@
                 <input type="text" id="fullName" placeholder="Enter your full name">
             </div>
             
-            <div class="input-group-custom">
-                <label>EMAIL ADDRESS (Cannot be changed)</label>
-                <input type="email" id="email" placeholder="yourname@domain.com" readonly style="opacity: 0.6; cursor: not-allowed;">
+            <!-- UPDATED EMAIL SECTION WITH VERIFICATION UX -->
+            <div class="input-group-custom position-relative" id="emailGroup">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="mb-0">EMAIL ADDRESS</label>
+                    <span id="emailStatusBadge" class="status-unverified" style="font-size: 0.65rem; font-weight: 900; letter-spacing: 1px;">SYNCING...</span>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <input type="email" id="email" placeholder="yourname@domain.com" readonly style="opacity: 0.6; cursor: not-allowed; flex-grow: 1;">
+                    <button type="button" id="verifyEmailBtn" class="btn btn-sm btn-warning fw-bold px-3 py-2 rounded-3" style="display: none; white-space: nowrap;" onclick="requestEmailOTP()">
+                        <i class="fas fa-shield-alt me-1"></i> VERIFY NOW
+                    </button>
+                </div>
             </div>
             
             <div class="input-group-custom">
@@ -129,7 +141,7 @@
             
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
-                    <div class="input-group-custom position-relative">
+                    <div class="input-group-custom position-relative h-100 mb-0">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <label class="mb-0">YOUR REFERRAL CODE</label>
                             <button type="button" class="copy-btn" onclick="copyReferralCode()"><i class="fas fa-copy"></i> COPY</button>
@@ -138,32 +150,32 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="input-group-custom">
+                    <div class="input-group-custom h-100 mb-0">
                         <label>TOTAL REFERRALS</label>
                         <input type="text" id="referralCount" readonly style="opacity: 0.6;">
                     </div>
                 </div>
             </div>
             
-            <div class="input-group-custom">
+            <div class="input-group-custom mt-4">
                 <label>ACCOUNT CREATED ON</label>
                 <input type="text" id="createdAt" readonly style="opacity: 0.6;">
             </div>
             
-            <button type="submit" class="btn-save">
+            <button type="submit" class="btn-save mt-3">
                 <i class="fas fa-save me-2"></i> SAVE CHANGES
             </button>
         </form>
     </div>
     
     <div class="text-center">
-        <a href="security.html" class="btn btn-outline-warning rounded-pill px-4">
+        <a href="security.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold">
             <i class="fas fa-lock me-2"></i> Security Settings
         </a>
     </div>
     
-    <div class="text-center text-muted small mt-4">
-        <p class="mb-1">Secured by NATER-PAY Protocol v3.0</p>
+    <div class="text-center text-muted small mt-4 mb-5">
+        <p class="mb-1 fw-bold">Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
 
@@ -193,145 +205,159 @@
     
     async function loadProfile() {
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
+        if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            // Fetching the real data from the database
             const res = await fetch('/api/user/dashboard-data', {
                 headers: { 'Authorization': `Bearer ${authToken}` }
             });
             const data = await res.json();
             
             if (data.success) {
-                // Populate fields with REAL database values
                 document.getElementById('profileName').innerText = data.userFullName || 'User';
                 document.getElementById('profileEmail').innerText = data.userEmail || 'Not set';
                 document.getElementById('fullName').value = data.userFullName || '';
                 document.getElementById('email').value = data.userEmail || '';
                 document.getElementById('phone').value = data.userPhone || '';
-                
-                // THE FIX: Pulling the actual database referral code
                 document.getElementById('referralCode').value = data.referralCode || 'NO_CODE_FOUND';
                 document.getElementById('referralCount').value = data.referralCount || 0;
                 
-                // THE FIX: Pulling the actual registration date from the database
                 const joinedDate = data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'Unknown';
                 document.getElementById('createdAt').value = joinedDate;
+
+                // Handle Email Verification Status UX
+                const emailBadge = document.getElementById('emailStatusBadge');
+                const verifyBtn = document.getElementById('verifyEmailBtn');
+                const emailGroup = document.getElementById('emailGroup');
+                
+                if (data.isEmailVerified) {
+                    emailBadge.className = 'status-verified';
+                    emailBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i> VERIFIED';
+                    verifyBtn.style.display = 'none';
+                    emailGroup.style.borderColor = 'rgba(0, 255, 136, 0.3)';
+                } else {
+                    emailBadge.className = 'status-unverified';
+                    emailBadge.innerHTML = '<i class="fas fa-times-circle me-1"></i> UNVERIFIED';
+                    verifyBtn.style.display = 'block';
+                    emailGroup.style.borderColor = 'rgba(211, 47, 47, 0.3)';
+                }
                 
                 const kycLevel = data.kycLevel || 0;
                 const kycBadge = document.getElementById('kycBadge');
                 kycBadge.className = 'kyc-badge';
-                if (kycLevel === 0) {
-                    kycBadge.classList.add('kyc-0');
-                    kycBadge.innerText = 'UNVERIFIED';
-                } else if (kycLevel === 1) {
-                    kycBadge.classList.add('kyc-1');
-                    kycBadge.innerText = 'LEVEL 1';
-                } else if (kycLevel === 2) {
-                    kycBadge.classList.add('kyc-2');
-                    kycBadge.innerText = 'LEVEL 2';
-                } else {
-                    kycBadge.classList.add('kyc-3');
-                    kycBadge.innerText = 'LEVEL 3';
-                }
+                if (kycLevel === 0) { kycBadge.classList.add('kyc-0'); kycBadge.innerText = 'UNVERIFIED'; } 
+                else if (kycLevel === 1) { kycBadge.classList.add('kyc-1'); kycBadge.innerText = 'LEVEL 1'; } 
+                else if (kycLevel === 2) { kycBadge.classList.add('kyc-2'); kycBadge.innerText = 'LEVEL 2'; } 
+                else { kycBadge.classList.add('kyc-3'); kycBadge.innerText = 'LEVEL 3'; }
             }
         } catch (e) {
             console.error('Failed to load profile details from server.', e);
         }
     }
     
+    // VERIFICATION OTP LOGIC
+    async function requestEmailOTP() {
+        const authToken = localStorage.getItem("naterpay_token");
+        const email = document.getElementById('email').value;
+
+        Swal.fire({ title: 'Sending OTP...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+
+        try {
+            const res = await fetch('/api/auth/resend-verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                // Prompt user to enter the OTP they just received
+                const { value: otp } = await Swal.fire({
+                    title: 'Enter Verification Code',
+                    text: `We just sent a 6-digit code to ${email}.`,
+                    input: 'text',
+                    inputPlaceholder: 'Enter 6-digit OTP',
+                    inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off' },
+                    showCancelButton: true,
+                    confirmButtonText: 'Verify Account',
+                    confirmButtonColor: '#FFD700',
+                    background: '#0a0a0a',
+                    color: '#fff',
+                    inputValidator: (value) => {
+                        if (!value || value.length !== 6) { return 'Please enter the valid 6-digit code'; }
+                    }
+                });
+
+                if (otp) { submitEmailOTP(email, otp); }
+            } else {
+                Swal.fire({ icon: 'error', title: 'Failed to Send', text: data.message, background: '#0a0a0a', color: '#fff' });
+            }
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Check your connection.', background: '#0a0a0a', color: '#fff' });
+        }
+    }
+
+    async function submitEmailOTP(email, otp) {
+        const authToken = localStorage.getItem("naterpay_token");
+        Swal.fire({ title: 'Verifying...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+
+        try {
+            const res = await fetch('/api/auth/verify-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ email, otp })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Account Verified!', text: 'Your email is now fully secured.', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                loadProfile(); 
+            } else {
+                Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message || 'Invalid or expired OTP.', background: '#0a0a0a', color: '#fff' });
+            }
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Check your connection.', background: '#0a0a0a', color: '#fff' });
+        }
+    }
+
     async function updateProfile(event) {
         event.preventDefault();
         
         const name = document.getElementById('fullName').value;
         const phone = document.getElementById('phone').value;
-        
         const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) {
-            window.location.href = '/index.html';
-            return;
-        }
         
         try {
-            Swal.fire({
-                title: 'Saving...',
-                text: 'Updating your profile securely...',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading(),
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ title: 'Saving...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
             
             const res = await fetch('/api/user/profile', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                 body: JSON.stringify({ name, phoneNumber: phone })
             });
-            
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Profile Updated',
-                    text: 'Your details have been saved successfully.',
-                    confirmButtonColor: '#d4af37',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
-                loadProfile(); // Reload to reflect changes globally
+                Swal.fire({ icon: 'success', title: 'Profile Updated', text: 'Your details have been saved.', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                loadProfile(); 
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Update Failed',
-                    text: data.message,
-                    confirmButtonColor: '#d32f2f',
-                    background: '#0a0a0a',
-                    color: '#fff'
-                });
+                Swal.fire({ icon: 'error', title: 'Update Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Update Error',
-                text: 'Unable to connect to the server. Please try again.',
-                confirmButtonColor: '#d32f2f',
-                background: '#0a0a0a',
-                color: '#fff'
-            });
+            Swal.fire({ icon: 'error', title: 'Update Error', text: 'Unable to connect to the server.', confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
         }
     }
 
-    // Added a quick copy button so users can easily share their real code
     function copyReferralCode() {
         const refCode = document.getElementById('referralCode').value;
         if(refCode && refCode !== 'NO_CODE_FOUND') {
             navigator.clipboard.writeText(refCode).then(() => {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Copied!',
-                    text: 'Your referral code is ready to share.',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 2000,
-                    background: '#111',
-                    color: '#fff'
-                });
+                Swal.fire({ icon: 'success', title: 'Copied!', text: 'Your referral code is ready to share.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' });
             });
         }
     }
     
-    window.onload = () => {
-        initStars();
-        loadProfile();
-    };
+    window.onload = () => { initStars(); loadProfile(); };
 </script>
 
 </body>
