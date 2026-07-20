@@ -148,7 +148,7 @@ async function registerSuccessfulSpend(userId, amountSpent, io) {
 }
 
 // ==================================================================
-// REAL VTPASS INTEGRATION CORE (RESTORED TO ORIGINAL WORKING LOGIC)
+// REAL VTPASS INTEGRATION CORE (STRICT DOCUMENTATION COMPLIANCE)
 // ==================================================================
 async function processVTURequest(type, data) {
   if (!process.env.VTPASS_API_KEY || !process.env.VTPASS_SECRET_KEY) {
@@ -164,24 +164,22 @@ async function processVTURequest(type, data) {
       'Content-Type': 'application/json' 
   };
 
-  // Build payload parameters dynamically
+  // Build strict payload parameters
   let payload = { 
       request_id: generateVTpassRequestId(), 
-      amount: data.amount
+      amount: data.amount,
+      phone: data.phone || '08011111111' // Mandatory field compliance
   };
 
   if (type === 'airtime') {
-      payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.serviceID = data.network; 
   } 
   else if (type === 'data') { 
-      payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.serviceID = data.network; 
-      payload.billersCode = isSandbox ? '08011111111' : data.phone; 
+      payload.billersCode = data.phone || '08011111111'; // Strict billersCode for data
       payload.variation_code = data.plan; 
   } 
   else if (type === 'electricity') {
-      payload.phone = '08000000000'; 
       payload.serviceID = data.disco;
       payload.variation_code = data.meterType; 
       
@@ -192,26 +190,27 @@ async function processVTURequest(type, data) {
       }
   } 
   else if (type === 'cable') {
-      // VTPASS CABLE TV DOCS FIX
-      payload.phone = '08000000000';
       payload.serviceID = data.provider;
       payload.variation_code = data.package;
       
       if (data.provider === 'showmax') {
-          payload.billersCode = isSandbox ? '08011111111' : data.smartcardNumber; // Showmax uses phone number
+          payload.billersCode = data.smartcardNumber; 
       } else {
-          // DSTV, GOTV, and Startimes use 1212121212 for Sandbox
           payload.billersCode = isSandbox ? '1212121212' : data.smartcardNumber; 
-          payload.subscription_type = 'change'; // Required parameter for changing/applying bouquets
+          payload.subscription_type = 'change'; 
       }
   } 
   else if (type === 'education') {
-      payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.serviceID = data.provider;
       payload.quantity = parseInt(data.quantity) || 1;
 
+      // STRICT VTPASS DOCUMENTATION ROUTING
       if (data.provider === 'waec') {
+          // WAEC Result Checker Rule
           payload.variation_code = 'waecdirect'; 
+      } else if (data.provider === 'waec-registration') {
+          // WAEC Registration Rule (using exact API spelling: waec-registraion)
+          payload.variation_code = 'waec-registraion'; 
       } else if (data.provider === 'jamb') {
           payload.variation_code = 'utme-no-mock'; 
           payload.billersCode = isSandbox ? '0123456789' : data.phone; 
@@ -222,16 +221,13 @@ async function processVTURequest(type, data) {
       }
   } 
   else if (type === 'betting') {
-      payload.phone = '08000000000';
       payload.serviceID = data.provider;
       payload.billersCode = isSandbox ? '08011111111' : data.customerId;
   }
   else if (type === 'insurance') {
-      payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.serviceID = data.provider;
   }
   else if (type === 'sms') {
-      payload.phone = data.phone;
       payload.serviceID = data.provider || 'bulk-sms';
   }
 
@@ -239,18 +235,15 @@ async function processVTURequest(type, data) {
     const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
     
     if (response.data.code === '000') {
-      // DYNAMIC TOKEN EXTRACTION FOR ALL PROVIDERS
+      // Dynamic token extraction based on provider formatting
       let extractedToken = response.data.purchased_code || response.data.token || response.data.Pin || null;
 
-      // SPECIFIC FIX: WAEC returns a "cards" array with Pin and Serial
       if (response.data.cards && Array.isArray(response.data.cards) && response.data.cards.length > 0) {
           extractedToken = `PIN: ${response.data.cards[0].Pin} | Serial: ${response.data.cards[0].Serial}`;
       } 
-      // Fallback for generic token arrays
       else if (response.data.tokens && Array.isArray(response.data.tokens) && response.data.tokens.length > 0) {
           extractedToken = `Token: ${response.data.tokens[0]}`;
       }
-      // SPECIFIC FIX: Showmax returns a "Voucher" array
       else if (response.data.Voucher && Array.isArray(response.data.Voucher) && response.data.Voucher.length > 0) {
           extractedToken = `Voucher: ${response.data.Voucher[0]}`;
       }
@@ -368,7 +361,6 @@ async function buyData(request, reply) {
     if (!selectedPlanData) return reply.status(400).send({ success: false, message: 'Invalid data plan selected' });
 
     const exactAmount = parseFloat(selectedPlanData.variation_amount);
-
     const payableAmount = applyEnterpriseDiscount(exactAmount, 'data', request.user.role);
 
     const wallet = await Wallet.findOne({ user: request.user._id });
@@ -408,9 +400,14 @@ async function buyData(request, reply) {
 
 async function buyElectricity(request, reply) {
   try {
-    const { meterNumber, disco, amount, meterType, pin } = request.body;
+    const { meterNumber, disco, amount, meterType, pin, phone } = request.body; // Added phone payload extraction
     if (!meterNumber || !disco || !amount || !meterType) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
+    // ELECTRICITY ₦1,000 MINIMUM RULE ENFORCEMENT
+    if (parseFloat(amount) < 1000) {
+        return reply.status(400).send({ success: false, message: 'Minimum electricity purchase amount is ₦1,000.' });
+    }
+
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
@@ -431,7 +428,7 @@ async function buyElectricity(request, reply) {
     await transaction.save();
 
     try {
-      const providerResponse = await processVTURequest('electricity', { meterNumber, disco, amount, meterType });
+      const providerResponse = await processVTURequest('electricity', { meterNumber, disco, amount, meterType, phone });
       transaction.status = 'success';
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
@@ -453,7 +450,7 @@ async function buyElectricity(request, reply) {
 
 async function buyCable(request, reply) {
   try {
-    const { smartcardNumber, provider, package: pkg, amount, pin } = request.body;
+    const { smartcardNumber, provider, package: pkg, amount, pin, phone } = request.body; // Added phone payload extraction
     if (!smartcardNumber || !provider || !amount || !pkg) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
     const pinCheck = await validateTransactionPin(request.user._id, pin);
@@ -476,7 +473,7 @@ async function buyCable(request, reply) {
     await transaction.save();
 
     try {
-      const providerResponse = await processVTURequest('cable', { smartcardNumber, provider, package: pkg, amount });
+      const providerResponse = await processVTURequest('cable', { smartcardNumber, provider, package: pkg, amount, phone });
       transaction.status = 'success';
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
@@ -543,7 +540,7 @@ async function buyEducation(request, reply) {
 
 async function buyBetting(request, reply) {
   try {
-    const { provider, customerId, amount, pin } = request.body;
+    const { provider, customerId, amount, pin, phone } = request.body; // Added phone payload extraction
     if (!provider || !customerId || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
     const pinCheck = await validateTransactionPin(request.user._id, pin);
@@ -566,7 +563,7 @@ async function buyBetting(request, reply) {
     await transaction.save();
 
     try {
-      const providerResponse = await processVTURequest('betting', { provider, customerId, amount });
+      const providerResponse = await processVTURequest('betting', { provider, customerId, amount, phone });
       transaction.status = 'success';
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
