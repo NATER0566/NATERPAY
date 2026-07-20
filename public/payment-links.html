@@ -197,8 +197,13 @@
     <div id="view-create" style="display: none;">
         
         <!-- STRICT KYC ALERT -->
-        <div class="alert alert-warning border-warning bg-dark text-white fw-bold mb-4" style="box-shadow: 0 0 15px rgba(255, 152, 0, 0.2);">
+        <div class="alert alert-warning border-warning bg-dark text-white fw-bold mb-3" style="box-shadow: 0 0 15px rgba(255, 152, 0, 0.2);">
             <i class="fas fa-exclamation-triangle text-warning me-2"></i> Notice: If you have not completed KYC Level 3, your products will display a strict "UNVERIFIED" badge to buyers on the marketplace. <a href="kyc.html" class="text-gold text-decoration-none ms-2 border-bottom border-warning">Complete KYC here.</a>
+        </div>
+
+        <!-- NEW: ENTERPRISE LIMITS BANNER -->
+        <div class="alert alert-info border-info bg-dark text-white fw-bold mb-4" style="box-shadow: 0 0 15px rgba(0, 191, 255, 0.1);">
+            <i class="fas fa-chart-pie text-info me-2"></i> <strong>Marketplace Limits:</strong> Resellers can upload up to <strong>15</strong> products. VIPs can upload up to <strong>50</strong>. Standard users must upgrade to unlock selling features.
         </div>
 
         <form id="productForm" class="studio-grid" onsubmit="event.preventDefault();">
@@ -452,7 +457,7 @@
         const formData = new FormData();
         formData.append('title', title);
         formData.append('category', category);
-        formData.append('description', finalDescription); // Send the injected description
+        formData.append('description', finalDescription); 
         formData.append('amount', amount);
         formData.append('isFlexibleAmount', isFlexibleAmount);
         formData.append('status', targetStatus); 
@@ -470,7 +475,26 @@
             });
             const data = await res.json();
             
-            if (data.success) {
+            // SMART FRIENDLY UPGRADE INTERCEPTOR
+            if (res.status === 403) {
+                Swal.fire({ 
+                    icon: 'info', 
+                    title: 'Upgrade Required', 
+                    text: data.message, 
+                    background: '#111', 
+                    color: '#fff',
+                    showCancelButton: true,
+                    confirmButtonColor: '#FFD700',
+                    cancelButtonColor: '#333',
+                    confirmButtonText: '<i class="fas fa-arrow-up"></i> Upgrade Now',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = 'upgrade.html'; // Assuming this is your upgrade page
+                    }
+                });
+            } 
+            else if (data.success) {
                 Swal.fire({ icon: 'success', title: 'Deployed!', text: 'Product registered successfully.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
                 document.getElementById('productForm').reset();
                 document.getElementById('imagePreview').style.display = 'none';
@@ -480,10 +504,10 @@
                 loadProducts();
                 document.querySelector('.nav-tab-btn[onclick="switchView(\'list\')"]').click();
             } else {
-                Swal.fire({ icon: 'error', title: 'Error', text: data.message, background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'error', title: 'Action Failed', text: data.message, background: '#111', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Communication failed.', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Communication failed. Check your internet connection.', background: '#111', color: '#fff' });
         }
     }
 
