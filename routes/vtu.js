@@ -167,21 +167,23 @@ async function processVTURequest(type, data) {
   // Build strict payload parameters
   let payload = { 
       request_id: generateVTpassRequestId(), 
-      amount: data.amount,
-      phone: data.phone || '08011111111' // Mandatory field compliance
+      amount: data.amount
   };
 
   if (type === 'airtime') {
-      payload.serviceID = data.network; 
+      payload.serviceID = data.network;
+      payload.phone = isSandbox ? '08011111111' : data.phone;
   } 
   else if (type === 'data') { 
-      payload.serviceID = data.network; 
-      payload.billersCode = data.phone || '08011111111'; // Strict billersCode for data
-      payload.variation_code = data.plan; 
+      payload.serviceID = data.network;
+      payload.variation_code = data.plan;
+      payload.phone = isSandbox ? '08011111111' : data.phone;
+      payload.billersCode = isSandbox ? '08011111111' : data.phone;
   } 
   else if (type === 'electricity') {
       payload.serviceID = data.disco;
       payload.variation_code = data.meterType; 
+      payload.phone = data.phone || '08000000000';
       
       if (isSandbox) {
           payload.billersCode = data.meterType === 'prepaid' ? '1111111111111' : '1010101010101';
@@ -192,9 +194,10 @@ async function processVTURequest(type, data) {
   else if (type === 'cable') {
       payload.serviceID = data.provider;
       payload.variation_code = data.package;
+      payload.phone = data.phone || '08000000000';
       
       if (data.provider === 'showmax') {
-          payload.billersCode = data.smartcardNumber; 
+          payload.billersCode = isSandbox ? '08011111111' : data.smartcardNumber; 
       } else {
           payload.billersCode = isSandbox ? '1212121212' : data.smartcardNumber; 
           payload.subscription_type = 'change'; 
@@ -203,6 +206,9 @@ async function processVTURequest(type, data) {
   else if (type === 'education') {
       payload.serviceID = data.provider;
       payload.quantity = parseInt(data.quantity) || 1;
+      
+      // STRICT SANDBOX COMPLIANCE: VTPass Sandbox rejects real phone numbers for Education
+      payload.phone = isSandbox ? '08011111111' : data.phone;
 
       // STRICT VTPASS DOCUMENTATION ROUTING
       if (data.provider === 'waec') {
@@ -222,13 +228,16 @@ async function processVTURequest(type, data) {
   } 
   else if (type === 'betting') {
       payload.serviceID = data.provider;
+      payload.phone = data.phone || '08000000000';
       payload.billersCode = isSandbox ? '08011111111' : data.customerId;
   }
   else if (type === 'insurance') {
       payload.serviceID = data.provider;
+      payload.phone = isSandbox ? '08011111111' : data.phone;
   }
   else if (type === 'sms') {
       payload.serviceID = data.provider || 'bulk-sms';
+      payload.phone = data.phone;
   }
 
   try {
@@ -400,10 +409,9 @@ async function buyData(request, reply) {
 
 async function buyElectricity(request, reply) {
   try {
-    const { meterNumber, disco, amount, meterType, pin, phone } = request.body; // Added phone payload extraction
+    const { meterNumber, disco, amount, meterType, pin, phone } = request.body; 
     if (!meterNumber || !disco || !amount || !meterType) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
-    // ELECTRICITY ₦1,000 MINIMUM RULE ENFORCEMENT
     if (parseFloat(amount) < 1000) {
         return reply.status(400).send({ success: false, message: 'Minimum electricity purchase amount is ₦1,000.' });
     }
@@ -450,7 +458,7 @@ async function buyElectricity(request, reply) {
 
 async function buyCable(request, reply) {
   try {
-    const { smartcardNumber, provider, package: pkg, amount, pin, phone } = request.body; // Added phone payload extraction
+    const { smartcardNumber, provider, package: pkg, amount, pin, phone } = request.body; 
     if (!smartcardNumber || !provider || !amount || !pkg) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
     const pinCheck = await validateTransactionPin(request.user._id, pin);
@@ -540,7 +548,7 @@ async function buyEducation(request, reply) {
 
 async function buyBetting(request, reply) {
   try {
-    const { provider, customerId, amount, pin, phone } = request.body; // Added phone payload extraction
+    const { provider, customerId, amount, pin, phone } = request.body; 
     if (!provider || !customerId || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
     const pinCheck = await validateTransactionPin(request.user._id, pin);
@@ -683,5 +691,5 @@ module.exports = {
   buyEducation,
   buyBetting,
   buyInsurance,
-  buySms
+  buySms 
 };
