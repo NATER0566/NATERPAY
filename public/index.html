@@ -22,7 +22,6 @@
 
         header, .viewport-wrapper { position: relative; z-index: 2; }
 
-        /* STRICT HEADER SEPARATION MATCHING DASHBOARD */
         header {
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
             background: rgba(0, 0, 0, 0.98); border-bottom: 2.5px solid var(--gold);
@@ -33,7 +32,6 @@
             flex-wrap: nowrap;
         }
 
-        /* BRANDING WRAPPER */
         .brand-wrapper {
             display: flex; align-items: center; gap: 12px; cursor: pointer;
             padding: 5px 15px 5px 5px; 
@@ -64,7 +62,6 @@
 
         .viewport-wrapper { flex: 1; display: flex; width: 100%; background: transparent; overflow: hidden; }
         
-        /* CUSTOM SYSTEM-SIDE SCROLL FOR 55 FEATURES ADVERTISEMENT */
         .system-side { flex: 1.3; border-right: 2px solid rgba(212, 175, 55, 0.1); padding: 50px 70px; display: flex; flex-direction: column; justify-content: flex-start; background: transparent; overflow-y: auto; }
         .system-side::-webkit-scrollbar { width: 6px; }
         .system-side::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
@@ -72,7 +69,6 @@
 
         .auth-side { flex: 1; background: var(--panel-bg); backdrop-filter: blur(10px); display: flex; flex-direction: column; padding: 45px 40px 30px 40px; position: relative; box-shadow: -20px 0 50px rgba(0,0,0,0.5); overflow-y: auto; }
 
-        /* REFINED COMPACT LUXURY HELPDESK ENGINE */
         .embedded-support-card {
             width: 100%; background: linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(12, 12, 12, 0.95) 50%, rgba(255, 255, 255, 0.12) 100%);
             border: 2.5px solid #ffffff; border-radius: 16px; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between;
@@ -122,7 +118,6 @@
         .toggle-password { position: absolute; right: 20px; top: 50%; transform: translateY(-10%); color: var(--gold); cursor: pointer; opacity: 0.7; }
         .toggle-password:hover { opacity: 1; }
 
-        /* REAL-TIME DYNAMIC PASS KEY REQUIREMENTS VALIDATOR BLOCK */
         .pass-hints { display: none; margin: -10px 0 20px 10px; font-size: 0.78rem; background: rgba(0, 0, 0, 0.5); border-radius: 12px; padding: 12px; border: 1px solid rgba(212, 175, 55, 0.2); }
         .hint { display: inline-block; margin-right: 15px; color: #ff4d4d; transition: all 0.3s ease; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; }
         .hint.valid { color: #00ff88 !important; text-shadow: 0 0 10px rgba(0, 255, 136, 0.3); }
@@ -131,18 +126,19 @@
         .btn-authorize { background: var(--gold); color: black; font-weight: 900; border-radius: 20px; padding: 22px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 4px; text-transform: uppercase; transition: 0.3s; }
         .btn-authorize:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
 
-        /* PUBLIC MEDIA BANNER ENGINE */
         .slideshow-viewport { width: 100%; height: 260px; position: relative; border-radius: 30px; border: 1.5px solid rgba(212, 175, 55, 0.2); overflow: hidden; background: #000; margin-bottom: 30px; flex-shrink: 0; }
         .slide-element { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:1; transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; padding: 40px; }
         .slide-element.active { opacity:1; z-index:2; }
+        
+        /* Video and Image formatting for slideshow */
         .slide-media-layer { position: absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; opacity: 0.35; z-index:-1; pointer-events: none; }
+        
         .slide-text-overlay { width: 85%; }
         .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.7rem; margin-bottom: 8px; }
         .slide-text-overlay p { font-size: 0.88rem; opacity: 0.85; margin-bottom: 15px; font-weight: 600; }
 
         .price-ticker { background: rgba(212, 175, 55, 0.04); border: 1.5px solid rgba(212, 175, 55, 0.15); border-radius: 30px; padding: 30px; flex-shrink: 0; margin-bottom: 30px; }
 
-        /* SYSTEM CAPABILITIES MAPPING (ADVERTISING ENTERPRISE SCALE) */
         .ecosystem-section { margin-bottom: 30px; flex-shrink: 0; }
         .ecosystem-header { font-family: 'Cinzel'; font-size: 1rem; color: var(--gold); letter-spacing: 2px; font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 8px; }
         .ecosystem-grid { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -155,12 +151,14 @@
 
         .footer-compliance-tag { color: #ffffff !important; font-weight: 700 !important; font-size: 0.82rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); margin-top: 10px; }
 
-        /* UPGRADED SOLID CONTRAST NAV SYSTEM CONTROLLER */
         .auth-tabs-wrapper { position: relative; width: 100%; display: flex; flex-direction: column; margin-bottom: 35px; }
         .auth-tab { flex: 1; text-align: center; padding: 14px 0; font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.05rem; letter-spacing: 2px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1.5px solid var(--gold); background: transparent; color: var(--gold); position: relative; z-index: 2; }
         .auth-tab.active { color: #0a0a0a !important; background: var(--gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
         .tab-indicator-container { position: relative; width: 100%; height: 4px; background: rgba(255, 255, 255, 0.05); margin-top: -1.5px; border-radius: 2px; overflow: hidden; }
         .tab-indicator-bar { position: absolute; left: 0; top: 0; width: 50%; height: 100%; background: linear-gradient(to right, var(--gold), #ffffff); box-shadow: 0 0 10px var(--gold); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .social-circle { width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: #888; text-decoration: none; border: 1px solid #333; transition: 0.3s; }
+        .social-circle:hover { background: rgba(212,175,55,0.1); color: var(--gold); border-color: var(--gold); transform: translateY(-3px); }
 
         @media (max-width: 1100px) { .system-side { display: none; } .auth-side { padding: 40px 25px; background: rgba(10, 10, 10, 0.4); } .viewport-wrapper { overflow-y: auto; } }
     </style>
@@ -186,6 +184,7 @@
 
 <div class="viewport-wrapper">
     <div class="system-side">
+        <!-- UPGRADED SLIDESHOW (Video/Image/Text Support) -->
         <div class="slideshow-viewport" id="mediaSlideshowEngine">
             <div class="slide-element active" id="fallbackSlideFrame">
                 <div class="slide-text-overlay">
@@ -371,6 +370,14 @@
         </div>
 
         <div class="mt-auto pt-4 text-center">
+            <!-- SOCIAL MEDIA INTEGRATION -->
+            <div class="d-flex justify-content-center gap-3 mb-3">
+                <a href="https://facebook.com/natergracecode" target="_blank" class="social-circle"><i class="fab fa-facebook-f"></i></a>
+                <a href="https://instagram.com/natergracecode" target="_blank" class="social-circle"><i class="fab fa-instagram"></i></a>
+                <a href="https://tiktok.com/@natergracecode" target="_blank" class="social-circle"><i class="fab fa-tiktok"></i></a>
+                <a href="https://youtube.com/@natergracecode" target="_blank" class="social-circle"><i class="fab fa-youtube"></i></a>
+            </div>
+            
             <p class="footer-compliance-tag m-0">v3.0 SECURED BY NATER-PAY PROTOCOL</p>
         </div>
     </div>
@@ -522,22 +529,19 @@
         }
     }
 
+    // ADVANCED MULTIMEDIA SLIDESHOW COMPILER (Image/Video/Text)
     async function deployMediaSlideshowEngine() {
         try {
-            // FIX: Changed '/api/cms/slides' to exactly '/api/slides' as registered in server.js
             const res = await fetch('/api/slides?_t=' + new Date().getTime());
             const dataResult = await res.json();
             
-            // Bulletproof extraction to prevent .forEach() crashes
             let slidesArray = [];
             if (Array.isArray(dataResult)) {
                 slidesArray = dataResult;
             } else if (dataResult) {
-                // Dig through potential backend wrappers safely
                 slidesArray = dataResult.slides || (Array.isArray(dataResult.data) ? dataResult.data : (dataResult.data?.slides || []));
             }
             
-            // Final safety check before executing the compiler
             if(Array.isArray(slidesArray) && slidesArray.length > 0) {
                 applicationSlides = slidesArray;
                 compileSlideshowMarkup();
@@ -560,15 +564,26 @@
             const viewportStateClass = pointer === 0 ? 'active' : '';
             const actionHyperlink = slide.link || slide.ctaLink || '#authTitle'; 
             const actionLabel = slide.ctaText || 'EXPLORE NOW';
-            
-            // Added broader fallbacks for image URL property names (image, image_url, etc.)
-            const imgUrl = slide.imageUrl || slide.mediaUrl || slide.image || slide.image_url || slide.url || '';
             const title = slide.title || slide.heading || 'PROMO';
             const caption = slide.caption || slide.description || slide.text || '';
             
+            const rawUrl = slide.imageUrl || slide.mediaUrl || slide.image || slide.image_url || slide.url || '';
+            let mediaHtml = '';
+
+            // Detect if video format or explicitly set as video type
+            const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
+
+            if (rawUrl) {
+                if (isVideo) {
+                    mediaHtml = `<video src="${rawUrl}" class="slide-media-layer" autoplay loop muted playsinline></video>`;
+                } else {
+                    mediaHtml = `<img src="${rawUrl}" class="slide-media-layer" alt="${title}">`;
+                }
+            }
+            
             frameBuffer += `
                 <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
-                    <img src="${imgUrl}" class="slide-media-layer" alt="${title}">
+                    ${mediaHtml}
                     <div class="slide-text-overlay">
                         <h3>${title}</h3>
                         <p>${caption}</p>
@@ -608,6 +623,7 @@
         }
     }
 
+    // THE HARD-GATE LOGIN INTERCEPTOR
     async function handleLogin(e) {
         e.preventDefault();
         const actionButton = document.getElementById('btnLoginButton');
@@ -625,6 +641,7 @@
             });
             
             const data = await res.json();
+            
             if (data.success) {
                 localStorage.setItem("naterpay_token", data.token);
                 localStorage.setItem("naterpay_profile", JSON.stringify(data.user));
@@ -638,7 +655,50 @@
                 }).then(() => {
                     window.location.href = data.redirectUrl || '/dashboard.html';
                 });
-            } else { 
+            } 
+            // HARD GATE FOR UNVERIFIED ACCOUNTS
+            else if (data.requiresVerification) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Verification Required',
+                    text: `We just sent a fresh 6-digit code to ${data.email}. You MUST verify your email before accessing your dashboard.`,
+                    input: 'text',
+                    inputPlaceholder: 'Enter 6-digit OTP',
+                    inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off', style: 'text-align: center; font-size: 24px; letter-spacing: 4px;' },
+                    showCancelButton: true,
+                    confirmButtonText: 'Verify Account',
+                    confirmButtonColor: '#FFD700',
+                    background: '#0a0a0a',
+                    color: '#fff',
+                    allowOutsideClick: false,
+                    inputValidator: (value) => {
+                        if (!value || value.length !== 6) { return 'Please enter the valid 6-digit code'; }
+                    }
+                }).then(async (result) => {
+                    if (result.isConfirmed && result.value) {
+                        Swal.fire({ title: 'Verifying...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+                        
+                        try {
+                            const otpRes = await fetch('/api/auth/verify-otp', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email: data.email, otp: result.value })
+                            });
+                            const otpData = await otpRes.json();
+                            
+                            if (otpData.success) {
+                                Swal.fire({ icon: 'success', title: 'Verified!', text: 'Your account is now fully secured. Please click ACTIVATE SESSION again to enter your dashboard.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' });
+                            } else {
+                                Swal.fire({ icon: 'error', title: 'Invalid OTP', text: otpData.message, confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' });
+                            }
+                        } catch(err) {
+                            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Verification failed.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' });
+                        }
+                    }
+                });
+            }
+            // NORMAL ERROR HANDLING 
+            else { 
                 Swal.fire({ icon: "error", title: "Authentication Alert", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
             }
         } catch (err) { 
@@ -649,7 +709,6 @@
         }
     }
 
-    // STRICT OTP REGISTRATION ENFORCEMENT
     async function handleRegister(e) {
         e.preventDefault();
         const actionButton = document.getElementById('btnRegisterButton');
@@ -675,34 +734,59 @@
 
             if (data.success) {
                 Swal.fire({
-                    title: 'ACCOUNT ACTIVATION REQUIRED',
-                    text: 'An account verification key has been sent to your registered corridors. Provide the 6-digit cryptographic activation OTP:',
+                    icon: 'success',
+                    title: 'Account Created!',
+                    text: `We sent a 6-digit code to ${email}. You MUST verify your email before accessing your dashboard. Enter it below:`,
                     input: 'text',
-                    inputAttributes: { autocapitalize: 'off', maxlength: '6', style: 'text-align: center; font-size: 24px; letter-spacing: 4px;' },
-                    showCancelButton: false,
-                    confirmButtonText: 'ACTIVATE IDENTITY',
-                    confirmButtonColor: '#d4af37',
+                    inputPlaceholder: 'Enter 6-digit OTP',
+                    inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off', style: 'text-align: center; font-size: 24px; letter-spacing: 4px;' },
+                    showCancelButton: true,
+                    confirmButtonText: 'Verify Account',
+                    cancelButtonText: 'Verify Later',
+                    confirmButtonColor: '#FFD700',
+                    cancelButtonColor: '#333',
                     background: '#0a0a0a',
                     color: '#fff',
                     allowOutsideClick: false,
-                    preConfirm: async (otp) => {
+                    inputValidator: (value) => {
+                        if (!value || value.length !== 6) { return 'Please enter the valid 6-digit code'; }
+                    }
+                }).then(async (result) => {
+                    if (result.isConfirmed && result.value) {
+                        Swal.fire({ title: 'Verifying...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+                        
                         try {
-                            const verifyRes = await fetch('/api/auth/verify-otp', {
+                            const otpRes = await fetch('/api/auth/verify-otp', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ email, otp })
+                                body: JSON.stringify({ email: email, otp: result.value })
                             });
-                            return await verifyRes.json();
-                        } catch (e) {
-                            Swal.showValidationMessage(`Network transmission breakdown: ${e.message}`);
+                            const otpData = await otpRes.json();
+                            
+                            if (otpData.success) {
+                                Swal.fire({ icon: 'success', title: 'Verified!', text: 'Your account is secured. You can now log in.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }).then(() => {
+                                    switchTab('login');
+                                });
+                            } else {
+                                Swal.fire({ icon: 'error', title: 'Invalid OTP', text: otpData.message + ' (You can request a new one by trying to log in).', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }).then(() => {
+                                    switchTab('login');
+                                });
+                            }
+                        } catch(err) {
+                            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Verification failed.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }).then(() => switchTab('login'));
                         }
-                    }
-                }).then((activationResult) => {
-                    if (activationResult.value && activationResult.value.success) {
-                        Swal.fire({ icon: 'success', title: 'REGISTRY ACTIVATED', text: 'Identity validated successfully. You can now access your account corridor.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d4af37' });
-                        switchTab('login');
                     } else {
-                        Swal.fire({ icon: 'error', title: 'ACTIVATION FAILED', text: activationResult.value?.message || 'Verification token mismatch.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d32f2f' });
+                        // User clicked verify later
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Verification Pending',
+                            text: 'No problem. Your account is created, but you must verify your email the first time you try to log in.',
+                            confirmButtonColor: '#FFD700',
+                            background: '#0a0a0a',
+                            color: '#fff'
+                        }).then(() => {
+                            switchTab('login');
+                        });
                     }
                 });
             } else {
