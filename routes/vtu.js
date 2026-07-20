@@ -17,7 +17,6 @@ function generateVTpassRequestId() {
 
 // =====================================================================
 // NATER-PAY ENTERPRISE DISCOUNT ENGINE
-// Maximum Profitability & Margin Protection Enabled
 // =====================================================================
 function applyEnterpriseDiscount(originalAmount, serviceType, userRole) {
     const role = (userRole || 'user').toLowerCase();
@@ -197,32 +196,39 @@ async function processVTURequest(type, data) {
       payload.phone = data.phone || '08000000000';
       
       if (data.provider === 'showmax') {
-          payload.billersCode = isSandbox ? '08011111111' : data.smartcardNumber; 
+          payload.billersCode = data.smartcardNumber; 
       } else {
           payload.billersCode = isSandbox ? '1212121212' : data.smartcardNumber; 
           payload.subscription_type = 'change'; 
       }
   } 
   else if (type === 'education') {
-      payload.serviceID = data.provider;
+      // ALWAYS ensure phone exists to pass VTPass API rules
+      payload.phone = isSandbox ? '08011111111' : (data.phone || '08011111111');
       payload.quantity = parseInt(data.quantity) || 1;
-      
-      // STRICT SANDBOX COMPLIANCE: VTPass Sandbox rejects real phone numbers for Education
-      payload.phone = isSandbox ? '08011111111' : data.phone;
 
-      // STRICT VTPASS DOCUMENTATION ROUTING
-      if (data.provider === 'waec') {
+      // 100% STRICT VTPASS DOCUMENTATION ROUTING
+      if (data.provider === 'waec' || data.provider === 'waecdirect') {
           // WAEC Result Checker Rule
+          payload.serviceID = 'waec';
           payload.variation_code = 'waecdirect'; 
-      } else if (data.provider === 'waec-registration') {
-          // WAEC Registration Rule (using exact API spelling: waec-registraion)
+      } 
+      else if (data.provider === 'waec-registration' || data.provider === 'waec-registraion') {
+          // WAEC Registration Rule
+          payload.serviceID = 'waec-registration';
           payload.variation_code = 'waec-registraion'; 
-      } else if (data.provider === 'jamb') {
+      } 
+      else if (data.provider === 'jamb') {
+          payload.serviceID = 'jamb';
           payload.variation_code = 'utme-no-mock'; 
-          payload.billersCode = isSandbox ? '0123456789' : data.phone; 
-      } else if (data.provider === 'neco') {
+          payload.billersCode = isSandbox ? '0123456789' : (data.phone || '08011111111'); 
+      } 
+      else if (data.provider === 'neco') {
+          payload.serviceID = 'neco';
           payload.variation_code = 'neco-biller'; 
-      } else {
+      } 
+      else {
+          payload.serviceID = data.provider;
           payload.variation_code = 'default';
       }
   } 
@@ -504,7 +510,13 @@ async function buyCable(request, reply) {
 async function buyEducation(request, reply) {
   try {
     const { provider, phone, quantity, amount, pin } = request.body;
-    if (!provider || !phone || !quantity || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    // THE FIX: Removed strict check for 'phone' and 'quantity' to stop blocking Exam Pins
+    if (!provider || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    // Provide safe fallbacks so it never fails local validation
+    const validPhone = phone || '08000000000';
+    const validQty = quantity || 1;
     
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
@@ -519,14 +531,14 @@ async function buyEducation(request, reply) {
     await wallet.save();
 
     const transaction = new Transaction({
-      user: request.user._id, type: 'education', description: `${provider.toUpperCase()} PIN sent to ${phone}`,
+      user: request.user._id, type: 'education', description: `${provider.toUpperCase()} PIN sent`,
       amount: payableAmount, fee: 0, balanceBefore: (parseFloat(wallet.availableBalance) + payableAmount).toString(), balanceAfter: wallet.availableBalance.toString(),
       status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
     });
     await transaction.save();
 
     try {
-      const providerResponse = await processVTURequest('education', { provider, phone, quantity, amount });
+      const providerResponse = await processVTURequest('education', { provider, phone: validPhone, quantity: validQty, amount });
       transaction.status = 'success';
       transaction.providerReference = providerResponse.reference;
       await transaction.save();
