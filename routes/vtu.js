@@ -208,7 +208,8 @@ async function processVTURequest(type, data) {
       payload.quantity = parseInt(data.quantity) || 1;
 
       // 100% STRICT VTPASS DOCUMENTATION ROUTING
-      if (data.provider === 'waec' || data.provider === 'waecdirect') {
+      // THE FIX: Added "waec-result" to correctly map what the frontend sends to what VTPass requires
+      if (data.provider === 'waec' || data.provider === 'waecdirect' || data.provider === 'waec-result') {
           // WAEC Result Checker Rule
           payload.serviceID = 'waec';
           payload.variation_code = 'waecdirect'; 
@@ -511,10 +512,8 @@ async function buyEducation(request, reply) {
   try {
     const { provider, phone, quantity, amount, pin } = request.body;
     
-    // THE FIX: Removed strict check for 'phone' and 'quantity' to stop blocking Exam Pins
     if (!provider || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
-    // Provide safe fallbacks so it never fails local validation
     const validPhone = phone || '08000000000';
     const validQty = quantity || 1;
     
