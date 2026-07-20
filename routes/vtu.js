@@ -180,9 +180,11 @@ async function processVTURequest(type, data) {
       payload.billersCode = isSandbox ? '08011111111' : data.phone;
   } 
   else if (type === 'electricity') {
-      payload.serviceID = data.disco;
+      payload.serviceID = (data.disco === 'port-harcourt-electric') ? 'portharcourt-electric' : data.disco;
+      
       payload.variation_code = data.meterType; 
-      payload.phone = data.phone || '08000000000';
+      
+      payload.phone = isSandbox ? '08011111111' : (data.phone || '08011111111');
       
       if (isSandbox) {
           payload.billersCode = data.meterType === 'prepaid' ? '1111111111111' : '1010101010101';
@@ -203,19 +205,14 @@ async function processVTURequest(type, data) {
       }
   } 
   else if (type === 'education') {
-      // ALWAYS ensure phone exists to pass VTPass API rules
       payload.phone = isSandbox ? '08011111111' : (data.phone || '08011111111');
       payload.quantity = parseInt(data.quantity) || 1;
 
-      // 100% STRICT VTPASS DOCUMENTATION ROUTING
-      // THE FIX: Added "waec-result" to correctly map what the frontend sends to what VTPass requires
       if (data.provider === 'waec' || data.provider === 'waecdirect' || data.provider === 'waec-result') {
-          // WAEC Result Checker Rule
           payload.serviceID = 'waec';
           payload.variation_code = 'waecdirect'; 
       } 
       else if (data.provider === 'waec-registration' || data.provider === 'waec-registraion') {
-          // WAEC Registration Rule
           payload.serviceID = 'waec-registration';
           payload.variation_code = 'waec-registraion'; 
       } 
@@ -251,7 +248,6 @@ async function processVTURequest(type, data) {
     const response = await axios.post(`${baseUrl}/pay`, payload, { headers });
     
     if (response.data.code === '000') {
-      // Dynamic token extraction based on provider formatting
       let extractedToken = response.data.purchased_code || response.data.token || response.data.Pin || null;
 
       if (response.data.cards && Array.isArray(response.data.cards) && response.data.cards.length > 0) {
@@ -271,7 +267,7 @@ async function processVTURequest(type, data) {
           raw: response.data 
       };
     } else {
-      throw new Error(`VTpass Error (${response.data.code}): ${response.data.response_description || response.data.message}`);
+      throw new Error(`Provider Error: ${response.data.response_description || response.data.message}`);
     }
   } catch (error) {
     const apiErrorMessage = error.response?.data?.response_description || error.response?.data?.message || error.message;
@@ -419,8 +415,13 @@ async function buyElectricity(request, reply) {
     const { meterNumber, disco, amount, meterType, pin, phone } = request.body; 
     if (!meterNumber || !disco || !amount || !meterType) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
-    if (parseFloat(amount) < 1000) {
-        return reply.status(400).send({ success: false, message: 'Minimum electricity purchase amount is ₦1,000.' });
+    // THE FIX: Adjusted global minimum to 500 for providers like Kaduna
+    if (parseFloat(amount) < 500) {
+        return reply.status(400).send({ success: false, message: 'Minimum electricity purchase amount is ₦500.' });
+    }
+    
+    if (disco === 'ibadan-electric' && parseFloat(amount) < 2000) {
+        return reply.status(400).send({ success: false, message: 'Ibadan Electric (IBEDC) requires a minimum purchase of ₦2,000.' });
     }
 
     const pinCheck = await validateTransactionPin(request.user._id, pin);
