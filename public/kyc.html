@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,6 +80,21 @@
     <div class="kyc-header">
         <h1>IDENTITY VERIFICATION</h1>
         <p class="text-muted">Complete your KYC to unlock higher transaction limits and premium features.</p>
+    </div>
+
+    <!-- NEW BASE TIER: EMAIL VERIFICATION -->
+    <div class="tier-card locked" id="tier0Card">
+        <div class="tier-badge badge-locked" id="tier0Badge">LOCKED</div>
+        <h4 style="color: var(--gold);"><i class="fas fa-envelope-circle-check me-2"></i> BASE TIER: Email Security</h4>
+        <p class="text-muted small mb-4">Required to secure your vault and receive transaction receipts.</p>
+        
+        <div id="tier0Form">
+            <div class="input-group-custom">
+                <label>REGISTERED EMAIL ADDRESS</label>
+                <input type="email" id="baseEmailInput" readonly style="opacity: 0.7; cursor: not-allowed;">
+            </div>
+            <button class="btn-submit" onclick="requestKycEmailOTP()"><i class="fas fa-shield-alt me-2"></i> VERIFY EMAIL NOW</button>
+        </div>
     </div>
     
     <div class="tier-card locked" id="tier1Card">
@@ -167,7 +181,7 @@
         </div>
     </div>
     
-    <div class="text-center text-muted small mt-4 fw-bold">
+    <div class="text-center text-muted small mt-4 fw-bold mb-5">
         <p><i class="fas fa-shield-alt text-success me-1"></i> Global verification check enforced before approval.</p>
     </div>
 </div>
@@ -208,24 +222,42 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
 
         try {
-            const res = await fetch('/api/kyc', { headers: { 'Authorization': `Bearer ${authToken}` } });
-            const data = await res.json();
+            // Fetch both User Dashboard Data (for Email Status) and KYC Data (for Tier status)
+            const [userRes, kycRes] = await Promise.all([
+                fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } }),
+                fetch('/api/kyc', { headers: { 'Authorization': `Bearer ${authToken}` } })
+            ]);
+            
+            const userData = await userRes.json();
+            const kycData = await kycRes.json();
 
-            if (data.success) {
-                const kycLevel = data.kyc.currentLevel;
-                const status = data.kyc.status;
+            if (userData.success && kycData.success) {
+                const isEmailVerified = userData.isEmailVerified;
+                document.getElementById('baseEmailInput').value = userData.userEmail || 'Unknown Email';
 
+                const kycLevel = kycData.kyc.currentLevel;
+                const status = kycData.kyc.status;
+
+                const t0 = document.getElementById('tier0Card'); const b0 = document.getElementById('tier0Badge'); const f0 = document.getElementById('tier0Form');
                 const t1 = document.getElementById('tier1Card'); const b1 = document.getElementById('tier1Badge'); const f1 = document.getElementById('tier1Form');
                 const t2 = document.getElementById('tier2Card'); const b2 = document.getElementById('tier2Badge'); const f2 = document.getElementById('tier2Form');
                 const t3 = document.getElementById('tier3Card'); const b3 = document.getElementById('tier3Badge'); const f3 = document.getElementById('tier3Form');
 
-                [t1, t2, t3].forEach(t => t.className = 'tier-card locked');
+                [t0, t1, t2, t3].forEach(t => t.className = 'tier-card locked');
 
+                // BASE TIER LOGIC (EMAIL)
+                if (!isEmailVerified) {
+                    t0.className = 'tier-card active'; b0.className = 'tier-badge badge-active'; b0.innerText = 'ACTION REQUIRED';
+                    return; // Stop here, they MUST verify email first
+                } else {
+                    t0.className = 'tier-card completed'; b0.className = 'tier-badge badge-completed'; b0.innerText = 'COMPLETED'; f0.style.display = 'none';
+                }
+
+                // TIER 1 LOGIC
                 if (kycLevel === 0 || !status) {
                     t1.className = 'tier-card active'; b1.className = 'tier-badge badge-active'; b1.innerText = 'ACTION REQUIRED';
                 } 
                 else if (kycLevel === 1) {
-                    // THE FIX: Looking for 'under_review' instead of 'pending'
                     if (status === 'under_review') {
                         t1.className = 'tier-card'; b1.className = 'tier-badge badge-pending'; b1.innerText = 'REVIEW PENDING'; f1.style.display = 'none';
                     } else if (status === 'rejected') {
@@ -235,6 +267,7 @@
                         t2.className = 'tier-card active'; b2.className = 'tier-badge badge-active'; b2.innerText = 'ACTION REQUIRED';
                     }
                 }
+                // TIER 2 LOGIC
                 else if (kycLevel === 2) {
                     t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
                     if (status === 'under_review') {
@@ -246,6 +279,7 @@
                         t3.className = 'tier-card active'; b3.className = 'tier-badge badge-active'; b3.innerText = 'ACTION REQUIRED';
                     }
                 }
+                // TIER 3 LOGIC
                 else if (kycLevel === 3) {
                     t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
                     t2.className = 'tier-card completed'; b2.className = 'tier-badge badge-completed'; b2.innerText = 'COMPLETED'; f2.style.display = 'none';
@@ -259,6 +293,70 @@
                 }
             }
         } catch (e) { console.error('KYC Load Error:', e); }
+    }
+
+    // BASE TIER EMAIL OTP LOGIC
+    async function requestKycEmailOTP() {
+        const authToken = localStorage.getItem("naterpay_token");
+        const email = document.getElementById('baseEmailInput').value;
+
+        Swal.fire({ title: 'Sending OTP...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+
+        try {
+            const res = await fetch('/api/auth/resend-verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                const { value: otp } = await Swal.fire({
+                    title: 'Enter Verification Code',
+                    text: `A 6-digit code was sent to ${email}.`,
+                    input: 'text',
+                    inputPlaceholder: 'Enter 6-digit OTP',
+                    inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off', style: 'text-align: center; font-size: 20px; letter-spacing: 4px;' },
+                    showCancelButton: true,
+                    confirmButtonText: 'Verify Account',
+                    confirmButtonColor: '#d4af37',
+                    background: '#111',
+                    color: '#fff',
+                    inputValidator: (value) => {
+                        if (!value || value.length !== 6) return 'Please enter the valid 6-digit code';
+                    }
+                });
+
+                if (otp) { submitKycEmailOTP(email, otp); }
+            } else {
+                Swal.fire({ icon: 'error', title: 'Failed to Send', text: data.message, background: '#111', color: '#fff' });
+            }
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Check your connection.', background: '#111', color: '#fff' });
+        }
+    }
+
+    async function submitKycEmailOTP(email, otp) {
+        const authToken = localStorage.getItem("naterpay_token");
+        Swal.fire({ title: 'Verifying...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+
+        try {
+            const res = await fetch('/api/auth/verify-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ email, otp })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Base Tier Unlocked!', text: 'Your email is secured. You can now proceed to Tier 1.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
+                checkKYCStatus(); 
+            } else {
+                Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message || 'Invalid or expired OTP.', background: '#111', color: '#fff' });
+            }
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Check your connection.', background: '#111', color: '#fff' });
+        }
     }
 
     async function submitTier1() {
