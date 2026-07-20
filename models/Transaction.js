@@ -20,7 +20,7 @@ const transactionSchema = new mongoose.Schema({
       'loan_disbursement', 'loan_repayment', 'savings_deposit', 'savings_withdrawal',
       'escrow_deposit', 'escrow_release', 'virtual_card_fund', 'virtual_card_charge',
       'crypto_sell', 'giftcard_trade', 'airtime_to_cash', 'task_reward', 'spin_win',
-      'daily_reward', 'reseller_upgrade', 'merchant_payout', 'api_transaction'
+      'daily_reward', 'reseller_upgrade', 'merchant_payout', 'api_transaction', 'sms'
     ]
   },
   
@@ -285,69 +285,7 @@ transactionSchema.set('toJSON', {
   }
 });
 
-
-// ============================================================================
-// NATER-PAY AUTOMATED CASHBACK REWARD ENGINE
-// ============================================================================
-transactionSchema.post('save', async function (doc) {
-    // 1. ONLY trigger on eligible service purchases
-    const eligibleTypes = ['airtime', 'data', 'electricity', 'cable', 'exam'];
-
-    // 2. ONLY trigger if the transaction was successful
-    if (doc.status === 'success' && eligibleTypes.includes(doc.type)) {
-        try {
-            const mongoose = require('mongoose');
-            const Wallet = mongoose.models.Wallet || mongoose.model('Wallet');
-            const Transaction = mongoose.models.Transaction || mongoose.model('Transaction');
-
-            // 3. DOUBLE-SPEND PROTECTION: Check if we already paid cashback for this exact transaction ID
-            const existingCashback = await Transaction.findOne({ idempotencyKey: `cb_${doc._id}` });
-            if (existingCashback) return; // If already paid, silently stop
-
-            // 4. DYNAMIC RATE CALCULATOR (Based on the safe margins we set)
-            let cashbackRate = 0;
-            if (doc.type === 'data' || doc.type === 'exam') {
-                cashbackRate = 0.01; // 1.0% Cashback
-            } else if (doc.type === 'airtime' || doc.type === 'electricity' || doc.type === 'cable') {
-                cashbackRate = 0.005; // 0.5% Cashback
-            }
-
-            const txAmount = parseFloat(doc.amount.toString());
-            const cashbackReward = txAmount * cashbackRate;
-
-            // 5. ONLY PAY IF REWARD IS VALID (Greater than 0)
-            if (cashbackReward > 0) {
-                const userWallet = await Wallet.findOne({ user: doc.user });
-                
-                if (userWallet) {
-                    const currentAvail = parseFloat(userWallet.availableBalance || 0);
-                    const currentLedger = parseFloat(userWallet.balance || 0);
-
-                    // A. Instantly Auto-Credit the Main Wallet
-                    userWallet.availableBalance = String(currentAvail + cashbackReward);
-                    userWallet.balance = String(currentLedger + cashbackReward);
-                    await userWallet.save();
-
-                    // B. Generate the Official Cashback Receipt
-                    const cbTx = new Transaction({
-                        user: doc.user,
-                        type: 'cashback',
-                        description: `${doc.type.toUpperCase()} Reward Cashback`,
-                        amount: cashbackReward,
-                        fee: 0,
-                        balanceBefore: String(currentAvail),
-                        balanceAfter: userWallet.availableBalance,
-                        status: 'success',
-                        provider: 'system',
-                        idempotencyKey: `cb_${doc._id}` // Locks the engine from ever paying this twice
-                    });
-                    await cbTx.save();
-                }
-            }
-        } catch (error) {
-            console.error("Auto-Cashback Engine Error:", error.message);
-        }
-    }
-});
+// AUTOMATED CASHBACK ENGINE HAS BEEN PERMANENTLY REMOVED 
+// TO PROTECT PROFIT MARGINS AND ENSURE ONLY UPGRADED USERS BENEFIT.
 
 module.exports = mongoose.model('Transaction', transactionSchema);
