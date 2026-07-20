@@ -70,6 +70,29 @@ async function getLinks(request, reply) {
  */
 async function createLink(request, reply) {
   try {
+    // =====================================================================
+    // ENTERPRISE MARKETPLACE LIMIT ENGINE
+    // =====================================================================
+    const role = (request.user.role || 'user').toLowerCase();
+    
+    if (role !== 'reseller' && role !== 'agent' && role !== 'vip' && role !== 'admin' && role !== 'superadmin') {
+        return reply.status(403).send({ 
+            success: false, 
+            message: 'Selling on the marketplace is reserved for Verified Vendors to protect buyers from scams. Please upgrade to Reseller or VIP to start selling!' 
+        });
+    }
+
+    const maxLimit = role === 'vip' ? 50 : (role === 'admin' || role === 'superadmin' ? 99999 : 15);
+    const currentProductCount = await PaymentLink.countDocuments({ user: request.user._id });
+
+    if (currentProductCount >= maxLimit) {
+        return reply.status(403).send({ 
+            success: false, 
+            message: `Limit Reached: You can only have ${maxLimit} active products on your current plan. Please delete older products you no longer sell, or upgrade your account to add more slots.` 
+        });
+    }
+    // =====================================================================
+
     const { 
         title, description, amount, currency, isFlexibleAmount, 
         minAmount, maxAmount, collectCustomerName, collectCustomerEmail, 
@@ -124,7 +147,6 @@ async function createLink(request, reply) {
 async function getLink(request, reply) {
   try {
     const { id } = request.params;
-    // THE FIX: Added 'kycLevel' to the database populate command so the frontend can read it!
     const paymentLink = await PaymentLink.findOne({ linkId: id }).populate('user', 'name email whatsapp kycLevel');
     
     if (!paymentLink) return reply.status(404).send({ success: false, message: 'Payment link not found' });
@@ -152,7 +174,7 @@ async function getLink(request, reply) {
         collectCustomerPhone: paymentLink.collectCustomerPhone,
         merchantName: paymentLink.user ? paymentLink.user.name : 'Merchant',
         merchantWhatsApp: paymentLink.user ? (paymentLink.user.whatsapp || '') : '', 
-        kycLevel: paymentLink.user ? paymentLink.user.kycLevel : 0, // THE FIX: Send KYC level to pay.html
+        kycLevel: paymentLink.user ? paymentLink.user.kycLevel : 0,
         category: paymentLink.category || 'General',
         redirectUrl: paymentLink.redirectUrl,
         productImageBase64: paymentLink.productImageBase64,
@@ -173,7 +195,6 @@ async function payLink(request, reply) {
     const { id } = request.params;
     const { customerName, customerEmail, gatewayReference, paymentMethod } = request.body;
     
-    // This is the GROSS amount physically paid by the buyer at checkout
     const paymentAmount = parseFloat(request.body.amount || request.body.paidAmount || 0);
     const paymentLink = await PaymentLink.findOne({ linkId: id });
     
@@ -184,8 +205,6 @@ async function payLink(request, reply) {
     // =====================================================================
     // NATER-PAY CENTRAL FEE ENGINE
     // =====================================================================
-    
-    // 1. Exact Paystack Gateway Fee extraction (To prevent platform bleed)
     let paystackFee = 0;
     if (paymentAmount < 2500) {
         paystackFee = paymentAmount * 0.015;
@@ -194,19 +213,14 @@ async function payLink(request, reply) {
     }
     if (paystackFee > 2000) paystackFee = 2000;
 
-    // 2. Platform Commission Calculation (e.g., 2.5% of Gross)
     const platformFee = paymentAmount * 0.025; 
     
-    // 3. Final credit to the merchant's virtual wallet
     let finalCredit = paymentAmount - paystackFee - platformFee;
 
-    // Failsafe: If seller set fee to 'buyer', they must receive the exact base product price.
-    // The frontend checkout must have successfully grossed-up the paymentAmount.
     if (paymentLink.feePreference === 'buyer' && !paymentLink.isFlexibleAmount) {
         finalCredit = parseFloat(paymentLink.amount);
     }
     
-    // Safety check to ensure no negative crediting
     if (finalCredit < 0) finalCredit = 0;
     // =====================================================================
 
@@ -225,7 +239,7 @@ async function payLink(request, reply) {
       type: 'payment_link',
       description: `Marketplace Sale: ${paymentLink.title} (Buyer: ${customerName || 'Anonymous'})`,
       amount: finalCredit,
-      fee: paystackFee + platformFee, // Total transparent fees deducted
+      fee: paystackFee + platformFee,
       balanceBefore: String(currentAvail),
       balanceAfter: wallet.availableBalance.toString(),
       status: 'success',
@@ -241,7 +255,6 @@ async function payLink(request, reply) {
     });
     await transaction.save();
     
-    // --- STOCK DECREMENT & ANALYTICS ENGINE ---
     paymentLink.transactionCount = (paymentLink.transactionCount || 0) + 1;
     paymentLink.totalCollected = (parseFloat(paymentLink.totalCollected?.toString() || '0') + paymentAmount).toString();
     paymentLink.feesPaid = (paymentLink.feesPaid || 0) + (paymentAmount - finalCredit);
@@ -255,7 +268,6 @@ async function payLink(request, reply) {
     }
     await paymentLink.save();
     
-    // Notifications
     if (Notification && typeof Notification.create === 'function') {
       await Notification.create({ user: paymentLink.user, title: 'Product Sale!', message: `₦${finalCredit.toLocaleString()} received via storefront: ${paymentLink.title}`, type: 'transaction', priority: 'high' }).catch(e=>e);
     }
@@ -323,6 +335,29 @@ async function getMyProducts(request, reply) {
 // 7. Create Enterprise Product (Multipart Binary/Cloudinary stream)
 async function createProductMultipart(request, reply) {
     try {
+        // =====================================================================
+        // ENTERPRISE MARKETPLACE LIMIT ENGINE (Pre-Cloudinary Upload Check)
+        // =====================================================================
+        const role = (request.user.role || 'user').toLowerCase();
+        
+        if (role !== 'reseller' && role !== 'agent' && role !== 'vip' && role !== 'admin' && role !== 'superadmin') {
+            return reply.status(403).send({ 
+                success: false, 
+                message: 'Selling on the marketplace is reserved for Verified Vendors to protect buyers from scams. Please upgrade to Reseller or VIP to start selling!' 
+            });
+        }
+
+        const maxLimit = role === 'vip' ? 50 : (role === 'admin' || role === 'superadmin' ? 99999 : 15);
+        const currentProductCount = await PaymentLink.countDocuments({ user: request.user._id });
+
+        if (currentProductCount >= maxLimit) {
+            return reply.status(403).send({ 
+                success: false, 
+                message: `Limit Reached: You can only have ${maxLimit} active products on your current plan. Please delete older products you no longer sell, or upgrade your account to add more slots.` 
+            });
+        }
+        // =====================================================================
+
         const parts = request.parts();
         let productData = {};
         let fileBuffer = null;
@@ -400,7 +435,7 @@ async function updateProductStatus(request, reply) {
     }
 }
 
-// 9. Delete Forever
+// 9. Delete Forever (Frees up user slot limit)
 async function deleteProductForever(request, reply) {
     try {
         const { id } = request.params;
@@ -408,7 +443,7 @@ async function deleteProductForever(request, reply) {
         
         if (!product) return reply.status(404).send({ success: false, message: 'Product not found' });
 
-        reply.send({ success: true, message: 'Product permanently deleted' });
+        reply.send({ success: true, message: 'Product permanently deleted. A new slot has been freed up.' });
     } catch (error) {
         reply.status(500).send({ success: false, message: 'Failed to delete product' });
     }
