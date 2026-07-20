@@ -24,8 +24,12 @@
 
         .brand-text { 
             font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
-            text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start;
+            text-transform: uppercase; display: flex; flex-direction: column; align-items: center;
         }
+        
+        /* Adjusted for the header */
+        header .brand-text { align-items: flex-start; }
+        
         .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
         .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
 
@@ -122,8 +126,39 @@
     </div>
 </div>
 
-<footer class="text-center pb-4 mt-auto">
-    <p class="text-muted small fw-bold m-0" style="letter-spacing: 1px;">v3.0 SECURED BY NATER-PAY INFRASTRUCTURES PROTOCOL</p>
+<!-- GLOBAL SOCIAL FOOTER -->
+<footer class="mt-auto text-center" style="background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%;">
+    <div class="brand-text mb-3" style="align-items: center;">
+        <span class="site-part-1" style="font-size: 1.2rem;">NATER</span>
+        <span class="site-part-2" style="font-size: 0.8rem;">PAY</span>
+    </div>
+    
+    <p class="text-muted small fw-bold mb-4">Connect with us for updates, tech tutorials, and alternative support channels.</p>
+    
+    <div class="d-flex justify-content-center gap-3 mb-4">
+        <!-- Facebook -->
+        <a href="https://facebook.com/natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
+            <i class="fab fa-facebook-f fs-5"></i>
+        </a>
+        
+        <!-- Instagram -->
+        <a href="https://instagram.com/natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
+            <i class="fab fa-instagram fs-5"></i>
+        </a>
+        
+        <!-- TikTok -->
+        <a href="https://tiktok.com/@natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
+            <i class="fab fa-tiktok fs-5"></i>
+        </a>
+        
+        <!-- YouTube -->
+        <a href="https://youtube.com/@natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
+            <i class="fab fa-youtube fs-5"></i>
+        </a>
+    </div>
+    
+    <p class="text-white m-0" style="font-size: 0.85rem; font-weight: 800; letter-spacing: 2px;">v3.0 SECURED BY NATER-PAY INFRASTRUCTURES PROTOCOL</p>
+    <p class="small text-secondary fw-bold mt-2 pb-2 m-0">© 2026 NATER-PAY. All rights reserved.</p>
 </footer>
 
 <script>
