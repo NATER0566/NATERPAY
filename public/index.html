@@ -130,7 +130,6 @@
         .slide-element { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:1; transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; padding: 40px; }
         .slide-element.active { opacity:1; z-index:2; }
         
-        /* Video and Image formatting for slideshow */
         .slide-media-layer { position: absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; opacity: 0.35; z-index:-1; pointer-events: none; }
         
         .slide-text-overlay { width: 85%; }
@@ -623,7 +622,9 @@
         }
     }
 
+    // =====================================================================
     // THE HARD-GATE LOGIN INTERCEPTOR
+    // =====================================================================
     async function handleLogin(e) {
         e.preventDefault();
         const actionButton = document.getElementById('btnLoginButton');
@@ -643,6 +644,7 @@
             const data = await res.json();
             
             if (data.success) {
+                // NORMAL LOGIN
                 localStorage.setItem("naterpay_token", data.token);
                 localStorage.setItem("naterpay_profile", JSON.stringify(data.user));
 
@@ -676,7 +678,7 @@
                     }
                 }).then(async (result) => {
                     if (result.isConfirmed && result.value) {
-                        Swal.fire({ title: 'Verifying...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+                        Swal.fire({ title: 'Authenticating...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
                         
                         try {
                             const otpRes = await fetch('/api/auth/verify-otp', {
@@ -687,7 +689,13 @@
                             const otpData = await otpRes.json();
                             
                             if (otpData.success) {
-                                Swal.fire({ icon: 'success', title: 'Verified!', text: 'Your account is now fully secured. Please click ACTIVATE SESSION again to enter your dashboard.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' });
+                                // THE FIX: Auto-Login directly from the OTP response!
+                                localStorage.setItem("naterpay_token", otpData.token);
+                                localStorage.setItem("naterpay_profile", JSON.stringify(otpData.user));
+                                
+                                Swal.fire({ icon: 'success', title: 'Verified!', text: 'Your account is secured. Logging you in now...', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff', timer: 1500, showConfirmButton: false }).then(() => {
+                                    window.location.href = otpData.redirectUrl || '/dashboard.html';
+                                });
                             } else {
                                 Swal.fire({ icon: 'error', title: 'Invalid OTP', text: otpData.message, confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' });
                             }
@@ -709,6 +717,9 @@
         }
     }
 
+    // =====================================================================
+    // STRICT OTP REGISTRATION ENFORCEMENT
+    // =====================================================================
     async function handleRegister(e) {
         e.preventDefault();
         const actionButton = document.getElementById('btnRegisterButton');
@@ -753,7 +764,7 @@
                     }
                 }).then(async (result) => {
                     if (result.isConfirmed && result.value) {
-                        Swal.fire({ title: 'Verifying...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+                        Swal.fire({ title: 'Authenticating...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
                         
                         try {
                             const otpRes = await fetch('/api/auth/verify-otp', {
@@ -764,8 +775,12 @@
                             const otpData = await otpRes.json();
                             
                             if (otpData.success) {
-                                Swal.fire({ icon: 'success', title: 'Verified!', text: 'Your account is secured. You can now log in.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }).then(() => {
-                                    switchTab('login');
+                                // THE FIX: Auto-Login directly from the OTP response!
+                                localStorage.setItem("naterpay_token", otpData.token);
+                                localStorage.setItem("naterpay_profile", JSON.stringify(otpData.user));
+                                
+                                Swal.fire({ icon: 'success', title: 'Verified!', text: 'Your account is secured. Logging you in now...', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff', timer: 1500, showConfirmButton: false }).then(() => {
+                                    window.location.href = otpData.redirectUrl || '/dashboard.html';
                                 });
                             } else {
                                 Swal.fire({ icon: 'error', title: 'Invalid OTP', text: otpData.message + ' (You can request a new one by trying to log in).', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }).then(() => {
