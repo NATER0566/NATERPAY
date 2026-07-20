@@ -105,10 +105,32 @@
             text-align: center;
             width: 100%; 
             outline: none; 
-            margin-bottom: 25px;
+            margin-bottom: 10px;
         }
         .amount-input:focus { box-shadow: 0 0 25px rgba(255, 215, 0, 0.5); }
         
+        /* NEW PROVIDER ALERT NOTICE */
+        .provider-alert {
+            background: rgba(255, 215, 0, 0.1);
+            border-left: 4px solid var(--gold);
+            padding: 12px 15px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .provider-alert i {
+            color: var(--gold);
+            font-size: 1.3rem;
+        }
+        .provider-alert span {
+            color: #ddd;
+            font-size: 0.9rem;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
         .btn-buy {
             background: var(--gold); 
             color: #000000; 
@@ -217,9 +239,20 @@
                 <option value="postpaid">Postpaid Meter</option>
             </select>
         </div>
+
+        <div class="input-group-custom">
+            <label>CUSTOMER PHONE NUMBER</label>
+            <input type="tel" id="customerPhone" placeholder="Enter recipient phone number...">
+        </div>
         
         <label class="amount-label text-center">ENTER AMOUNT (₦)</label>
-        <input type="number" id="powerAmount" class="amount-input" placeholder="0" min="500">
+        <input type="number" id="powerAmount" class="amount-input" placeholder="1000" min="1000">
+
+        <!-- NEW ALERT BOX -->
+        <div class="provider-alert">
+            <i class="fas fa-info-circle"></i>
+            <span><strong>Provider Mandate:</strong> Due to national grid policies, the minimum allowable purchase for electricity tokens is <strong>₦1,000</strong>.</span>
+        </div>
         
         <div class="input-group-custom" style="border-color: #555;">
             <label style="color: #bbb;"><i class="fas fa-lock me-1"></i> SECURITY PIN</label>
@@ -287,14 +320,16 @@
         const meterType = document.getElementById('meterType').value;
         const amount = parseFloat(document.getElementById('powerAmount').value);
         const pin = document.getElementById('withdrawalPin').value;
+        const phone = document.getElementById('customerPhone').value;
         
-        if (!disco || !meterNumber) {
-            Swal.fire({ icon: 'error', title: 'Missing Information', text: 'Please select an electricity company and enter the meter number.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+        if (!disco || !meterNumber || !phone) {
+            Swal.fire({ icon: 'error', title: 'Missing Information', text: 'Please fill in all the required details, including the phone number.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             return;
         }
         
-        if (!amount || amount < 500) {
-            Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'Minimum electricity purchase is ₦500.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+        // UPDATED VALIDATION FOR 1000 MINIMUM
+        if (!amount || amount < 1000) {
+            Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'As mandated by utility providers, the minimum electricity purchase is ₦1,000.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             return;
         }
         
@@ -327,7 +362,8 @@
             const res = await fetch('/api/vtu/electricity', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ meterNumber, disco, amount, meterType, pin })
+                // Added phone to the payload to comply with VTPass rules
+                body: JSON.stringify({ meterNumber, disco, amount, meterType, pin, phone })
             });
             
             const data = await res.json();
