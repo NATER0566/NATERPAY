@@ -35,6 +35,7 @@ function applyEnterpriseDiscount(originalAmount, serviceType, userRole) {
     const rate = commissionRates[serviceType] || 0;
     const platformCommission = originalAmount * rate;
     
+    // If there is no provider commission, return the original amount
     if (platformCommission <= 0) return originalAmount;
 
     let discount = 0;
@@ -300,7 +301,7 @@ async function getVariations(request, reply) {
       headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }
     });
     
-    const fetchedVariations = response.data.content?.varations || response.data.content?.variations || [];
+    const fetchedVariations = response.data.content?.varations || response.data.content?.varations || [];
     
     if (fetchedVariations.length > 0) {
         variationsCache[serviceID] = { timestamp: Date.now(), data: fetchedVariations };
@@ -704,5 +705,3 @@ module.exports = {
   buyInsurance,
   buySms 
 };
-
-Are we to change any to the dashboard since that automatic is remove from normal users  the dashboard and cashback page still show that normal user have cashback but we don't have automatic any more  how to we remove those things completely from the normal dashboard and everything or should me  leave it so people we see  that we have discount maybe it will attract people into upgrading or buying ?
