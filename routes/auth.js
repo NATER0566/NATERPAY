@@ -65,7 +65,9 @@ async function register(request, reply) {
   }
 }
 
-// LEGACY REGISTRATION OTP VERIFICATION
+// ============================================================================
+// THE FIX: VERIFY OTP NOW AUTO-LOGS THE USER IN IMMEDIATELY
+// ============================================================================
 async function verifyOTP(request, reply) {
   try {
     const { email, otp } = request.body;
@@ -75,12 +77,32 @@ async function verifyOTP(request, reply) {
     
     if (!user.verifyOTP(otp)) return reply.status(400).send({ success: false, message: 'Invalid or expired OTP' });
     
-    // Actually update the database so the system knows they are verified!
+    // Update the database
     user.isEmailVerified = true; 
     await user.consumeOTP();
+    
+    // Auto-Login Logic: Generate tokens
+    await user.resetLoginAttempts();
+    user.lastLogin = new Date();
+    user.lastLoginIP = request.ip;
     await user.save();
     
-    reply.send({ success: true, message: 'Account verified successfully' });
+    const userAgent = request.headers['user-agent'] || '';
+    const fingerprint = crypto.createHash('sha256').update(userAgent + request.ip).digest('hex');
+    
+    let device = await Device.findByFingerprint(fingerprint);
+    if (!device) {
+      device = new Device({ user: user._id, deviceName: 'New Device', deviceType: detectDeviceType(userAgent), platform: detectPlatform(userAgent), browser: detectBrowser(userAgent), ipAddress: request.ip, userAgent, fingerprint });
+      await device.save();
+    } else {
+      await device.recordLogin();
+    }
+    
+    const accessToken = generateAccessToken({ userId: user._id });
+    const refreshToken = generateRefreshToken({ userId: user._id });
+    
+    // Return the token so frontend can redirect without looping!
+    reply.send({ success: true, message: 'Account verified and logged in', token: accessToken, refreshToken, user: sanitizeUser(user), redirectUrl: '/dashboard.html' });
     
   } catch (error) {
     console.error('OTP verification error:', error);
@@ -89,7 +111,7 @@ async function verifyOTP(request, reply) {
 }
 
 // ============================================================================
-// NEW ENTERPRISE VERIFICATION ROUTES (TRIGGERED FROM PROFILE DASHBOARD)
+// ENTERPRISE VERIFICATION ROUTES (TRIGGERED FROM PROFILE DASHBOARD)
 // ============================================================================
 
 async function resendVerification(request, reply) {
@@ -114,6 +136,7 @@ async function resendVerification(request, reply) {
   }
 }
 
+// Used specifically by the Profile Settings page
 async function verifyEmail(request, reply) {
   try {
     const { email, otp } = request.body;
@@ -124,7 +147,6 @@ async function verifyEmail(request, reply) {
     
     if (!user.verifyOTP(otp)) return reply.status(400).send({ success: false, message: 'Invalid or expired OTP' });
 
-    // Update system record
     user.isEmailVerified = true;
     await user.consumeOTP();
     await user.save();
@@ -137,7 +159,7 @@ async function verifyEmail(request, reply) {
 }
 
 // ============================================================================
-// CORE LOGIN ENGINE WITH HARD GATE INTERCEPTOR
+// CORE LOGIN ENGINE WITH HARD GATE INTERCEPTOR & OLD USER PROTECTION
 // ============================================================================
 
 async function login(request, reply) {
@@ -158,12 +180,11 @@ async function login(request, reply) {
     }
 
     // === THE HARD GATE: MANDATORY EMAIL VERIFICATION ===
-    if (!user.isEmailVerified) {
-        // Generate a fresh OTP because the old one from registration probably expired
+    // Note: === false protects older users whose value is undefined
+    if (user.isEmailVerified === false) {
         await user.generateOTP();
         await sendOTPEmail(user.email, user.otp);
         
-        // Return a special 403 response that tells index.html to show the OTP pop-up
         return reply.status(403).send({ 
             success: false, 
             message: 'Email verification required.', 
