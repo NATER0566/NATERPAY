@@ -20,10 +20,6 @@ function generateVTpassRequestId() {
 // =====================================================================
 function applyEnterpriseDiscount(originalAmount, serviceType, userRole) {
     const role = (userRole || 'user').toLowerCase();
-    
-    if (role !== 'reseller' && role !== 'agent' && role !== 'vip') {
-        return originalAmount; 
-    }
 
     const commissionRates = { 
         airtime: 0.03,      
@@ -43,15 +39,20 @@ function applyEnterpriseDiscount(originalAmount, serviceType, userRole) {
 
     let discount = 0;
 
-    if (role === 'reseller' || role === 'agent') {
-        discount = platformCommission * 0.15; 
-    } else if (role === 'vip') {
-        discount = platformCommission * 0.25; 
+    // THE FIX: Mentor's Tiered Commission Strategy applied globally
+    if (role === 'vip') {
+        discount = platformCommission * 0.35; // VIPs get 35% of profit margin
+    } else if (role === 'reseller' || role === 'agent') {
+        discount = platformCommission * 0.20; // Resellers get 20% of profit margin
+    } else {
+        // Normal users, Admins, and all un-upgraded roles get a 5% micro-reward
+        discount = platformCommission * 0.05; 
     }
 
     const discountedPrice = originalAmount - discount;
     const actualCostPrice = originalAmount - platformCommission;
     
+    // Failsafe: Never sell below actual cost price
     if (discountedPrice < actualCostPrice) {
         return actualCostPrice; 
     }
@@ -415,11 +416,9 @@ async function buyElectricity(request, reply) {
     const { meterNumber, disco, amount, meterType, pin, phone } = request.body; 
     if (!meterNumber || !disco || !amount || !meterType) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
-    // THE FIX: Adjusted global minimum to 500 for providers like Kaduna
     if (parseFloat(amount) < 500) {
         return reply.status(400).send({ success: false, message: 'Minimum electricity purchase amount is ₦500.' });
     }
-    
     if (disco === 'ibadan-electric' && parseFloat(amount) < 2000) {
         return reply.status(400).send({ success: false, message: 'Ibadan Electric (IBEDC) requires a minimum purchase of ₦2,000.' });
     }
@@ -705,3 +704,5 @@ module.exports = {
   buyInsurance,
   buySms 
 };
+
+Are we to change any to the dashboard since that automatic is remove from normal users  the dashboard and cashback page still show that normal user have cashback but we don't have automatic any more  how to we remove those things completely from the normal dashboard and everything or should me  leave it so people we see  that we have discount maybe it will attract people into upgrading or buying ?
