@@ -32,15 +32,15 @@ async function register(request, reply) {
 
     const newReferralCode = 'NP' + crypto.randomBytes(3).toString('hex').toUpperCase();
     
-    // THE FIX: We ONLY link the referrer here. No money is paid yet.
     const user = new User({
       name, 
       email: email.toLowerCase(), 
       phoneNumber, 
       password,
-      referredBy: referrer ? referrer.referralCode : null, // Store the code, not the ID, for easier tracking
+      referredBy: referrer ? referrer.referralCode : null, 
       referralCode: newReferralCode,
-      referralBonusPaid: false // Ensure the flag is set so the engine knows to watch them
+      referralBonusPaid: false,
+      isEmailVerified: false // Explicitly set to false on registration
     });
     
     await user.save();
@@ -65,6 +65,7 @@ async function register(request, reply) {
   }
 }
 
+// LEGACY REGISTRATION OTP VERIFICATION
 async function verifyOTP(request, reply) {
   try {
     const { email, otp } = request.body;
@@ -74,10 +75,10 @@ async function verifyOTP(request, reply) {
     
     if (!user.verifyOTP(otp)) return reply.status(400).send({ success: false, message: 'Invalid or expired OTP' });
     
+    // THE FIX: Actually update the database so the system knows they are verified!
+    user.isEmailVerified = true; 
     await user.consumeOTP();
-    
-    // THE FIX: The instant-payment logic has been completely removed.
-    // The user is now verified. The Transaction Engine will pay the bonus later.
+    await user.save();
     
     reply.send({ success: true, message: 'Account verified successfully' });
     
@@ -86,6 +87,55 @@ async function verifyOTP(request, reply) {
     reply.status(500).send({ success: false, message: 'Verification failed' });
   }
 }
+
+// ============================================================================
+// NEW ENTERPRISE VERIFICATION ROUTES (TRIGGERED FROM PROFILE DASHBOARD)
+// ============================================================================
+
+async function resendVerification(request, reply) {
+  try {
+    const { email } = request.body;
+    if (!email) return reply.status(400).send({ success: false, message: 'Email is required' });
+
+    const user = await User.findByEmail(email);
+    if (!user) return reply.status(404).send({ success: false, message: 'User not found' });
+    
+    if (user.isEmailVerified) {
+        return reply.status(400).send({ success: false, message: 'This account is already verified.' });
+    }
+
+    await user.generateOTP();
+    await sendOTPEmail(user.email, user.otp);
+
+    reply.send({ success: true, message: 'A new 6-digit OTP has been sent to your email.' });
+  } catch (error) {
+    console.error('Resend Verification OTP error:', error);
+    reply.status(500).send({ success: false, message: 'Failed to send OTP' });
+  }
+}
+
+async function verifyEmail(request, reply) {
+  try {
+    const { email, otp } = request.body;
+    if (!email || !otp) return reply.status(400).send({ success: false, message: 'Email and OTP are required' });
+
+    const user = await User.findByEmail(email);
+    if (!user) return reply.status(404).send({ success: false, message: 'User not found' });
+    
+    if (!user.verifyOTP(otp)) return reply.status(400).send({ success: false, message: 'Invalid or expired OTP' });
+
+    // Update system record
+    user.isEmailVerified = true;
+    await user.consumeOTP();
+    await user.save();
+
+    reply.send({ success: true, message: 'Email successfully verified!' });
+  } catch (error) {
+    console.error('Email Verification error:', error);
+    reply.status(500).send({ success: false, message: 'Failed to verify email' });
+  }
+}
+// ============================================================================
 
 async function login(request, reply) {
   try {
@@ -285,4 +335,18 @@ function detectBrowser(userAgent) {
   return 'Unknown';
 }
 
-module.exports = { register, verifyOTP, login, verifyLoginInput, refreshToken, forgotPassword, resetPassword, getProfile, logout, changePassword, logoutAllSessions };
+module.exports = { 
+  register, 
+  verifyOTP, 
+  resendVerification, 
+  verifyEmail, 
+  login, 
+  verifyLoginInput, 
+  refreshToken, 
+  forgotPassword, 
+  resetPassword, 
+  getProfile, 
+  logout, 
+  changePassword, 
+  logoutAllSessions 
+};
