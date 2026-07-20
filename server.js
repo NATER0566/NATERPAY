@@ -68,6 +68,11 @@ async function registerRoutes() {
   const authRoutes = require('./routes/auth');
   fastify.post('/api/auth/register', authRoutes.register);
   fastify.post('/api/auth/verify-otp', authRoutes.verifyOTP);
+  
+  // THE FIX: ADDED THE MISSING VERIFICATION ROUTES HERE
+  fastify.post('/api/auth/resend-verification', authRoutes.resendVerification);
+  fastify.post('/api/auth/verify-email', authRoutes.verifyEmail);
+  
   fastify.post('/api/auth/login', authRoutes.login);
   fastify.post('/api/auth/verify-login-input', authRoutes.verifyLoginInput);
   fastify.post('/api/auth/refresh-token', authRoutes.refreshToken);
