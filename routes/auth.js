@@ -75,7 +75,7 @@ async function verifyOTP(request, reply) {
     
     if (!user.verifyOTP(otp)) return reply.status(400).send({ success: false, message: 'Invalid or expired OTP' });
     
-    // THE FIX: Actually update the database so the system knows they are verified!
+    // Actually update the database so the system knows they are verified!
     user.isEmailVerified = true; 
     await user.consumeOTP();
     await user.save();
@@ -135,6 +135,9 @@ async function verifyEmail(request, reply) {
     reply.status(500).send({ success: false, message: 'Failed to verify email' });
   }
 }
+
+// ============================================================================
+// CORE LOGIN ENGINE WITH HARD GATE INTERCEPTOR
 // ============================================================================
 
 async function login(request, reply) {
@@ -153,6 +156,22 @@ async function login(request, reply) {
       await user.incrementLoginAttempts();
       return reply.status(401).send({ success: false, message: 'Invalid credentials' });
     }
+
+    // === THE HARD GATE: MANDATORY EMAIL VERIFICATION ===
+    if (!user.isEmailVerified) {
+        // Generate a fresh OTP because the old one from registration probably expired
+        await user.generateOTP();
+        await sendOTPEmail(user.email, user.otp);
+        
+        // Return a special 403 response that tells index.html to show the OTP pop-up
+        return reply.status(403).send({ 
+            success: false, 
+            message: 'Email verification required.', 
+            requiresVerification: true, 
+            email: user.email 
+        });
+    }
+    // ====================================================
     
     await user.resetLoginAttempts();
     user.lastLogin = new Date();
