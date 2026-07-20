@@ -83,8 +83,8 @@
         }
         .copy-btn:hover { background: var(--gold); color: black; }
         
-        .status-verified { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff88; padding: 3px 8px; border-radius: 6px; }
-        .status-unverified { background: rgba(211, 47, 47, 0.2); color: #ff4d4d; border: 1px solid #ff4d4d; padding: 3px 8px; border-radius: 6px; }
+        .status-verified { background: rgba(0, 255, 136, 0.15); color: #00ff88; border: 1px solid #00ff88; padding: 4px 10px; border-radius: 8px; }
+        .status-unverified { background: rgba(211, 47, 47, 0.15); color: #ff4d4d; border: 1px solid #ff4d4d; padding: 4px 10px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -120,11 +120,11 @@
                 <input type="text" id="fullName" placeholder="Enter your full name">
             </div>
             
-            <!-- UPDATED EMAIL SECTION WITH VERIFICATION UX -->
+            <!-- INDEPENDENT EMAIL VERIFICATION REGION -->
             <div class="input-group-custom position-relative" id="emailGroup">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <label class="mb-0">EMAIL ADDRESS</label>
-                    <span id="emailStatusBadge" class="status-unverified" style="font-size: 0.65rem; font-weight: 900; letter-spacing: 1px;">SYNCING...</span>
+                    <span id="emailStatusBadge" class="status-unverified" style="font-size: 0.7rem; font-weight: 900; letter-spacing: 1px;">SYNCING...</span>
                 </div>
                 <div class="d-flex gap-2 align-items-center">
                     <input type="email" id="email" placeholder="yourname@domain.com" readonly style="opacity: 0.6; cursor: not-allowed; flex-grow: 1;">
@@ -208,29 +208,35 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            const res = await fetch('/api/user/dashboard-data', {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-            const data = await res.json();
+            // THE FIX: Fetching from both routes to separate KYC Level from exact Email Verification Status
+            const [dashRes, authRes] = await Promise.all([
+                fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } }),
+                fetch('/api/auth/profile', { headers: { 'Authorization': `Bearer ${authToken}` } })
+            ]);
             
-            if (data.success) {
-                document.getElementById('profileName').innerText = data.userFullName || 'User';
-                document.getElementById('profileEmail').innerText = data.userEmail || 'Not set';
-                document.getElementById('fullName').value = data.userFullName || '';
-                document.getElementById('email').value = data.userEmail || '';
-                document.getElementById('phone').value = data.userPhone || '';
-                document.getElementById('referralCode').value = data.referralCode || 'NO_CODE_FOUND';
-                document.getElementById('referralCount').value = data.referralCount || 0;
+            const dashData = await dashRes.json();
+            const authData = await authRes.json();
+            
+            if (dashData.success && authData.success) {
+                // Populate Profile Text Fields
+                document.getElementById('profileName').innerText = dashData.userFullName || 'User';
+                document.getElementById('profileEmail').innerText = dashData.userEmail || 'Not set';
+                document.getElementById('fullName').value = dashData.userFullName || '';
+                document.getElementById('email').value = dashData.userEmail || '';
+                document.getElementById('phone').value = dashData.userPhone || '';
+                document.getElementById('referralCode').value = dashData.referralCode || 'NO_CODE_FOUND';
+                document.getElementById('referralCount').value = dashData.referralCount || 0;
                 
-                const joinedDate = data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'Unknown';
+                const joinedDate = dashData.createdAt ? new Date(dashData.createdAt).toLocaleDateString() : 'Unknown';
                 document.getElementById('createdAt').value = joinedDate;
 
-                // Handle Email Verification Status UX
+                // REGION 1: INDEPENDENT EMAIL VERIFICATION BADGE
                 const emailBadge = document.getElementById('emailStatusBadge');
                 const verifyBtn = document.getElementById('verifyEmailBtn');
                 const emailGroup = document.getElementById('emailGroup');
                 
-                if (data.isEmailVerified) {
+                // We check the exact boolean flag from the core user object
+                if (authData.user.isEmailVerified === true) {
                     emailBadge.className = 'status-verified';
                     emailBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i> VERIFIED';
                     verifyBtn.style.display = 'none';
@@ -242,7 +248,8 @@
                     emailGroup.style.borderColor = 'rgba(211, 47, 47, 0.3)';
                 }
                 
-                const kycLevel = data.kycLevel || 0;
+                // REGION 2: INDEPENDENT KYC LEVEL BADGE
+                const kycLevel = dashData.kycLevel || 0;
                 const kycBadge = document.getElementById('kycBadge');
                 kycBadge.className = 'kyc-badge';
                 if (kycLevel === 0) { kycBadge.classList.add('kyc-0'); kycBadge.innerText = 'UNVERIFIED'; } 
@@ -271,13 +278,12 @@
             const data = await res.json();
 
             if (data.success) {
-                // Prompt user to enter the OTP they just received
                 const { value: otp } = await Swal.fire({
                     title: 'Enter Verification Code',
                     text: `We just sent a 6-digit code to ${email}.`,
                     input: 'text',
                     inputPlaceholder: 'Enter 6-digit OTP',
-                    inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off' },
+                    inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off', style: 'text-align: center; font-size: 20px; letter-spacing: 4px;' },
                     showCancelButton: true,
                     confirmButtonText: 'Verify Account',
                     confirmButtonColor: '#FFD700',
