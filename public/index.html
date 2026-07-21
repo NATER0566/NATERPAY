@@ -126,6 +126,7 @@
         .btn-authorize { background: var(--gold); color: black; font-weight: 900; border-radius: 20px; padding: 22px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 4px; text-transform: uppercase; transition: 0.3s; }
         .btn-authorize:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
 
+        /* THE SLIDESHOW CONTAINER */
         .slideshow-viewport { width: 100%; height: 260px; position: relative; border-radius: 30px; border: 1.5px solid rgba(212, 175, 55, 0.2); overflow: hidden; background: #000; margin-bottom: 30px; flex-shrink: 0; }
         .slide-element { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:1; transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; padding: 40px; }
         .slide-element.active { opacity:1; z-index:2; }
@@ -183,6 +184,13 @@
 
 <div class="viewport-wrapper">
     <div class="system-side">
+
+        <!-- THE DIAGNOSTIC DEBUG CARD FOR SLIDES -->
+        <div id="diagnosticCard" style="background: rgba(40,0,0,0.8); border: 2px solid #ff4444; border-radius: 12px; padding: 15px; margin-bottom: 20px; font-family: monospace; font-size: 0.8rem; overflow-wrap: break-word; max-height: 200px; overflow-y: auto;">
+            <strong style="color: #ff4444;">[SYSTEM DIAGNOSTIC: SLIDES FETCH DATA]</strong><br>
+            <span id="diagnosticOutput" style="color: #fff;">Waiting for backend response...</span>
+        </div>
+
         <!-- UPGRADED SLIDESHOW (Video/Image/Text Support) -->
         <div class="slideshow-viewport" id="mediaSlideshowEngine">
             <div class="slide-element active" id="fallbackSlideFrame">
@@ -534,6 +542,11 @@
             const res = await fetch('/api/slides?_t=' + new Date().getTime());
             const dataResult = await res.json();
             
+            // Output raw data to the Diagnostic Card
+            const outputBox = document.getElementById('diagnosticOutput');
+            outputBox.innerText = JSON.stringify(dataResult, null, 2);
+            outputBox.style.color = "#00ff88"; // Turn green to show successful fetch
+            
             let slidesArray = [];
             if (Array.isArray(dataResult)) {
                 slidesArray = dataResult;
@@ -546,9 +559,12 @@
                 compileSlideshowMarkup();
             } else {
                 console.warn("[NATER-PAY] No slides found in the database payload. Showing fallback.");
+                outputBox.innerText += "\n\nWARNING: Array is empty. Falling back to default slide.";
+                outputBox.style.color = "#ffaa00";
             }
         } catch (err) {
             console.error("[NATER-PAY] Slideshow streaming channel detached:", err);
+            document.getElementById('diagnosticOutput').innerText = "ERROR FETCHING FROM SERVER: \n" + err.message;
         }
     }
 
@@ -572,7 +588,7 @@
             // Detect if video format or explicitly set as video type
             const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
 
-            if (rawUrl) {
+            if (rawUrl && slide.type !== 'text') {
                 if (isVideo) {
                     mediaHtml = `<video src="${rawUrl}" class="slide-media-layer" autoplay loop muted playsinline></video>`;
                 } else {
@@ -947,3 +963,5 @@
 </script>
 </body>
 </html>
+
+after adding adding this file check the image to what happens to me I notice that what cause it from that new index.html code you update there for diagnosis
