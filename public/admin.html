@@ -51,7 +51,6 @@
         .admin-tab.active { border-color: var(--gold); background: rgba(212,175,55,0.15); color: var(--gold); box-shadow: 0 0 10px rgba(212,175,55,0.3); }
         .admin-tab:hover { background: rgba(50,50,50,0.9); }
         
-        /* THE DYNAMIC RED ALERT BADGE */
         .badge-dynamic { font-size: 0.75rem; padding: 4px 8px; transform: translateY(-2px); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
 
         .btn-gold { background: var(--gold); color: black; font-weight: 900; border: none; transition: 0.3s; }
@@ -64,6 +63,11 @@
         .action-btns .btn { flex: 0 1 auto; padding: 6px 10px; font-size: 0.8rem; }
         
         .product-img-thumb { width: 45px; height: 45px; border-radius: 8px; object-fit: cover; border: 1px solid #444; background: #000; display: flex; align-items: center; justify-content: center;}
+
+        /* Media Upload Wrapper */
+        .file-upload-wrapper { border: 2px dashed #444; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; margin-bottom: 15px; background: rgba(0,0,0,0.4); }
+        .file-upload-wrapper:hover { border-color: var(--gold); background: rgba(212,175,55,0.05); }
+        .file-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
     </style>
 </head>
 <body>
@@ -82,9 +86,9 @@
 <div class="container-fluid">
     <h2 class="text-center mb-4 mt-2" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); word-wrap: break-word;">ENTERPRISE COMMAND CENTER</h2>
     
-    <!-- STRICTLY ACTIONABLE BADGES (Only Payouts, KYC, and Adverts show red alerts) -->
     <div class="tab-nav">
         <button class="admin-tab active" onclick="showTab('overview')"><i class="fas fa-chart-pie me-2"></i>Overview</button>
+        <button class="admin-tab" onclick="showTab('slides')"><i class="fas fa-images me-2"></i>Slideshow</button>
         <button class="admin-tab" onclick="showTab('withdrawals')">Payouts <span id="withdrawBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('kyc')">KYC <span id="kycBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('adverts')">Adverts <span id="advertsBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
@@ -99,6 +103,65 @@
             <div class="col-6 col-md-3"><div class="stat-box"><div class="high-vis-label">TOTAL USERS</div><div class="stat-number" id="statUsers">...</div></div></div>
             <div class="col-6 col-md-3"><div class="stat-box"><div class="high-vis-label">TRANSACTIONS</div><div class="stat-number" id="statTransactions">...</div></div></div>
             <div class="col-12 col-md-6"><div class="stat-box"><div class="high-vis-label">TOTAL SYSTEM VAULT VALUE</div><div class="stat-number" id="statVault">...</div></div></div>
+        </div>
+    </div>
+
+    <!-- NEW SLIDESHOW ENGINE MANAGER -->
+    <div id="tab-slides" class="tab-content" style="display: none;">
+        <div class="row">
+            <div class="col-lg-4 mb-3">
+                <div class="admin-card h-100">
+                    <h5 class="mb-3 text-gold fw-bold text-center border-bottom border-secondary pb-2">CREATE NEW SLIDE</h5>
+                    <form id="slideForm" onsubmit="submitNewSlide(event)">
+                        <label class="high-vis-label">Media Setup</label>
+                        <select id="slideMediaType" class="input-dark mb-2" onchange="toggleSlideMediaInput()">
+                            <option value="image">Image Display</option>
+                            <option value="video">Video Autoplay</option>
+                            <option value="text">Text Only</option>
+                        </select>
+
+                        <div id="slideMediaWrapper" class="file-upload-wrapper">
+                            <input type="file" id="slideMediaFile" accept="image/*,video/*" onchange="updateSlideFileName(this)">
+                            <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-warning" id="slideMediaIcon"></i>
+                            <div class="fw-bold" id="slideFileName">Drag & Drop Media Here</div>
+                            <small class="text-muted" id="slideFileHint">Supports Images and Videos</small>
+                        </div>
+
+                        <label class="high-vis-label">Header Title</label>
+                        <input type="text" id="slideTitle" class="input-dark" placeholder="e.g. New Promo!" required>
+                        
+                        <label class="high-vis-label">Caption / Description</label>
+                        <textarea id="slideCaption" class="input-dark" rows="2" placeholder="Slide text content..."></textarea>
+                        
+                        <div class="row">
+                            <div class="col-6">
+                                <label class="high-vis-label">Button Text</label>
+                                <input type="text" id="slideCtaText" class="input-dark" placeholder="e.g. BUY NOW">
+                            </div>
+                            <div class="col-6">
+                                <label class="high-vis-label">Button Link</label>
+                                <input type="text" id="slideCtaLink" class="input-dark" placeholder="e.g. /vtu.html">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-warning w-100 py-3 rounded-pill fw-bold" id="btnSubmitSlide"><i class="fas fa-satellite-dish me-2"></i> PUBLISH SLIDE TO USERS</button>
+                    </form>
+                </div>
+            </div>
+            <div class="col-lg-8 mb-3">
+                <div class="admin-card h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="text-gold fw-bold m-0">ACTIVE LIVE SLIDES</h5>
+                        <button class="btn btn-sm btn-outline-light" onclick="fetchSlides()"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-dark align-middle">
+                            <thead><tr><th>MEDIA PREVIEW</th><th>TEXT CONTENT</th><th>TYPE</th><th class="text-end">ACTION</th></tr></thead>
+                            <tbody id="slidesTable"><tr><td colspan="4" class="text-center opacity-50 py-4">Loading active slides...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -205,7 +268,6 @@
 </div>
 
 <script>
-    // Visual Effects
     function initStars() { 
         const c = document.getElementById('starCanvas'); c.width = window.innerWidth; c.height = window.innerHeight; 
         const ctx = c.getContext('2d'); const s = []; 
@@ -223,9 +285,16 @@
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
     window.globalSystemUsers = [];
 
-    // ==========================================
-    // ALL-SYNC ENGINE (RUNS EVERY 30 SECONDS)
-    // ==========================================
+    // Helper: Convert File to Base64 for Image/Video uploads
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
     async function syncAllBadges() {
         try {
             await Promise.all([
@@ -233,13 +302,147 @@
                 fetchWithdrawals(),
                 fetchKYC(),
                 fetchAdverts(),
-                fetchMarketplace()
+                fetchMarketplace(),
+                fetchSlides() // Added Slides Sync
             ]);
         } catch (e) { console.log('Background Sync Delay'); }
     }
-
-    // Auto-refresh the entire dashboard every 30 seconds so it's a real-time monitor
     setInterval(syncAllBadges, 30000); 
+
+    // ==========================================
+    // MULTIMEDIA SLIDESHOW MANAGER ENGINE
+    // ==========================================
+    function toggleSlideMediaInput() {
+        const type = document.getElementById('slideMediaType').value;
+        const wrapper = document.getElementById('slideMediaWrapper');
+        if (type === 'text') {
+            wrapper.style.display = 'none';
+        } else {
+            wrapper.style.display = 'block';
+            document.getElementById('slideFileHint').innerText = type === 'video' ? 'Supports MP4/WebM Video' : 'Supports JPG/PNG Image';
+            document.getElementById('slideMediaIcon').className = type === 'video' ? 'fas fa-video fa-2x mb-2 text-info' : 'fas fa-image fa-2x mb-2 text-warning';
+        }
+    }
+
+    function updateSlideFileName(input) {
+        if (input.files && input.files[0]) {
+            document.getElementById('slideFileName').innerText = input.files[0].name;
+            document.getElementById('slideFileName').style.color = '#00ff88';
+        }
+    }
+
+    async function fetchSlides() {
+        try {
+            const res = await fetch('/api/slides?_t=' + Date.now());
+            const data = await res.json();
+            
+            let slidesArray = Array.isArray(data) ? data : (data.slides || data.data?.slides || []);
+            const tbody = document.getElementById('slidesTable');
+            
+            if(slidesArray.length === 0) { 
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center opacity-50 py-4">No active slides deployed.</td></tr>'; 
+                return; 
+            }
+            
+            tbody.innerHTML = slidesArray.map(slide => {
+                const rawUrl = slide.imageUrl || slide.mediaUrl || slide.url || slide.image || '';
+                const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
+                
+                let mediaThumb = '';
+                if (isVideo) {
+                    mediaThumb = `<div class="product-img-thumb"><i class="fas fa-video text-info"></i></div>`;
+                } else if (rawUrl) {
+                    mediaThumb = `<img src="${rawUrl}" class="product-img-thumb">`;
+                } else {
+                    mediaThumb = `<div class="product-img-thumb"><i class="fas fa-font text-secondary"></i></div>`;
+                }
+                
+                return `<tr>
+                    <td>${mediaThumb}</td>
+                    <td><div class="fw-bold text-white">${slide.title || 'Untitled'}</div><small class="text-muted text-truncate d-inline-block" style="max-width: 150px;">${slide.caption || slide.description || ''}</small></td>
+                    <td><span class="badge bg-secondary">${slide.type || 'Media'}</span></td>
+                    <td class="text-end"><button class="btn btn-danger btn-sm" onclick="deleteSlideForever('${slide._id}')"><i class="fas fa-trash"></i> Drop</button></td>
+                </tr>`;
+            }).join('');
+        } catch (e) {
+            console.error('Failed to load slides', e);
+        }
+    }
+
+    async function submitNewSlide(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubmitSlide');
+        const type = document.getElementById('slideMediaType').value;
+        const title = document.getElementById('slideTitle').value;
+        const caption = document.getElementById('slideCaption').value;
+        const ctaText = document.getElementById('slideCtaText').value;
+        const link = document.getElementById('slideCtaLink').value;
+        const fileInput = document.getElementById('slideMediaFile');
+
+        let base64Media = null;
+        if (type !== 'text') {
+            if (!fileInput.files || !fileInput.files[0]) {
+                Swal.fire({ icon: 'warning', title: 'Missing Media', text: 'Please select a file to upload.', background: '#0a0a0a', color: '#fff' });
+                return;
+            }
+            Swal.fire({ title: 'Compressing Media...', didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+            try {
+                base64Media = await fileToBase64(fileInput.files[0]);
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'File Error', text: 'Failed to read media file.', background: '#0a0a0a', color: '#fff' });
+                return;
+            }
+        }
+
+        const payload = {
+            title,
+            caption,
+            ctaText,
+            link,
+            type,
+            mediaData: base64Media // Sending Base64 to backend
+        };
+
+        btn.disabled = true;
+        btn.innerText = "TRANSMITTING...";
+        Swal.fire({ title: 'Uploading to Cloudinary/DB...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+
+        try {
+            // Using /api/cms/slides which was mapped in your server.js
+            const res = await fetch('/api/cms/slides', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success !== false) {
+                Swal.fire({ icon: 'success', title: 'Slide Deployed', text: 'It is now live on the user index page.', background: '#0a0a0a', color: '#fff' });
+                document.getElementById('slideForm').reset();
+                document.getElementById('slideFileName').innerText = 'Drag & Drop Media Here';
+                document.getElementById('slideFileName').style.color = '#fff';
+                toggleSlideMediaInput(); // reset visual state
+                fetchSlides();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Upload Failed', text: data.message || 'Server rejected the file.', background: '#0a0a0a', color: '#fff' });
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Transmission failed.', background: '#0a0a0a', color: '#fff' });
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-plus-circle me-2"></i> PUBLISH SLIDE';
+        }
+    }
+
+    async function deleteSlideForever(id) {
+        if((await Swal.fire({ title: 'Remove Slide?', icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff' })).isConfirmed) {
+            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try { 
+                const res = await fetch(`/api/cms/slides/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
+                if(res.ok) { Swal.fire('Dropped!', '', 'success'); fetchSlides(); } 
+            } catch (e) {}
+        }
+    }
 
     // ==========================================
     // OVERVIEW, TRANSACTIONS & USERS
@@ -354,7 +557,6 @@
             const tbody = document.getElementById('withdrawalsTable');
             const pending = data.pendingWithdrawals || [];
             
-            // STRICT RED BADGE: Only show if there are actual items
             if(data.success && pending.length > 0) {
                 badge.innerText = pending.length; 
                 badge.classList.remove('d-none');
@@ -396,7 +598,6 @@
             const kycTable = document.getElementById('kycTable');
             const pendingList = data.kycRequests || data.pendingKYC || [];
             
-            // STRICT RED BADGE: Only show if there are actual items
             if(data.success && pendingList.length > 0) {
                 badge.innerText = pendingList.length; 
                 badge.classList.remove('d-none');
@@ -464,7 +665,6 @@
             const pendingAds = ads.filter(a => a.status === 'pending');
             const badge = document.getElementById('advertsBadge');
             
-            // STRICT RED BADGE: Only show if there are actual items
             if (pendingAds.length > 0) { 
                 badge.innerText = pendingAds.length; 
                 badge.classList.remove('d-none'); 
@@ -574,3 +774,7 @@
 </script>
 </body>
 </html>
+
+check this code very well because if want to test and any error occur it will be a problem so check it out before responding
+
+There is a file you can reference named "Screenshot_2024-11-20-00-51-18-090_com.google.android.apps.docs.jpg". Refer to this file by its name verbatim.
