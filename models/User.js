@@ -28,6 +28,12 @@ const userSchema = new mongoose.Schema({
     trim: true
   },
   
+  // THE FIX: Added isEmailVerified to satisfy Mongoose strict mode for the Hard Gate!
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  },
+  
   // THE FIX: Added 'reseller' and 'vip' to the allowed enum list!
   role: {
     type: String,
