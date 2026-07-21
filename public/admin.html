@@ -173,7 +173,7 @@
             </div>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>DATE & REF</th><th>USER</th><th>BANK DETAILS</th><th>AMOUNT + FEE</th><th class="text-end">ACTION</th></tr></thead>
+                    <thead><tr><th>DATE & REF</th><th>USER & KYC STATUS</th><th>BANK DETAILS</th><th>AMOUNT + FEE</th><th class="text-end">ACTION</th></tr></thead>
                     <tbody id="withdrawalsTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading pending payouts...</td></tr></tbody>
                 </table>
             </div>
@@ -198,8 +198,8 @@
     <div id="tab-users" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="table-responsive">
-                <table class="table table-dark">
-                    <thead><tr><th>NAME / ID</th><th>CONTACT</th><th>BALANCE</th><th>ROLE / KYC</th><th class="text-end">ACTIONS</th></tr></thead>
+                <table class="table table-dark align-middle">
+                    <thead><tr><th>NAME / ID</th><th>CONTACT</th><th>BALANCE</th><th>ROLE & KYC STATUS</th><th class="text-end">ACTIONS</th></tr></thead>
                     <tbody id="usersTable"></tbody>
                 </table>
             </div>
@@ -221,7 +221,7 @@
         <div class="admin-card">
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>FORMAT/MEDIA</th><th>CAMPAIGN DETAILS</th><th>PACKAGE & BUDGET</th><th>STATUS</th><th class="text-end">ACTIONS</th></tr></thead>
+                    <thead><tr><th>FORMAT/MEDIA</th><th>CAMPAIGN & OWNER KYC</th><th>PACKAGE & BUDGET</th><th>STATUS</th><th class="text-end">ACTIONS</th></tr></thead>
                     <tbody id="advertsTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading adverts...</td></tr></tbody>
                 </table>
             </div>
@@ -232,7 +232,7 @@
         <div class="admin-card">
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>PRODUCT</th><th>MERCHANT INFO</th><th>PRICE</th><th>SALES</th><th class="text-end">ACTIONS</th></tr></thead>
+                    <thead><tr><th>PRODUCT</th><th>MERCHANT & KYC</th><th>PRICE</th><th>SALES</th><th class="text-end">ACTIONS</th></tr></thead>
                     <tbody id="marketplaceTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading marketplace products...</td></tr></tbody>
                 </table>
             </div>
@@ -295,10 +295,35 @@
         });
     }
 
+    // THE FIX: Dynamic KYC Badge Generator
+    function getUserKycBadge(userId) {
+        if (!userId) return '<span class="status-pill bg-danger text-white mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-times-circle"></i> UNVERIFIED</span>';
+        
+        // Handle populated objects vs raw string IDs
+        const idString = typeof userId === 'object' ? (userId._id || userId.id) : userId;
+        const user = window.globalSystemUsers.find(u => u._id === idString);
+        
+        let lvl = 0;
+        if (user) {
+            lvl = user.kycLevel || 0;
+        } else if (typeof userId === 'object' && userId.kycLevel !== undefined) {
+            lvl = userId.kycLevel;
+        }
+
+        if (lvl === 0) return '<span class="status-pill bg-danger text-white mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-times-circle"></i> UNVERIFIED</span>';
+        if (lvl === 1) return '<span class="status-pill bg-warning text-dark mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-check-circle"></i> TIER 1</span>';
+        if (lvl === 2) return '<span class="status-pill bg-info text-dark mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-check-circle"></i> TIER 2</span>';
+        if (lvl >= 3) return '<span class="status-pill bg-success text-white mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-shield-alt"></i> TIER 3 PRO</span>';
+        
+        return '<span class="status-pill bg-danger text-white mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-times-circle"></i> UNVERIFIED</span>';
+    }
+
     async function syncAllBadges() {
         try {
+            // MUST await loadAdminEcosystem FIRST to populate globalSystemUsers for the KYC Badges
+            await loadAdminEcosystem(); 
+            
             await Promise.all([
-                loadAdminEcosystem(),
                 fetchWithdrawals(),
                 fetchKYC(),
                 fetchAdverts(),
@@ -400,7 +425,7 @@
             ctaText,
             link,
             type,
-            mediaData: base64Media // Sending Base64 to backend
+            mediaData: base64Media
         };
 
         btn.disabled = true;
@@ -408,7 +433,6 @@
         Swal.fire({ title: 'Uploading to Cloudinary/DB...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
 
         try {
-            // Using /api/cms/slides which was mapped in your server.js
             const res = await fetch('/api/cms/slides', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
@@ -421,7 +445,7 @@
                 document.getElementById('slideForm').reset();
                 document.getElementById('slideFileName').innerText = 'Drag & Drop Media Here';
                 document.getElementById('slideFileName').style.color = '#fff';
-                toggleSlideMediaInput(); // reset visual state
+                toggleSlideMediaInput(); 
                 fetchSlides();
             } else {
                 Swal.fire({ icon: 'error', title: 'Upload Failed', text: data.message || 'Server rejected the file.', background: '#0a0a0a', color: '#fff' });
@@ -464,13 +488,16 @@
             const userRes = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
             const usersData = await userRes.json();
             if(usersData.users) {
-                window.globalSystemUsers = usersData.users;
+                window.globalSystemUsers = usersData.users; // Populates memory for KYC badge lookups
                 document.getElementById('usersTable').innerHTML = usersData.users.map(u => `
                     <tr>
                         <td><div class="fw-bold">${u.name}</div><small class="text-secondary">${u._id}</small></td>
                         <td><div class="text-white">${u.email}</div><small class="text-muted">${u.phoneNumber}</small></td>
                         <td class="text-warning fw-bold fs-5">₦${parseNum(u.walletBalance).toLocaleString()}</td>
-                        <td><span class="status-pill bg-dark border">${u.role.toUpperCase()}</span><br><span class="status-pill ${u.kycLevel > 0 ? 'bg-success' : 'bg-danger'} mt-1 d-inline-block">KYC LVL ${u.kycLevel || 0}</span></td>
+                        <td>
+                            <span class="status-pill bg-dark border mb-1">${u.role.toUpperCase()}</span><br>
+                            ${getUserKycBadge(u)}
+                        </td>
                         <td class="text-end"><div class="action-btns"><button class="btn btn-success fw-bold" onclick="modifyUserBalance('${u._id}', 'credit', null, '${u.name}')" title="Add Money"><i class="fas fa-plus"></i></button><button class="btn btn-danger fw-bold" onclick="modifyUserBalance('${u._id}', 'debit', null, '${u.name}')" title="Deduct Money"><i class="fas fa-minus"></i></button></div></td>
                     </tr>
                 `).join('');
@@ -565,7 +592,9 @@
                     const bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
                     const bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || 'Unknown Account';
                     const baseAmt = parseNum(tx.amount); const feeAmt = parseNum(tx.fee);
-                    return `<tr><td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td><td><div class="text-white">${tx.user?.name || 'Unknown'}</div><small class="text-muted">${tx.user?.email || ''}</small></td><td><div class="text-warning fw-bold">${bName}</div><small class="text-white" style="letter-spacing:1px;">${bAcc}</small></td><td><div class="fw-bold text-gold fs-5">₦${baseAmt.toLocaleString()}</div><small class="text-danger">Fee: ₦${feeAmt.toLocaleString()}</small></td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="processWithdrawal('${tx._id}', 'approve')" title="Approve & Settle"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="processWithdrawal('${tx._id}', 'reject')" title="Reject & Refund"><i class="fas fa-times"></i></button></div></td></tr>`;
+                    const kycBadgeHtml = getUserKycBadge(tx.user?._id || tx.user); // THE FIX
+                    
+                    return `<tr><td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td><td><div class="text-white">${tx.user?.name || 'Unknown'}</div><small class="text-muted d-block mb-1">${tx.user?.email || ''}</small>${kycBadgeHtml}</td><td><div class="text-warning fw-bold">${bName}</div><small class="text-white" style="letter-spacing:1px;">${bAcc}</small></td><td><div class="fw-bold text-gold fs-5">₦${baseAmt.toLocaleString()}</div><small class="text-danger">Fee: ₦${feeAmt.toLocaleString()}</small></td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="processWithdrawal('${tx._id}', 'approve')" title="Approve & Settle"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="processWithdrawal('${tx._id}', 'reject')" title="Reject & Refund"><i class="fas fa-times"></i></button></div></td></tr>`;
                 }).join('');
             } else { 
                 badge.classList.add('d-none'); 
@@ -678,10 +707,11 @@
             tbody.innerHTML = ads.map(ad => {
                 const statusColor = ad.status === 'approved' ? 'success' : (ad.status === 'pending' ? 'warning text-dark' : 'danger');
                 const encodedAd = encodeURIComponent(JSON.stringify(ad));
+                const kycBadgeHtml = getUserKycBadge(ad.user || ad.userId || ad.ownerId); // THE FIX
                 
                 let mediaThumb = ad.adType === 'Video' ? `<div style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #444; display:flex; align-items:center; justify-content:center; background:#111; cursor:pointer;" onclick="viewAdDossier('${encodedAd}')"><i class="fas fa-video fa-2x text-info"></i></div>` : (ad.adType === 'Text' || ad.adType === 'PDF' ? `<div style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #444; display:flex; align-items:center; justify-content:center; background:#111; cursor:pointer;" onclick="viewAdDossier('${encodedAd}')"><i class="fas fa-file-alt fa-2x text-danger"></i></div>` : `<img src="${ad.mediaUrl || 'https://via.placeholder.com/60/111/d4af37?text=Ad'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #444; cursor: pointer;" onclick="viewAdDossier('${encodedAd}')">`);
                 
-                return `<tr><td>${mediaThumb}</td><td><div class="fw-bold text-white text-truncate" style="max-width: 200px;">${ad.title}</div><small class="text-gold"><i class="fas fa-store"></i> ${ad.businessName}</small><br><small class="text-muted"><i class="fas fa-tag"></i> ${ad.adType || 'Ad'} | ${ad.category}</small></td><td><span class="badge bg-secondary text-uppercase">${ad.packageType || 'BASIC'}</span><br><small class="text-warning">₦${ad.packageCost || 0} / ${ad.maxRewardedViews || 0} Views</small></td><td><span class="status-pill bg-${statusColor}">${ad.status}</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewAdDossier('${encodedAd}')" title="View Details"><i class="fas fa-eye"></i></button>${ad.status === 'pending' ? `<button class="btn btn-success" onclick="processAd('${ad._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-warning text-dark fw-bold" onclick="processAd('${ad._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>` : `<button class="btn btn-outline-warning" onclick="processAd('${ad._id}', 'reject')" title="Revoke"><i class="fas fa-ban"></i></button>`}<button class="btn btn-danger" onclick="deleteAdForever('${ad._id}')" title="Delete"><i class="fas fa-trash"></i></button></div></td></tr>`;
+                return `<tr><td>${mediaThumb}</td><td><div class="fw-bold text-white text-truncate" style="max-width: 200px;">${ad.title}</div><small class="text-gold d-block mb-1"><i class="fas fa-store"></i> ${ad.businessName}</small>${kycBadgeHtml}<br><small class="text-muted mt-1 d-inline-block"><i class="fas fa-tag"></i> ${ad.adType || 'Ad'} | ${ad.category}</small></td><td><span class="badge bg-secondary text-uppercase">${ad.packageType || 'BASIC'}</span><br><small class="text-warning">₦${ad.packageCost || 0} / ${ad.maxRewardedViews || 0} Views</small></td><td><span class="status-pill bg-${statusColor}">${ad.status}</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewAdDossier('${encodedAd}')" title="View Details"><i class="fas fa-eye"></i></button>${ad.status === 'pending' ? `<button class="btn btn-success" onclick="processAd('${ad._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-warning text-dark fw-bold" onclick="processAd('${ad._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>` : `<button class="btn btn-outline-warning" onclick="processAd('${ad._id}', 'reject')" title="Revoke"><i class="fas fa-ban"></i></button>`}<button class="btn btn-danger" onclick="deleteAdForever('${ad._id}')" title="Delete"><i class="fas fa-trash"></i></button></div></td></tr>`;
             }).join('');
         } catch (error) {}
     }
@@ -724,21 +754,21 @@
             tbody.innerHTML = products.map(p => {
                 const priceDisplay = p.isFlexibleAmount ? 'Flexible' : `₦${Number(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
                 
-                // THE FIX: Looking for Cloudinary URL instead of the old base64
                 const mediaUrl = p.cloudinaryUrl || p.imageUrl || p.productImageBase64;
                 let imgHtml = mediaUrl ? `<img src="${mediaUrl}" class="product-img-thumb me-3" style="object-fit: cover;">` : `<div class="product-img-thumb me-3"><i class="fas fa-box text-secondary fs-5"></i></div>`;
                 
                 const ownerId = p.user || p.userId || p.merchant || p.creator; const foundUser = window.globalSystemUsers.find(u => u._id === ownerId) || {};
                 const mName = foundUser.name || p.merchantName || p.userName || 'Verified Merchant'; const mEmail = foundUser.email || p.userEmail || p.email || 'No Email';
                 p.displayMerchantName = mName; p.displayEmail = mEmail; const encodedProduct = encodeURIComponent(JSON.stringify(p));
-                return `<tr><td><div class="d-flex align-items-center">${imgHtml}<div><div class="fw-bold text-truncate" style="max-width: 200px;">${p.title}</div><span class="status-pill bg-dark border mt-1">${p.category || 'Product'}</span></div></div></td><td><div class="text-white fw-bold"><i class="fas fa-store text-gold me-1"></i> ${mName}</div><small class="text-secondary">${mEmail}</small></td><td class="text-warning fw-bold fs-5">${priceDisplay}</td><td><span class="badge bg-secondary">${p.transactionCount || 0} Sales</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewProductDetails('${encodedProduct}')"><i class="fas fa-eye"></i></button><button class="btn btn-primary" onclick="editProduct('${encodedProduct}')"><i class="fas fa-edit"></i></button><button class="btn btn-danger" onclick="deleteProduct('${p._id || p.linkId}')"><i class="fas fa-trash"></i></button></div></td></tr>`;
+                const kycBadgeHtml = getUserKycBadge(ownerId); // THE FIX
+
+                return `<tr><td><div class="d-flex align-items-center">${imgHtml}<div><div class="fw-bold text-truncate" style="max-width: 200px;">${p.title}</div><span class="status-pill bg-dark border mt-1">${p.category || 'Product'}</span></div></div></td><td><div class="text-white fw-bold"><i class="fas fa-store text-gold me-1"></i> ${mName}</div><small class="text-secondary d-block mb-1">${mEmail}</small>${kycBadgeHtml}</td><td class="text-warning fw-bold fs-5">${priceDisplay}</td><td><span class="badge bg-secondary">${p.transactionCount || 0} Sales</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewProductDetails('${encodedProduct}')"><i class="fas fa-eye"></i></button><button class="btn btn-primary" onclick="editProduct('${encodedProduct}')"><i class="fas fa-edit"></i></button><button class="btn btn-danger" onclick="deleteProduct('${p._id || p.linkId}')"><i class="fas fa-trash"></i></button></div></td></tr>`;
             }).join('');
         } catch (error) {}
     }
 
     function viewProductDetails(encodedData) {
         const p = JSON.parse(decodeURIComponent(encodedData));
-        // THE FIX: Looking for Cloudinary URL instead of the old base64
         const mediaUrl = p.cloudinaryUrl || p.imageUrl || p.productImageBase64;
         const imageBlock = mediaUrl ? `<div class="mb-3 text-center"><img src="${mediaUrl}" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 2px solid var(--gold); object-fit: contain;"></div>` : `<div class="mb-3 text-center py-4 bg-dark rounded border"><i class="fas fa-box fa-3x text-secondary"></i><p class="mt-2 text-muted small">No Image Uploaded</p></div>`;
         Swal.fire({ title: 'Full Product Dossier', html: `<div class="text-start mt-3" style="font-size: 0.95rem; line-height: 1.6;">${imageBlock}<h5 class="text-gold fw-bold mb-3 border-bottom pb-2"><i class="fas fa-info-circle"></i> Item Data</h5><p class="mb-1"><strong>Title:</strong> ${p.title}</p><p class="mb-1"><strong>Category:</strong> ${p.category || 'N/A'}</p><p class="mb-1"><strong>Price:</strong> <span class="text-warning fw-bold">₦${p.amount}</span></p><p class="mb-3"><strong>Description:</strong> <br><span class="text-white bg-black p-2 rounded d-block mt-1">${p.description || 'No description provided.'}</span></p><h5 class="text-danger fw-bold mb-3 border-bottom pb-2 mt-4"><i class="fas fa-user-shield"></i> Owner Information</h5><p class="mb-1"><strong>Merchant Name:</strong> ${p.displayMerchantName}</p><p class="mb-1"><strong>Registered Email:</strong> ${p.displayEmail}</p></div>`, background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Dossier', confirmButtonColor: '#444' });
