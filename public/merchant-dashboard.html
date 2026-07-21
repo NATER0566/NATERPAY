@@ -97,8 +97,9 @@
         <div class="col-12 col-md-4">
             <div class="stat-card">
                 <div class="stat-info">
-                    <h6>Commissions & Cashback</h6>
-                    <h3 id="statCommissions" style="color: #2eb82e;">₦0.00</h3>
+                    <!-- THE FIX: Updated terminology to exactly match your backend mechanics -->
+                    <h6>Tasks, Referrals & Discounts</h6>
+                    <h3 id="statEarnings" style="color: #2eb82e;">₦0.00</h3>
                 </div>
                 <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
             </div>
@@ -131,7 +132,7 @@
 
     <div class="transaction-box">
         <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-3">
-            <h5 class="text-white fw-bold m-0"><i class="fas fa-list-ul me-2 text-warning"></i> Recent Sales Logs</h5>
+            <h5 class="text-white fw-bold m-0"><i class="fas fa-list-ul me-2 text-warning"></i> Recent Sales & Earnings Logs</h5>
         </div>
         <div class="table-responsive">
             <table class="table table-dark table-hover align-middle">
@@ -235,6 +236,7 @@
 
         transactions.forEach(tx => {
             const txType = (tx.type || '').toLowerCase();
+            // Plot only actual volume generating transactions (purchases)
             if (tx.status === 'success' && ['airtime', 'data', 'electricity', 'cable', 'pos', 'invoice', 'payment_link', 'vtu'].includes(txType)) {
                 const txDateStr = new Date(tx.date || tx.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 if (dailyRevenue[txDateStr] !== undefined) {
@@ -255,7 +257,6 @@
         if(!authToken) { window.location.href = '/index.html'; return; }
 
         try {
-            // Because we upgraded the backend, this single call now returns 100% lifetime accurate data
             const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
 
@@ -270,16 +271,18 @@
                 // 2. TOTAL LIFETIME TRANSACTIONS
                 document.getElementById('statCount').innerText = data.totalLogs || 0;
                 
-                // 3. LIFETIME COMMISSIONS (Direct from Backend Database Scan!)
-                const trueCommissions = Number(data.totalCommission || 0);
-                document.getElementById('statCommissions').innerText = '₦' + trueCommissions.toLocaleString(undefined, {minimumFractionDigits:2});
+                // 3. TASKS, REFERRALS & DISCOUNTS
+                // Reads the combined metric from the backend (previously labeled as generic commission)
+                const trueEarnings = Number(data.totalEarned || data.totalCommission || 0);
+                document.getElementById('statEarnings').innerText = '₦' + trueEarnings.toLocaleString(undefined, {minimumFractionDigits:2});
                 
                 const tbody = document.getElementById('merchantTxBody');
                 tbody.innerHTML = '';
                 
+                // THE FIX: Stripped out "cashback" array filter entirely and explicitly added task_reward and referral_bonus
                 const merchantTx = (data.recentTransactions || []).filter(tx => {
                     const type = (tx.type || '').toLowerCase();
-                    return ['airtime', 'data', 'electricity', 'cable', 'pos', 'bulk_sms', 'invoice', 'payment_link', 'vtu', 'task_reward', 'cashback', 'reward'].includes(type);
+                    return ['airtime', 'data', 'electricity', 'cable', 'pos', 'bulk_sms', 'invoice', 'payment_link', 'vtu', 'task_reward', 'referral_bonus'].includes(type);
                 });
 
                 if(merchantTx.length > 0) {
@@ -291,13 +294,19 @@
                         if (tx.status === 'success') statusClass = 'bg-success text-white';
                         else if (tx.status === 'pending') statusClass = 'bg-warning text-dark';
                         
+                        // Highlight earnings vs spending by visually styling task/referral logs green
+                        const type = (tx.type || '').toLowerCase();
+                        const isEarning = type === 'task_reward' || type === 'referral_bonus';
+                        const amountColor = isEarning ? 'text-success' : '';
+                        const amountSign = isEarning ? '+' : '';
+
                         const amount = Number(tx.amount?.$numberDecimal || tx.amount || 0);
 
                         tbody.innerHTML += `
                             <tr>
                                 <td>${dateString}</td>
-                                <td><strong class="d-block text-white">${tx.type.toUpperCase()}</strong><span class="small opacity-75">${tx.description || 'System Log'}</span></td>
-                                <td class="fw-bold">₦${amount.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                                <td><strong class="d-block text-white">${tx.type.toUpperCase().replace('_', ' ')}</strong><span class="small opacity-75">${tx.description || 'System Log'}</span></td>
+                                <td class="fw-bold ${amountColor}">${amountSign}₦${amount.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
                                 <td class="text-end"><span class="status-pill ${statusClass}">${tx.status}</span></td>
                             </tr>
                         `;
