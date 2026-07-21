@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Cashback Rewards</title>
+    <title>NATER-PAY | Discount Earnings & Savings</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -56,16 +56,19 @@
         }
         .info-card:hover { border-color: rgba(212,175,55,0.4); transform: translateY(-3px); }
 
-        /* RATES GRID */
-        .rate-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
-        .rate-item {
+        /* TIERS GRID */
+        .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
+        .tier-item {
             background: rgba(0,0,0,0.6); border: 1px solid #444; border-radius: 12px;
-            padding: 15px; text-align: center; transition: 0.3s;
+            padding: 20px 15px; text-align: center; transition: 0.3s; position: relative; overflow: hidden;
         }
-        .rate-item:hover { border-color: var(--gold); background: rgba(212,175,55,0.1); }
-        .rate-item i { font-size: 1.5rem; color: var(--gold); margin-bottom: 10px; }
-        .rate-percent { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.2rem; color: #fff; }
-        .rate-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #aaa; font-weight: 700; margin-top: 5px; }
+        .tier-item.active-tier { border-color: var(--gold); background: rgba(212,175,55,0.1); box-shadow: 0 0 15px rgba(212,175,55,0.3); }
+        .tier-item i { font-size: 1.8rem; margin-bottom: 12px; }
+        .tier-percent { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; color: #fff; line-height: 1.1; }
+        .tier-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: #aaa; font-weight: 800; margin-top: 5px; }
+        .tier-desc { font-size: 0.65rem; color: #777; margin-top: 5px; line-height: 1.3; }
+
+        .active-badge { position: absolute; top: 0; right: 0; background: var(--gold); color: #000; font-size: 0.55rem; font-weight: 900; padding: 3px 8px; border-bottom-left-radius: 8px; letter-spacing: 1px; }
 
         /* HISTORY LIST */
         .history-list { max-height: 500px; overflow-y: auto; padding-right: 5px; }
@@ -78,7 +81,7 @@
             border-radius: 12px; margin-bottom: 10px; transition: 0.3s;
         }
         .tx-item:hover { background: rgba(212,175,55,0.05); border-color: #444; }
-        .tx-icon { width: 40px; height: 40px; border-radius: 50%; background: rgba(0, 255, 136, 0.1); color: #00ff88; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        .tx-icon { width: 40px; height: 40px; border-radius: 50%; background: rgba(212, 175, 55, 0.1); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; border: 1px solid rgba(212,175,55,0.3); }
         
         .rules-list li { margin-bottom: 12px; font-size: 0.85rem; color: #ccc; line-height: 1.6; }
         .rules-list li strong { color: var(--gold); }
@@ -101,15 +104,15 @@
     <div class="cashback-hero text-center text-md-start">
         <div class="row align-items-center">
             <div class="col-md-7 position-relative" style="z-index: 2;">
-                <h6 class="text-white fw-bold mb-2" style="letter-spacing: 3px;"><i class="fas fa-gem text-warning me-2"></i> LIFETIME REWARDS ENGINE</h6>
-                <div class="amount-display" id="totalCashbackDisplay">₦0.00</div>
-                <p class="text-muted fw-bold mb-0">Total Cashback Automatically Credited to Main Ledger</p>
+                <h6 class="text-white fw-bold mb-2" style="letter-spacing: 3px;"><i class="fas fa-tags text-warning me-2"></i> INSTANT DISCOUNT ENGINE</h6>
+                <div class="amount-display" id="totalDiscountDisplay">₦0.00</div>
+                <p class="text-muted fw-bold mb-0">Total Lifetime Savings Deducted at Checkout</p>
                 <div class="mt-4 d-inline-block bg-dark border border-success rounded-pill px-3 py-2 text-success" style="font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;">
-                    <i class="fas fa-shield-check me-1"></i> INSTANT AUTO-CREDIT ACTIVE
+                    <i class="fas fa-check-circle me-1"></i> POINT-OF-SALE AUTO-APPLIED
                 </div>
             </div>
             <div class="col-md-5 mt-4 mt-md-0 position-relative text-md-end text-center" style="z-index: 2;">
-                <i class="fas fa-undo-alt fa-6x" style="color: rgba(212, 175, 55, 0.2); filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));"></i>
+                <i class="fas fa-wallet fa-6x" style="color: rgba(212, 175, 55, 0.2); filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.4));"></i>
             </div>
         </div>
     </div>
@@ -117,45 +120,20 @@
     <div class="row g-4">
         <div class="col-lg-7">
             <div class="info-card mb-4">
-                <h5 class="mb-1" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;"><i class="fas fa-percent me-2"></i> ELIGIBLE SERVICES</h5>
-                <p class="text-muted small fw-bold mb-4">Earn instant micro-commissions on these successful transactions.</p>
+                <h5 class="mb-1" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;"><i class="fas fa-layer-group me-2"></i> DISCOUNT TIERS</h5>
+                <p class="text-muted small fw-bold mb-4">Your discounts scale with your account level. Upgrade to earn a higher percentage of the platform's wholesale margin.</p>
                 
-                <div class="rate-grid">
-                    <div class="rate-item">
-                        <i class="fas fa-wifi"></i>
-                        <div class="rate-percent">1.0%</div>
-                        <div class="rate-label">Data Purchase</div>
-                    </div>
-                    <div class="rate-item">
-                        <i class="fas fa-phone-alt"></i>
-                        <div class="rate-percent">0.5%</div>
-                        <div class="rate-label">Airtime Topup</div>
-                    </div>
-                    <div class="rate-item">
-                        <i class="fas fa-bolt"></i>
-                        <div class="rate-percent">0.5%</div>
-                        <div class="rate-label">Electricity</div>
-                    </div>
-                    <div class="rate-item">
-                        <i class="fas fa-tv"></i>
-                        <div class="rate-percent">0.5%</div>
-                        <div class="rate-label">TV Subs</div>
-                    </div>
-                    <div class="rate-item">
-                        <i class="fas fa-graduation-cap"></i>
-                        <div class="rate-percent">1.0%</div>
-                        <div class="rate-label">Exam Pins</div>
-                    </div>
+                <div class="tier-grid" id="tierGridEngine">
+                    <!-- Tiers injected via JS based on user role -->
                 </div>
             </div>
 
             <div class="info-card">
-                <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;"><i class="fas fa-gavel me-2"></i> REWARD PROTOCOL RULES</h5>
+                <h5 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;"><i class="fas fa-cogs me-2"></i> HOW SAVINGS WORK</h5>
                 <ul class="rules-list ps-3 m-0">
-                    <li><strong>Instant Auto-Credit:</strong> You do not need to manually claim rewards. Cashback is instantly added to your main available balance.</li>
-                    <li><strong>Success Only:</strong> Failed or cancelled transactions do not qualify for cashback generation.</li>
-                    <li><strong>System Calculated:</strong> Rewards are dynamically calculated by the Naterpay Engine based on net service margins.</li>
-                    <li><strong>Non-Transferable:</strong> Cashback data is bound to the transacting account and cannot be routed to other users.</li>
+                    <li><strong>Instant Checkout Deduction:</strong> NATER-PAY does not hold your rewards. Discounts are instantly applied, reducing the actual amount deducted from your wallet at the time of purchase.</li>
+                    <li><strong>Wholesale Margin Splitting:</strong> The platform negotiates wholesale rates with providers (MTN, Airtel, DSTV, etc.). Your tier dictates the percentage of that wholesale profit margin you receive as a discount.</li>
+                    <li><strong>Automated Calculation:</strong> The Enterprise Engine ensures you never pay retail price, dynamically applying 5%, 20%, or 35% margin cuts based on your active role.</li>
                 </ul>
             </div>
         </div>
@@ -163,13 +141,13 @@
         <div class="col-lg-5">
             <div class="info-card d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="m-0" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;"><i class="fas fa-history me-2"></i> RECENT REWARDS</h5>
-                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="loadCashbackHistory()"><i class="fas fa-sync-alt"></i> Sync</button>
+                    <h5 class="m-0" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;"><i class="fas fa-receipt me-2"></i> SAVINGS LEDGER</h5>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="loadDiscountHistory()"><i class="fas fa-sync-alt"></i> Sync</button>
                 </div>
 
-                <div class="history-list flex-grow-1" id="cashbackList">
+                <div class="history-list flex-grow-1" id="discountList">
                     <div class="text-center py-5 opacity-50">
-                        <i class="fas fa-spinner fa-spin me-2"></i> Scanning ledger logs...
+                        <i class="fas fa-spinner fa-spin me-2"></i> Analyzing transactions...
                     </div>
                 </div>
             </div>
@@ -201,58 +179,119 @@
         animate();
     }
 
-    async function loadCashbackHistory() {
+    // Backend Commission Rates Sync
+    const platformCommissionRates = { 
+        airtime: 0.03, data: 0.03, cable: 0.015, electricity: 0.015, 
+        betting: 0.01, insurance: 0.015, sms: 0.01, education: 0 
+    };
+
+    function renderTiers(userRole) {
+        const role = (userRole || 'user').toLowerCase();
+        const grid = document.getElementById('tierGridEngine');
+        
+        grid.innerHTML = `
+            <div class="tier-item ${role === 'user' ? 'active-tier' : ''}">
+                ${role === 'user' ? '<div class="active-badge">YOUR TIER</div>' : ''}
+                <i class="fas fa-user ${role === 'user' ? 'text-warning' : 'text-secondary'}"></i>
+                <div class="tier-percent">5%</div>
+                <div class="tier-label">Base Terminal</div>
+                <div class="tier-desc">Receives 5% of the platform's wholesale margin cut.</div>
+            </div>
+            
+            <div class="tier-item ${(role === 'reseller' || role === 'agent') ? 'active-tier' : ''}">
+                ${(role === 'reseller' || role === 'agent') ? '<div class="active-badge">YOUR TIER</div>' : ''}
+                <i class="fas fa-store ${(role === 'reseller' || role === 'agent') ? 'text-warning' : 'text-primary'}"></i>
+                <div class="tier-percent text-primary">20%</div>
+                <div class="tier-label text-primary">Reseller Node</div>
+                <div class="tier-desc">Receives 20% of the platform's wholesale margin cut.</div>
+            </div>
+            
+            <div class="tier-item ${role === 'vip' || role === 'admin' ? 'active-tier' : ''}">
+                ${role === 'vip' || role === 'admin' ? '<div class="active-badge">YOUR TIER</div>' : ''}
+                <i class="fas fa-crown ${role === 'vip' || role === 'admin' ? 'text-warning' : 'text-danger'}"></i>
+                <div class="tier-percent text-danger">35%</div>
+                <div class="tier-label text-danger">VIP Partner</div>
+                <div class="tier-desc">Receives max 35% of the wholesale margin cut.</div>
+            </div>
+        `;
+    }
+
+    async function loadDiscountHistory() {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) { window.location.href = '/index.html'; return; }
 
-        const listContainer = document.getElementById('cashbackList');
-        listContainer.innerHTML = '<div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Scanning ledger logs...</div>';
+        const listContainer = document.getElementById('discountList');
+        listContainer.innerHTML = '<div class="text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin me-2"></i> Analyzing transactions...</div>';
 
         try {
-            // Fetching dashboard data to filter out cashback transactions
             const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
 
-            if (data.success && data.recentTransactions) {
-                // Filter transactions looking for cashback records
-                const cashbackLogs = data.recentTransactions.filter(tx => 
-                    tx.type === 'cashback' || 
-                    (tx.description && tx.description.toLowerCase().includes('cashback'))
-                );
+            if (data.success) {
+                const userRole = (data.userRole || 'user').toLowerCase();
+                renderTiers(userRole);
 
-                let totalCashbackEarned = 0;
+                const roleMultiplier = (userRole === 'vip' || userRole === 'admin') ? 0.35 : (userRole === 'reseller' || userRole === 'agent') ? 0.20 : 0.05;
+                const vtuTypes = Object.keys(platformCommissionRates);
+                
+                let totalDiscountsEarned = 0;
+                let htmlBuffer = '';
 
-                if (cashbackLogs.length > 0) {
-                    let htmlBuffer = '';
-                    cashbackLogs.forEach(tx => {
-                        const amount = Number(tx.amount?.$numberDecimal || tx.amount || 0);
-                        totalCashbackEarned += amount;
-                        
-                        const dateString = new Date(tx.createdAt || tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-                        
-                        htmlBuffer += `
-                            <div class="tx-item">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="tx-icon"><i class="fas fa-plus"></i></div>
-                                    <div>
-                                        <div class="fw-bold" style="font-size: 0.9rem;">${tx.description || 'Service Cashback'}</div>
-                                        <div class="text-muted" style="font-size: 0.7rem;">${dateString} • <span class="text-success">Auto-Credited</span></div>
-                                    </div>
-                                </div>
-                                <div style="font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.1rem; color: #00ff88;">
-                                    +₦${amount.toLocaleString(undefined, {minimumFractionDigits: 2})}
-                                </div>
-                            </div>
-                        `;
+                if (data.recentTransactions && data.recentTransactions.length > 0) {
+                    data.recentTransactions.forEach(tx => {
+                        // Only analyze successful VTU transactions for discounts
+                        if (vtuTypes.includes(tx.type) && tx.status === 'success') {
+                            const baseRate = platformCommissionRates[tx.type] || 0;
+                            
+                            if (baseRate > 0) {
+                                const payableAmount = Number(tx.amount?.$numberDecimal || tx.amount || 0);
+                                
+                                // Reverse-engineer the math: originalAmount = payableAmount / (1 - (baseRate * roleMultiplier))
+                                const originalAmount = payableAmount / (1 - (baseRate * roleMultiplier));
+                                const discountEarned = originalAmount - payableAmount;
+                                
+                                // Only display if an actual measurable discount was applied
+                                if (discountEarned > 0.01) {
+                                    totalDiscountsEarned += discountEarned;
+                                    const dateString = new Date(tx.createdAt || tx.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                                    
+                                    htmlBuffer += `
+                                        <div class="tx-item">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="tx-icon"><i class="fas fa-tag"></i></div>
+                                                <div>
+                                                    <div class="fw-bold text-white text-uppercase" style="font-size: 0.8rem;">${tx.type.replace('_', ' ')}</div>
+                                                    <div class="text-muted" style="font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${tx.description || 'Service'}</div>
+                                                    <div class="text-muted mt-1" style="font-size: 0.65rem;">${dateString} • <span class="text-warning fw-bold">Discount Applied</span></div>
+                                                </div>
+                                            </div>
+                                            <div style="font-family: 'Cinzel', serif; font-weight: 900; font-size: 1rem; color: var(--gold);">
+                                                +₦${discountEarned.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                            </div>
+                                        </div>
+                                    `;
+                                }
+                            }
+                        }
                     });
+
+                    if (htmlBuffer === '') {
+                        htmlBuffer = `
+                            <div class="text-center py-5">
+                                <i class="fas fa-tags fa-3x mb-3 text-muted" style="opacity: 0.3;"></i>
+                                <p class="text-muted fw-bold">No discounts tracked yet.</p>
+                                <small class="text-muted opacity-75">Make your first bill payment to see your savings!</small>
+                            </div>`;
+                    }
+
                     listContainer.innerHTML = htmlBuffer;
-                    document.getElementById('totalCashbackDisplay').innerText = `₦${totalCashbackEarned.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                    document.getElementById('totalDiscountDisplay').innerText = `₦${totalDiscountsEarned.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                 } else {
                     listContainer.innerHTML = `
                         <div class="text-center py-5">
-                            <i class="fas fa-box-open fa-3x mb-3 text-muted" style="opacity: 0.3;"></i>
-                            <p class="text-muted fw-bold">No cashback logs found yet.</p>
-                            <small class="text-muted opacity-75">Make your first bill payment to earn rewards!</small>
+                            <i class="fas fa-tags fa-3x mb-3 text-muted" style="opacity: 0.3;"></i>
+                            <p class="text-muted fw-bold">No discounts tracked yet.</p>
+                            <small class="text-muted opacity-75">Make your first bill payment to see your savings!</small>
                         </div>
                     `;
                 }
@@ -266,7 +305,7 @@
 
     window.onload = () => {
         initStars();
-        loadCashbackHistory();
+        loadDiscountHistory();
     };
     window.onresize = initStars;
 </script>
