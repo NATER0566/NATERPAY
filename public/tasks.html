@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
+    <!-- Google AdSense Main Script -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
+
     <style>
         :root { --gold: #FFD700; --gold-dim: #d4af37; --bg: #030303; --card-bg: rgba(18, 18, 18, 0.85); --neon-glow: rgba(255, 215, 0, 0.15); }
         body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
@@ -32,7 +35,7 @@
         .task-hero {
             background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(5, 5, 5, 0.98) 100%);
             border: 1.5px solid var(--gold-dim); border-radius: 20px; padding: 40px;
-            margin-bottom: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(255,215,0,0.05); position: relative; overflow: hidden;
+            margin-bottom: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 0 20px rgba(255,215,0,0.05); position: relative; overflow: hidden;
         }
 
         .info-card {
@@ -79,9 +82,8 @@
         .ad-body-content { padding: 25px; display: flex; flex-direction: column; flex-grow: 1; }
         .ad-title { font-weight: 900; font-size: 1.4rem; color: #fff; margin-bottom: 10px; font-family: 'Cinzel', serif; padding-right: 40px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         .ad-desc { font-size: 0.92rem; color: #ccc; margin-bottom: 18px; line-height: 1.6; }
-        .ad-contact-strip { font-size: 0.85rem; color: #aaa; background: rgba(0,0,0,0.5); padding: 12px 18px; border-radius: 10px; display: inline-block; margin-bottom: 20px; border: 1px dashed #444; width: max-content; max-width: 100%; }
         
-        .business-card { background: linear-gradient(90deg, #0f0f0f, #050505); border: 1.5px dashed var(--gold-dim); border-radius: 16px; padding: 30px; text-align: center; margin-top: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        .business-card { background: linear-gradient(90deg, #0f0f0f, #050505); border: 1.5px dashed var(--gold-dim); border-radius: 16px; padding: 30px; text-align: center; margin-top: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
 
         .premium-empty-container { 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
@@ -108,6 +110,26 @@
             position: relative; z-index: 2; font-size: 3rem; color: var(--gold);
             text-shadow: 0 0 20px var(--gold), 0 0 40px rgba(255,255,255,0.5);
             animation: counterSpin 2.5s linear infinite; 
+        }
+
+        /* Custom styling for Google AdSense containers to match theme */
+        .google-ad-wrapper {
+            background: rgba(15, 15, 15, 0.4);
+            border: 1px dashed #333;
+            border-radius: 15px;
+            padding: 10px;
+            margin-bottom: 40px;
+            text-align: center;
+            overflow: hidden;
+            width: 100%;
+        }
+        .ad-label {
+            display: block;
+            font-size: 0.6rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
         }
         
         @keyframes spinReflective { 100% { transform: rotate(360deg); } }
@@ -136,6 +158,20 @@
         </p>
     </div>
 
+    <!-- GOOGLE ADSENSE - TOP PLACEMENT -->
+    <div class="google-ad-wrapper">
+        <span class="ad-label">Advertisement</span>
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-4661775522120249"
+             data-ad-slot="4213132193"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+
     <div class="row g-4 mb-5">
         <div class="col-md-6 col-lg-4">
             <div class="info-card">
@@ -157,7 +193,7 @@
             </div>
         </div>
 
-        <!-- PROFILE REWARD CARD WITH STRICT SHIELDING -->
+        <!-- PROFILE REWARD CARD -->
         <div class="col-md-6 col-lg-4" id="profileTaskWrapper" style="display: none;">
             <div class="info-card">
                 <div class="task-icon-wrapper" style="background: rgba(0, 191, 255, 0.1); color: #00bfff;"><i class="fas fa-id-badge"></i></div>
@@ -183,6 +219,20 @@
 
     <div id="dynamicAdsContainer" class="row">
         <div class="col-12 text-center py-5 opacity-50"><i class="fas fa-spinner fa-spin fa-2x text-warning me-2"></i><br>Scanning Database for Live Ads...</div>
+    </div>
+
+    <!-- GOOGLE ADSENSE - BOTTOM PLACEMENT -->
+    <div class="google-ad-wrapper">
+        <span class="ad-label">Advertisement</span>
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-4661775522120249"
+             data-ad-slot="4213132193"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
     </div>
 
     <div class="business-card">
@@ -330,7 +380,6 @@
 
                 const mediaUrl = ad.mediaUrl || 'https://via.placeholder.com/1200x400/050505/d4af37?text=ADVERTISEMENT';
                 
-                // THE FIX: Added 'controls' to the video tag so users can unmute
                 let mediaHtml = '';
                 if (ad.adType === 'Video') {
                     mediaHtml = `<video src="${mediaUrl}" class="ad-banner-media" autoplay muted loop playsinline controls></video>`;
