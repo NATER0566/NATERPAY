@@ -8,9 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
         :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #030303; --card-bg: rgba(15, 15, 15, 0.95); --red: #ff3333; --green: #00ff88; --blue: #00bfff; }
@@ -55,12 +53,6 @@
         .input-dark:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 15px rgba(255,215,0,0.1); }
         .input-dark:disabled { background: #0a0a0a; color: #666; cursor: not-allowed; }
         .input-label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-
-        /* Toggles & Checks */
-        .payment-toggle { display: flex; align-items: center; gap: 15px; background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 10px; cursor: pointer; transition: 0.3s; }
-        .payment-toggle:hover { border-color: var(--gold); }
-        .payment-toggle input { transform: scale(1.5); cursor: pointer; accent-color: var(--gold); }
-        .payment-toggle span { font-weight: 700; font-size: 0.9rem; }
 
         /* Items Engine */
         .item-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; background: #0a0a0a; padding: 15px; border-radius: 12px; border: 1px solid #222; }
@@ -118,8 +110,6 @@
 
         .image-upload-wrapper { border: 2px dashed #444; border-radius: 12px; padding: 30px 20px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; background: #0a0a0a; margin-bottom: 20px; }
         .image-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
-        
-        .pdf-hidden-container { position: absolute; top: -9999px; left: -9999px; width: 800px; background: #fff; color: #000; }
     </style>
 </head>
 <body>
@@ -131,7 +121,7 @@
         <span class="site-part-1">NATER</span>
         <span class="site-part-2">PAY</span>
     </div>
-    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
+    <a href="merchant-dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Exit</a>
 </header>
 
 <div class="container">
@@ -235,8 +225,8 @@
             
             <div class="row g-3 mt-3 border-top border-secondary pt-3">
                 <div class="col-md-6">
-                    <span class="input-label">Tax Rate (%)</span>
-                    <input type="number" id="invTax" class="input-dark" placeholder="0" value="0" min="0" oninput="calcTotals()">
+                    <span class="input-label">Tax Rate (%) / Processing Fee</span>
+                    <input type="number" id="invTax" class="input-dark" placeholder="e.g. 1.5 for Paystack Fee" value="0" min="0" step="0.1" oninput="calcTotals()">
                 </div>
                 <div class="col-md-6">
                     <span class="input-label">Discount (%)</span>
@@ -246,7 +236,7 @@
 
             <div class="mt-4 p-4 rounded-4" style="background: #000; border: 1px solid var(--gold);">
                 <div class="d-flex justify-content-between mb-2 text-muted fw-bold"><span>Subtotal:</span><span id="txtSub">0.00</span></div>
-                <div class="d-flex justify-content-between mb-2 text-danger fw-bold"><span>Tax:</span><span id="txtTax">+ 0.00</span></div>
+                <div class="d-flex justify-content-between mb-2 text-danger fw-bold"><span>Tax / Fees:</span><span id="txtTax">+ 0.00</span></div>
                 <div class="d-flex justify-content-between mb-3 text-success fw-bold"><span>Discount:</span><span id="txtDisc">- 0.00</span></div>
                 <div class="d-flex justify-content-between pt-3 border-top border-secondary">
                     <span class="text-white fw-bold fs-5">GRAND TOTAL:</span>
@@ -256,18 +246,13 @@
         </div>
 
         <div class="form-card">
-            <h5 class="form-section-title"><i class="fas fa-credit-card"></i> Payment Options</h5>
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="payment-toggle"><input type="checkbox" id="payPaystack" checked> <span>Paystack</span></label>
-                </div>
-                <div class="col-md-4">
-                    <label class="payment-toggle"><input type="checkbox" id="payFlutterwave"> <span>Flutterwave</span></label>
-                </div>
-                <div class="col-md-4">
-                    <label class="payment-toggle"><input type="checkbox" id="payTransfer" checked> <span>Bank Transfer</span></label>
-                </div>
+            <h5 class="form-section-title"><i class="fas fa-credit-card"></i> Payment Gateway</h5>
+            <!-- ONLY PAYSTACK REMAINS -->
+            <div class="payment-toggle" style="pointer-events: none; border-color: var(--gold);">
+                <i class="fas fa-check-circle text-success fs-4"></i> 
+                <span>Secure Payments via <strong>Paystack</strong></span>
             </div>
+            <p class="text-muted small mt-2">All invoice payments are automatically routed through your NATER-PAY Paystack integration.</p>
         </div>
 
         <div class="form-card" id="premiumFeaturesBox">
@@ -281,7 +266,7 @@
             <textarea id="invTerms" class="input-dark" rows="3" placeholder="No refunds after 14 days..."></textarea>
         </div>
 
-        <button class="btn-full btn-gold" style="font-size: 1.2rem; min-height: 60px; margin-bottom: 50px;" onclick="generateInvoice()"><i class="fas fa-paper-plane"></i> CREATE & SEND INVOICE</button>
+        <button class="btn-full btn-gold" style="font-size: 1.2rem; min-height: 60px; margin-bottom: 50px;" onclick="generateInvoice()"><i class="fas fa-paper-plane"></i> CREATE INVOICE</button>
     </div>
 
     <!-- TAB 3: BUSINESS PROFILE -->
@@ -329,9 +314,6 @@
     </div>
 </div>
 
-<!-- Hidden container for generating strict PDF layout -->
-<div id="pdfPrintContainer" class="pdf-hidden-container"></div>
-
 <footer>
     <p class="footer-compliance-tag m-0 text-center text-muted fw-bold">BUILT BY NATER GRACE CODE | NATER-PAY ENTERPRISE</p>
 </footer>
@@ -361,7 +343,6 @@
         animate();
     }
 
-    // THE FIX: Proper Tab Switching that doesn't rely on global 'event'
     function switchTab(btnElement, tabId) {
         document.querySelectorAll('.tab-section').forEach(el => el.style.display = 'none');
         document.querySelectorAll('.inv-tab-btn').forEach(el => el.classList.remove('active'));
@@ -392,7 +373,7 @@
                 } else {
                     badge.innerHTML = '<i class="fas fa-user"></i> STANDARD (3 INV/MO)';
                     
-                    // Lock Premium Features (CSS Overlay)
+                    // Lock Premium Features
                     const lockHTML = `<div class="locked-overlay"><div class="locked-badge"><i class="fas fa-lock me-1"></i> Reseller Required</div></div>`;
                     document.getElementById('premiumFeaturesBox').classList.add('locked-feature');
                     document.getElementById('premiumLockOverlay').innerHTML = lockHTML;
@@ -419,7 +400,7 @@
         } catch (e) { console.error("System sync failed."); }
     }
 
-    // --- BUSINESS PROFILE LOGIC (SAVING TO DB) ---
+    // --- BUSINESS PROFILE LOGIC ---
     function previewBizLogo(event) {
         if(currentUserRole === 'user') return; 
         const file = event.target.files[0];
@@ -449,7 +430,6 @@
         Swal.fire({ title: 'Syncing to Cloud...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
 
         try {
-            // Note to dev: Requires POST /api/user/business-profile endpoint on backend
             const res = await fetch('/api/user/business-profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
@@ -510,7 +490,6 @@
         const due = document.getElementById('invDueDate').value;
         const currency = document.getElementById('invCurrency').value;
         
-        // Strict Validation
         if(!cName || !cEmail || !due) return Swal.fire({ icon:'error', title:'Error', text:'Customer Name, Email, and Due Date required.', background:'#111', color:'#fff' });
         
         const selectedDate = new Date(due);
@@ -534,9 +513,7 @@
             discountRate: parseFloat(document.getElementById('invDiscount').value) || 0,
             items: items,
             paymentOptions: {
-                paystack: document.getElementById('payPaystack').checked,
-                flutterwave: document.getElementById('payFlutterwave').checked,
-                transfer: document.getElementById('payTransfer').checked
+                paystack: true // Forced Paystack ONLY
             }
         };
 
@@ -556,7 +533,7 @@
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({ icon:'success', title:'Invoice Sent!', text:'Invoice securely recorded.', background:'#111', color:'#fff', confirmButtonColor: '#FFD700' });
+                Swal.fire({ icon:'success', title:'Invoice Created!', text:'Invoice securely recorded. Please share the link with your customer.', background:'#111', color:'#fff', confirmButtonColor: '#FFD700' });
                 
                 document.getElementById('invName').value = '';
                 document.getElementById('invEmail').value = '';
@@ -599,7 +576,6 @@
 
             if(inv.status === 'paid') {
                 tPaid += amt;
-                // Use paidAt from DB for accuracy, fallback to createdAt if missing
                 const payDate = inv.paidAt ? new Date(inv.paidAt) : new Date(inv.createdAt);
                 if(payDate.getMonth() === thisMonth && payDate.getFullYear() === thisYear) tMonth += amt;
             } else if (inv.status !== 'cancelled') {
@@ -679,7 +655,6 @@
             const linkUrl = `${window.location.origin}/invoice-view.html?id=${inv.invoiceId}`;
             const whatsAppText = encodeURIComponent(`Hello ${inv.customerName},\n\nHere is your invoice for ${sym}${amt}. Please view and pay using this secure link:\n${linkUrl}`);
 
-            // ALL FULL WIDTH BUTTONS
             return `
             <div class="invoice-card" id="card-${inv._id}">
                 <div class="inv-head">
@@ -699,8 +674,8 @@
                 <div class="mt-auto">
                     <button class="btn-full btn-gold" onclick="window.open('${linkUrl}', '_blank')"><i class="fas fa-eye"></i> VIEW INVOICE</button>
                     <button class="btn-full btn-outline" onclick="copyLink('${linkUrl}')"><i class="fas fa-link"></i> COPY LINK</button>
-                    <button class="btn-full btn-outline" onclick="downloadPDF('${inv._id}')"><i class="fas fa-file-pdf text-danger"></i> DOWNLOAD PDF</button>
                     ${inv.status !== 'paid' ? `<button class="btn-full btn-outline" style="border-color: var(--green); color: var(--green);" onclick="markAsPaid('${inv._id}')"><i class="fas fa-check-circle"></i> MARK AS PAID</button>` : ''}
+                    <button class="btn-full btn-outline" onclick="window.open('https://wa.me/?text=${whatsAppText}', '_blank')"><i class="fab fa-whatsapp text-success"></i> SHARE TO WHATSAPP</button>
                     <button class="btn-full btn-outline" onclick="window.location.href='mailto:${inv.customerEmail}?subject=Invoice%20${invNum}&body=Please%20find%20your%20invoice%20here:%20${encodeURIComponent(linkUrl)}'"><i class="fas fa-envelope text-primary"></i> SEND EMAIL</button>
                     <button class="btn-full btn-outline" style="border-color: rgba(255,51,51,0.3); color: #ff3333;" onclick="deleteInvoiceAPI('${inv._id}')"><i class="fas fa-trash"></i> DELETE INVOICE</button>
                 </div>
@@ -719,7 +694,6 @@
         });
     }
 
-    // --- REAL API CALLS ---
     async function deleteInvoiceAPI(id) {
         if((await Swal.fire({ title: 'Delete Invoice?', text: "This permanently removes the ledger record.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' })).isConfirmed) {
             Swal.fire({ title: 'Deleting...', didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
@@ -744,79 +718,6 @@
                 } else Swal.fire('Error', 'Update failed', 'error');
             } catch(e) { Swal.fire('Error', 'Network error', 'error'); }
         }
-    }
-
-    // --- PDF GENERATOR ---
-    function downloadPDF(id) {
-        const inv = masterInvoices.find(i => i._id === id);
-        if(!inv) return;
-        
-        Swal.fire({ title: 'Generating PDF...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
-
-        const biz = inv.businessDetails || {};
-        const logoHtml = biz.logoUrl ? `<img src="${biz.logoUrl}" style="max-height: 80px; border-radius: 8px;">` : `<h2 style="color: #333; margin:0;">${biz.name || 'INVOICE'}</h2>`;
-        const sym = currMap[inv.currency] || '₦';
-
-        const itemsHtml = inv.items.map(item => `
-            <tr>
-                <td style="padding: 12px; border-bottom: 1px solid #eee; color: #333;">${item.description}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #eee; color: #333; text-align: center;">${item.quantity}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #eee; color: #333; text-align: right;">${sym}${item.unitPrice.toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #eee; color: #333; text-align: right;">${sym}${(item.quantity * item.unitPrice).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-            </tr>
-        `).join('');
-
-        const container = document.getElementById('pdfPrintContainer');
-        container.innerHTML = `
-            <div style="padding: 50px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #fff;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 50px; border-bottom: 2px solid #FFD700; padding-bottom: 20px;">
-                    <div>${logoHtml}<p style="margin: 10px 0 0 0; color: #666; font-size: 0.9rem;">${biz.email||''}<br>${biz.phone||''}</p></div>
-                    <div style="text-align: right;">
-                        <h1 style="color: #000; margin: 0; font-size: 2.5rem; letter-spacing: 2px;">INVOICE</h1>
-                        <p style="margin: 5px 0 0 0; color: #666; font-weight: bold;">#${inv.invoiceId || 'INV-0000'}</p>
-                        <p style="margin: 5px 0 0 0; color: #666;">Date: ${new Date(inv.createdAt).toLocaleDateString()}</p>
-                        <p style="margin: 5px 0 0 0; color: #d32f2f; font-weight: bold;">Due: ${new Date(inv.dueDate).toLocaleDateString()}</p>
-                    </div>
-                </div>
-                <div style="margin-bottom: 40px; background: #f8f9fa; padding: 20px; border-radius: 8px;">
-                    <h3 style="color: #000; margin: 0 0 10px 0; font-size: 1rem; text-transform: uppercase;">Billed To:</h3>
-                    <p style="margin: 0; font-weight: bold; font-size: 1.2rem; color: #333;">${inv.customerName}</p>
-                    <p style="margin: 5px 0 0 0; color: #666;">${inv.customerEmail}</p>
-                </div>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
-                    <thead>
-                        <tr style="background: #000; color: #fff;">
-                            <th style="padding: 15px 12px; text-align: left;">Item Description</th>
-                            <th style="padding: 15px 12px; text-align: center;">Qty</th>
-                            <th style="padding: 15px 12px; text-align: right;">Price</th>
-                            <th style="padding: 15px 12px; text-align: right;">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>${itemsHtml}</tbody>
-                </table>
-                <div style="display: flex; justify-content: flex-end;">
-                    <div style="width: 350px; background: #f8f9fa; padding: 20px; border-radius: 8px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color:#555;"><span>Subtotal:</span><span>${sym}${Number(inv.subtotal||0).toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color:#d32f2f;"><span>Tax:</span><span>+ ${sym}${Number(inv.taxAmount||0).toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; color:#00b85c;"><span>Discount:</span><span>- ${sym}${Number(inv.discountAmount||0).toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
-                        <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 2px solid #000; font-weight: bold; font-size: 1.5rem; color: #000;">
-                            <span>Total:</span><span>${sym}${Number(inv.total||0).toLocaleString(undefined, {minimumFractionDigits:2})}</span>
-                        </div>
-                    </div>
-                </div>
-                ${inv.notes ? `<div style="margin-top: 50px;"><h4 style="color:#000; font-size:1rem;">Notes:</h4><p style="color:#666;">${inv.notes}</p></div>` : ''}
-            </div>
-        `;
-
-        const opt = {
-            margin: 0,
-            filename: `Invoice_${inv.invoiceId || inv._id}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-
-        html2pdf().set(opt).from(container).save().then(() => Swal.close());
     }
 
     window.onload = () => { 
