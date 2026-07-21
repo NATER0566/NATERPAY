@@ -82,7 +82,7 @@
         <p class="text-muted">Complete your KYC to unlock higher transaction limits and premium features.</p>
     </div>
 
-    <!-- NEW BASE TIER: EMAIL VERIFICATION -->
+    <!-- BASE TIER: EMAIL VERIFICATION -->
     <div class="tier-card locked" id="tier0Card">
         <div class="tier-badge badge-locked" id="tier0Badge">LOCKED</div>
         <h4 style="color: var(--gold);"><i class="fas fa-envelope-circle-check me-2"></i> BASE TIER: Email Security</h4>
@@ -97,6 +97,7 @@
         </div>
     </div>
     
+    <!-- TIER 1 -->
     <div class="tier-card locked" id="tier1Card">
         <div class="tier-badge badge-locked" id="tier1Badge">LOCKED</div>
         <h4 style="color: var(--gold);"><i class="fas fa-id-badge me-2"></i> TIER 1: Basic Identity</h4>
@@ -115,6 +116,7 @@
         </div>
     </div>
 
+    <!-- TIER 2 -->
     <div class="tier-card locked" id="tier2Card">
         <div class="tier-badge badge-locked" id="tier2Badge">LOCKED</div>
         <h4 style="color: var(--gold);"><i class="fas fa-passport me-2"></i> TIER 2: Document Upload</h4>
@@ -153,6 +155,7 @@
         </div>
     </div>
 
+    <!-- TIER 3 -->
     <div class="tier-card locked" id="tier3Card">
         <div class="tier-badge badge-locked" id="tier3Badge">LOCKED</div>
         <h4 style="color: var(--gold);"><i class="fas fa-map-marker-alt me-2"></i> TIER 3: Address Proof</h4>
@@ -222,18 +225,21 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
 
         try {
-            // Fetch both User Dashboard Data (for Email Status) and KYC Data (for Tier status)
-            const [userRes, kycRes] = await Promise.all([
-                fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } }),
-                fetch('/api/kyc', { headers: { 'Authorization': `Bearer ${authToken}` } })
+            // THE FIX: Fetching fresh data to absolutely bypass mobile browser cache!
+            const [dashRes, authRes, kycRes] = await Promise.all([
+                fetch('/api/user/dashboard-data?_t=' + Date.now(), { headers: { 'Authorization': `Bearer ${authToken}` } }),
+                fetch('/api/auth/profile?_t=' + Date.now(), { headers: { 'Authorization': `Bearer ${authToken}` } }),
+                fetch('/api/kyc?_t=' + Date.now(), { headers: { 'Authorization': `Bearer ${authToken}` } })
             ]);
             
-            const userData = await userRes.json();
+            const dashData = await dashRes.json();
+            const authData = await authRes.json();
             const kycData = await kycRes.json();
 
-            if (userData.success && kycData.success) {
-                const isEmailVerified = userData.isEmailVerified;
-                document.getElementById('baseEmailInput').value = userData.userEmail || 'Unknown Email';
+            if (dashData.success && kycData.success) {
+                // Ensure absolute truth from database for Email Verification
+                const isEmailVerifiedNow = dashData.isEmailVerified === true || (authData.user && authData.user.isEmailVerified === true);
+                document.getElementById('baseEmailInput').value = dashData.userEmail || authData.user?.email || 'Unknown Email';
 
                 const kycLevel = kycData.kyc.currentLevel;
                 const status = kycData.kyc.status;
@@ -246,7 +252,7 @@
                 [t0, t1, t2, t3].forEach(t => t.className = 'tier-card locked');
 
                 // BASE TIER LOGIC (EMAIL)
-                if (!isEmailVerified) {
+                if (!isEmailVerifiedNow) {
                     t0.className = 'tier-card active'; b0.className = 'tier-badge badge-active'; b0.innerText = 'ACTION REQUIRED';
                     return; // Stop here, they MUST verify email first
                 } else {
@@ -349,7 +355,20 @@
             const data = await res.json();
 
             if (data.success) {
+                // THE FIX: Instant DOM Manipulation! Force the Base Tier to complete and unlock Tier 1 instantly without waiting for a reload!
+                document.getElementById('tier0Card').className = 'tier-card completed';
+                document.getElementById('tier0Badge').className = 'tier-badge badge-completed';
+                document.getElementById('tier0Badge').innerText = 'COMPLETED';
+                document.getElementById('tier0Form').style.display = 'none';
+
+                // Unlock Tier 1 visually instantly
+                document.getElementById('tier1Card').className = 'tier-card active';
+                document.getElementById('tier1Badge').className = 'tier-badge badge-active';
+                document.getElementById('tier1Badge').innerText = 'ACTION REQUIRED';
+
                 Swal.fire({ icon: 'success', title: 'Base Tier Unlocked!', text: 'Your email is secured. You can now proceed to Tier 1.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
+                
+                // Fetch in background just to be safe
                 checkKYCStatus(); 
             } else {
                 Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message || 'Invalid or expired OTP.', background: '#111', color: '#fff' });
