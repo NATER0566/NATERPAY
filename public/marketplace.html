@@ -9,6 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Google AdSense Main Script -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
 
     <style>
         :root { 
@@ -65,7 +68,7 @@
         .stat-lbl { font-size: 0.75rem; color: #888; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
 
         /* CATEGORY SCROLLER */
-        .category-scroller { display: flex; gap: 15px; overflow-x: auto; padding: 0 5% 20px; scrollbar-width: none; }
+        .category-scroller { display: flex; gap: 15px; overflow-x: auto; padding: 0 5% 30px; scrollbar-width: none; }
         .category-scroller::-webkit-scrollbar { display: none; }
         .cat-pill {
             background: #111; border: 1px solid #333; color: #ccc; padding: 12px 25px;
@@ -73,6 +76,27 @@
             cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px;
         }
         .cat-pill:hover, .cat-pill.active { background: rgba(255,215,0,0.1); border-color: var(--gold); color: var(--gold); }
+
+        /* Google AdSense Compliant Wrapper */
+        .google-ad-wrapper {
+            background: rgba(15, 15, 15, 0.4);
+            border: 1px dashed #333;
+            border-radius: 15px;
+            padding: 10px;
+            margin: 0 auto 40px;
+            max-width: 1200px;
+            width: 90%;
+            text-align: center;
+            overflow: hidden;
+        }
+        .ad-label {
+            display: block;
+            font-size: 0.6rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
 
         /* LAYOUT SECTIONS */
         .section-wrapper { padding: 0 5% 50px; }
@@ -181,6 +205,21 @@
     <div class="cat-pill" onclick="filterCategory('Physical Goods', this)"><i class="fas fa-box"></i> Physical Goods</div>
 </div>
 
+<!-- GOOGLE ADSENSE - TOP PLACEMENT -->
+<div class="google-ad-wrapper">
+    <span class="ad-label">Advertisement</span>
+    <!-- Marketplace Display -->
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-4661775522120249"
+         data-ad-slot="3761706050"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+</div>
+
 <!-- DYNAMIC SECTIONS -->
 <div class="section-wrapper" id="trendingSection">
     <div class="section-header">
@@ -205,6 +244,21 @@
         <a href="#" class="view-all">Explore New <i class="fas fa-chevron-right ms-1"></i></a>
     </div>
     <div class="grid-layout" id="recentGrid"></div>
+</div>
+
+<!-- GOOGLE ADSENSE - BOTTOM PLACEMENT -->
+<div class="google-ad-wrapper">
+    <span class="ad-label">Advertisement</span>
+    <!-- Marketplace Display -->
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-4661775522120249"
+         data-ad-slot="3761706050"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
 </div>
 
 <!-- BUYER TRUST FOOTER -->
