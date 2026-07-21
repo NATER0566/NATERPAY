@@ -78,12 +78,6 @@
         
         .embedded-support-card:hover { background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(30, 30, 30, 0.98) 50%, rgba(212, 175, 55, 0.4) 100%); transform: translateY(-2px); border-color: #ffffff; }
 
-        .embedded-support-card::before {
-            content: ''; position: absolute; top: -120%; left: -150%; width: 350%; height: 350%;
-            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.98) 40%, rgba(212,175,55,0.7) 50%, rgba(255,255,255,0) 100%);
-            transform: rotate(28deg); animation: light-refract-sweep 1.8s infinite linear; pointer-events: none; z-index: 1;
-        }
-
         .support-info-block { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; position: relative; z-index: 2; }
         .support-text-details-wrapper { display: flex; flex-direction: column; justify-content: center; flex: 1; min-width: 0; }
         
@@ -100,14 +94,6 @@
 
         .support-text-label { font-size: 1rem; font-weight: 900; color: #ffffff !important; letter-spacing: 0.3px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
         .support-text-sub { font-size: 0.8rem !important; color: #ffffff !important; font-weight: 700 !important; display: block; margin-top: 3px; line-height: 1.2; text-shadow: 0px 2px 4px rgba(0,0,0,1); opacity: 0.9 !important; word-break: normal; white-space: normal; }
-
-        @keyframes hyper-luxury-plumbing {
-            0%, 100% { box-shadow: 0 0 18px rgba(212, 175, 55, 0.4), inset 0 0 8px rgba(212, 175, 55, 0.2); border-color: var(--gold); filter: brightness(1); }
-            50% { box-shadow: 0 0 50px rgba(212, 175, 55, 0.95), 0 0 30px rgba(255, 255, 255, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.4); border-color: #ffffff; filter: brightness(1.5); }
-        }
-        @keyframes light-refract-sweep {
-            0% { left: -150%; } 50%, 100% { left: 150%; }
-        }
 
         .input-group-custom { background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212, 175, 55, 0.35); border-radius: 20px; padding: 15px 25px; margin-bottom: 20px; transition: border-color 0.3s ease, box-shadow 0.3s ease; position: relative; }
         .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
@@ -127,38 +113,39 @@
         .btn-authorize:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
 
         /* ========================================================
-           THE NEW, MASSIVE EDGE-TO-EDGE MANUAL SLIDESHOW DESIGN 
+           THE NEW, PERFECT-FIT MANUAL SLIDESHOW DESIGN 
            ======================================================== */
         .slideshow-section { margin-bottom: 50px; flex-shrink: 0; background: rgba(5,5,5,0.9); border-top: 2px solid var(--gold); border-bottom: 2px solid var(--gold); padding: 25px 0; box-shadow: 0 10px 40px rgba(0,0,0,0.9); }
         .slideshow-header { font-family: 'Cinzel'; font-size: 1.1rem; color: var(--gold); letter-spacing: 2px; font-weight: 900; margin-bottom: 15px; padding: 0 25px; display: flex; align-items: center; gap: 8px; }
         
-        .slideshow-viewport { width: 100%; height: 420px; position: relative; overflow: hidden; background: #000; }
-        .slide-element { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:1; transition: opacity 0.5s ease-in-out; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 40px 25px; background: linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.1) 100%); }
-        .slide-element.active { opacity:1; z-index:2; }
+        .slideshow-viewport { width: 100%; height: auto; position: relative; overflow: hidden; background: #000; min-height: 400px; display: flex; align-items: stretch; justify-content: center; }
         
-        /* Media Layers */
-        .slide-media-layer { position: absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; z-index:-1; pointer-events: auto; } /* pointer-events auto allows video interaction */
+        .slide-element { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:1; transition: opacity 0.5s ease-in-out; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background: #0a0a0a; }
+        .slide-element.active { opacity:1; z-index:2; position: relative; } /* Active slide determines height */
+        
+        /* THE FIX: Changed to contain so nothing gets cropped out! */
+        .slide-media-layer { width:100%; max-height: 60vh; object-fit: contain; z-index: 2; pointer-events: auto; flex-grow: 1; background: #000; } 
         
         /* Animated Background for Text-Only Slides */
         @keyframes textBgFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:-1; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
+        .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:0; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
 
-        /* Overlay Text must not block video clicks */
-        .slide-text-overlay { width: 100%; position: relative; z-index: 3; pointer-events: none; }
-        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.8rem; margin-bottom: 8px; text-shadow: 0 2px 8px rgba(0,0,0,1); line-height: 1.2; }
-        .slide-text-overlay p { font-size: 0.95rem; color: #fff; opacity: 0.95; margin-bottom: 15px; font-weight: 600; text-shadow: 0 2px 8px rgba(0,0,0,1); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        .slide-text-overlay a { pointer-events: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.8); } /* CTA button stays clickable */
+        /* Overlay Text sits neatly at the bottom */
+        .slide-text-overlay { width: 100%; padding: 20px 25px; position: relative; z-index: 3; pointer-events: none; background: rgba(0,0,0,0.85); text-align: left; border-top: 1px solid rgba(212,175,55,0.3); flex-shrink: 0; }
+        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.5rem; margin-bottom: 8px; text-shadow: 0 2px 5px rgba(0,0,0,1); line-height: 1.2; }
+        .slide-text-overlay p { font-size: 0.9rem; color: #fff; opacity: 0.95; margin-bottom: 15px; font-weight: 600; text-shadow: 0 2px 5px rgba(0,0,0,1); line-height: 1.5; }
+        .slide-text-overlay a { pointer-events: auto; } /* CTA button stays clickable */
 
         /* Manual Controls (Arrows & Dots) */
-        .slide-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 15px; z-index: 10; pointer-events: none; }
-        .slide-nav button { pointer-events: auto; background: rgba(0,0,0,0.7); color: var(--gold); border: 1.5px solid var(--gold); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(5px); }
+        .slide-nav { position: absolute; top: 40%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 10px; z-index: 10; pointer-events: none; }
+        .slide-nav button { pointer-events: auto; background: rgba(0,0,0,0.8); color: var(--gold); border: 1.5px solid var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(5px); }
         .slide-nav button:hover { background: var(--gold); color: #000; transform: scale(1.1); }
         
-        .slide-dots { position: absolute; bottom: 15px; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 10; }
+        .slide-dots { width: 100%; display: flex; justify-content: center; gap: 10px; padding: 15px 0; background: #000; z-index: 10; position: relative; }
         .slide-dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.3); cursor: pointer; transition: 0.3s; border: 1px solid transparent; }
         .slide-dot.active { background: var(--gold); transform: scale(1.3); border-color: #000; box-shadow: 0 0 10px rgba(212,175,55,0.6); }
 
-        .slide-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.4; }
+        .slide-empty-state { width: 100%; height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.4; }
 
         .price-ticker { background: rgba(212, 175, 55, 0.04); border: 1.5px solid rgba(212, 175, 55, 0.15); border-radius: 30px; padding: 30px; flex-shrink: 0; margin-bottom: 30px; }
 
@@ -388,18 +375,21 @@
         </div>
 
         <!-- NEW DEDICATED SLIDESHOW BILLBOARD SECTION (EDGE TO EDGE) -->
-        <div class="slideshow-section mt-5 w-100">
-            <div class="slideshow-header"><i class="fas fa-bullhorn"></i> SYSTEM UPDATES & PROMOS</div>
+        <div class="slideshow-section mt-4 w-100">
+            <div class="slideshow-header"><i class="fas fa-bullhorn"></i> PROMOS</div>
+            
             <div class="slideshow-viewport" id="mediaSlideshowEngine">
                 <div class="slide-empty-state">
                     <i class="fas fa-photo-video fa-3x mb-3 text-secondary"></i>
                     <h6 class="text-gold fw-bold m-0" id="slideshowStatusText" style="font-size: 0.9rem;">Loading Slides...</h6>
                 </div>
             </div>
+            <!-- Pagination dots moved below the image box -->
+            <div id="slideDotsContainer" class="slide-dots"></div>
         </div>
         <!-- END SLIDESHOW SECTION -->
 
-        <div class="mt-auto pt-4 pb-4 text-center w-100">
+        <div class="mt-auto pt-2 pb-4 text-center w-100">
             <!-- SOCIAL MEDIA INTEGRATION -->
             <div class="d-flex justify-content-center gap-3 mb-3">
                 <a href="https://facebook.com/natergracecode" target="_blank" class="social-circle"><i class="fab fa-facebook-f"></i></a>
@@ -572,11 +562,12 @@
 
     function compileSlideshowMarkup() {
         const slideViewport = document.getElementById('mediaSlideshowEngine');
+        const dotsContainer = document.getElementById('slideDotsContainer');
         if(!slideViewport || applicationSlides.length === 0) return;
         
         let frameBuffer = '';
         
-        // Build Navigation Arrows if more than 1 slide
+        // Build Navigation Arrows
         let navHtml = '';
         if (applicationSlides.length > 1) {
             navHtml = `
@@ -587,11 +578,11 @@
         }
 
         // Build Navigation Dots
-        let dotsHtml = '<div class="slide-dots">';
+        let dotsHtml = '';
         applicationSlides.forEach((_, pointer) => {
             dotsHtml += `<div class="slide-dot ${pointer === 0 ? 'active' : ''}" id="slide_dot_${pointer}" onclick="goToSlide(${pointer})"></div>`;
         });
-        dotsHtml += '</div>';
+        dotsContainer.innerHTML = dotsHtml;
 
         // Build Slides
         applicationSlides.forEach((slide, pointer) => {
@@ -607,13 +598,10 @@
             const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
 
             if (slide.type === 'text' || (!rawUrl && !isVideo)) {
-                // Animated Gradient for Text-Only Slides
                 mediaHtml = `<div class="bg-text-slide"></div>`;
             } else if (isVideo) {
-                // Video with controls, no autoplay to allow sound
                 mediaHtml = `<video src="${rawUrl}" class="slide-media-layer" controls playsinline preload="metadata"></video>`;
             } else {
-                // Image filling the space beautifully
                 mediaHtml = `<img src="${rawUrl}" class="slide-media-layer" alt="${title}">`;
             }
             
@@ -629,7 +617,7 @@
             `;
         });
         
-        slideViewport.innerHTML = navHtml + frameBuffer + dotsHtml;
+        slideViewport.innerHTML = navHtml + frameBuffer;
         activeSlidePointer = 0;
     }
 
@@ -638,6 +626,10 @@
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.remove('active');
         document.getElementById(`slide_dot_${activeSlidePointer}`).classList.remove('active');
         
+        // Pause any video that was playing
+        const oldVideo = document.getElementById(`slide_node_index_${activeSlidePointer}`).querySelector('video');
+        if (oldVideo) oldVideo.pause();
+
         activeSlidePointer = (activeSlidePointer - 1 + applicationSlides.length) % applicationSlides.length;
         
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.add('active');
@@ -649,6 +641,10 @@
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.remove('active');
         document.getElementById(`slide_dot_${activeSlidePointer}`).classList.remove('active');
         
+        // Pause any video that was playing
+        const oldVideo = document.getElementById(`slide_node_index_${activeSlidePointer}`).querySelector('video');
+        if (oldVideo) oldVideo.pause();
+
         activeSlidePointer = (activeSlidePointer + 1) % applicationSlides.length;
         
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.add('active');
@@ -660,6 +656,10 @@
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.remove('active');
         document.getElementById(`slide_dot_${activeSlidePointer}`).classList.remove('active');
         
+        // Pause any video that was playing
+        const oldVideo = document.getElementById(`slide_node_index_${activeSlidePointer}`).querySelector('video');
+        if (oldVideo) oldVideo.pause();
+
         activeSlidePointer = index;
         
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.add('active');
@@ -867,3 +867,4 @@
 </script>
 </body>
 </html>
+
