@@ -127,14 +127,14 @@
         .btn-authorize:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
 
         /* ========================================================
-           EXPANDED WIDE CARD SLIDESHOW (PERFECT FIT, TALLER HEIGHT)
+           CLEAN, MEDIA-FOCUSED SLIDESHOW DESIGN 
            ======================================================== */
         .promo-card {
             background: rgba(12, 12, 12, 0.9);
             border: 2px solid rgba(212, 175, 55, 0.4);
             border-radius: 20px;
             padding: 18px;
-            margin: 0 -10px 30px -10px; /* Expands wider to almost touch the screen edges */
+            margin: 0 -10px 30px -10px; /* Expands wider */
             box-shadow: 0 10px 35px rgba(0,0,0,0.9);
         }
         
@@ -144,41 +144,47 @@
 
         .slideshow-viewport {
             width: 100%;
-            height: 380px; /* Taller display area */
+            height: 380px; 
             background: #000;
             border-radius: 14px;
             position: relative;
             overflow: hidden;
             border: 1px solid #333;
+            display: flex; align-items: stretch; justify-content: center;
         }
 
         .slide-element {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s ease-in-out; display: flex; flex-direction: column; justify-content: space-between;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s ease-in-out; display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
-        .slide-element.active { opacity: 1; z-index: 2; }
+        .slide-element.active { opacity: 1; z-index: 2; position: relative; width: 100%; height: 100%; }
         
-        /* THE MAGIC FIX: 'contain' ensures nothing is ever hidden or chopped off */
+        /* Media fills the entire viewport, no heavy text blocking it */
         .slide-media-layer {
-            width: 100%; height: 100%; object-fit: contain; pointer-events: auto; background: #000; flex-grow: 1;
+            width: 100%; height: 100%; object-fit: contain; pointer-events: auto; background: #000;
         }
         
-        /* Text overlays gracefully at the bottom */
+        /* Text overlay is now very subtle and minimal */
         .slide-text-overlay {
-            width: 100%; padding: 20px 15px; 
-            background: rgba(0, 0, 0, 0.9);
-            border-top: 1px solid rgba(212,175,55,0.3);
-            z-index: 3; text-align: left; flex-shrink: 0;
+            position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px; 
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+            pointer-events: none; z-index: 3; text-align: center;
         }
-        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.3rem; margin-bottom: 5px; text-shadow: 0 2px 5px rgba(0,0,0,1); }
-        .slide-text-overlay p { font-size: 0.85rem; color: #fff; opacity: 0.95; margin-bottom: 12px; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .slide-text-overlay a { pointer-events: auto; }
+        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.1rem; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,1); display: none; /* Hidden by default to let media breathe, can enable if needed */ }
+        .slide-text-overlay p { font-size: 0.8rem; color: #fff; opacity: 0.9; margin-bottom: 0; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,1); display: none; }
+        .slide-text-overlay a { pointer-events: auto; margin-top: 10px; display: inline-block; }
 
+        /* Specific styling for Text-Only slides to make them look good */
+        .slide-element.text-only-slide { justify-content: center; padding: 30px; text-align: center; }
+        .slide-element.text-only-slide .slide-text-overlay { position: static; background: transparent; }
+        .slide-element.text-only-slide .slide-text-overlay h3 { display: block; font-size: 1.8rem; margin-bottom: 15px; }
+        .slide-element.text-only-slide .slide-text-overlay p { display: block; font-size: 1rem; margin-bottom: 20px; line-height: 1.6; }
+        
         @keyframes textBgFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:0; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
+        .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:-1; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
 
         /* Manual Controls */
-        .slide-nav { position: absolute; top: 40%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 10px; z-index: 10; pointer-events: none; }
-        .slide-nav button { pointer-events: auto; background: rgba(0,0,0,0.8); color: var(--gold); border: 1.5px solid var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(5px); }
+        .slide-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 10px; z-index: 10; pointer-events: none; }
+        .slide-nav button { pointer-events: auto; background: rgba(0,0,0,0.5); color: var(--gold); border: 1.5px solid var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(5px); }
         .slide-nav button:hover { background: var(--gold); color: #000; transform: scale(1.1); }
         
         .slide-dots { width: 100%; display: flex; justify-content: center; gap: 8px; margin-top: 15px; }
@@ -637,23 +643,44 @@
             const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
 
             if (slide.type === 'text' || (!rawUrl && !isVideo)) {
+                // Animated Gradient for Text-Only Slides
                 mediaHtml = `<div class="bg-text-slide"></div>`;
-            } else if (isVideo) {
-                mediaHtml = `<video src="${rawUrl}" class="slide-media-layer" controls playsinline preload="metadata"></video>`;
-            } else {
-                mediaHtml = `<img src="${rawUrl}" class="slide-media-layer" alt="${title}">`;
-            }
-            
-            frameBuffer += `
-                <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
+                frameBuffer += `
+                <div class="slide-element text-only-slide ${viewportStateClass}" id="slide_node_index_${pointer}">
                     ${mediaHtml}
                     <div class="slide-text-overlay">
                         <h3>${title}</h3>
                         <p>${caption}</p>
                         <a href="${actionHyperlink}" class="btn btn-sm btn-warning px-4 py-2 rounded-pill fw-bold text-dark" style="font-size:0.8rem; letter-spacing:1px;">${actionLabel}</a>
                     </div>
-                </div>
-            `;
+                </div>`;
+            } else if (isVideo) {
+                // Video with controls
+                mediaHtml = `<video src="${rawUrl}" class="slide-media-layer" controls playsinline preload="metadata"></video>`;
+                frameBuffer += `
+                <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
+                    ${mediaHtml}
+                    <!-- The hidden overlay to keep formatting strict -->
+                    <div class="slide-text-overlay d-none">
+                        <h3>${title}</h3>
+                        <p>${caption}</p>
+                        <a href="${actionHyperlink}" class="btn btn-sm btn-warning px-4 py-2 rounded-pill fw-bold text-dark" style="font-size:0.8rem; letter-spacing:1px;">${actionLabel}</a>
+                    </div>
+                </div>`;
+            } else {
+                // Image filling the space beautifully
+                mediaHtml = `<img src="${rawUrl}" class="slide-media-layer" alt="${title}">`;
+                frameBuffer += `
+                <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
+                    ${mediaHtml}
+                    <!-- Minimal overlay for images -->
+                    <div class="slide-text-overlay" style="display: ${title === 'PROMO' && !caption ? 'none' : 'block'};">
+                        <h3>${title}</h3>
+                        <p>${caption}</p>
+                        <a href="${actionHyperlink}" class="btn btn-sm btn-warning px-4 py-2 rounded-pill fw-bold text-dark" style="font-size:0.8rem; letter-spacing:1px;">${actionLabel}</a>
+                    </div>
+                </div>`;
+            }
         });
         
         slideViewport.innerHTML = navHtml + frameBuffer;
@@ -906,3 +933,7 @@
 </script>
 </body>
 </html>
+
+ok see now the image and videos displaying good but now you still not do the text very will if there is a text with video or image it is not displaying and the next botton text arrow does not see well give them back ground and put it middle  and that yellow back round don't use it. let just text only be clean  let slide and video only be clear no any useless text on top or inside if text follow them please do well
+
+There is a file you can reference named "1000085363.jpg". Refer to this file by its name verbatim.
