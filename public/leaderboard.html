@@ -9,6 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Google AdSense Main Script (Loaded once for compliance and speed) -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     
     <style>
         :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
@@ -95,6 +98,27 @@
         .rules-card { background: rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 16px; padding: 25px; margin-top: 40px; }
         .rules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
         .rule-item { display: flex; align-items: center; gap: 10px; background: #111; padding: 15px; border-radius: 12px; border: 1px solid #222; }
+
+        /* ================= ADS SECTION SAFE STYLES ================= */
+        .google-ad-wrapper {
+            background: rgba(15, 15, 15, 0.4);
+            border: 1px dashed #333;
+            border-radius: 15px;
+            padding: 10px;
+            margin: 20px auto 30px;
+            width: 100%;
+            text-align: center;
+            overflow: hidden;
+        }
+        .ad-label {
+            display: block;
+            font-size: 0.6rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+        /* =========================================================== */
     </style>
 </head>
 <body>
@@ -137,6 +161,22 @@
             <div class="text-end mt-1"><small class="text-muted" id="nextBadgeTarget" style="font-size: 0.65rem;">Syncing target...</small></div>
         </div>
     </div>
+
+    <!-- ================= START: GOOGLE ADSENSE TOP PLACEMENT ================= -->
+    <div class="google-ad-wrapper">
+        <span class="ad-label">Advertisement</span>
+        <!-- System Status Display -->
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-4661775522120249"
+             data-ad-slot="1097828358"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+    <!-- ================= END: GOOGLE ADSENSE TOP PLACEMENT ================= -->
 
     <!-- EXPANDED LEADERBOARD TABS -->
     <ul class="nav nav-tabs" id="boardTabs" role="tablist">
@@ -229,6 +269,22 @@
             <div class="rule-item"><i class="fas fa-crown" style="color:#e5e4e2;"></i> <div><div class="fw-bold text-white" style="font-size: 0.8rem;">Elite</div><small class="text-muted" style="font-size:0.7rem;">10,000+ Pts</small></div></div>
         </div>
     </div>
+
+    <!-- ================= START: GOOGLE ADSENSE BOTTOM PLACEMENT ================= -->
+    <div class="google-ad-wrapper">
+        <span class="ad-label">Advertisement</span>
+        <!-- System Status Display -->
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-4661775522120249"
+             data-ad-slot="1097828358"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+    <!-- ================= END: GOOGLE ADSENSE BOTTOM PLACEMENT ================= -->
 
 </div>
 
