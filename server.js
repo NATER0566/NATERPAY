@@ -89,6 +89,44 @@ async function registerRoutes() {
   fastify.post('/api/user/profile', { preHandler: require('./middleware/auth').authenticate }, userRoutes.updateProfile);
   fastify.get('/api/user/referral-tree', { preHandler: require('./middleware/auth').authenticate }, userRoutes.getReferralTree);
   fastify.post('/api/user/upgrade', { preHandler: require('./middleware/auth').authenticate }, userRoutes.upgradeUser);
+
+  // ---> BUSINESS PROFILE ROUTE ADDED HERE <---
+  fastify.post('/api/user/business-profile', { preHandler: require('./middleware/auth').authenticate }, async (request, reply) => {
+    try {
+      const { name, email, phone, web, address, logoBase64 } = request.body;
+      const User = require('./models/User');
+      const user = await User.findById(request.user._id);
+      
+      if (!user.businessProfile) user.businessProfile = {};
+      user.businessProfile.name = name;
+      user.businessProfile.email = email;
+      user.businessProfile.phone = phone;
+      user.businessProfile.website = web;
+      user.businessProfile.address = address;
+
+      if (logoBase64 && logoBase64.startsWith('data:image')) {
+        const cloudinary = require('cloudinary').v2;
+        if (process.env.CLOUDINARY_CLOUD_NAME) {
+          cloudinary.config({
+            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+            api_key: process.env.CLOUDINARY_API_KEY,
+            api_secret: process.env.CLOUDINARY_API_SECRET
+          });
+          const uploadRes = await cloudinary.uploader.upload(logoBase64, { folder: 'naterpay/logos' });
+          user.businessProfile.logoUrl = uploadRes.secure_url;
+          user.businessProfile.cloudinaryId = uploadRes.public_id;
+        } else {
+          user.businessProfile.logoUrl = logoBase64;
+        }
+      }
+      
+      await user.save();
+      reply.send({ success: true, profile: user.businessProfile });
+    } catch (err) {
+      console.error('Business Profile Save Error:', err);
+      reply.status(500).send({ success: false, message: 'Failed to save business profile.' });
+    }
+  });
   
   const walletRoutes = require('./routes/wallet');
   fastify.get('/api/wallet', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.getWallet);
@@ -112,10 +150,6 @@ async function registerRoutes() {
   fastify.post('/api/vtu/insurance', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyInsurance);
   
   fastify.post('/api/vtu/sms', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buySms);
-  
-  // PROACTIVE CRASH PREVENTION: Commented out missing VTU routes to guarantee successful startup
-  // fastify.post('/api/vtu/pos', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyPOS);
-  // fastify.post('/api/vtu/webhook', vtuRoutes.handleVTpassWebhook);
   
   fastify.get('/api/vtu/rates', vtuRoutes.getRates);
   fastify.get('/api/vtu/variations', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getVariations);
@@ -159,6 +193,11 @@ async function registerRoutes() {
   const invoiceRoutes = require('./routes/invoice');
   fastify.get('/api/invoices', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.getInvoices);
   fastify.post('/api/invoices', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.createInvoice);
+  
+  // ---> THE FIX: EXPLICITLY ADDING DELETE AND MARK-PAID ROUTES <---
+  fastify.delete('/api/invoices/:id', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.deleteInvoice);
+  fastify.put('/api/invoices/:id/mark-paid', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.markInvoicePaid);
+  
   fastify.get('/api/invoices/:invoiceId', invoiceRoutes.getInvoice);
   fastify.post('/api/invoices/:invoiceId/pay', invoiceRoutes.payInvoice);
   
@@ -220,7 +259,6 @@ async function registerRoutes() {
   fastify.delete('/api/cms/announcements/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.deleteAnnouncement);
   fastify.put('/api/cms/maintenance', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.setMaintenanceMode);
   
-  // ---> THE FIX: EXPLICITLY ADDING THE FOUNDER ROUTES HERE <---
   fastify.get('/api/cms/founder', cmsRoutes.getFounderProfile);
   fastify.post('/api/cms/founder', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.updateFounderProfile);
   
