@@ -39,15 +39,37 @@
             background: linear-gradient(90deg, transparent, var(--gold), transparent);
         }
 
+        /* UPGRADED FOUNDER PHOTO DISPLAY */
         .founder-photo-wrapper {
-            width: 180px; height: 180px; border-radius: 50%; padding: 5px;
-            background: linear-gradient(135deg, var(--gold), #ff4d4d); margin-bottom: 25px;
-            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3); position: relative;
+            width: 200px; height: 200px; border-radius: 50%; padding: 6px;
+            background: conic-gradient(from 0deg, var(--gold), #ff4d4d, var(--bg), var(--gold));
+            margin-bottom: 25px; box-shadow: 0 10px 40px rgba(255, 215, 0, 0.3);
+            position: relative; animation: spinBorder 10s linear infinite;
+        }
+        
+        @keyframes spinBorder {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Counter-rotate the image so the picture stays upright while the border spins */
+        .founder-photo-container {
+            width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+            animation: counterSpinBorder 10s linear infinite;
+            background: #111; border: 4px solid #000;
+        }
+
+        @keyframes counterSpinBorder {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-360deg); }
         }
         
         .founder-photo {
-            width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
-            background: #111; border: 4px solid #000;
+            width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;
+        }
+
+        .founder-photo-container:hover .founder-photo {
+            transform: scale(1.1);
         }
 
         .founder-name { font-family: 'Cinzel', serif; font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 900; color: #fff; margin-bottom: 5px; text-shadow: 0 4px 15px rgba(0,0,0,0.8); }
@@ -56,7 +78,7 @@
         .academic-badge {
             background: rgba(255, 255, 255, 0.05); border: 1px solid #444; color: #ccc;
             padding: 8px 20px; border-radius: 50px; font-size: 0.85rem; font-weight: 700;
-            display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px;
+            display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px; text-align: center; line-height: 1.4;
         }
 
         .social-grid { display: flex; gap: 15px; justify-content: center; margin-top: 20px; }
@@ -110,16 +132,20 @@
         </div>
 
         <!-- DYNAMIC CONTENT (Hidden until loaded) -->
-        <div id="dynamicProfile" style="display: none; width: 100%; display: flex; flex-direction: column; align-items: center;">
+        <div id="dynamicProfile" style="display: none; width: 100%; flex-direction: column; align-items: center;">
+            
             <div class="founder-photo-wrapper">
-                <img src="" alt="Founder" class="founder-photo" id="founderPhoto">
+                <div class="founder-photo-container">
+                    <!-- Default fallback image is used initially -->
+                    <img src="logopay.jpg.jpg" alt="Founder Profile" class="founder-photo" id="founderPhoto">
+                </div>
             </div>
             
-            <h1 class="founder-name" id="founderName">Nater Mbashau</h1>
-            <div class="founder-title" id="founderTitle">Chief Executive Officer & Lead Architect</div>
+            <h1 class="founder-name" id="founderName">Loading Name...</h1>
+            <div class="founder-title" id="founderTitle">Loading Title...</div>
             
             <div class="academic-badge" id="founderAcademic">
-                <i class="fas fa-university text-warning"></i> 300L Computer Science • Nasarawa State University, Keffi
+                <i class="fas fa-university text-warning"></i> Loading Credentials...
             </div>
 
             <div class="social-grid">
@@ -136,21 +162,12 @@
         <div class="d-flex flex-column gap-4">
             <div class="info-card">
                 <h3 class="section-title"><i class="fas fa-book-open"></i> The Vision & Autobiography</h3>
-                <div class="biography-text" id="founderBio">
-Operating under the professional architecture of NATER GRACE CODE, the vision behind NATER-PAY was simple: to bridge the gap between complex financial infrastructure and everyday digital needs for the African market.
-
-Driven by a profound passion for programming, web development, and digital problem-solving, this platform was built from the ground up to ensure military-grade security, lightning-fast transactions, and seamless user experiences. 
-
-The ultimate objective is to evolve NATER-PAY into a master super-app, integrating web technologies with upcoming advancements in Python, Data Analytics, Blockchain, and Artificial Intelligence, ensuring our users always stay ahead of the digital curve.
-                </div>
+                <div class="biography-text" id="founderBio">Loading biography...</div>
             </div>
 
-            <!-- NEW MISSION SECTION -->
             <div class="info-card">
                 <h3 class="section-title"><i class="fas fa-bullseye"></i> Our Mission</h3>
-                <p class="biography-text m-0">
-                    NATER-PAY exists to make digital financial services simple, secure, affordable, and accessible to everyone. Our mission is to build one trusted platform where users can pay bills, purchase airtime and data, trade gift cards, complete tasks, shop in the marketplace, and access future financial innovations with confidence.
-                </p>
+                <p class="biography-text m-0" id="founderMission">Loading mission statement...</p>
             </div>
         </div>
 
@@ -167,17 +184,16 @@ The ultimate objective is to evolve NATER-PAY into a master super-app, integrati
                 </div>
             </div>
 
-            <!-- UPDATED CONTACT SECTION -->
             <div class="info-card">
                 <h3 class="section-title"><i class="fas fa-envelope"></i> Contact the Founder</h3>
                 <p class="text-muted small fw-bold mb-3">For enterprise partnerships, API integrations, or direct inquiries.</p>
-                <div class="d-flex align-items-center gap-3 mb-2">
+                <div class="d-flex align-items-center gap-3 mb-3">
                     <i class="fab fa-whatsapp fs-4 text-success"></i>
-                    <a href="https://wa.me/2348160979620" class="text-white text-decoration-none fw-bold">+234 816 097 9620</a>
+                    <a href="#" id="founderWhatsappLink" class="text-white text-decoration-none fw-bold" target="_blank"><span id="founderWhatsappText">Loading...</span></a>
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <i class="fas fa-envelope fs-4 text-warning"></i>
-                    <a href="mailto:nmbashau@gmail.com" class="text-white text-decoration-none fw-bold">nmbashau@gmail.com</a>
+                    <a href="#" id="founderEmailLink" class="text-white text-decoration-none fw-bold"><span id="founderEmailText">Loading...</span></a>
                 </div>
             </div>
         </div>
@@ -215,14 +231,36 @@ The ultimate objective is to evolve NATER-PAY into a master super-app, integrati
             const data = await res.json();
             
             if (data.success && data.founder) {
-                document.getElementById('founderName').innerText = data.founder.name;
-                document.getElementById('founderTitle').innerText = data.founder.title;
-                document.getElementById('founderAcademic').innerHTML = `<i class="fas fa-university text-warning"></i> ${data.founder.academic}`;
-                document.getElementById('founderBio').innerText = data.founder.bio;
-                if(data.founder.photoUrl) document.getElementById('founderPhoto').src = data.founder.photoUrl;
+                // Populate Core Info
+                if(data.founder.name) document.getElementById('founderName').innerText = data.founder.name;
+                if(data.founder.title) document.getElementById('founderTitle').innerText = data.founder.title;
+                if(data.founder.academic) document.getElementById('founderAcademic').innerHTML = `<i class="fas fa-university text-warning"></i> ${data.founder.academic}`;
+                
+                // Populate Bio & Mission
+                if(data.founder.bio) document.getElementById('founderBio').innerText = data.founder.bio;
+                if(data.founder.mission) document.getElementById('founderMission').innerText = data.founder.mission;
+                
+                // Populate Contact Links dynamically
+                if(data.founder.whatsapp) {
+                    const phoneStr = data.founder.whatsapp.replace(/\D/g,''); // Remove non-numeric characters
+                    document.getElementById('founderWhatsappText').innerText = '+' + phoneStr;
+                    document.getElementById('founderWhatsappLink').href = 'https://wa.me/' + phoneStr;
+                }
+
+                if(data.founder.email) {
+                    const emailStr = data.founder.email;
+                    document.getElementById('founderEmailText').innerText = emailStr;
+                    document.getElementById('founderEmailLink').href = 'mailto:' + emailStr;
+                }
+
+                // SECURE IMAGE RENDERER: Updates the image source if a valid URL was uploaded
+                if(data.founder.photoUrl && data.founder.photoUrl.length > 10) {
+                    document.getElementById('founderPhoto').src = data.founder.photoUrl;
+                }
             }
         } catch (e) {
-            document.getElementById('founderPhoto').src = "logopay.jpg.jpg"; 
+            console.error("Failed to load profile:", e);
+            // Default stays as logopay.jpg.jpg if it completely fails
         } finally {
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('dynamicProfile').style.display = 'flex';
