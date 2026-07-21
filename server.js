@@ -111,7 +111,6 @@ async function registerRoutes() {
   fastify.post('/api/vtu/betting', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyBetting);
   fastify.post('/api/vtu/insurance', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyInsurance);
   
-  // THE FIX: Correctly maps to buySms as exported in vtu.js
   fastify.post('/api/vtu/sms', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buySms);
   
   // PROACTIVE CRASH PREVENTION: Commented out missing VTU routes to guarantee successful startup
@@ -206,6 +205,7 @@ async function registerRoutes() {
   fastify.put('/api/admin/ads/:id/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.rejectAd);
   fastify.delete('/api/admin/ads/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.deleteAd);
   
+  // === CMS / HOMEPAGE / SLIDES / FOUNDER ROUTES ===
   const cmsRoutes = require('./routes/cms');
   fastify.get('/api/cms/homepage-data', cmsRoutes.getHomepageData);
   fastify.get('/api/slides', cmsRoutes.getSlides);
@@ -219,6 +219,10 @@ async function registerRoutes() {
   fastify.put('/api/cms/announcements/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.updateAnnouncement);
   fastify.delete('/api/cms/announcements/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.deleteAnnouncement);
   fastify.put('/api/cms/maintenance', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.setMaintenanceMode);
+  
+  // ---> THE FIX: EXPLICITLY ADDING THE FOUNDER ROUTES HERE <---
+  fastify.get('/api/cms/founder', cmsRoutes.getFounderProfile);
+  fastify.post('/api/cms/founder', { preHandler: require('./middleware/auth').authenticateAdmin }, cmsRoutes.updateFounderProfile);
   
   const apiRoutes = require('./routes/api');
   fastify.get('/api/api/keys', { preHandler: require('./middleware/auth').authenticate }, apiRoutes.getApiKeys);
