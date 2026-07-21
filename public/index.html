@@ -126,14 +126,39 @@
         .btn-authorize { background: var(--gold); color: black; font-weight: 900; border-radius: 20px; padding: 22px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 4px; text-transform: uppercase; transition: 0.3s; }
         .btn-authorize:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
 
-        /* RECONFIGURED COMPACT SLIDESHOW FOR MOBILE AUTH PANEL */
-        .slideshow-viewport { width: 100%; height: 220px; position: relative; border-radius: 15px; overflow: hidden; background: #050505; flex-shrink: 0; border: 1px solid rgba(212, 175, 55, 0.2); }
-        .slide-element { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:1; transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 20px; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.2) 100%); }
+        /* ========================================================
+           THE NEW, MASSIVE EDGE-TO-EDGE MANUAL SLIDESHOW DESIGN 
+           ======================================================== */
+        .slideshow-section { margin-bottom: 50px; flex-shrink: 0; background: rgba(5,5,5,0.9); border-top: 2px solid var(--gold); border-bottom: 2px solid var(--gold); padding: 25px 0; box-shadow: 0 10px 40px rgba(0,0,0,0.9); }
+        .slideshow-header { font-family: 'Cinzel'; font-size: 1.1rem; color: var(--gold); letter-spacing: 2px; font-weight: 900; margin-bottom: 15px; padding: 0 25px; display: flex; align-items: center; gap: 8px; }
+        
+        .slideshow-viewport { width: 100%; height: 420px; position: relative; overflow: hidden; background: #000; }
+        .slide-element { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:1; transition: opacity 0.5s ease-in-out; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 40px 25px; background: linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.1) 100%); }
         .slide-element.active { opacity:1; z-index:2; }
-        .slide-media-layer { position: absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; z-index:-1; pointer-events: none; }
-        .slide-text-overlay { width: 100%; position: relative; z-index: 3; }
-        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.2rem; margin-bottom: 5px; text-shadow: 0 2px 5px rgba(0,0,0,1); line-height: 1.2; }
-        .slide-text-overlay p { font-size: 0.8rem; color: #fff; opacity: 0.9; margin-bottom: 12px; font-weight: 600; text-shadow: 0 2px 5px rgba(0,0,0,1); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        /* Media Layers */
+        .slide-media-layer { position: absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; z-index:-1; pointer-events: auto; } /* pointer-events auto allows video interaction */
+        
+        /* Animated Background for Text-Only Slides */
+        @keyframes textBgFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:-1; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
+
+        /* Overlay Text must not block video clicks */
+        .slide-text-overlay { width: 100%; position: relative; z-index: 3; pointer-events: none; }
+        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.8rem; margin-bottom: 8px; text-shadow: 0 2px 8px rgba(0,0,0,1); line-height: 1.2; }
+        .slide-text-overlay p { font-size: 0.95rem; color: #fff; opacity: 0.95; margin-bottom: 15px; font-weight: 600; text-shadow: 0 2px 8px rgba(0,0,0,1); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .slide-text-overlay a { pointer-events: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.8); } /* CTA button stays clickable */
+
+        /* Manual Controls (Arrows & Dots) */
+        .slide-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 15px; z-index: 10; pointer-events: none; }
+        .slide-nav button { pointer-events: auto; background: rgba(0,0,0,0.7); color: var(--gold); border: 1.5px solid var(--gold); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(5px); }
+        .slide-nav button:hover { background: var(--gold); color: #000; transform: scale(1.1); }
+        
+        .slide-dots { position: absolute; bottom: 15px; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 10; }
+        .slide-dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.3); cursor: pointer; transition: 0.3s; border: 1px solid transparent; }
+        .slide-dot.active { background: var(--gold); transform: scale(1.3); border-color: #000; box-shadow: 0 0 10px rgba(212,175,55,0.6); }
+
+        .slide-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.4; }
 
         .price-ticker { background: rgba(212, 175, 55, 0.04); border: 1.5px solid rgba(212, 175, 55, 0.15); border-radius: 30px; padding: 30px; flex-shrink: 0; margin-bottom: 30px; }
 
@@ -159,7 +184,7 @@
         .social-circle:hover { background: rgba(212,175,55,0.1); color: var(--gold); border-color: var(--gold); transform: translateY(-3px); }
 
         /* Hide the left panel completely on mobile */
-        @media (max-width: 1100px) { .system-side { display: none; } .auth-side { padding: 40px 25px; background: rgba(10, 10, 10, 0.4); } .viewport-wrapper { overflow-y: auto; } }
+        @media (max-width: 1100px) { .system-side { display: none; } .auth-side { padding: 40px 0; background: rgba(10, 10, 10, 0.4); } .viewport-wrapper { overflow-y: auto; } }
     </style>
 </head>
 <body>
@@ -214,6 +239,18 @@
         </div>
 
         <div class="ecosystem-section">
+            <div class="ecosystem-header"><i class="fas fa-rocket"></i> Scalable Retention Engine</div>
+            <div class="ecosystem-grid">
+                <span class="eco-pill"><i class="fas fa-undo-alt"></i> Cashback Automations</span>
+                <span class="eco-pill"><i class="fas fa-dharmachakra"></i> Daily Rewards & Spin</span>
+                <span class="eco-pill"><i class="fas fa-tasks"></i> Task & Earn System</span>
+                <span class="eco-pill"><i class="fas fa-trophy"></i> Agent Leaderboards</span>
+                <span class="eco-pill"><i class="fas fa-bullseye"></i> Engagement Scoring</span>
+                <span class="eco-pill"><i class="fas fa-bell"></i> Realtime Alerts</span>
+            </div>
+        </div>
+
+        <div class="ecosystem-section">
             <div class="ecosystem-header"><i class="fas fa-shield-alt"></i> Military-Grade Security</div>
             <div class="ecosystem-grid">
                 <span class="eco-pill"><i class="fas fa-fingerprint"></i> Level 3 KYC Shielding</span>
@@ -228,140 +265,141 @@
 
     <!-- MAIN INTERACTION AREA (Visible on Mobile) -->
     <div class="auth-side">
-        <div class="auth-header" style="margin-bottom: 40px; border-left: 6px solid var(--gold); padding-left: 25px;">
-            <h2 id="authTitle" style="font-family:Cinzel; font-weight:900; color: #ffffff; letter-spacing: 1px;">NATER<span style="color:var(--gold)">-PAY</span></h2>
-            <p class="high-contrast-subtitle" id="authSubtitle">AUTHORIZE SECURE IDENTITY</p>
-        </div>
-
-        <div class="auth-tabs-wrapper" id="authTabsHeader">
-            <div class="d-flex w-100 gap-2">
-                <span class="auth-tab active" id="tabLogin" onclick="switchTab('login')">LOGIN <i class="fas fa-sign-in-alt ms-2"></i></span>
-                <span class="auth-tab" id="tabReg" onclick="switchTab('reg')">REGISTER <i class="fas fa-user-plus ms-2"></i></span>
-            </div>
-            <div class="tab-indicator-container">
-                <div class="tab-indicator-bar" id="slidingIndicator"></div>
-            </div>
-        </div>
-
-        <form id="loginForm" onsubmit="handleLogin(event)">
-            <div class="input-group-custom">
-                <label>Account Identifier (Email)</label>
-                <input type="email" id="loginEmail" placeholder="yourname@domain.com" required autocomplete="username">
-            </div>
-            <div class="input-group-custom" id="loginPassWrapper">
-                <label>Security Access Key</label>
-                <input type="password" id="loginPass" placeholder="••••••••" oninput="liveLoginBinderCheck(this.value)" required autocomplete="current-password">
-                <i class="fas fa-eye toggle-password" onclick="togglePass('loginPass', this)"></i>
-            </div>
-            <div class="text-end mb-4">
-                <a href="#" onclick="switchTab('forgot'); return false;" style="color: var(--gold); text-decoration: none; font-size: 13px; font-weight: 700; letter-spacing:1px;">FORGOT SECURITY KEY?</a>
-            </div>
-            <button type="submit" class="btn-authorize" id="btnLoginButton">ACTIVATE SESSION</button>
-        </form>
-
-        <form id="regForm" style="display:none;" onsubmit="handleRegister(event)">
-            <div class="input-group-custom">
-                <label>Legal Identity Name</label>
-                <input type="text" id="regName" placeholder="Full Legal Name" required autocomplete="name">
-            </div>
-            <div class="input-group-custom">
-                <label>Primary Email Address</label>
-                <input type="email" id="regEmail" placeholder="name@domain.com" required autocomplete="email">
-            </div>
-            <div class="input-group-custom">
-                <label>Core Connection Line (Phone)</label>
-                <input type="tel" id="regPhone" placeholder="e.g. +2348000000000" required autocomplete="tel">
-            </div>
-            <div class="input-group-custom">
-                <label>New Security Pass Key</label>
-                <input type="password" id="regPass" placeholder="Create Secure Key" oninput="liveSecurityCheck(this.value)" required autocomplete="new-password">
-                <i class="fas fa-eye toggle-password" onclick="togglePass('regPass', this)"></i>
-            </div>
-            
-            <div class="pass-hints" id="passHints">
-                <span class="hint" id="crit_len"><i class="fas fa-times-circle"></i>8-16 Characters</span>
-                <span class="hint" id="crit_case"><i class="fas fa-times-circle"></i>Upper & Lower</span>
-                <span class="hint" id="crit_num"><i class="fas fa-times-circle"></i>Numbers (0-9)</span>
-                <span class="hint" id="crit_spec"><i class="fas fa-times-circle"></i>Symbols (#$&@)</span>
+        
+        <div style="padding: 0 25px;">
+            <div class="auth-header" style="margin-bottom: 40px; border-left: 6px solid var(--gold); padding-left: 25px;">
+                <h2 id="authTitle" style="font-family:Cinzel; font-weight:900; color: #ffffff; letter-spacing: 1px;">NATER<span style="color:var(--gold)">-PAY</span></h2>
+                <p class="high-contrast-subtitle" id="authSubtitle">AUTHORIZE SECURE IDENTITY</p>
             </div>
 
-            <div class="input-group-custom">
-                <label>Referral Node ID</label>
-                <input type="text" id="regRef" placeholder="Optional Affiliate Code">
+            <div class="auth-tabs-wrapper" id="authTabsHeader">
+                <div class="d-flex w-100 gap-2">
+                    <span class="auth-tab active" id="tabLogin" onclick="switchTab('login')">LOGIN <i class="fas fa-sign-in-alt ms-2"></i></span>
+                    <span class="auth-tab" id="tabReg" onclick="switchTab('reg')">REGISTER <i class="fas fa-user-plus ms-2"></i></span>
+                </div>
+                <div class="tab-indicator-container">
+                    <div class="tab-indicator-bar" id="slidingIndicator"></div>
+                </div>
             </div>
-            <div class="mb-4"></div>
-            <button type="submit" class="btn-authorize" id="btnRegisterButton">PROVISION ACCOUNT</button>
-        </form>
 
-        <form id="forgotForm" style="display:none;" onsubmit="handleInlineForgotPassword(event)">
-            <div id="forgotStep1">
-                <div class="mb-4">
-                    <p class="high-contrast-desc">Provide your verified identity credentials below to request a security key reset token from the NATER-PAY validation vault.</p>
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="input-group-custom">
+                    <label>Account Identifier (Email)</label>
+                    <input type="email" id="loginEmail" placeholder="yourname@domain.com" required autocomplete="username">
+                </div>
+                <div class="input-group-custom" id="loginPassWrapper">
+                    <label>Security Access Key</label>
+                    <input type="password" id="loginPass" placeholder="••••••••" oninput="liveLoginBinderCheck(this.value)" required autocomplete="current-password">
+                    <i class="fas fa-eye toggle-password" onclick="togglePass('loginPass', this)"></i>
+                </div>
+                <div class="text-end mb-4">
+                    <a href="#" onclick="switchTab('forgot'); return false;" style="color: var(--gold); text-decoration: none; font-size: 13px; font-weight: 700; letter-spacing:1px;">FORGOT SECURITY KEY?</a>
+                </div>
+                <button type="submit" class="btn-authorize" id="btnLoginButton">ACTIVATE SESSION</button>
+            </form>
+
+            <form id="regForm" style="display:none;" onsubmit="handleRegister(event)">
+                <div class="input-group-custom">
+                    <label>Legal Identity Name</label>
+                    <input type="text" id="regName" placeholder="Full Legal Name" required autocomplete="name">
                 </div>
                 <div class="input-group-custom">
-                    <label>Registered Account Email</label>
-                    <input type="email" id="forgotEmail" placeholder="yourname@domain.com" required>
-                </div>
-                <button type="submit" class="btn-authorize mb-4" id="btnForgotButton">SEND RECOVERY KEY</button>
-                
-                <div class="text-center mt-3">
-                    <button type="button" onclick="switchTab('login')" class="btn btn-outline-secondary rounded-pill text-white fw-bold px-4" style="border-color: rgba(255,255,255,0.2);">
-                        <i class="fas fa-arrow-left me-2"></i> Back to Login
-                    </button>
-                </div>
-            </div>
-
-            <div id="forgotStep2" style="display:none;">
-                <div class="mb-4">
-                    <p class="high-contrast-desc" style="color: #00ff88 !important;">Security token dispatched! Enter the 6-digit code sent to your email and create a new secure key.</p>
+                    <label>Primary Email Address</label>
+                    <input type="email" id="regEmail" placeholder="name@domain.com" required autocomplete="email">
                 </div>
                 <div class="input-group-custom">
-                    <label>6-Digit Reset Token</label>
-                    <input type="text" id="resetOtp" placeholder="123456" maxlength="6" style="letter-spacing: 10px; font-size: 1.5rem; text-align: center;">
+                    <label>Core Connection Line (Phone)</label>
+                    <input type="tel" id="regPhone" placeholder="e.g. +2348000000000" required autocomplete="tel">
                 </div>
                 <div class="input-group-custom">
                     <label>New Security Pass Key</label>
-                    <input type="password" id="resetPass" placeholder="Create Secure Key">
-                    <i class="fas fa-eye toggle-password" onclick="togglePass('resetPass', this)"></i>
+                    <input type="password" id="regPass" placeholder="Create Secure Key" oninput="liveSecurityCheck(this.value)" required autocomplete="new-password">
+                    <i class="fas fa-eye toggle-password" onclick="togglePass('regPass', this)"></i>
                 </div>
-                <button type="button" class="btn-authorize mb-4" id="btnResetButton" onclick="handleResetPassword()">UPDATE SECURITY KEY</button>
                 
-                <div class="text-center mt-3">
-                    <button type="button" onclick="resetForgotForm(); switchTab('login')" class="btn btn-outline-secondary rounded-pill text-white fw-bold px-4" style="border-color: rgba(255,255,255,0.2);">
-                        <i class="fas fa-times me-2"></i> Cancel Reset
-                    </button>
+                <div class="pass-hints" id="passHints">
+                    <span class="hint" id="crit_len"><i class="fas fa-times-circle"></i>8-16 Characters</span>
+                    <span class="hint" id="crit_case"><i class="fas fa-times-circle"></i>Upper & Lower</span>
+                    <span class="hint" id="crit_num"><i class="fas fa-times-circle"></i>Numbers (0-9)</span>
+                    <span class="hint" id="crit_spec"><i class="fas fa-times-circle"></i>Symbols (#$&@)</span>
                 </div>
-            </div>
-        </form>
 
-        <div class="embedded-support-card" onclick="openChat()">
-            <div class="support-info-block">
-                <div class="support-icon-wrapper">
-                    <i class="fas fa-headset" style="font-weight: 900; font-size: 1.2rem;"></i>
+                <div class="input-group-custom">
+                    <label>Referral Node ID</label>
+                    <input type="text" id="regRef" placeholder="Optional Affiliate Code">
                 </div>
-                <div class="support-text-details-wrapper">
-                    <span class="support-text-label">Need Help?</span>
-                    <span class="support-text-sub">Click here to contact Customer Care</span>
+                <div class="mb-4"></div>
+                <button type="submit" class="btn-authorize" id="btnRegisterButton">PROVISION ACCOUNT</button>
+            </form>
+
+            <form id="forgotForm" style="display:none;" onsubmit="handleInlineForgotPassword(event)">
+                <div id="forgotStep1">
+                    <div class="mb-4">
+                        <p class="high-contrast-desc">Provide your verified identity credentials below to request a security key reset token from the NATER-PAY validation vault.</p>
+                    </div>
+                    <div class="input-group-custom">
+                        <label>Registered Account Email</label>
+                        <input type="email" id="forgotEmail" placeholder="yourname@domain.com" required>
+                    </div>
+                    <button type="submit" class="btn-authorize mb-4" id="btnForgotButton">SEND RECOVERY KEY</button>
+                    
+                    <div class="text-center mt-3">
+                        <button type="button" onclick="switchTab('login')" class="btn btn-outline-secondary rounded-pill text-white fw-bold px-4" style="border-color: rgba(255,255,255,0.2);">
+                            <i class="fas fa-arrow-left me-2"></i> Back to Login
+                        </button>
+                    </div>
                 </div>
+
+                <div id="forgotStep2" style="display:none;">
+                    <div class="mb-4">
+                        <p class="high-contrast-desc" style="color: #00ff88 !important;">Security token dispatched! Enter the 6-digit code sent to your email and create a new secure key.</p>
+                    </div>
+                    <div class="input-group-custom">
+                        <label>6-Digit Reset Token</label>
+                        <input type="text" id="resetOtp" placeholder="123456" maxlength="6" style="letter-spacing: 10px; font-size: 1.5rem; text-align: center;">
+                    </div>
+                    <div class="input-group-custom">
+                        <label>New Security Pass Key</label>
+                        <input type="password" id="resetPass" placeholder="Create Secure Key">
+                        <i class="fas fa-eye toggle-password" onclick="togglePass('resetPass', this)"></i>
+                    </div>
+                    <button type="button" class="btn-authorize mb-4" id="btnResetButton" onclick="handleResetPassword()">UPDATE SECURITY KEY</button>
+                    
+                    <div class="text-center mt-3">
+                        <button type="button" onclick="resetForgotForm(); switchTab('login')" class="btn btn-outline-secondary rounded-pill text-white fw-bold px-4" style="border-color: rgba(255,255,255,0.2);">
+                            <i class="fas fa-times me-2"></i> Cancel Reset
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="embedded-support-card" onclick="openChat()">
+                <div class="support-info-block">
+                    <div class="support-icon-wrapper">
+                        <i class="fas fa-headset" style="font-weight: 900; font-size: 1.2rem;"></i>
+                    </div>
+                    <div class="support-text-details-wrapper">
+                        <span class="support-text-label">Need Help?</span>
+                        <span class="support-text-sub">Click here to contact Customer Care</span>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: #ffffff; opacity: 1; font-size: 1.2rem; padding-left: 10px; position: relative; z-index: 2;"></i>
             </div>
-            <i class="fas fa-chevron-right" style="color: #ffffff; opacity: 1; font-size: 1.2rem; padding-left: 10px; position: relative; z-index: 2;"></i>
         </div>
 
-        <!-- NEW DEDICATED SLIDESHOW CARD (MOVED HERE BELOW HELP BUTTON FOR MOBILE VISIBILITY) -->
-        <div class="mt-4 mb-3" style="background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212, 175, 55, 0.3); border-radius: 20px; padding: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.7);">
-            <div style="font-family: 'Cinzel'; font-size: 0.9rem; color: var(--gold); letter-spacing: 2px; font-weight: 800; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 8px;">
-                <i class="fas fa-bullhorn"></i> SYSTEM UPDATES & PROMOS
-            </div>
+        <!-- NEW DEDICATED SLIDESHOW BILLBOARD SECTION (EDGE TO EDGE) -->
+        <div class="slideshow-section mt-5 w-100">
+            <div class="slideshow-header"><i class="fas fa-bullhorn"></i> SYSTEM UPDATES & PROMOS</div>
             <div class="slideshow-viewport" id="mediaSlideshowEngine">
-                <div class="slide-empty-state" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5;">
-                    <i class="fas fa-images fa-2x mb-2 text-secondary"></i>
-                    <h6 class="text-gold fw-bold m-0" id="slideshowStatusText" style="font-size: 0.85rem;">Loading Slides...</h6>
+                <div class="slide-empty-state">
+                    <i class="fas fa-photo-video fa-3x mb-3 text-secondary"></i>
+                    <h6 class="text-gold fw-bold m-0" id="slideshowStatusText" style="font-size: 0.9rem;">Loading Slides...</h6>
                 </div>
             </div>
         </div>
-        <!-- END SLIDESHOW CARD -->
+        <!-- END SLIDESHOW SECTION -->
 
-        <div class="mt-auto pt-4 text-center">
+        <div class="mt-auto pt-4 pb-4 text-center w-100">
             <!-- SOCIAL MEDIA INTEGRATION -->
             <div class="d-flex justify-content-center gap-3 mb-3">
                 <a href="https://facebook.com/natergracecode" target="_blank" class="social-circle"><i class="fab fa-facebook-f"></i></a>
@@ -382,7 +420,6 @@
     let socketInstance = null;
     let applicationSlides = [];
     let activeSlidePointer = 0;
-    let loopSlideshowInterval = null;
 
     function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     function initStars() {
@@ -445,7 +482,6 @@
         return Object.values(checks).every(Boolean);
     }
 
-    // REAL-TIME DATABASE PASS-MATCH LOGIN VERIFIER BINDER
     async function liveLoginBinderCheck(val) {
         const wrapper = document.getElementById('loginPassWrapper');
         const emailInput = document.getElementById('loginEmail').value.trim();
@@ -472,9 +508,7 @@
                     wrapper.style.borderColor = '#00ff88';
                     wrapper.style.boxShadow = '0 0 14px rgba(0, 255, 136, 0.45)';
                 }
-            } catch (error) {
-                console.debug('[NATER-PAY] Asynchronous background handshake verification pending loop initialization.');
-            }
+            } catch (error) {}
         }
     }
 
@@ -505,23 +539,13 @@
                 if (dataResult.data.logoUrl) {
                     document.getElementById('adminLogo').src = dataResult.data.logoUrl;
                 }
-
-                if(dataResult.data.rates) {
-                    document.getElementById('tickerMTN').innerText = `₦${dataResult.data.rates.mtn || '215'}`;
-                    document.getElementById('tickerAIRTEL').innerText = `₦${dataResult.data.rates.airtel || '190'}`;
-                    document.getElementById('tickerGLO').innerText = `₦${dataResult.data.rates.glo || '220'}`;
-                    document.getElementById('ticker9MOBILE').innerText = `₦${dataResult.data.rates.nineMobile || '180'}`;
-                }
             }
-        } catch (e) {
-            document.getElementById('tickerMTN').innerText = '₦215';
-            document.getElementById('tickerAIRTEL').innerText = '₦190';
-            document.getElementById('tickerGLO').innerText = '₦220';
-            document.getElementById('ticker9MOBILE').innerText = '₦180';
-        }
+        } catch (e) {}
     }
 
-    // ADVANCED MULTIMEDIA SLIDESHOW COMPILER (Image/Video/Text)
+    // =====================================================================
+    // MANUAL SLIDESHOW LOGIC
+    // =====================================================================
     async function deployMediaSlideshowEngine() {
         try {
             const res = await fetch('/api/slides?_t=' + new Date().getTime());
@@ -541,9 +565,8 @@
                 document.getElementById('slideshowStatusText').innerText = "No Announcements Right Now.";
             }
         } catch (err) {
-            console.error("[NATER-PAY] Slideshow streaming channel detached:", err);
             document.getElementById('slideshowStatusText').innerText = "Unable to connect to Media Server.";
-            document.getElementById('slideshowStatusText').style.color = "red";
+            document.getElementById('slideshowStatusText').style.color = "var(--red)";
         }
     }
 
@@ -551,9 +574,26 @@
         const slideViewport = document.getElementById('mediaSlideshowEngine');
         if(!slideViewport || applicationSlides.length === 0) return;
         
-        clearInterval(loopSlideshowInterval);
         let frameBuffer = '';
         
+        // Build Navigation Arrows if more than 1 slide
+        let navHtml = '';
+        if (applicationSlides.length > 1) {
+            navHtml = `
+            <div class="slide-nav">
+                <button onclick="prevSlide()"><i class="fas fa-chevron-left"></i></button>
+                <button onclick="nextSlide()"><i class="fas fa-chevron-right"></i></button>
+            </div>`;
+        }
+
+        // Build Navigation Dots
+        let dotsHtml = '<div class="slide-dots">';
+        applicationSlides.forEach((_, pointer) => {
+            dotsHtml += `<div class="slide-dot ${pointer === 0 ? 'active' : ''}" id="slide_dot_${pointer}" onclick="goToSlide(${pointer})"></div>`;
+        });
+        dotsHtml += '</div>';
+
+        // Build Slides
         applicationSlides.forEach((slide, pointer) => {
             const viewportStateClass = pointer === 0 ? 'active' : '';
             const actionHyperlink = slide.link || slide.ctaLink || '#authTitle'; 
@@ -566,12 +606,15 @@
 
             const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
 
-            if (rawUrl && slide.type !== 'text') {
-                if (isVideo) {
-                    mediaHtml = `<video src="${rawUrl}" class="slide-media-layer" autoplay loop muted playsinline></video>`;
-                } else {
-                    mediaHtml = `<img src="${rawUrl}" class="slide-media-layer" alt="${title}">`;
-                }
+            if (slide.type === 'text' || (!rawUrl && !isVideo)) {
+                // Animated Gradient for Text-Only Slides
+                mediaHtml = `<div class="bg-text-slide"></div>`;
+            } else if (isVideo) {
+                // Video with controls, no autoplay to allow sound
+                mediaHtml = `<video src="${rawUrl}" class="slide-media-layer" controls playsinline preload="metadata"></video>`;
+            } else {
+                // Image filling the space beautifully
+                mediaHtml = `<img src="${rawUrl}" class="slide-media-layer" alt="${title}">`;
             }
             
             frameBuffer += `
@@ -580,30 +623,47 @@
                     <div class="slide-text-overlay">
                         <h3>${title}</h3>
                         <p>${caption}</p>
-                        <a href="${actionHyperlink}" class="btn btn-sm btn-outline-warning px-3 rounded-pill fw-bold" style="font-size:0.75rem; letter-spacing:1px;">${actionLabel}</a>
+                        <a href="${actionHyperlink}" class="btn btn-sm btn-warning px-4 py-2 rounded-pill fw-bold text-dark" style="font-size:0.8rem; letter-spacing:1px;">${actionLabel}</a>
                     </div>
                 </div>
             `;
         });
         
-        slideViewport.innerHTML = frameBuffer;
+        slideViewport.innerHTML = navHtml + frameBuffer + dotsHtml;
         activeSlidePointer = 0;
-        
-        if (applicationSlides.length > 1) {
-            const transitionPeriod = applicationSlides[0].duration || 5000;
-            loopSlideshowInterval = setInterval(transitionSlideNext, transitionPeriod);
-        }
     }
 
-    function transitionSlideNext() {
+    function prevSlide() {
         if(applicationSlides.length <= 1) return;
-        const currentFrame = document.getElementById(`slide_node_index_${activeSlidePointer}`);
-        if(currentFrame) currentFrame.classList.remove('active');
+        document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.remove('active');
+        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.remove('active');
+        
+        activeSlidePointer = (activeSlidePointer - 1 + applicationSlides.length) % applicationSlides.length;
+        
+        document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.add('active');
+        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.add('active');
+    }
+
+    function nextSlide() {
+        if(applicationSlides.length <= 1) return;
+        document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.remove('active');
+        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.remove('active');
         
         activeSlidePointer = (activeSlidePointer + 1) % applicationSlides.length;
         
-        const nextFrame = document.getElementById(`slide_node_index_${activeSlidePointer}`);
-        if(nextFrame) nextFrame.classList.add('active');
+        document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.add('active');
+        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.add('active');
+    }
+
+    function goToSlide(index) {
+        if(index === activeSlidePointer) return;
+        document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.remove('active');
+        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.remove('active');
+        
+        activeSlidePointer = index;
+        
+        document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.add('active');
+        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.add('active');
     }
 
     function initializeSocketConnection() {
@@ -611,13 +671,11 @@
             socketInstance = io({ transparent: true });
             socketInstance.on('cms_update', () => { syncDynamicBrandingAndRates(); });
             socketInstance.on('slides_refresh', () => { deployMediaSlideshowEngine(); });
-        } catch (err) {
-            console.warn("Realtime communications pipeline unlinked.");
-        }
+        } catch (err) {}
     }
 
     // =====================================================================
-    // THE HARD-GATE LOGIN INTERCEPTOR
+    // LOGIN & REGISTRATION LOGIC
     // =====================================================================
     async function handleLogin(e) {
         e.preventDefault();
@@ -638,82 +696,46 @@
             const data = await res.json();
             
             if (data.success) {
-                // NORMAL LOGIN
                 localStorage.setItem("naterpay_token", data.token);
                 localStorage.setItem("naterpay_profile", JSON.stringify(data.user));
 
                 Swal.fire({ 
-                    icon: 'success', 
-                    title: 'Access Granted', 
-                    text: data.message || 'Synchronizing Dashboard Hub...', 
-                    timer: 1500, 
-                    showConfirmButton: false 
-                }).then(() => {
-                    window.location.href = data.redirectUrl || '/dashboard.html';
-                });
+                    icon: 'success', title: 'Access Granted', text: data.message || 'Synchronizing Dashboard Hub...', 
+                    timer: 1500, showConfirmButton: false 
+                }).then(() => { window.location.href = data.redirectUrl || '/dashboard.html'; });
             } 
-            // HARD GATE FOR UNVERIFIED ACCOUNTS
             else if (data.requiresVerification) {
                 Swal.fire({
-                    icon: 'warning',
-                    title: 'Verification Required',
+                    icon: 'warning', title: 'Verification Required',
                     text: `We just sent a fresh 6-digit code to ${data.email}. You MUST verify your email before accessing your dashboard.`,
-                    input: 'text',
-                    inputPlaceholder: 'Enter 6-digit OTP',
+                    input: 'text', inputPlaceholder: 'Enter 6-digit OTP',
                     inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off', style: 'text-align: center; font-size: 24px; letter-spacing: 4px;' },
-                    showCancelButton: true,
-                    confirmButtonText: 'Verify Account',
-                    confirmButtonColor: '#FFD700',
-                    background: '#0a0a0a',
-                    color: '#fff',
-                    allowOutsideClick: false,
-                    inputValidator: (value) => {
-                        if (!value || value.length !== 6) { return 'Please enter the valid 6-digit code'; }
-                    }
+                    showCancelButton: true, confirmButtonText: 'Verify Account', confirmButtonColor: '#FFD700',
+                    background: '#0a0a0a', color: '#fff', allowOutsideClick: false,
+                    inputValidator: (value) => { if (!value || value.length !== 6) return 'Please enter the valid 6-digit code'; }
                 }).then(async (result) => {
                     if (result.isConfirmed && result.value) {
                         Swal.fire({ title: 'Authenticating...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
-                        
                         try {
                             const otpRes = await fetch('/api/auth/verify-otp', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ email: data.email, otp: result.value })
+                                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: data.email, otp: result.value })
                             });
                             const otpData = await otpRes.json();
-                            
                             if (otpData.success) {
-                                // THE FIX: Auto-Login directly from the OTP response!
                                 localStorage.setItem("naterpay_token", otpData.token);
                                 localStorage.setItem("naterpay_profile", JSON.stringify(otpData.user));
-                                
                                 Swal.fire({ icon: 'success', title: 'Verified!', text: 'Your account is secured. Logging you in now...', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff', timer: 1500, showConfirmButton: false }).then(() => {
                                     window.location.href = otpData.redirectUrl || '/dashboard.html';
                                 });
-                            } else {
-                                Swal.fire({ icon: 'error', title: 'Invalid OTP', text: otpData.message, confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' });
-                            }
-                        } catch(err) {
-                            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Verification failed.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' });
-                        }
+                            } else { Swal.fire({ icon: 'error', title: 'Invalid OTP', text: otpData.message, confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }); }
+                        } catch(err) { Swal.fire({ icon: 'error', title: 'Network Error', text: 'Verification failed.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }); }
                     }
                 });
-            }
-            // NORMAL ERROR HANDLING 
-            else { 
-                Swal.fire({ icon: "error", title: "Authentication Alert", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-            }
-        } catch (err) { 
-             Swal.fire({ icon: "error", title: "Gateway Failure", text: "Connection with authorization servers disrupted.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-        } finally {
-            actionButton.disabled = false;
-            actionButton.innerText = "ACTIVATE SESSION";
-        }
+            } else { Swal.fire({ icon: "error", title: "Authentication Alert", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' }); }
+        } catch (err) { Swal.fire({ icon: "error", title: "Gateway Failure", text: "Connection with authorization servers disrupted.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
+        } finally { actionButton.disabled = false; actionButton.innerText = "ACTIVATE SESSION"; }
     }
 
-    // =====================================================================
-    // STRICT OTP REGISTRATION ENFORCEMENT
-    // =====================================================================
     async function handleRegister(e) {
         e.preventDefault();
         const actionButton = document.getElementById('btnRegisterButton');
@@ -723,124 +745,67 @@
         const password = document.getElementById('regPass').value;
         const referralCode = document.getElementById('regRef').value.trim();
 
-        if (!emailCheck(email)) return;
-        if (!liveSecurityCheck(password)) return;
+        if (!emailCheck(email) || !liveSecurityCheck(password)) return;
 
         try {
             actionButton.disabled = true;
             actionButton.innerText = "PROVISIONING VECTOR...";
 
             const res = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, phoneNumber, password, referralCode })
             });
             const data = await res.json();
 
             if (data.success) {
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Account Created!',
+                    icon: 'success', title: 'Account Created!',
                     text: `We sent a 6-digit code to ${email}. You MUST verify your email before accessing your dashboard. Enter it below:`,
-                    input: 'text',
-                    inputPlaceholder: 'Enter 6-digit OTP',
+                    input: 'text', inputPlaceholder: 'Enter 6-digit OTP',
                     inputAttributes: { maxlength: 6, autocapitalize: 'off', autocorrect: 'off', style: 'text-align: center; font-size: 24px; letter-spacing: 4px;' },
-                    showCancelButton: true,
-                    confirmButtonText: 'Verify Account',
-                    cancelButtonText: 'Verify Later',
-                    confirmButtonColor: '#FFD700',
-                    cancelButtonColor: '#333',
-                    background: '#0a0a0a',
-                    color: '#fff',
-                    allowOutsideClick: false,
-                    inputValidator: (value) => {
-                        if (!value || value.length !== 6) { return 'Please enter the valid 6-digit code'; }
-                    }
+                    showCancelButton: true, confirmButtonText: 'Verify Account', cancelButtonText: 'Verify Later',
+                    confirmButtonColor: '#FFD700', cancelButtonColor: '#333', background: '#0a0a0a', color: '#fff', allowOutsideClick: false,
+                    inputValidator: (value) => { if (!value || value.length !== 6) return 'Please enter the valid 6-digit code'; }
                 }).then(async (result) => {
                     if (result.isConfirmed && result.value) {
                         Swal.fire({ title: 'Authenticating...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
-                        
                         try {
                             const otpRes = await fetch('/api/auth/verify-otp', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ email: email, otp: result.value })
+                                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, otp: result.value })
                             });
                             const otpData = await otpRes.json();
-                            
                             if (otpData.success) {
-                                // THE FIX: Auto-Login directly from the OTP response!
                                 localStorage.setItem("naterpay_token", otpData.token);
                                 localStorage.setItem("naterpay_profile", JSON.stringify(otpData.user));
-                                
                                 Swal.fire({ icon: 'success', title: 'Verified!', text: 'Your account is secured. Logging you in now...', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff', timer: 1500, showConfirmButton: false }).then(() => {
                                     window.location.href = otpData.redirectUrl || '/dashboard.html';
                                 });
-                            } else {
-                                Swal.fire({ icon: 'error', title: 'Invalid OTP', text: otpData.message + ' (You can request a new one by trying to log in).', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }).then(() => {
-                                    switchTab('login');
-                                });
-                            }
-                        } catch(err) {
-                            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Verification failed.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }).then(() => switchTab('login'));
-                        }
+                            } else { Swal.fire({ icon: 'error', title: 'Invalid OTP', text: otpData.message + ' (You can request a new one by trying to log in).', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }).then(() => switchTab('login')); }
+                        } catch(err) { Swal.fire({ icon: 'error', title: 'Network Error', text: 'Verification failed.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }).then(() => switchTab('login')); }
                     } else {
-                        // User clicked verify later
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'Verification Pending',
-                            text: 'No problem. Your account is created, but you must verify your email the first time you try to log in.',
-                            confirmButtonColor: '#FFD700',
-                            background: '#0a0a0a',
-                            color: '#fff'
-                        }).then(() => {
-                            switchTab('login');
-                        });
+                        Swal.fire({ icon: 'info', title: 'Verification Pending', text: 'No problem. Your account is created, but you must verify your email the first time you try to log in.', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff' }).then(() => switchTab('login'));
                     }
                 });
-            } else {
-                Swal.fire({ icon: "error", title: "Registry Error", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-            }
-        } catch (err) { 
-             Swal.fire({ icon: "error", title: "Sync Disrupted", text: "Application layer was unable to register data packet.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-        } finally {
-            actionButton.disabled = false;
-            actionButton.innerText = "PROVISION ACCOUNT";
-        }
+            } else { Swal.fire({ icon: "error", title: "Registry Error", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' }); }
+        } catch (err) { Swal.fire({ icon: "error", title: "Sync Disrupted", text: "Application layer was unable to register data packet.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
+        } finally { actionButton.disabled = false; actionButton.innerText = "PROVISION ACCOUNT"; }
     }
 
     async function handleInlineForgotPassword(e) {
         e.preventDefault();
         const actionButton = document.getElementById('btnForgotButton');
         const email = document.getElementById('forgotEmail').value.trim();
-        
         if (!emailCheck(email)) return;
-        
         try {
-            actionButton.disabled = true;
-            actionButton.innerText = "DISPATCHING ENCRYPTION KEYS...";
-
-            const res = await fetch('/api/auth/forgot-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
+            actionButton.disabled = true; actionButton.innerText = "DISPATCHING ENCRYPTION KEYS...";
+            const res = await fetch('/api/auth/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
             const data = await res.json();
-            
             if (data.success) {
                 Swal.fire({ icon: "success", title: "Handshake Sent", text: data.message || 'Check your primary mailbox infrastructure.', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
-                // Hide Step 1, Show Step 2
-                document.getElementById('forgotStep1').style.display = 'none';
-                document.getElementById('forgotStep2').style.display = 'block';
-            } else {
-                Swal.fire({ icon: "error", title: "Handshake Refused", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-            }
-        } catch(err) {
-            Swal.fire({ icon: "error", title: "Network Disrupted", text: "Unable to process pipeline request.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-        } finally {
-            actionButton.disabled = false;
-            actionButton.innerText = "SEND RECOVERY KEY";
-        }
+                document.getElementById('forgotStep1').style.display = 'none'; document.getElementById('forgotStep2').style.display = 'block';
+            } else { Swal.fire({ icon: "error", title: "Handshake Refused", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' }); }
+        } catch(err) { Swal.fire({ icon: "error", title: "Network Disrupted", text: "Unable to process pipeline request.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
+        } finally { actionButton.disabled = false; actionButton.innerText = "SEND RECOVERY KEY"; }
     }
 
     async function handleResetPassword() {
@@ -849,77 +814,43 @@
         const otp = document.getElementById('resetOtp').value.trim();
         const newPassword = document.getElementById('resetPass').value;
 
-        if(!otp || !newPassword) {
-            Swal.fire({ icon: "warning", title: "Missing Data", text: "Please provide both the 6-digit reset token and your new password.", background: '#0a0a0a', color: '#fff' });
-            return;
-        }
+        if(!otp || !newPassword) return Swal.fire({ icon: "warning", title: "Missing Data", text: "Please provide both the 6-digit reset token and your new password.", background: '#0a0a0a', color: '#fff' });
 
         try {
-            actionButton.disabled = true;
-            actionButton.innerText = "UPDATING VAULT...";
-
-            const res = await fetch('/api/auth/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, otp, newPassword })
-            });
+            actionButton.disabled = true; actionButton.innerText = "UPDATING VAULT...";
+            const res = await fetch('/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, otp, newPassword }) });
             const data = await res.json();
-            
             if (data.success) {
                 Swal.fire({ icon: "success", title: "Password Updated", text: data.message || 'Your security key has been successfully changed.', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
-                resetForgotForm();
-                switchTab('login');
-            } else {
-                Swal.fire({ icon: "error", title: "Reset Failed", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-            }
-        } catch(err) {
-            Swal.fire({ icon: "error", title: "Network Disrupted", text: "Unable to process pipeline request.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
-        } finally {
-            actionButton.disabled = false;
-            actionButton.innerText = "UPDATE SECURITY KEY";
-        }
+                resetForgotForm(); switchTab('login');
+            } else { Swal.fire({ icon: "error", title: "Reset Failed", text: data.message, confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' }); }
+        } catch(err) { Swal.fire({ icon: "error", title: "Network Disrupted", text: "Unable to process pipeline request.", confirmButtonColor: '#d32f2f', background: '#0a0a0a', color: '#fff' });
+        } finally { actionButton.disabled = false; actionButton.innerText = "UPDATE SECURITY KEY"; }
     }
 
     function resetForgotForm() {
-        document.getElementById('forgotStep1').style.display = 'block';
-        document.getElementById('forgotStep2').style.display = 'none';
-        document.getElementById('forgotEmail').value = '';
-        document.getElementById('resetOtp').value = '';
-        document.getElementById('resetPass').value = '';
+        document.getElementById('forgotStep1').style.display = 'block'; document.getElementById('forgotStep2').style.display = 'none';
+        document.getElementById('forgotEmail').value = ''; document.getElementById('resetOtp').value = ''; document.getElementById('resetPass').value = '';
     }
 
     function openChat() {
-        Swal.fire({
-            html: `<div style="text-align:center;"><img src="logopay.jpg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" style="width:80px; height:80px; border-radius:50%; border:2px solid var(--gold);"><h4 style="color:#d4af37; margin-top:15px;">Customer Care</h4><hr style="background-color: var(--gold); height:2px;"><a href="https://wa.me/2348160979620" target="_blank" class="btn btn-warning w-100 py-3 mb-2" style="font-weight:700;">Chat on WhatsApp</a><a href="mailto:nmbashau@gmail.com" class="btn btn-outline-warning w-100 py-3 mb-3" style="font-weight:700;">Send us an Email</a><button onclick="Swal.close()" class="btn btn-danger w-100" style="font-weight:700;">Close Menu</button></div>`,
-            showConfirmButton: false, background: '#0a0a0a'
-        });
+        Swal.fire({ html: `<div style="text-align:center;"><img src="logopay.jpg" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" style="width:80px; height:80px; border-radius:50%; border:2px solid var(--gold);"><h4 style="color:#d4af37; margin-top:15px;">Customer Care</h4><hr style="background-color: var(--gold); height:2px;"><a href="https://wa.me/2348160979620" target="_blank" class="btn btn-warning w-100 py-3 mb-2" style="font-weight:700;">Chat on WhatsApp</a><a href="mailto:nmbashau@gmail.com" class="btn btn-outline-warning w-100 py-3 mb-3" style="font-weight:700;">Send us an Email</a><button onclick="Swal.close()" class="btn btn-danger w-100" style="font-weight:700;">Close Menu</button></div>`, showConfirmButton: false, background: '#0a0a0a' });
     }
 
-    // HIGH-CONTRAST TAB NAVIGATION MATRIX SWITCHER
     function switchTab(type) {
         document.getElementById('loginForm').style.display = type === 'login' ? 'block' : 'none';
         document.getElementById('regForm').style.display = type === 'reg' ? 'block' : 'none';
         document.getElementById('forgotForm').style.display = type === 'forgot' ? 'block' : 'none';
-        
         const headerTabs = document.getElementById('authTabsHeader');
         const indicator = document.getElementById('slidingIndicator');
-
         if (type === 'forgot') {
             headerTabs.style.setProperty('display', 'none', 'important');
             document.getElementById('authSubtitle').innerText = "VAULT CREDENTIAL RECOVERY";
         } else {
             headerTabs.style.setProperty('display', 'flex', 'important');
             document.getElementById('authSubtitle').innerText = "AUTHORIZE SECURE IDENTITY";
-            
-            if (type === 'login') {
-                document.getElementById('tabLogin').classList.add('active');
-                document.getElementById('tabReg').classList.remove('active');
-                indicator.style.transform = 'translate3d(0%, 0, 0)';
-            } else {
-                document.getElementById('tabLogin').classList.remove('active');
-                document.getElementById('tabReg').classList.add('active');
-                indicator.style.transform = 'translate3d(100%, 0, 0)';
-            }
+            if (type === 'login') { document.getElementById('tabLogin').classList.add('active'); document.getElementById('tabReg').classList.remove('active'); indicator.style.transform = 'translate3d(0%, 0, 0)'; }
+            else { document.getElementById('tabLogin').classList.remove('active'); document.getElementById('tabReg').classList.add('active'); indicator.style.transform = 'translate3d(100%, 0, 0)'; }
         }
     }
 
@@ -930,13 +861,8 @@
         syncDynamicBrandingAndRates();
         deployMediaSlideshowEngine();
         initializeSocketConnection();
-        
         const urlParams = new URLSearchParams(window.location.search);
-        if(urlParams.has('ref')) { 
-            switchTab('reg'); 
-            const allocationField = document.getElementById('regRef');
-            if(allocationField) allocationField.value = urlParams.get('ref'); 
-        }
+        if(urlParams.has('ref')) { switchTab('reg'); const allocationField = document.getElementById('regRef'); if(allocationField) allocationField.value = urlParams.get('ref'); }
     });
 </script>
 </body>
