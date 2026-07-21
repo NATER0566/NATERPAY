@@ -45,14 +45,22 @@ const cmsSchema = new mongoose.Schema({
       type: String,
       required: true
     },
+    // THE FIX: Added 'text' to the enum array so text-only slides don't fail!
     mediaType: {
       type: String,
-      enum: ['image', 'video'],
+      enum: ['image', 'video', 'text'],
+      default: 'image'
+    },
+    // THE FIX: Added the 'type' field that index.html actually reads!
+    type: {
+      type: String,
+      enum: ['image', 'video', 'text'],
       default: 'image'
     },
     mediaUrl: {
       type: String,
-      required: true
+      // Removed "required: true" because text-only slides won't have a mediaUrl!
+      default: '' 
     },
     ctaText: {
       type: String,
