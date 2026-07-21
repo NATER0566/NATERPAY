@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -67,16 +68,22 @@
         .system-side::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
         .system-side::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
 
-        .auth-side { flex: 1; background: var(--panel-bg); backdrop-filter: blur(10px); display: flex; flex-direction: column; padding: 45px 25px 30px 25px; position: relative; box-shadow: -20px 0 50px rgba(0,0,0,0.5); overflow-y: auto; }
+        .auth-side { flex: 1; background: var(--panel-bg); backdrop-filter: blur(10px); display: flex; flex-direction: column; position: relative; box-shadow: -20px 0 50px rgba(0,0,0,0.5); overflow-y: auto; }
 
         .embedded-support-card {
             width: 100%; background: linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(12, 12, 12, 0.95) 50%, rgba(255, 255, 255, 0.12) 100%);
             border: 2.5px solid #ffffff; border-radius: 16px; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between;
-            cursor: pointer; transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); margin-top: 15px; margin-bottom: 15px; position: relative;
+            cursor: pointer; transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); margin-top: 15px; margin-bottom: 25px; position: relative;
             overflow: hidden; box-shadow: 0 0 30px rgba(212, 175, 55, 0.45); animation: hyper-luxury-plumbing 2s infinite ease-in-out; flex-shrink: 0;
         }
         
         .embedded-support-card:hover { background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(30, 30, 30, 0.98) 50%, rgba(212, 175, 55, 0.4) 100%); transform: translateY(-2px); border-color: #ffffff; }
+
+        .embedded-support-card::before {
+            content: ''; position: absolute; top: -120%; left: -150%; width: 350%; height: 350%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.98) 40%, rgba(212,175,55,0.7) 50%, rgba(255,255,255,0) 100%);
+            transform: rotate(28deg); animation: light-refract-sweep 1.8s infinite linear; pointer-events: none; z-index: 1;
+        }
 
         .support-info-block { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; position: relative; z-index: 2; }
         .support-text-details-wrapper { display: flex; flex-direction: column; justify-content: center; flex: 1; min-width: 0; }
@@ -113,52 +120,51 @@
         .btn-authorize:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
 
         /* ========================================================
-           FULL EDGE-TO-EDGE IMMERSIVE SLIDESHOW
+           EXPANDED WIDE CARD SLIDESHOW (PERFECT FIT, TALLER HEIGHT)
            ======================================================== */
         .promo-card {
             background: rgba(12, 12, 12, 0.9);
             border: 2px solid rgba(212, 175, 55, 0.4);
             border-radius: 20px;
-            padding: 0; /* Remove padding so viewport touches edges */
-            margin: 0 -10px 30px -10px; /* Stretch to sides */
+            padding: 18px;
+            margin: 0 -10px 30px -10px; /* Expands wider */
             box-shadow: 0 10px 35px rgba(0,0,0,0.9);
-            overflow: hidden; /* Ensure rounded corners clip content */
         }
         
         .promo-header {
-            font-family: 'Cinzel'; font-size: 1rem; color: var(--gold); letter-spacing: 2px; font-weight: 900; 
-            padding: 15px 20px; display: flex; align-items: center; gap: 8px; 
-            border-bottom: 1.5px solid rgba(212,175,55,0.3); background: rgba(5,5,5,0.8); z-index: 10; position: relative;
+            font-family: 'Cinzel'; font-size: 1rem; color: var(--gold); letter-spacing: 2px; font-weight: 900; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid rgba(212,175,55,0.3); padding-bottom: 10px;
         }
 
         .slideshow-viewport {
             width: 100%;
-            height: 450px; /* Taller, more vertical orientation */
+            height: 380px; 
             background: #000;
+            border-radius: 14px;
             position: relative;
             overflow: hidden;
+            border: 1px solid #333;
             display: flex; align-items: stretch; justify-content: center;
         }
 
         .slide-element {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s ease-in-out; display: flex; flex-direction: column; justify-content: space-between; align-items: center; background: #000;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s ease-in-out; display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
         .slide-element.active { opacity: 1; z-index: 2; position: relative; width: 100%; height: 100%; }
         
-        /* THE MAGIC FIX: cover ensures it fills the entire box edge-to-edge with ZERO empty space */
+        /* Media fills the entire viewport, no heavy text blocking it */
         .slide-media-layer {
-            width: 100%; height: 100%; object-fit: cover; pointer-events: auto; background: #000; flex-grow: 1;
+            width: 100%; height: 100%; object-fit: cover; pointer-events: auto; background: #000;
         }
         
-        /* Clean Text Overlay */
+        /* Text overlay is now very subtle and minimal */
         .slide-text-overlay {
-            position: absolute; bottom: 0; left: 0; width: 100%; padding: 25px 20px 40px 20px; /* Extra bottom padding to avoid dots */
-            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, rgba(0,0,0,0) 100%);
+            position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px; 
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
             pointer-events: none; z-index: 3; text-align: center;
         }
-        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.4rem; margin-bottom: 5px; text-shadow: 0 2px 8px rgba(0,0,0,1); display: none; }
-        .slide-text-overlay p { font-size: 0.9rem; color: #fff; opacity: 0.95; margin-bottom: 0; font-weight: 600; text-shadow: 0 2px 8px rgba(0,0,0,1); display: none; line-height: 1.5; }
-        .slide-text-overlay a { pointer-events: auto; margin-top: 15px; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.8); }
+        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.1rem; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,1); display: none; }
+        .slide-text-overlay p { font-size: 0.8rem; color: #fff; opacity: 0.9; margin-bottom: 0; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,1); display: none; }
+        .slide-text-overlay a { pointer-events: auto; margin-top: 10px; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.8); }
 
         /* Specific styling for Text-Only slides */
         .slide-element.text-only-slide { justify-content: center; padding: 40px; text-align: center; }
@@ -169,18 +175,14 @@
         @keyframes textBgFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:-1; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
 
-        /* Highly Visible, Centered Manual Controls */
-        .slide-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 15px; z-index: 10; pointer-events: none; }
-        .slide-nav button { 
-            pointer-events: auto; background: rgba(0, 0, 0, 0.75); color: var(--gold); border: 2px solid var(--gold); 
-            width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-            font-size: 1.4rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.8);
-        }
-        .slide-nav button:hover { background: var(--gold); color: #000; transform: scale(1.15); }
+        /* Manual Controls */
+        .slide-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 10px; z-index: 10; pointer-events: none; }
+        .slide-nav button { pointer-events: auto; background: rgba(0,0,0,0.5); color: var(--gold); border: 1.5px solid var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(5px); }
+        .slide-nav button:hover { background: var(--gold); color: #000; transform: scale(1.1); }
         
-        .slide-dots { position: absolute; bottom: 15px; width: 100%; display: flex; justify-content: center; gap: 10px; z-index: 10; }
-        .slide-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; transition: 0.3s; border: 1px solid transparent; box-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-        .slide-dot.active { background: var(--gold); transform: scale(1.4); border-color: #000; box-shadow: 0 0 10px rgba(212,175,55,0.8); }
+        .slide-dots { width: 100%; display: flex; justify-content: center; gap: 8px; margin-top: 15px; }
+        .slide-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.3); cursor: pointer; transition: 0.3s; border: 1px solid transparent; }
+        .slide-dot.active { background: var(--gold); transform: scale(1.3); border-color: #000; box-shadow: 0 0 10px rgba(212,175,55,0.6); }
 
         .slide-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.4; }
         /* ======================================================== */
@@ -208,8 +210,16 @@
         .social-circle { width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: #888; text-decoration: none; border: 1px solid #333; transition: 0.3s; }
         .social-circle:hover { background: rgba(212,175,55,0.1); color: var(--gold); border-color: var(--gold); transform: translateY(-3px); }
 
-        /* Hide the left panel completely on mobile */
-        @media (max-width: 1100px) { .system-side { display: none; } .auth-side { padding: 40px 15px; background: rgba(10, 10, 10, 0.4); } .viewport-wrapper { overflow-y: auto; } }
+        /* THE FIX: Changed padding to wrap everything properly on mobile without hiding it */
+        .auth-side-inner { padding: 45px 30px; max-width: 600px; margin: 0 auto; width: 100%; }
+
+        @media (max-width: 1100px) { 
+            .system-side { display: none; } 
+            .auth-side { padding: 0; background: rgba(10, 10, 10, 0.4); } 
+            .viewport-wrapper { overflow-y: auto; } 
+            /* THE FIX: Tighter padding on mobile so it fits the screen nicely */
+            .auth-side-inner { padding: 30px 20px; }
+        }
     </style>
 </head>
 <body>
@@ -233,7 +243,6 @@
 
 <div class="viewport-wrapper">
     <div class="system-side">
-        <!-- System content that is hidden on mobile -->
         <div class="welcome-banner mb-4" style="border-left: 6px solid var(--gold); padding-left: 20px; flex-shrink: 0;">
             <h1 class="fw-black" style="font-size: clamp(2.2rem, 4.5vw, 3.5rem); font-family: 'Cinzel'; line-height: 0.9;">BEYOND<br><span style="color:var(--gold)">LIMITS</span></h1>
             <p class="small fw-bold opacity-75 mt-2" style="letter-spacing: 5px; color: var(--gold);">THE SUPER-APP ECOSYSTEM</p>
@@ -290,152 +299,154 @@
 
     <!-- MAIN INTERACTION AREA (Visible on Mobile) -->
     <div class="auth-side">
-        
-        <div class="auth-header" style="margin-bottom: 40px; border-left: 6px solid var(--gold); padding-left: 25px;">
-            <h2 id="authTitle" style="font-family:Cinzel; font-weight:900; color: #ffffff; letter-spacing: 1px;">NATER<span style="color:var(--gold)">-PAY</span></h2>
-            <p class="high-contrast-subtitle" id="authSubtitle">AUTHORIZE SECURE IDENTITY</p>
-        </div>
-
-        <div class="auth-tabs-wrapper" id="authTabsHeader">
-            <div class="d-flex w-100 gap-2">
-                <span class="auth-tab active" id="tabLogin" onclick="switchTab('login')">LOGIN <i class="fas fa-sign-in-alt ms-2"></i></span>
-                <span class="auth-tab" id="tabReg" onclick="switchTab('reg')">REGISTER <i class="fas fa-user-plus ms-2"></i></span>
-            </div>
-            <div class="tab-indicator-container">
-                <div class="tab-indicator-bar" id="slidingIndicator"></div>
-            </div>
-        </div>
-
-        <form id="loginForm" onsubmit="handleLogin(event)">
-            <div class="input-group-custom">
-                <label>Account Identifier (Email)</label>
-                <input type="email" id="loginEmail" placeholder="yourname@domain.com" required autocomplete="username">
-            </div>
-            <div class="input-group-custom" id="loginPassWrapper">
-                <label>Security Access Key</label>
-                <input type="password" id="loginPass" placeholder="••••••••" oninput="liveLoginBinderCheck(this.value)" required autocomplete="current-password">
-                <i class="fas fa-eye toggle-password" onclick="togglePass('loginPass', this)"></i>
-            </div>
-            <div class="text-end mb-4">
-                <a href="#" onclick="switchTab('forgot'); return false;" style="color: var(--gold); text-decoration: none; font-size: 13px; font-weight: 700; letter-spacing:1px;">FORGOT SECURITY KEY?</a>
-            </div>
-            <button type="submit" class="btn-authorize" id="btnLoginButton">ACTIVATE SESSION</button>
-        </form>
-
-        <form id="regForm" style="display:none;" onsubmit="handleRegister(event)">
-            <div class="input-group-custom">
-                <label>Legal Identity Name</label>
-                <input type="text" id="regName" placeholder="Full Legal Name" required autocomplete="name">
-            </div>
-            <div class="input-group-custom">
-                <label>Primary Email Address</label>
-                <input type="email" id="regEmail" placeholder="name@domain.com" required autocomplete="email">
-            </div>
-            <div class="input-group-custom">
-                <label>Core Connection Line (Phone)</label>
-                <input type="tel" id="regPhone" placeholder="e.g. +2348000000000" required autocomplete="tel">
-            </div>
-            <div class="input-group-custom">
-                <label>New Security Pass Key</label>
-                <input type="password" id="regPass" placeholder="Create Secure Key" oninput="liveSecurityCheck(this.value)" required autocomplete="new-password">
-                <i class="fas fa-eye toggle-password" onclick="togglePass('regPass', this)"></i>
-            </div>
-            
-            <div class="pass-hints" id="passHints">
-                <span class="hint" id="crit_len"><i class="fas fa-times-circle"></i>8-16 Characters</span>
-                <span class="hint" id="crit_case"><i class="fas fa-times-circle"></i>Upper & Lower</span>
-                <span class="hint" id="crit_num"><i class="fas fa-times-circle"></i>Numbers (0-9)</span>
-                <span class="hint" id="crit_spec"><i class="fas fa-times-circle"></i>Symbols (#$&@)</span>
+        <!-- THE FIX: Wrapped everything inside auth-side-inner so nothing bleeds into the hidden overflow -->
+        <div class="auth-side-inner">
+            <div class="auth-header" style="margin-bottom: 40px; border-left: 6px solid var(--gold); padding-left: 25px;">
+                <h2 id="authTitle" style="font-family:Cinzel; font-weight:900; color: #ffffff; letter-spacing: 1px;">NATER<span style="color:var(--gold)">-PAY</span></h2>
+                <p class="high-contrast-subtitle" id="authSubtitle">AUTHORIZE SECURE IDENTITY</p>
             </div>
 
-            <div class="input-group-custom">
-                <label>Referral Node ID</label>
-                <input type="text" id="regRef" placeholder="Optional Affiliate Code">
+            <div class="auth-tabs-wrapper" id="authTabsHeader">
+                <div class="d-flex w-100 gap-2">
+                    <span class="auth-tab active" id="tabLogin" onclick="switchTab('login')">LOGIN <i class="fas fa-sign-in-alt ms-2"></i></span>
+                    <span class="auth-tab" id="tabReg" onclick="switchTab('reg')">REGISTER <i class="fas fa-user-plus ms-2"></i></span>
+                </div>
+                <div class="tab-indicator-container">
+                    <div class="tab-indicator-bar" id="slidingIndicator"></div>
+                </div>
             </div>
-            <div class="mb-4"></div>
-            <button type="submit" class="btn-authorize" id="btnRegisterButton">PROVISION ACCOUNT</button>
-        </form>
 
-        <form id="forgotForm" style="display:none;" onsubmit="handleInlineForgotPassword(event)">
-            <div id="forgotStep1">
-                <div class="mb-4">
-                    <p class="high-contrast-desc">Provide your verified identity credentials below to request a security key reset token from the NATER-PAY validation vault.</p>
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="input-group-custom">
+                    <label>Account Identifier (Email)</label>
+                    <input type="email" id="loginEmail" placeholder="yourname@domain.com" required autocomplete="username">
+                </div>
+                <div class="input-group-custom" id="loginPassWrapper">
+                    <label>Security Access Key</label>
+                    <input type="password" id="loginPass" placeholder="••••••••" oninput="liveLoginBinderCheck(this.value)" required autocomplete="current-password">
+                    <i class="fas fa-eye toggle-password" onclick="togglePass('loginPass', this)"></i>
+                </div>
+                <div class="text-end mb-4">
+                    <a href="#" onclick="switchTab('forgot'); return false;" style="color: var(--gold); text-decoration: none; font-size: 13px; font-weight: 700; letter-spacing:1px;">FORGOT SECURITY KEY?</a>
+                </div>
+                <button type="submit" class="btn-authorize" id="btnLoginButton">ACTIVATE SESSION</button>
+            </form>
+
+            <form id="regForm" style="display:none;" onsubmit="handleRegister(event)">
+                <div class="input-group-custom">
+                    <label>Legal Identity Name</label>
+                    <input type="text" id="regName" placeholder="Full Legal Name" required autocomplete="name">
                 </div>
                 <div class="input-group-custom">
-                    <label>Registered Account Email</label>
-                    <input type="email" id="forgotEmail" placeholder="yourname@domain.com" required>
-                </div>
-                <button type="submit" class="btn-authorize mb-4" id="btnForgotButton">SEND RECOVERY KEY</button>
-                
-                <div class="text-center mt-3">
-                    <button type="button" onclick="switchTab('login')" class="btn btn-outline-secondary rounded-pill text-white fw-bold px-4" style="border-color: rgba(255,255,255,0.2);">
-                        <i class="fas fa-arrow-left me-2"></i> Back to Login
-                    </button>
-                </div>
-            </div>
-
-            <div id="forgotStep2" style="display:none;">
-                <div class="mb-4">
-                    <p class="high-contrast-desc" style="color: #00ff88 !important;">Security token dispatched! Enter the 6-digit code sent to your email and create a new secure key.</p>
+                    <label>Primary Email Address</label>
+                    <input type="email" id="regEmail" placeholder="name@domain.com" required autocomplete="email">
                 </div>
                 <div class="input-group-custom">
-                    <label>6-Digit Reset Token</label>
-                    <input type="text" id="resetOtp" placeholder="123456" maxlength="6" style="letter-spacing: 10px; font-size: 1.5rem; text-align: center;">
+                    <label>Core Connection Line (Phone)</label>
+                    <input type="tel" id="regPhone" placeholder="e.g. +2348000000000" required autocomplete="tel">
                 </div>
                 <div class="input-group-custom">
                     <label>New Security Pass Key</label>
-                    <input type="password" id="resetPass" placeholder="Create Secure Key">
-                    <i class="fas fa-eye toggle-password" onclick="togglePass('resetPass', this)"></i>
+                    <input type="password" id="regPass" placeholder="Create Secure Key" oninput="liveSecurityCheck(this.value)" required autocomplete="new-password">
+                    <i class="fas fa-eye toggle-password" onclick="togglePass('regPass', this)"></i>
                 </div>
-                <button type="button" class="btn-authorize mb-4" id="btnResetButton" onclick="handleResetPassword()">UPDATE SECURITY KEY</button>
                 
-                <div class="text-center mt-3">
-                    <button type="button" onclick="resetForgotForm(); switchTab('login')" class="btn btn-outline-secondary rounded-pill text-white fw-bold px-4" style="border-color: rgba(255,255,255,0.2);">
-                        <i class="fas fa-times me-2"></i> Cancel Reset
-                    </button>
+                <div class="pass-hints" id="passHints">
+                    <span class="hint" id="crit_len"><i class="fas fa-times-circle"></i>8-16 Characters</span>
+                    <span class="hint" id="crit_case"><i class="fas fa-times-circle"></i>Upper & Lower</span>
+                    <span class="hint" id="crit_num"><i class="fas fa-times-circle"></i>Numbers (0-9)</span>
+                    <span class="hint" id="crit_spec"><i class="fas fa-times-circle"></i>Symbols (#$&@)</span>
                 </div>
-            </div>
-        </form>
 
-        <div class="embedded-support-card" onclick="openChat()">
-            <div class="support-info-block">
-                <div class="support-icon-wrapper">
-                    <i class="fas fa-headset" style="font-weight: 900; font-size: 1.2rem;"></i>
+                <div class="input-group-custom">
+                    <label>Referral Node ID</label>
+                    <input type="text" id="regRef" placeholder="Optional Affiliate Code">
                 </div>
-                <div class="support-text-details-wrapper">
-                    <span class="support-text-label">Need Help?</span>
-                    <span class="support-text-sub">Click here to contact Customer Care</span>
-                </div>
-            </div>
-            <i class="fas fa-chevron-right" style="color: #ffffff; opacity: 1; font-size: 1.2rem; padding-left: 10px; position: relative; z-index: 2;"></i>
-        </div>
+                <div class="mb-4"></div>
+                <button type="submit" class="btn-authorize" id="btnRegisterButton">PROVISION ACCOUNT</button>
+            </form>
 
-        <!-- EXPANDED WIDE CARD SLIDESHOW (PERFECT FIT & SOUND ENABLED) -->
-        <div class="promo-card">
-            <div class="promo-header"><i class="fas fa-bullhorn"></i> SYSTEM UPDATES & PROMOS</div>
-            
-            <div class="slideshow-viewport" id="mediaSlideshowEngine">
-                <div class="slide-empty-state">
-                    <i class="fas fa-photo-video fa-3x mb-3 text-secondary"></i>
-                    <h6 class="text-gold fw-bold m-0" id="slideshowStatusText" style="font-size: 0.85rem;">Loading Slides...</h6>
+            <form id="forgotForm" style="display:none;" onsubmit="handleInlineForgotPassword(event)">
+                <div id="forgotStep1">
+                    <div class="mb-4">
+                        <p class="high-contrast-desc">Provide your verified identity credentials below to request a security key reset token from the NATER-PAY validation vault.</p>
+                    </div>
+                    <div class="input-group-custom">
+                        <label>Registered Account Email</label>
+                        <input type="email" id="forgotEmail" placeholder="yourname@domain.com" required>
+                    </div>
+                    <button type="submit" class="btn-authorize mb-4" id="btnForgotButton">SEND RECOVERY KEY</button>
+                    
+                    <div class="text-center mt-3">
+                        <button type="button" onclick="switchTab('login')" class="btn btn-outline-secondary rounded-pill text-white fw-bold px-4" style="border-color: rgba(255,255,255,0.2);">
+                            <i class="fas fa-arrow-left me-2"></i> Back to Login
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <!-- Pagination dots overlay at the bottom of the viewport -->
-            <div id="slideDotsContainer" class="slide-dots"></div>
-        </div>
-        <!-- END SLIDESHOW SECTION -->
 
-        <div class="mt-auto pt-2 pb-4 text-center w-100">
-            <!-- SOCIAL MEDIA INTEGRATION -->
-            <div class="d-flex justify-content-center gap-3 mb-3">
-                <a href="https://facebook.com/natergracecode" target="_blank" class="social-circle"><i class="fab fa-facebook-f"></i></a>
-                <a href="https://instagram.com/natergracecode" target="_blank" class="social-circle"><i class="fab fa-instagram"></i></a>
-                <a href="https://tiktok.com/@natergracecode" target="_blank" class="social-circle"><i class="fab fa-tiktok"></i></a>
-                <a href="https://youtube.com/@natergracecode" target="_blank" class="social-circle"><i class="fab fa-youtube"></i></a>
+                <div id="forgotStep2" style="display:none;">
+                    <div class="mb-4">
+                        <p class="high-contrast-desc" style="color: #00ff88 !important;">Security token dispatched! Enter the 6-digit code sent to your email and create a new secure key.</p>
+                    </div>
+                    <div class="input-group-custom">
+                        <label>6-Digit Reset Token</label>
+                        <input type="text" id="resetOtp" placeholder="123456" maxlength="6" style="letter-spacing: 10px; font-size: 1.5rem; text-align: center;">
+                    </div>
+                    <div class="input-group-custom">
+                        <label>New Security Pass Key</label>
+                        <input type="password" id="resetPass" placeholder="Create Secure Key">
+                        <i class="fas fa-eye toggle-password" onclick="togglePass('resetPass', this)"></i>
+                    </div>
+                    <button type="button" class="btn-authorize mb-4" id="btnResetButton" onclick="handleResetPassword()">UPDATE SECURITY KEY</button>
+                    
+                    <div class="text-center mt-3">
+                        <button type="button" onclick="resetForgotForm(); switchTab('login')" class="btn btn-outline-secondary rounded-pill text-white fw-bold px-4" style="border-color: rgba(255,255,255,0.2);">
+                            <i class="fas fa-times me-2"></i> Cancel Reset
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="embedded-support-card" onclick="openChat()">
+                <div class="support-info-block">
+                    <div class="support-icon-wrapper">
+                        <i class="fas fa-headset" style="font-weight: 900; font-size: 1.2rem;"></i>
+                    </div>
+                    <div class="support-text-details-wrapper">
+                        <span class="support-text-label">Need Help?</span>
+                        <span class="support-text-sub">Click here to contact Customer Care</span>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: #ffffff; opacity: 1; font-size: 1.2rem; padding-left: 10px; position: relative; z-index: 2;"></i>
             </div>
-            
-            <p class="footer-compliance-tag m-0">v3.0 SECURED BY NATER-PAY PROTOCOL</p>
-        </div>
+
+            <!-- EXPANDED WIDE CARD SLIDESHOW (PERFECT FIT & SOUND ENABLED) -->
+            <div class="promo-card">
+                <div class="promo-header"><i class="fas fa-bullhorn"></i> SYSTEM UPDATES & PROMOS</div>
+                
+                <div class="slideshow-viewport" id="mediaSlideshowEngine">
+                    <div class="slide-empty-state">
+                        <i class="fas fa-photo-video fa-3x mb-3 text-secondary"></i>
+                        <h6 class="text-gold fw-bold m-0" id="slideshowStatusText" style="font-size: 0.85rem;">Loading Slides...</h6>
+                    </div>
+                </div>
+                <!-- Pagination dots moved below the viewport inside the card -->
+                <div id="slideDotsContainer" class="slide-dots"></div>
+            </div>
+            <!-- END SLIDESHOW SECTION -->
+
+            <div class="mt-auto pt-2 pb-4 text-center w-100">
+                <!-- SOCIAL MEDIA INTEGRATION -->
+                <div class="d-flex justify-content-center gap-3 mb-3">
+                    <a href="https://facebook.com/natergracecode" target="_blank" class="social-circle"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://instagram.com/natergracecode" target="_blank" class="social-circle"><i class="fab fa-instagram"></i></a>
+                    <a href="https://tiktok.com/@natergracecode" target="_blank" class="social-circle"><i class="fab fa-tiktok"></i></a>
+                    <a href="https://youtube.com/@natergracecode" target="_blank" class="social-circle"><i class="fab fa-youtube"></i></a>
+                </div>
+                
+                <p class="footer-compliance-tag m-0">v3.0 SECURED BY NATER-PAY PROTOCOL</p>
+            </div>
+        </div> <!-- End auth-side-inner -->
     </div>
 </div>
 
