@@ -3,113 +3,53 @@ const mongoose = require('mongoose');
 const cmsSchema = new mongoose.Schema({
   // Homepage data
   homepage: {
-    siteName: {
-      type: String,
-      default: 'NATER-PAY'
-    },
-    logoUrl: {
-      type: String,
-      default: null
-    },
-    tagline: {
-      type: String,
-      default: 'Enterprise Fintech Services Platform'
-    },
+    siteName: { type: String, default: 'NATER-PAY' },
+    logoUrl: { type: String, default: null },
+    tagline: { type: String, default: 'Enterprise Fintech Services Platform' },
     rates: {
-      mtn: {
-        type: Number,
-        default: 215
-      },
-      airtel: {
-        type: Number,
-        default: 190
-      },
-      glo: {
-        type: Number,
-        default: 220
-      },
-      nineMobile: {
-        type: Number,
-        default: 180
-      }
+      mtn: { type: Number, default: 215 },
+      airtel: { type: Number, default: 190 },
+      glo: { type: Number, default: 220 },
+      nineMobile: { type: Number, default: 180 }
     }
+  },
+  
+  // THE FIX: ADDED FOUNDER PROFILE SCHEMA SO MONGOOSE ACTUALLY SAVES IT
+  founderProfile: {
+    name: { type: String, default: '' },
+    title: { type: String, default: '' },
+    academic: { type: String, default: '' },
+    bio: { type: String, default: '' },
+    mission: { type: String, default: '' },
+    whatsapp: { type: String, default: '' },
+    email: { type: String, default: '' },
+    photoUrl: { type: String, default: '' },
+    cloudinaryId: { type: String, default: '' }
   },
   
   // Slides/Media
   slides: [{
-    title: {
-      type: String,
-      required: true
-    },
-    caption: {
-      type: String,
-      required: true
-    },
-    // THE FIX: Added 'text' to the enum array so text-only slides don't fail!
-    mediaType: {
-      type: String,
-      enum: ['image', 'video', 'text'],
-      default: 'image'
-    },
-    // THE FIX: Added the 'type' field that index.html actually reads!
-    type: {
-      type: String,
-      enum: ['image', 'video', 'text'],
-      default: 'image'
-    },
-    mediaUrl: {
-      type: String,
-      // Removed "required: true" because text-only slides won't have a mediaUrl!
-      default: '' 
-    },
-    ctaText: {
-      type: String,
-      default: null
-    },
-    ctaLink: {
-      type: String,
-      default: null
-    },
-    order: {
-      type: Number,
-      default: 0
-    },
-    isActive: {
-      type: Boolean,
-      default: true
-    }
+    title: { type: String, required: true },
+    caption: { type: String, required: true },
+    mediaType: { type: String, enum: ['image', 'video', 'text'], default: 'image' },
+    type: { type: String, enum: ['image', 'video', 'text'], default: 'image' },
+    mediaUrl: { type: String, default: '' },
+    ctaText: { type: String, default: null },
+    ctaLink: { type: String, default: null },
+    order: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true }
   }],
   
   // Announcements
   announcements: [{
-    title: {
-      type: String,
-      required: true
-    },
-    message: {
-      type: String,
-      required: true
-    },
-    type: {
-      type: String,
-      enum: ['info', 'warning', 'success', 'urgent'],
-      default: 'info'
-    },
-    isActive: {
-      type: Boolean,
-      default: true
-    },
+    title: { type: String, required: true },
+    message: { type: String, required: true },
+    type: { type: String, enum: ['info', 'warning', 'success', 'urgent'], default: 'info' },
+    isActive: { type: Boolean, default: true },
     startDate: Date,
     endDate: Date,
-    targetAudience: {
-      type: String,
-      enum: ['all', 'users', 'merchants', 'agents', 'admins'],
-      default: 'all'
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
+    targetAudience: { type: String, enum: ['all', 'users', 'merchants', 'agents', 'admins'], default: 'all' },
+    createdAt: { type: Date, default: Date.now }
   }],
   
   // Public pages
@@ -138,14 +78,8 @@ const cmsSchema = new mongoose.Schema({
   footer: {
     companyName: String,
     tagline: String,
-    links: [{
-      label: String,
-      url: String
-    }],
-    legalLinks: [{
-      label: String,
-      url: String
-    }]
+    links: [{ label: String, url: String }],
+    legalLinks: [{ label: String, url: String }]
   },
   
   // SEO
@@ -158,14 +92,8 @@ const cmsSchema = new mongoose.Schema({
   
   // Maintenance mode
   maintenanceMode: {
-    enabled: {
-      type: Boolean,
-      default: false
-    },
-    message: {
-      type: String,
-      default: 'System under maintenance. Please check back later.'
-    },
+    enabled: { type: Boolean, default: false },
+    message: { type: String, default: 'System under maintenance. Please check back later.' },
     scheduledStart: Date,
     scheduledEnd: Date
   },
@@ -220,7 +148,7 @@ cmsSchema.statics.addSlide = async function(slideData) {
       cms = new this({ slides: [], announcements: [] });
     }
     cms.slides.push(slideData);
-    return await cms.save(); // This enforces strict DB validation
+    return await cms.save(); 
   } catch (error) {
     console.error("CRITICAL DB ERROR SAVING SLIDE:", error);
     throw error;
@@ -251,7 +179,7 @@ cmsSchema.statics.addAnnouncement = async function(announcementData) {
       cms = new this({ slides: [], announcements: [] });
     }
     cms.announcements.push(announcementData);
-    return await cms.save(); // This enforces strict DB validation
+    return await cms.save(); 
   } catch (error) {
     console.error("CRITICAL DB ERROR SAVING ANNOUNCEMENT:", error);
     throw error;
