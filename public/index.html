@@ -78,12 +78,6 @@
         
         .embedded-support-card:hover { background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(30, 30, 30, 0.98) 50%, rgba(212, 175, 55, 0.4) 100%); transform: translateY(-2px); border-color: #ffffff; }
 
-        .embedded-support-card::before {
-            content: ''; position: absolute; top: -120%; left: -150%; width: 350%; height: 350%;
-            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.98) 40%, rgba(212,175,55,0.7) 50%, rgba(255,255,255,0) 100%);
-            transform: rotate(28deg); animation: light-refract-sweep 1.8s infinite linear; pointer-events: none; z-index: 1;
-        }
-
         .support-info-block { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; position: relative; z-index: 2; }
         .support-text-details-wrapper { display: flex; flex-direction: column; justify-content: center; flex: 1; min-width: 0; }
         
@@ -105,9 +99,6 @@
             0%, 100% { box-shadow: 0 0 18px rgba(212, 175, 55, 0.4), inset 0 0 8px rgba(212, 175, 55, 0.2); border-color: var(--gold); filter: brightness(1); }
             50% { box-shadow: 0 0 50px rgba(212, 175, 55, 0.95), 0 0 30px rgba(255, 255, 255, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.4); border-color: #ffffff; filter: brightness(1.5); }
         }
-        @keyframes light-refract-sweep {
-            0% { left: -150%; } 50%, 100% { left: 150%; }
-        }
 
         .input-group-custom { background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212, 175, 55, 0.35); border-radius: 20px; padding: 15px 25px; margin-bottom: 20px; transition: border-color 0.3s ease, box-shadow 0.3s ease; position: relative; }
         .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
@@ -126,16 +117,21 @@
         .btn-authorize { background: var(--gold); color: black; font-weight: 900; border-radius: 20px; padding: 22px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 4px; text-transform: uppercase; transition: 0.3s; }
         .btn-authorize:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
 
-        /* THE SLIDESHOW CONTAINER */
-        .slideshow-viewport { width: 100%; height: 260px; position: relative; border-radius: 30px; border: 1.5px solid rgba(212, 175, 55, 0.2); overflow: hidden; background: #000; margin-bottom: 30px; flex-shrink: 0; }
-        .slide-element { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:1; transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; padding: 40px; }
+        /* THE DEDICATED SLIDESHOW BILLBOARD SECTION */
+        .slideshow-section { margin-bottom: 40px; flex-shrink: 0; }
+        .slideshow-header { font-family: 'Cinzel'; font-size: 1.2rem; color: var(--gold); letter-spacing: 2px; font-weight: 900; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border-bottom: 2px solid rgba(212,175,55,0.4); padding-bottom: 10px; }
+        .slideshow-viewport { width: 100%; height: 320px; position: relative; border-radius: 20px; border: 2px solid rgba(212, 175, 55, 0.4); overflow: hidden; background: rgba(10,10,10,0.8); box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        
+        .slide-element { position: absolute; top:0; left:0; width:100%; height:100%; opacity:0; z-index:1; transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 40px; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.1) 100%); }
         .slide-element.active { opacity:1; z-index:2; }
         
-        .slide-media-layer { position: absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; opacity: 0.35; z-index:-1; pointer-events: none; }
+        .slide-media-layer { position: absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; z-index:-1; pointer-events: none; }
         
-        .slide-text-overlay { width: 85%; }
-        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.7rem; margin-bottom: 8px; }
-        .slide-text-overlay p { font-size: 0.88rem; opacity: 0.85; margin-bottom: 15px; font-weight: 600; }
+        .slide-text-overlay { width: 85%; position: relative; z-index: 3; }
+        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 2rem; margin-bottom: 10px; text-shadow: 0 2px 10px rgba(0,0,0,1); }
+        .slide-text-overlay p { font-size: 1rem; color: #fff; opacity: 0.9; margin-bottom: 20px; font-weight: 600; text-shadow: 0 2px 10px rgba(0,0,0,1); }
+        
+        .slide-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5; }
 
         .price-ticker { background: rgba(212, 175, 55, 0.04); border: 1.5px solid rgba(212, 175, 55, 0.15); border-radius: 30px; padding: 30px; flex-shrink: 0; margin-bottom: 30px; }
 
@@ -184,23 +180,6 @@
 
 <div class="viewport-wrapper">
     <div class="system-side">
-
-        <!-- THE DIAGNOSTIC DEBUG CARD FOR SLIDES -->
-        <div id="diagnosticCard" style="background: rgba(40,0,0,0.8); border: 2px solid #ff4444; border-radius: 12px; padding: 15px; margin-bottom: 20px; font-family: monospace; font-size: 0.8rem; overflow-wrap: break-word; max-height: 200px; overflow-y: auto;">
-            <strong style="color: #ff4444;">[SYSTEM DIAGNOSTIC: SLIDES FETCH DATA]</strong><br>
-            <span id="diagnosticOutput" style="color: #fff;">Waiting for backend response...</span>
-        </div>
-
-        <!-- UPGRADED SLIDESHOW (Video/Image/Text Support) -->
-        <div class="slideshow-viewport" id="mediaSlideshowEngine">
-            <div class="slide-element active" id="fallbackSlideFrame">
-                <div class="slide-text-overlay">
-                    <h3>SECURE FINTECH ARCHITECTURE</h3>
-                    <p>Process enterprise wholesale automated telecoms, encrypted crypto handshakes, multi-tier collateralized credit services, and high-velocity smart wallet ledger actions.</p>
-                    <a href="#authTitle" class="btn btn-sm btn-outline-warning px-3 rounded-pill fw-bold" style="font-size:0.75rem; letter-spacing:1px;">INITIALIZE LOG CORRIDOR</a>
-                </div>
-            </div>
-        </div>
 
         <div class="welcome-banner mb-4" style="border-left: 6px solid var(--gold); padding-left: 20px; flex-shrink: 0;">
             <h1 class="fw-black" style="font-size: clamp(2.2rem, 4.5vw, 3.5rem); font-family: 'Cinzel'; line-height: 0.9;">BEYOND<br><span style="color:var(--gold)">LIMITS</span></h1>
@@ -254,6 +233,19 @@
                 <span class="eco-pill"><i class="fas fa-lock"></i> Strict Idempotency</span>
             </div>
         </div>
+
+        <!-- NEW DEDICATED SLIDESHOW BILLBOARD SECTION -->
+        <div class="slideshow-section mt-4">
+            <div class="slideshow-header"><i class="fas fa-tv"></i> Nater-Pay Announcements & Promos</div>
+            <div class="slideshow-viewport" id="mediaSlideshowEngine">
+                <div class="slide-empty-state">
+                    <i class="fas fa-photo-video fa-3x mb-3 text-secondary"></i>
+                    <h5 class="text-gold fw-bold m-0" id="slideshowStatusText">Loading Slides...</h5>
+                </div>
+            </div>
+        </div>
+        <!-- END SLIDESHOW SECTION -->
+
     </div>
 
     <div class="auth-side">
@@ -542,11 +534,6 @@
             const res = await fetch('/api/slides?_t=' + new Date().getTime());
             const dataResult = await res.json();
             
-            // Output raw data to the Diagnostic Card
-            const outputBox = document.getElementById('diagnosticOutput');
-            outputBox.innerText = JSON.stringify(dataResult, null, 2);
-            outputBox.style.color = "#00ff88"; // Turn green to show successful fetch
-            
             let slidesArray = [];
             if (Array.isArray(dataResult)) {
                 slidesArray = dataResult;
@@ -558,13 +545,12 @@
                 applicationSlides = slidesArray;
                 compileSlideshowMarkup();
             } else {
-                console.warn("[NATER-PAY] No slides found in the database payload. Showing fallback.");
-                outputBox.innerText += "\n\nWARNING: Array is empty. Falling back to default slide.";
-                outputBox.style.color = "#ffaa00";
+                document.getElementById('slideshowStatusText').innerText = "No Announcements Right Now.";
             }
         } catch (err) {
             console.error("[NATER-PAY] Slideshow streaming channel detached:", err);
-            document.getElementById('diagnosticOutput').innerText = "ERROR FETCHING FROM SERVER: \n" + err.message;
+            document.getElementById('slideshowStatusText').innerText = "Unable to connect to Media Server.";
+            document.getElementById('slideshowStatusText').style.color = "red";
         }
     }
 
@@ -585,7 +571,6 @@
             const rawUrl = slide.imageUrl || slide.mediaUrl || slide.image || slide.image_url || slide.url || '';
             let mediaHtml = '';
 
-            // Detect if video format or explicitly set as video type
             const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
 
             if (rawUrl && slide.type !== 'text') {
@@ -963,5 +948,3 @@
 </script>
 </body>
 </html>
-
-after adding adding this file check the image to what happens to me I notice that what cause it from that new index.html code you update there for diagnosis
