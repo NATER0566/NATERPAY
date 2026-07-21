@@ -54,6 +54,12 @@
         .input-dark:disabled { background: #0a0a0a; color: #666; cursor: not-allowed; }
         .input-label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
 
+        /* Toggles & Checks */
+        .payment-toggle { display: flex; align-items: center; gap: 15px; background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 10px; cursor: pointer; transition: 0.3s; }
+        .payment-toggle:hover { border-color: var(--gold); }
+        .payment-toggle input { transform: scale(1.5); cursor: pointer; accent-color: var(--gold); }
+        .payment-toggle span { font-weight: 700; font-size: 0.9rem; }
+
         /* Items Engine */
         .item-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; background: #0a0a0a; padding: 15px; border-radius: 12px; border: 1px solid #222; }
         .item-row .input-dark { margin-bottom: 0; }
@@ -513,13 +519,27 @@
             discountRate: parseFloat(document.getElementById('invDiscount').value) || 0,
             items: items,
             paymentOptions: {
-                paystack: true // Forced Paystack ONLY
+                paystack: true 
             }
         };
 
+        // THE FIX IS APPLIED HERE: Grabbing the Business Details and attaching them
         if(currentUserRole !== 'user') {
             payload.notes = document.getElementById('invNotes').value;
             payload.terms = document.getElementById('invTerms').value;
+            
+            const logoEl = document.getElementById('logoPreview');
+            const bizLogo = (logoEl.style.display !== 'none' && logoEl.src) ? logoEl.getAttribute('src') : null;
+
+            payload.businessDetails = {
+                name: document.getElementById('bizName').value.trim(),
+                email: document.getElementById('bizEmail').value.trim(),
+                phone: document.getElementById('bizPhone').value.trim(),
+                website: document.getElementById('bizWeb').value.trim(),
+                address: document.getElementById('bizAddress').value.trim(),
+                logoUrl: bizLogo
+            };
+            payload.businessLogoBase64 = bizLogo;
         }
 
         Swal.fire({ title: 'Processing Ledger...', text: 'Backend is verifying limits...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
