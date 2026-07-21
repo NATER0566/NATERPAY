@@ -303,7 +303,7 @@
                 fetchKYC(),
                 fetchAdverts(),
                 fetchMarketplace(),
-                fetchSlides() // Added Slides Sync
+                fetchSlides() 
             ]);
         } catch (e) { console.log('Background Sync Delay'); }
     }
@@ -723,7 +723,11 @@
             
             tbody.innerHTML = products.map(p => {
                 const priceDisplay = p.isFlexibleAmount ? 'Flexible' : `₦${Number(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
-                let imgHtml = p.productImageBase64 ? `<img src="${p.productImageBase64}" class="product-img-thumb me-3">` : `<div class="product-img-thumb me-3"><i class="fas fa-box text-secondary fs-5"></i></div>`;
+                
+                // THE FIX: Looking for Cloudinary URL instead of the old base64
+                const mediaUrl = p.cloudinaryUrl || p.imageUrl || p.productImageBase64;
+                let imgHtml = mediaUrl ? `<img src="${mediaUrl}" class="product-img-thumb me-3" style="object-fit: cover;">` : `<div class="product-img-thumb me-3"><i class="fas fa-box text-secondary fs-5"></i></div>`;
+                
                 const ownerId = p.user || p.userId || p.merchant || p.creator; const foundUser = window.globalSystemUsers.find(u => u._id === ownerId) || {};
                 const mName = foundUser.name || p.merchantName || p.userName || 'Verified Merchant'; const mEmail = foundUser.email || p.userEmail || p.email || 'No Email';
                 p.displayMerchantName = mName; p.displayEmail = mEmail; const encodedProduct = encodeURIComponent(JSON.stringify(p));
@@ -734,7 +738,9 @@
 
     function viewProductDetails(encodedData) {
         const p = JSON.parse(decodeURIComponent(encodedData));
-        const imageBlock = p.productImageBase64 ? `<div class="mb-3 text-center"><img src="${p.productImageBase64}" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 2px solid var(--gold);"></div>` : `<div class="mb-3 text-center py-4 bg-dark rounded border"><i class="fas fa-box fa-3x text-secondary"></i><p class="mt-2 text-muted small">No Image Uploaded</p></div>`;
+        // THE FIX: Looking for Cloudinary URL instead of the old base64
+        const mediaUrl = p.cloudinaryUrl || p.imageUrl || p.productImageBase64;
+        const imageBlock = mediaUrl ? `<div class="mb-3 text-center"><img src="${mediaUrl}" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 2px solid var(--gold); object-fit: contain;"></div>` : `<div class="mb-3 text-center py-4 bg-dark rounded border"><i class="fas fa-box fa-3x text-secondary"></i><p class="mt-2 text-muted small">No Image Uploaded</p></div>`;
         Swal.fire({ title: 'Full Product Dossier', html: `<div class="text-start mt-3" style="font-size: 0.95rem; line-height: 1.6;">${imageBlock}<h5 class="text-gold fw-bold mb-3 border-bottom pb-2"><i class="fas fa-info-circle"></i> Item Data</h5><p class="mb-1"><strong>Title:</strong> ${p.title}</p><p class="mb-1"><strong>Category:</strong> ${p.category || 'N/A'}</p><p class="mb-1"><strong>Price:</strong> <span class="text-warning fw-bold">₦${p.amount}</span></p><p class="mb-3"><strong>Description:</strong> <br><span class="text-white bg-black p-2 rounded d-block mt-1">${p.description || 'No description provided.'}</span></p><h5 class="text-danger fw-bold mb-3 border-bottom pb-2 mt-4"><i class="fas fa-user-shield"></i> Owner Information</h5><p class="mb-1"><strong>Merchant Name:</strong> ${p.displayMerchantName}</p><p class="mb-1"><strong>Registered Email:</strong> ${p.displayEmail}</p></div>`, background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Dossier', confirmButtonColor: '#444' });
     }
 
@@ -774,7 +780,3 @@
 </script>
 </body>
 </html>
-
-check this code very well because if want to test and any error occur it will be a problem so check it out before responding
-
-There is a file you can reference named "Screenshot_2024-11-20-00-51-18-090_com.google.android.apps.docs.jpg". Refer to this file by its name verbatim.
