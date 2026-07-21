@@ -253,7 +253,6 @@
 
         <div class="form-card">
             <h5 class="form-section-title"><i class="fas fa-credit-card"></i> Payment Gateway</h5>
-            <!-- ONLY PAYSTACK REMAINS -->
             <div class="payment-toggle" style="pointer-events: none; border-color: var(--gold);">
                 <i class="fas fa-check-circle text-success fs-4"></i> 
                 <span>Secure Payments via <strong>Paystack</strong></span>
@@ -387,17 +386,23 @@
                     document.getElementById('profileLockOverlay').innerHTML = lockHTML;
                 }
 
-                // Populate Business Profile from Database
-                const p = userData.user?.businessProfile || {};
+                // Populate Business Profile from Database OR Local Storage fallback
+                const localProfile = JSON.parse(localStorage.getItem('naterpay_biz_profile')) || {};
+                const p = userData.user?.businessProfile || localProfile;
+                
                 if(p.name) document.getElementById('bizName').value = p.name;
                 if(p.email) document.getElementById('bizEmail').value = p.email;
                 if(p.phone) document.getElementById('bizPhone').value = p.phone;
                 if(p.website) document.getElementById('bizWeb').value = p.website;
                 if(p.address) document.getElementById('bizAddress').value = p.address;
-                if(p.logoUrl) {
-                    document.getElementById('logoPreview').src = p.logoUrl;
+                
+                // Set the logo if exists
+                if(p.logoUrl || p.logoBase64 || p.logo) {
+                    const logoString = p.logoUrl || p.logoBase64 || p.logo;
+                    document.getElementById('logoPreview').src = logoString;
                     document.getElementById('logoPreview').style.display = 'block';
                     document.getElementById('logoPlaceholder').style.display = 'none';
+                    base64LogoData = logoString;
                 }
             }
 
@@ -443,6 +448,8 @@
             });
             const data = await res.json();
             if(data.success) {
+                // Keep local fallback updated
+                localStorage.setItem('naterpay_biz_profile', JSON.stringify(payload));
                 Swal.fire({ icon: 'success', title: 'Profile Secured', text: 'Saved to Database successfully.', background:'#111', color:'#fff', confirmButtonColor: '#FFD700' });
             } else {
                 Swal.fire({ icon: 'error', title: 'Save Failed', text: data.message || 'API endpoint not found.', background:'#111', color:'#fff' });
@@ -491,6 +498,19 @@
 
     // --- GENERATE INVOICE ---
     async function generateInvoice() {
+        // === THE FIX: MANDATORY BUSINESS NAME CHECK ===
+        const bizName = document.getElementById('bizName').value.trim();
+        if (!bizName) {
+            return Swal.fire({ 
+                icon: 'warning', 
+                title: 'Business Profile Missing', 
+                text: 'You must set your "Registered Business Name" in the Business Profile tab before creating an invoice.', 
+                background: '#111', color: '#fff', confirmButtonColor: '#FFD700' 
+            }).then(() => {
+                switchTab(document.querySelectorAll('.inv-tab-btn')[2], 'profile');
+            });
+        }
+
         const cName = document.getElementById('invName').value.trim();
         const cEmail = document.getElementById('invEmail').value.trim();
         const due = document.getElementById('invDueDate').value;
@@ -518,27 +538,26 @@
             taxRate: parseFloat(document.getElementById('invTax').value) || 0,
             discountRate: parseFloat(document.getElementById('invDiscount').value) || 0,
             items: items,
-            paymentOptions: {
-                paystack: true 
-            }
+            paymentOptions: { paystack: true }
         };
 
-        // THE FIX IS APPLIED HERE: Grabbing the Business Details and attaching them
+        // === THE FIX: ALWAYS ATTACH BUSINESS INFO, ONLY LOCK LOGO/NOTES ===
+        payload.businessDetails = {
+            name: bizName,
+            email: document.getElementById('bizEmail').value.trim(),
+            phone: document.getElementById('bizPhone').value.trim(),
+            website: document.getElementById('bizWeb').value.trim(),
+            address: document.getElementById('bizAddress').value.trim()
+        };
+
         if(currentUserRole !== 'user') {
             payload.notes = document.getElementById('invNotes').value;
             payload.terms = document.getElementById('invTerms').value;
             
             const logoEl = document.getElementById('logoPreview');
             const bizLogo = (logoEl.style.display !== 'none' && logoEl.src) ? logoEl.getAttribute('src') : null;
-
-            payload.businessDetails = {
-                name: document.getElementById('bizName').value.trim(),
-                email: document.getElementById('bizEmail').value.trim(),
-                phone: document.getElementById('bizPhone').value.trim(),
-                website: document.getElementById('bizWeb').value.trim(),
-                address: document.getElementById('bizAddress').value.trim(),
-                logoUrl: bizLogo
-            };
+            
+            payload.businessDetails.logoUrl = bizLogo;
             payload.businessLogoBase64 = bizLogo;
         }
 
