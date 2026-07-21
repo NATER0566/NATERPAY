@@ -225,7 +225,6 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
 
         try {
-            // THE FIX: Fetching fresh data to absolutely bypass mobile browser cache!
             const [dashRes, authRes, kycRes] = await Promise.all([
                 fetch('/api/user/dashboard-data?_t=' + Date.now(), { headers: { 'Authorization': `Bearer ${authToken}` } }),
                 fetch('/api/auth/profile?_t=' + Date.now(), { headers: { 'Authorization': `Bearer ${authToken}` } }),
@@ -237,7 +236,6 @@
             const kycData = await kycRes.json();
 
             if (dashData.success && kycData.success) {
-                // Ensure absolute truth from database for Email Verification
                 const isEmailVerifiedNow = dashData.isEmailVerified === true || (authData.user && authData.user.isEmailVerified === true);
                 document.getElementById('baseEmailInput').value = dashData.userEmail || authData.user?.email || 'Unknown Email';
 
@@ -355,21 +353,19 @@
             const data = await res.json();
 
             if (data.success) {
-                // THE FIX: Instant DOM Manipulation! Force the Base Tier to complete and unlock Tier 1 instantly without waiting for a reload!
+                // THE PERMANENT FIX: Instantly lock in the UI changes and do NOT re-fetch data.
                 document.getElementById('tier0Card').className = 'tier-card completed';
                 document.getElementById('tier0Badge').className = 'tier-badge badge-completed';
                 document.getElementById('tier0Badge').innerText = 'COMPLETED';
                 document.getElementById('tier0Form').style.display = 'none';
 
-                // Unlock Tier 1 visually instantly
                 document.getElementById('tier1Card').className = 'tier-card active';
                 document.getElementById('tier1Badge').className = 'tier-badge badge-active';
                 document.getElementById('tier1Badge').innerText = 'ACTION REQUIRED';
 
                 Swal.fire({ icon: 'success', title: 'Base Tier Unlocked!', text: 'Your email is secured. You can now proceed to Tier 1.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
                 
-                // Fetch in background just to be safe
-                checkKYCStatus(); 
+                // checkKYCStatus() REMOVED so it doesn't fetch cached server data and snap back to locked.
             } else {
                 Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message || 'Invalid or expired OTP.', background: '#111', color: '#fff' });
             }
