@@ -13,6 +13,7 @@
 
     <style>
         :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #030303; --card-bg: rgba(15, 15, 15, 0.95); --red: #ff3333; --green: #00ff88; }
+        * { box-sizing: border-box; }
         body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; display: flex; flex-direction: column; }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
@@ -22,63 +23,66 @@
             position: sticky; top: 0; width: 100%; padding: 15px 5%;
             background: rgba(0, 0, 0, 0.98); border-bottom: 2px solid var(--gold);
             display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(15px);
-            box-shadow: 0 5px 25px rgba(0,0,0,0.8); gap: 15px; flex-wrap: nowrap;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.8); gap: 10px; flex-wrap: nowrap;
         }
         .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85; flex-shrink: 0; }
-        .site-part-1 { color: var(--gold); font-size: clamp(1.3rem, 4vw, 1.6rem); text-shadow: 0 0 10px var(--gold-glow); } 
-        .site-part-2 { color: var(--red); font-size: clamp(0.9rem, 3vw, 1.1rem); letter-spacing: 3px; }
+        .site-part-1 { color: var(--gold); font-size: clamp(1.1rem, 4vw, 1.6rem); text-shadow: 0 0 10px var(--gold-glow); } 
+        .site-part-2 { color: var(--red); font-size: clamp(0.8rem, 3vw, 1.1rem); letter-spacing: 3px; }
         
-        .secure-header-badge { background: rgba(0, 255, 136, 0.1); border: 1px solid var(--green); color: var(--green); padding: 6px 12px; border-radius: 50px; font-weight: 800; font-size: clamp(0.65rem, 2vw, 0.75rem); letter-spacing: 1px; display: flex; align-items: center; gap: 6px; text-transform: uppercase; white-space: nowrap; flex-shrink: 0; }
+        .secure-header-badge { background: rgba(0, 255, 136, 0.1); border: 1px solid var(--green); color: var(--green); padding: 6px 12px; border-radius: 50px; font-weight: 800; font-size: clamp(0.6rem, 2vw, 0.75rem); letter-spacing: 1px; display: flex; align-items: center; gap: 5px; text-transform: uppercase; white-space: nowrap; flex-shrink: 0; }
 
-        .main-wrapper { flex: 1; padding: 25px 12px; display: flex; justify-content: center; align-items: flex-start; }
+        .main-wrapper { flex: 1; padding: 25px 10px; display: flex; justify-content: center; align-items: flex-start; }
 
+        /* STRICT OVERFLOW PREVENTION */
         .invoice-container { 
             background: var(--card-bg); border: 1px solid #333; border-radius: 20px; 
             width: 100%; max-width: 850px; box-shadow: 0 20px 60px rgba(0,0,0,0.9); 
-            overflow: hidden; position: relative;
+            overflow: hidden; position: relative; word-wrap: break-word; overflow-wrap: break-word;
         }
         .invoice-container::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: linear-gradient(90deg, var(--gold), #ff4d4d, var(--gold)); }
 
-        .invoice-header { background: #0a0a0a; padding: 25px 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px; }
+        /* Centered Mobile Layout */
+        .invoice-header { background: #0a0a0a; padding: 30px 15px; border-bottom: 1px solid #222; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 20px; }
         
-        /* BUSINESS LETTERHEAD STYLES */
-        .business-logo { max-width: 180px; max-height: 80px; object-fit: contain; border-radius: 8px; margin-bottom: 15px; }
-        .fallback-logo { font-family: 'Cinzel', serif; font-size: 1.8rem; font-weight: 900; color: var(--gold); letter-spacing: 2px; margin: 0 0 10px 0; text-shadow: 0 0 15px rgba(255,215,0,0.3); }
-        .business-info-block { color: #aaa; font-size: 0.85rem; line-height: 1.5; word-break: break-word; }
-        .business-info-block strong { color: var(--gold); font-size: 1.3rem; display: block; margin-bottom: 8px; font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
-        .biz-detail-line { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-        .biz-detail-line i { color: #666; width: 14px; text-align: center; }
-        .biz-detail-line a { color: #aaa; text-decoration: none; transition: 0.3s; }
-        .biz-detail-line a:hover { color: var(--gold); }
+        .business-logo { max-width: 150px; max-height: 70px; object-fit: contain; border-radius: 8px; margin-bottom: 10px; }
+        .fallback-logo { font-family: 'Cinzel', serif; font-size: 1.6rem; font-weight: 900; color: var(--gold); letter-spacing: 2px; margin: 0 0 10px 0; text-shadow: 0 0 15px rgba(255,215,0,0.3); }
         
-        .invoice-meta { text-align: right; }
+        .business-info-block { color: #aaa; font-size: 0.85rem; line-height: 1.6; display: flex; flex-direction: column; align-items: center; }
+        .business-info-block strong { color: var(--gold); font-size: 1.2rem; display: block; margin-bottom: 8px; font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; text-align: center; }
+        
+        .biz-detail-line { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
+        .biz-detail-line i { color: #666; width: 16px; text-align: center; font-size: 1rem; }
+        .biz-detail-line a { color: #fff; text-decoration: none; font-weight: 600; transition: 0.3s; border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 2px; }
+        .biz-detail-line a.whatsapp-link { color: #25D366; border-bottom-color: rgba(37,211,102,0.3); }
+        .biz-detail-line a:hover { color: var(--gold); border-bottom-color: var(--gold); }
+        
+        .invoice-meta { text-align: center; width: 100%; margin-top: 10px; }
         .invoice-meta h2 { color: #fff; font-family: 'Cinzel', serif; font-weight: 900; margin: 0 0 5px 0; letter-spacing: 2px; font-size: 1.8rem; }
         .invoice-id { color: var(--gold); font-family: monospace; font-size: 0.95rem; font-weight: 700; background: rgba(255,215,0,0.1); padding: 4px 10px; border-radius: 6px; display: inline-block; word-break: break-all; }
 
-        .invoice-body { padding: 25px 20px; }
+        .invoice-body { padding: 25px 15px; }
         
-        .bill-to-section { display: flex; justify-content: space-between; margin-bottom: 25px; flex-wrap: wrap; gap: 20px; background: #111; padding: 20px; border-radius: 12px; border: 1px solid #222; }
-        .bill-to-box { flex: 1; min-width: 200px; }
-        .bill-to-box h6 { color: #888; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-size: 0.7rem; }
-        .client-name { font-size: 1.1rem; font-weight: 800; margin: 0; color: #fff; word-break: break-word; }
-        .client-email { color: var(--gold); margin: 4px 0 0 0; font-weight: 600; font-size: 0.85rem; word-break: break-all; }
+        .bill-to-section { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 25px; gap: 20px; background: #111; padding: 20px; border-radius: 12px; border: 1px solid #222; }
+        .bill-to-box { width: 100%; }
+        .bill-to-box h6 { color: #888; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-size: 0.75rem; }
+        .client-name { font-size: 1.1rem; font-weight: 800; margin: 0; color: #fff; }
+        .client-email { color: var(--gold); margin: 4px 0 0 0; font-weight: 600; font-size: 0.85rem; }
 
-        .status-badge { padding: 6px 15px; border-radius: 50px; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 6px; }
+        .status-badge { padding: 6px 15px; border-radius: 50px; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
         .status-unpaid { background: rgba(255, 51, 51, 0.1); color: var(--red); border: 1px solid rgba(255, 51, 51, 0.3); }
         .status-paid { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid rgba(0, 255, 136, 0.3); }
 
-        .table-responsive { border-radius: 10px; border: 1px solid #222; overflow-x: auto; margin-bottom: 25px; }
-        .table-custom { width: 100%; border-collapse: collapse; margin: 0; background: #0a0a0a; min-width: 450px; }
-        .table-custom th { background: #111; color: var(--gold); padding: 14px 15px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; text-align: left; border-bottom: 2px solid #222; white-space: nowrap; }
+        .table-responsive { border-radius: 10px; border: 1px solid #222; overflow-x: auto; margin-bottom: 25px; -webkit-overflow-scrolling: touch; }
+        .table-custom { width: 100%; border-collapse: collapse; margin: 0; background: #0a0a0a; min-width: 350px; }
+        .table-custom th { background: #111; color: var(--gold); padding: 12px 10px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; text-align: left; border-bottom: 2px solid #222; white-space: nowrap; }
         .table-custom th.text-right, .table-custom td.text-right { text-align: right; }
-        .table-custom td { padding: 14px 15px; border-bottom: 1px solid #1a1a1a; font-weight: 600; color: #ddd; font-size: 0.88rem; }
+        .table-custom td { padding: 12px 10px; border-bottom: 1px solid #1a1a1a; font-weight: 600; color: #ddd; font-size: 0.85rem; }
         .table-custom tr:last-child td { border-bottom: none; }
 
-        .totals-wrapper { display: flex; justify-content: flex-end; margin-bottom: 30px; }
-        .totals-box { width: 100%; max-width: 400px; background: #111; border: 1px solid #333; border-radius: 12px; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        .total-line { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 10px; color: #aaa; font-weight: 600; font-size: 0.9rem; gap: 8px; }
-        .total-line span:first-child { flex: 1 1 auto; }
-        .total-line span:last-child { flex: 0 1 auto; text-align: right; word-break: break-word; font-weight: 700; color: #eee; }
+        .totals-wrapper { display: flex; justify-content: center; margin-bottom: 30px; width: 100%; }
+        .totals-box { width: 100%; background: #111; border: 1px solid #333; border-radius: 12px; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .total-line { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 10px; color: #aaa; font-weight: 600; font-size: 0.9rem; gap: 5px; }
+        .total-line span:last-child { text-align: right; font-weight: 700; color: #eee; }
         
         .total-line.fee-line { color: #ff9900; font-size: 0.8rem; border-top: 1px dashed #333; padding-top: 10px; margin-top: 4px; }
         .total-line.fee-line span:last-child { color: #ff9900; }
@@ -88,28 +92,37 @@
             font-family: 'Cinzel', serif; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
         }
         .total-line.grand-total span:first-child { font-size: 1rem; font-weight: 800; color: #fff; letter-spacing: 1px; }
-        .total-line.grand-total span:last-child { font-size: clamp(1.4rem, 6vw, 1.8rem); color: var(--gold); font-weight: 900; text-align: right; word-break: break-word; }
+        .total-line.grand-total span:last-child { font-size: clamp(1.3rem, 5vw, 1.8rem); color: var(--gold); font-weight: 900; text-align: right; }
 
-        .info-blocks { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 30px; }
-        .info-card { background: #0a0a0a; border: 1px solid #222; padding: 15px; border-radius: 10px; }
+        .info-blocks { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 30px; width: 100%; }
+        .info-card { background: #0a0a0a; border: 1px solid #222; padding: 15px; border-radius: 10px; text-align: center; }
         .info-card h6 { color: var(--gold); font-weight: 800; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; margin-bottom: 8px; }
-        .info-card p { color: #aaa; font-size: 0.82rem; line-height: 1.5; margin: 0; white-space: pre-wrap; word-break: break-word; }
+        .info-card p { color: #aaa; font-size: 0.82rem; line-height: 1.5; margin: 0; white-space: pre-wrap; }
 
-        .payment-section { text-align: center; padding: 0 20px 35px 20px; }
-        .btn-pay { background: linear-gradient(90deg, var(--gold), #ffcc00); color: #000; font-weight: 900; border-radius: 12px; padding: 18px 25px; border: none; font-size: clamp(1rem, 3.5vw, 1.2rem); letter-spacing: 1px; text-transform: uppercase; transition: 0.3s; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(255,215,0,0.3); display: inline-flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; white-space: normal; line-height: 1.3; }
+        .payment-section { text-align: center; padding: 0 15px 35px 15px; }
+        .btn-pay { background: linear-gradient(90deg, var(--gold), #ffcc00); color: #000; font-weight: 900; border-radius: 12px; padding: 18px 15px; border: none; font-size: clamp(0.95rem, 3.5vw, 1.2rem); letter-spacing: 1px; text-transform: uppercase; transition: 0.3s; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(255,215,0,0.3); display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; white-space: normal; line-height: 1.3; }
         .btn-pay:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 15px 40px rgba(255,255,255,0.3); }
 
-        .secure-badge { color: #666; font-size: 0.7rem; font-weight: 800; margin-top: 15px; text-transform: uppercase; letter-spacing: 1.5px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .secure-badge { color: #666; font-size: 0.7rem; font-weight: 800; margin-top: 15px; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
         footer { background: #000; border-top: 1px solid #222; padding: 15px; text-align: center; margin-top: auto; }
         .footer-tag { color: #555; font-weight: 800; font-size: 0.7rem; letter-spacing: 1.5px; margin: 0; }
 
+        /* Desktop Layout Overrides */
         @media (min-width: 768px) {
-            .info-blocks { grid-template-columns: 1fr 1fr; }
-            .invoice-header { padding: 40px; }
+            .invoice-header { flex-direction: row; text-align: left; padding: 40px; }
+            .business-info-block { align-items: flex-start; text-align: left; }
+            .business-info-block strong { text-align: left; }
+            .biz-detail-line { justify-content: flex-start; }
+            .invoice-meta { text-align: right; width: auto; margin-top: 0; }
+            
             .invoice-body { padding: 40px; }
-            .payment-section { padding: 0 40px 45px 40px; }
+            .bill-to-section { flex-direction: row; text-align: left; }
             .bill-to-box.text-md-end { text-align: right; }
+            .totals-wrapper { justify-content: flex-end; }
+            .info-blocks { grid-template-columns: 1fr 1fr; text-align: left; }
+            .info-card { text-align: left; }
+            .payment-section { padding: 0 40px 45px 40px; }
         }
     </style>
 </head>
@@ -123,7 +136,7 @@
         <span class="site-part-2">PAY</span>
     </div>
     <div class="secure-header-badge">
-        <i class="fas fa-lock"></i> SECURE CHECKOUT
+        <i class="fas fa-lock"></i> SECURE
     </div>
 </header>
 
@@ -189,29 +202,32 @@
     function renderInvoice(invoice) {
         const sym = currMap[invoice.currency] || '₦';
 
-        // 1. BUSINESS PROFILE LETTERHEAD
+        // 1. BUSINESS PROFILE LETTERHEAD & CLICKABLE LINKS
         const biz = invoice.businessDetails || {};
         let logoHTML = '';
         let bizInfoHTML = '';
         
         const logoSrc = biz.logoUrl || invoice.businessLogoBase64;
         
-        // Logo processing
+        // Render Logo or fallback Name/Text
         if (logoSrc) {
             logoHTML = `<img src="${logoSrc}" class="business-logo" alt="Business Logo">`;
         } else if (!biz.name) {
             logoHTML = `<h1 class="fallback-logo">INVOICE</h1>`;
         }
 
-        // Complete Professional Business Letterhead Block
+        // Format Phone for WhatsApp Link (remove spaces/dashes)
+        let cleanPhone = biz.phone ? biz.phone.replace(/[^\d+]/g, '') : '';
+
+        // Complete Professional Business Letterhead Block (Clickable)
         if (biz.name || biz.address || biz.phone || biz.email || biz.website) {
             bizInfoHTML = `
                 <div class="business-info-block">
                     ${biz.name ? `<strong>${biz.name}</strong>` : ''}
                     ${biz.address ? `<div class="biz-detail-line"><i class="fas fa-map-marker-alt"></i> <span>${biz.address}</span></div>` : ''}
-                    ${biz.phone ? `<div class="biz-detail-line"><i class="fas fa-phone-alt"></i> <span>${biz.phone}</span></div>` : ''}
-                    ${biz.email ? `<div class="biz-detail-line"><i class="fas fa-envelope"></i> <span>${biz.email}</span></div>` : ''}
-                    ${biz.website ? `<div class="biz-detail-line"><i class="fas fa-globe"></i> <span><a href="${biz.website.startsWith('http') ? biz.website : 'https://'+biz.website}" target="_blank">${biz.website}</a></span></div>` : ''}
+                    ${biz.phone ? `<div class="biz-detail-line"><i class="fab fa-whatsapp" style="color: #25D366; font-size: 1.1rem;"></i> <span><a href="https://wa.me/${cleanPhone}" target="_blank" class="whatsapp-link">${biz.phone}</a></span></div>` : ''}
+                    ${biz.email ? `<div class="biz-detail-line"><i class="fas fa-envelope"></i> <span><a href="mailto:${biz.email}">${biz.email}</a></span></div>` : ''}
+                    ${biz.website ? `<div class="biz-detail-line"><i class="fas fa-globe"></i> <span><a href="${biz.website.startsWith('http') ? biz.website : 'https://'+biz.website}" target="_blank">${biz.website.replace(/^https?:\/\//, '')}</a></span></div>` : ''}
                 </div>
             `;
         }
@@ -277,7 +293,7 @@
         // Render HTML inside bounds
         document.getElementById('invoiceCard').innerHTML = `
             <div class="invoice-header">
-                <div style="flex: 1; min-width: 250px;">
+                <div>
                     ${logoHTML}
                     ${bizInfoHTML}
                 </div>
@@ -292,13 +308,13 @@
                     <div class="bill-to-box">
                         <h6>Billed To:</h6>
                         <h4 class="client-name">${invoice.customerName}</h4>
-                        <p class="client-email"><i class="fas fa-envelope me-1"></i> ${invoice.customerEmail}</p>
+                        <p class="client-email"><i class="fas fa-envelope me-1"></i> <a href="mailto:${invoice.customerEmail}" style="color: inherit; text-decoration: none;">${invoice.customerEmail}</a></p>
                     </div>
                     <div class="bill-to-box text-md-end">
                         <h6>Status & Timeline:</h6>
                         ${statusHTML}
                         <p class="mt-2 text-secondary fw-bold mb-1" style="font-size: 0.75rem;">Issued: ${createStr}</p>
-                        <p class="text-white fw-bold m-0" style="font-size: 0.85rem;">Due: ${dateStr}</p>
+                        <p class="text-white fw-bold m-0" style="font-size: 0.85rem;">Due: <span style="${isOverdue ? 'color: var(--red);' : ''}">${dateStr}</span></p>
                     </div>
                 </div>
 
@@ -325,7 +341,7 @@
                         <div class="total-line" style="color: var(--green);"><span>Discount (${discRate}%):</span> <span>- ${sym}${discAmt.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
                         <div class="total-line" style="border-top: 1px solid #333; padding-top: 10px; margin-top: 8px;"><span>Invoice Total:</span> <span style="color: #fff;">${sym}${baseTotal.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>
                         
-                        ${!isPaid ? `<div class="total-line fee-line"><span>Gateway Fee (1.5%):</span> <span>+ ${sym}${gatewayProcessingFee.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>` : ''}
+                        ${!isPaid ? `<div class="total-line fee-line"><span>Gateway Processing + Fee (1.5%):</span> <span>+ ${sym}${gatewayProcessingFee.toLocaleString(undefined, {minimumFractionDigits:2})}</span></div>` : ''}
                         
                         <div class="total-line grand-total">
                             <span>${isPaid ? 'PAID:' : 'AMOUNT DUE:'}</span> 
