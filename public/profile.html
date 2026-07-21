@@ -83,8 +83,8 @@
         }
         .copy-btn:hover { background: var(--gold); color: black; }
         
-        .status-verified { background: rgba(0, 255, 136, 0.15); color: #00ff88; border: 1px solid #00ff88; padding: 4px 10px; border-radius: 8px; }
-        .status-unverified { background: rgba(211, 47, 47, 0.15); color: #ff4d4d; border: 1px solid #ff4d4d; padding: 4px 10px; border-radius: 8px; }
+        .status-verified { background: rgba(0, 255, 136, 0.15); color: #00ff88; border: 1px solid #00ff88; padding: 4px 10px; border-radius: 8px; transition: all 0.3s ease; }
+        .status-unverified { background: rgba(211, 47, 47, 0.15); color: #ff4d4d; border: 1px solid #ff4d4d; padding: 4px 10px; border-radius: 8px; transition: all 0.3s ease; }
     </style>
 </head>
 <body>
@@ -208,10 +208,10 @@
         if (!authToken) { window.location.href = '/index.html'; return; }
         
         try {
-            // THE FIX: Fetching from both routes to separate KYC Level from exact Email Verification Status
+            // THE FIX: Added Date.now() to force the browser to get fresh data instead of using cached memory
             const [dashRes, authRes] = await Promise.all([
-                fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } }),
-                fetch('/api/auth/profile', { headers: { 'Authorization': `Bearer ${authToken}` } })
+                fetch('/api/user/dashboard-data?_t=' + Date.now(), { headers: { 'Authorization': `Bearer ${authToken}` } }),
+                fetch('/api/auth/profile?_t=' + Date.now(), { headers: { 'Authorization': `Bearer ${authToken}` } })
             ]);
             
             const dashData = await dashRes.json();
@@ -235,8 +235,10 @@
                 const verifyBtn = document.getElementById('verifyEmailBtn');
                 const emailGroup = document.getElementById('emailGroup');
                 
-                // We check the exact boolean flag from the core user object
-                if (authData.user.isEmailVerified === true) {
+                // THE FIX: Checking dashData directly because we know it has the accurate flag
+                const isEmailVerifiedNow = dashData.isEmailVerified === true || (authData.user && authData.user.isEmailVerified === true);
+
+                if (isEmailVerifiedNow) {
                     emailBadge.className = 'status-verified';
                     emailBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i> VERIFIED';
                     verifyBtn.style.display = 'none';
@@ -316,7 +318,14 @@
             const data = await res.json();
 
             if (data.success) {
+                // THE FIX: Instant UI manipulation so you don't even have to wait for the page load!
+                document.getElementById('emailStatusBadge').className = 'status-verified';
+                document.getElementById('emailStatusBadge').innerHTML = '<i class="fas fa-check-circle me-1"></i> VERIFIED';
+                document.getElementById('verifyEmailBtn').style.display = 'none';
+                document.getElementById('emailGroup').style.borderColor = 'rgba(0, 255, 136, 0.3)';
+
                 Swal.fire({ icon: 'success', title: 'Account Verified!', text: 'Your email is now fully secured.', confirmButtonColor: '#d4af37', background: '#0a0a0a', color: '#fff' });
+                
                 loadProfile(); 
             } else {
                 Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message || 'Invalid or expired OTP.', background: '#0a0a0a', color: '#fff' });
