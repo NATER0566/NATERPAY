@@ -67,7 +67,7 @@
         .system-side::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
         .system-side::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
 
-        .auth-side { flex: 1; background: var(--panel-bg); backdrop-filter: blur(10px); display: flex; flex-direction: column; padding: 45px 40px 30px 40px; position: relative; box-shadow: -20px 0 50px rgba(0,0,0,0.5); overflow-y: auto; }
+        .auth-side { flex: 1; background: var(--panel-bg); backdrop-filter: blur(10px); display: flex; flex-direction: column; padding: 45px 25px 30px 25px; position: relative; box-shadow: -20px 0 50px rgba(0,0,0,0.5); overflow-y: auto; }
 
         .embedded-support-card {
             width: 100%; background: linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(12, 12, 12, 0.95) 50%, rgba(255, 255, 255, 0.12) 100%);
@@ -105,6 +105,9 @@
             0%, 100% { box-shadow: 0 0 18px rgba(212, 175, 55, 0.4), inset 0 0 8px rgba(212, 175, 55, 0.2); border-color: var(--gold); filter: brightness(1); }
             50% { box-shadow: 0 0 50px rgba(212, 175, 55, 0.95), 0 0 30px rgba(255, 255, 255, 0.6), inset 0 0 25px rgba(255, 255, 255, 0.4); border-color: #ffffff; filter: brightness(1.5); }
         }
+        @keyframes light-refract-sweep {
+            0% { left: -150%; } 50%, 100% { left: 150%; }
+        }
 
         .input-group-custom { background: rgba(0,0,0,0.6); border: 1.5px solid rgba(212, 175, 55, 0.35); border-radius: 20px; padding: 15px 25px; margin-bottom: 20px; transition: border-color 0.3s ease, box-shadow 0.3s ease; position: relative; }
         .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
@@ -124,57 +127,58 @@
         .btn-authorize:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
 
         /* ========================================================
-           THE FIXED CARD SLIDESHOW (PERFECT FIT, NO CROPPING)
+           EXPANDED WIDE CARD SLIDESHOW (PERFECT FIT, TALLER HEIGHT)
            ======================================================== */
         .promo-card {
-            background: rgba(15, 15, 15, 0.8);
-            border: 1.5px solid rgba(212, 175, 55, 0.3);
-            border-radius: 16px;
-            padding: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+            background: rgba(12, 12, 12, 0.9);
+            border: 2px solid rgba(212, 175, 55, 0.4);
+            border-radius: 20px;
+            padding: 18px;
+            margin: 0 -10px 30px -10px; /* Expands wider to almost touch the screen edges */
+            box-shadow: 0 10px 35px rgba(0,0,0,0.9);
         }
         
         .promo-header {
-            font-family: 'Cinzel'; font-size: 0.95rem; color: var(--gold); letter-spacing: 1px; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 8px;
+            font-family: 'Cinzel'; font-size: 1rem; color: var(--gold); letter-spacing: 2px; font-weight: 900; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid rgba(212,175,55,0.3); padding-bottom: 10px;
         }
 
         .slideshow-viewport {
             width: 100%;
-            aspect-ratio: 16 / 9; /* Creates a perfect TV-style box */
+            height: 380px; /* Taller display area */
             background: #000;
-            border-radius: 12px;
+            border-radius: 14px;
             position: relative;
             overflow: hidden;
-            border: 1px solid #222;
+            border: 1px solid #333;
         }
 
         .slide-element {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s ease-in-out;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s ease-in-out; display: flex; flex-direction: column; justify-content: space-between;
         }
         .slide-element.active { opacity: 1; z-index: 2; }
         
         /* THE MAGIC FIX: 'contain' ensures nothing is ever hidden or chopped off */
         .slide-media-layer {
-            width: 100%; height: 100%; object-fit: contain; pointer-events: auto; background: #000;
+            width: 100%; height: 100%; object-fit: contain; pointer-events: auto; background: #000; flex-grow: 1;
         }
         
-        /* Text overlays gracefully over the bottom of the video/image with a gradient to remain readable */
+        /* Text overlays gracefully at the bottom */
         .slide-text-overlay {
-            position: absolute; bottom: 0; left: 0; width: 100%; padding: 40px 15px 15px 15px;
-            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,0) 100%);
-            pointer-events: none; z-index: 3; text-align: left;
+            width: 100%; padding: 20px 15px; 
+            background: rgba(0, 0, 0, 0.9);
+            border-top: 1px solid rgba(212,175,55,0.3);
+            z-index: 3; text-align: left; flex-shrink: 0;
         }
-        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.2rem; margin-bottom: 5px; text-shadow: 0 2px 5px rgba(0,0,0,1); }
-        .slide-text-overlay p { font-size: 0.85rem; color: #fff; opacity: 0.95; margin-bottom: 10px; font-weight: 600; text-shadow: 0 2px 5px rgba(0,0,0,1); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.3rem; margin-bottom: 5px; text-shadow: 0 2px 5px rgba(0,0,0,1); }
+        .slide-text-overlay p { font-size: 0.85rem; color: #fff; opacity: 0.95; margin-bottom: 12px; font-weight: 600; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .slide-text-overlay a { pointer-events: auto; }
 
         @keyframes textBgFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:0; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
 
         /* Manual Controls */
-        .slide-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 10px; z-index: 10; pointer-events: none; }
-        .slide-nav button { pointer-events: auto; background: rgba(0,0,0,0.7); color: var(--gold); border: 1px solid var(--gold); width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(5px); }
+        .slide-nav { position: absolute; top: 40%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 10px; z-index: 10; pointer-events: none; }
+        .slide-nav button { pointer-events: auto; background: rgba(0,0,0,0.8); color: var(--gold); border: 1.5px solid var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(5px); }
         .slide-nav button:hover { background: var(--gold); color: #000; transform: scale(1.1); }
         
         .slide-dots { width: 100%; display: flex; justify-content: center; gap: 8px; margin-top: 15px; }
@@ -208,7 +212,7 @@
         .social-circle:hover { background: rgba(212,175,55,0.1); color: var(--gold); border-color: var(--gold); transform: translateY(-3px); }
 
         /* Hide the left panel completely on mobile */
-        @media (max-width: 1100px) { .system-side { display: none; } .auth-side { padding: 40px 25px; background: rgba(10, 10, 10, 0.4); } .viewport-wrapper { overflow-y: auto; } }
+        @media (max-width: 1100px) { .system-side { display: none; } .auth-side { padding: 40px 15px; background: rgba(10, 10, 10, 0.4); } .viewport-wrapper { overflow-y: auto; } }
     </style>
 </head>
 <body>
@@ -409,7 +413,7 @@
             <i class="fas fa-chevron-right" style="color: #ffffff; opacity: 1; font-size: 1.2rem; padding-left: 10px; position: relative; z-index: 2;"></i>
         </div>
 
-        <!-- NEW DEDICATED SLIDESHOW CARD (PERFECT FIT & SOUND ENABLED) -->
+        <!-- EXPANDED WIDE CARD SLIDESHOW (PERFECT FIT & SOUND ENABLED) -->
         <div class="promo-card">
             <div class="promo-header"><i class="fas fa-bullhorn"></i> SYSTEM UPDATES & PROMOS</div>
             
@@ -633,10 +637,8 @@
             const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
 
             if (slide.type === 'text' || (!rawUrl && !isVideo)) {
-                // Animated Gradient for Text-Only Slides
                 mediaHtml = `<div class="bg-text-slide"></div>`;
             } else if (isVideo) {
-                // THE FIX: Added controls, removed autoplay and muted. 'contain' handles fit.
                 mediaHtml = `<video src="${rawUrl}" class="slide-media-layer" controls playsinline preload="metadata"></video>`;
             } else {
                 mediaHtml = `<img src="${rawUrl}" class="slide-media-layer" alt="${title}">`;
@@ -661,7 +663,6 @@
     function prevSlide() {
         if(applicationSlides.length <= 1) return;
         
-        // Pause any video that was playing before switching
         const oldVideo = document.getElementById(`slide_node_index_${activeSlidePointer}`).querySelector('video');
         if (oldVideo) oldVideo.pause();
 
@@ -677,7 +678,6 @@
     function nextSlide() {
         if(applicationSlides.length <= 1) return;
         
-        // Pause any video that was playing before switching
         const oldVideo = document.getElementById(`slide_node_index_${activeSlidePointer}`).querySelector('video');
         if (oldVideo) oldVideo.pause();
 
@@ -693,7 +693,6 @@
     function goToSlide(index) {
         if(index === activeSlidePointer) return;
         
-        // Pause any video that was playing before switching
         const oldVideo = document.getElementById(`slide_node_index_${activeSlidePointer}`).querySelector('video');
         if (oldVideo) oldVideo.pause();
 
