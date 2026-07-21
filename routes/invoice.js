@@ -1,8 +1,9 @@
 const Invoice = require('../models/Invoice');
 const Transaction = require('../models/Transaction');
 const Wallet = require('../models/Wallet');
+const User = require('../models/User');
 const crypto = require('crypto');
-const { Resend } = require('resend'); 
+const { Resend } = require('resend');
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -32,7 +33,8 @@ async function getInvoices(request, reply) {
         dueDate: inv.dueDate,
         paidAt: inv.paidAt,
         createdAt: inv.createdAt,
-        businessLogoBase64: inv.businessLogoBase64 // Includes logo for frontend display
+        businessLogoBase64: inv.businessLogoBase64,
+        businessDetails: inv.businessDetails
       }))
     });
   } catch (error) {
@@ -41,18 +43,32 @@ async function getInvoices(request, reply) {
 }
 
 /**
- * 2. Create invoice & Send Email
+ * 2. Create invoice & Send Email (STRICT LIMITS APPLIED)
  */
 async function createInvoice(request, reply) {
   try {
-    // Destructured businessLogoBase64 from the incoming request
-    const { customerName, customerEmail, customerPhone, items, taxRate, discountRate, dueDate, notes, businessLogoBase64 } = request.body;
+    // 1. ENFORCE STRICT MONTHLY LIMITS ON THE BACKEND
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const invoiceCount = await Invoice.countDocuments({ user: request.user._id, createdAt: { $gte: startOfMonth } });
+    
+    // Fetch user to safely check role
+    const user = await User.findById(request.user._id);
+    const userRole = (user.role || 'user').toLowerCase();
+
+    if (userRole === 'user' && invoiceCount >= 3) {
+        return reply.status(403).send({ success: false, message: 'Standard users are limited to 3 invoices per month. Upgrade to Reseller.' });
+    }
+    if ((userRole === 'reseller' || userRole === 'agent') && invoiceCount >= 50) {
+        return reply.status(403).send({ success: false, message: 'Reseller limit is 50 invoices per month. Upgrade to VIP.' });
+    }
+
+    const { customerName, customerEmail, customerPhone, items, taxRate, discountRate, dueDate, notes, terms, businessLogoBase64, businessDetails, currency } = request.body;
     
     if (!customerName || !customerEmail || !items || items.length === 0) {
       return reply.status(400).send({ success: false, message: 'Customer name, email, and valid items are required' });
     }
     
-    // MATHEMATICS ENGINE
+    // 2. STRICT SERVER-SIDE MATHEMATICS ENGINE
     let subtotal = 0;
     const processedItems = items.map(item => {
         const qty = parseFloat(item.quantity) || 1;
@@ -76,6 +92,7 @@ async function createInvoice(request, reply) {
       customerName, 
       customerEmail, 
       customerPhone,
+      currency: currency || 'NGN',
       items: processedItems, 
       subtotal, 
       taxRate: tax, 
@@ -83,8 +100,10 @@ async function createInvoice(request, reply) {
       total: finalTotal, 
       dueDate: new Date(dueDate || Date.now()), 
       notes, 
+      terms,
       status: 'sent',
-      businessLogoBase64: businessLogoBase64 || null // Saves the logo string securely
+      businessLogoBase64: businessLogoBase64 || null,
+      businessDetails: businessDetails || {}
     });
     
     await invoice.save();
@@ -111,7 +130,7 @@ async function createInvoice(request, reply) {
                         <p style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold; word-break: break-all;">${invoice.invoiceId}</p>
                         
                         <p style="margin: 5px 0; font-size: 14px; color: #888;">Total Amount Due:</p>
-                        <p style="margin: 0 0 15px 0; font-size: 24px; font-weight: bold; color: #FFD700;">₦${finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                        <p style="margin: 0 0 15px 0; font-size: 24px; font-weight: bold; color: #FFD700;">${invoice.currency} ${finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
                         
                         <p style="margin: 5px 0; font-size: 14px; color: #888;">Due Date:</p>
                         <p style="margin: 0; font-size: 16px; font-weight: bold; color: #ff3333;">${new Date(invoice.dueDate).toLocaleDateString()}</p>
@@ -123,20 +142,14 @@ async function createInvoice(request, reply) {
                 </div>
             `
         });
-        console.log(`Invoice email successfully dispatched to ${customerEmail}`);
     } catch (emailError) {
-        console.error('Email failed. Please verify process.env.EMAIL_FROM matches your verified domain:', emailError.message);
+        console.error('Email failed:', emailError.message);
     }
 
     reply.status(201).send({
       success: true,
       message: 'Invoice generated.',
-      invoice: {
-        _id: invoice._id,
-        invoiceId: invoice.invoiceId,
-        url: invoiceLink,
-        total: invoice.total.toString()
-      }
+      invoice: { invoiceId: invoice.invoiceId, url: invoiceLink, total: invoice.total.toString() }
     });
   } catch (error) {
     console.error('Create invoice error:', error);
@@ -145,7 +158,7 @@ async function createInvoice(request, reply) {
 }
 
 /**
- * 3. Get invoice by ID (Now serves the Public Key dynamically)
+ * 3. Get invoice by ID (Public)
  */
 async function getInvoice(request, reply) {
   try {
@@ -158,19 +171,12 @@ async function getInvoice(request, reply) {
       success: true,
       paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
       invoice: {
-        invoiceId: invoice.invoiceId, 
-        customerName: invoice.customerName, 
-        customerEmail: invoice.customerEmail,
-        items: invoice.items, 
-        subtotal: invoice.subtotal ? invoice.subtotal.toString() : '0',
-        taxRate: invoice.taxRate, 
-        discountRate: invoice.discountRate, 
-        total: invoice.total ? invoice.total.toString() : '0',
-        currency: invoice.currency || 'NGN', 
-        dueDate: invoice.dueDate, 
-        notes: invoice.notes, 
-        status: invoice.status,
-        businessLogoBase64: invoice.businessLogoBase64 // Returns logo payload for public rendering
+        invoiceId: invoice.invoiceId, customerName: invoice.customerName, customerEmail: invoice.customerEmail,
+        items: invoice.items, subtotal: invoice.subtotal ? invoice.subtotal.toString() : '0',
+        taxRate: invoice.taxRate, discountRate: invoice.discountRate, total: invoice.total ? invoice.total.toString() : '0',
+        currency: invoice.currency || 'NGN', dueDate: invoice.dueDate, notes: invoice.notes, terms: invoice.terms,
+        status: invoice.status, businessLogoBase64: invoice.businessLogoBase64, businessDetails: invoice.businessDetails,
+        createdAt: invoice.createdAt
       }
     });
   } catch (error) {
@@ -187,7 +193,6 @@ async function payInvoice(request, reply) {
     const { paymentMethod, gatewayReference } = request.body;
     
     const invoice = await Invoice.findOne({ invoiceId });
-    
     if (!invoice) return reply.status(404).send({ success: false, message: 'Invoice not found' });
     if (['paid', 'cancelled'].includes(invoice.status)) return reply.status(400).send({ success: false, message: `Invoice is already ${invoice.status}` });
 
@@ -199,7 +204,6 @@ async function payInvoice(request, reply) {
     if (!wallet) throw new Error("Merchant wallet not found");
 
     const currentAvail = parseFloat(wallet.availableBalance?.toString() || '0');
-    
     wallet.availableBalance = String(currentAvail + finalCredit);
     wallet.balance = String(parseFloat(wallet.balance?.toString() || '0') + finalCredit);
     await wallet.save();
@@ -212,7 +216,6 @@ async function payInvoice(request, reply) {
       invoiceDetails: { invoiceId: invoice.invoiceId, customerEmail: invoice.customerEmail, customerName: invoice.customerName },
       ipAddress: request.ip, userAgent: request.headers['user-agent']
     });
-    
     await transaction.save();
     
     invoice.status = 'paid';
@@ -222,14 +225,44 @@ async function payInvoice(request, reply) {
     if (request.server && request.server.io) {
       request.server.io.to(`user:${invoice.user}`).emit('wallet:update', { balance: String(wallet.availableBalance || 0) });
     }
-    
     reply.send({ success: true, message: 'Invoice payment authorized and settled.', transaction });
   } catch (error) {
-    console.error('Pay invoice error:', error);
     reply.status(500).send({ success: false, message: 'Failed to process invoice payment' });
   }
 }
 
+/**
+ * 5. Delete Invoice (NEW)
+ */
+async function deleteInvoice(request, reply) {
+    try {
+        const { id } = request.params;
+        const deleted = await Invoice.findOneAndDelete({ _id: id, user: request.user._id });
+        if (!deleted) return reply.status(404).send({ success: false, message: 'Invoice not found or unauthorized.' });
+        reply.send({ success: true, message: 'Invoice permanently deleted from ledger.' });
+    } catch (error) {
+        reply.status(500).send({ success: false, message: 'System error deleting invoice.' });
+    }
+}
+
+/**
+ * 6. Mark Invoice as Paid Manually (NEW)
+ */
+async function markInvoicePaid(request, reply) {
+    try {
+        const { id } = request.params;
+        const updated = await Invoice.findOneAndUpdate(
+            { _id: id, user: request.user._id }, 
+            { status: 'paid', paidAt: new Date() },
+            { new: true }
+        );
+        if (!updated) return reply.status(404).send({ success: false, message: 'Invoice not found or unauthorized.' });
+        reply.send({ success: true, message: 'Invoice marked as paid.' });
+    } catch (error) {
+        reply.status(500).send({ success: false, message: 'System error updating status.' });
+    }
+}
+
 module.exports = {
-  getInvoices, createInvoice, getInvoice, payInvoice
+  getInvoices, createInvoice, getInvoice, payInvoice, deleteInvoice, markInvoicePaid
 };
