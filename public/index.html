@@ -137,7 +137,7 @@
             border-bottom: 1.5px solid rgba(212,175,55,0.3); background: rgba(5,5,5,0.8); z-index: 10; position: relative;
         }
 
-        /* 1. TOP SECTION: DYNAMIC TEXT ONLY (No overlapping on media) */
+        /* 1. TOP SECTION: DYNAMIC TEXT BLOCK (ONLY used for Media Slides) */
         .dynamic-text-block {
             width: 100%; padding: 20px 25px; background: rgba(15,15,15,0.95); text-align: center; border-bottom: 1px solid rgba(212,175,55,0.2);
             transition: opacity 0.3s ease;
@@ -145,10 +145,10 @@
         .dynamic-text-block h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.4rem; margin-bottom: 8px; text-shadow: 0 2px 4px rgba(0,0,0,1); line-height: 1.2; }
         .dynamic-text-block p { font-size: 0.95rem; color: #fff; opacity: 0.95; margin-bottom: 0; font-weight: 600; line-height: 1.5; }
 
-        /* 2. MIDDLE SECTION: PURE MEDIA CONTAINER (Edge-to-Edge) */
+        /* 2. MIDDLE SECTION: VIEWPORT */
         .slideshow-viewport {
             width: 100%;
-            height: 350px; /* Fixed height for media specifically to keep structure solid */
+            height: 350px; 
             background: #000;
             position: relative;
             overflow: hidden;
@@ -162,12 +162,22 @@
         .slide-element.active { opacity: 1; z-index: 2; position: relative; width: 100%; height: 100%; }
         
         .slide-media-layer {
-            width: 100%; height: 100%; object-fit: cover; pointer-events: auto; display: block;
+            width: 100%; height: 100%; object-fit: cover; pointer-events: auto; display: block; flex-grow: 1;
         }
 
-        /* Animated Background for Text-Only Slides */
+        /* THE FIX: TEXT-ONLY SLIDE FULL-BOX STYLING */
+        .slide-element.text-only-slide { 
+            justify-content: center; align-items: center; padding: 40px 30px; text-align: center; 
+        }
+        .slide-element.text-only-slide h3 { 
+            font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 2.2rem; margin-bottom: 15px; text-shadow: 0 2px 8px rgba(0,0,0,1); line-height: 1.2; position: relative; z-index: 5;
+        }
+        .slide-element.text-only-slide p { 
+            font-size: 1.1rem; color: #fff; opacity: 0.95; margin-bottom: 0; font-weight: 600; line-height: 1.6; text-shadow: 0 2px 6px rgba(0,0,0,1); position: relative; z-index: 5;
+        }
+
         @keyframes textBgFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:0; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
+        .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:1; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
         
         /* 3. BOTTOM SECTION: CTA BUTTON & DOTS */
         .dynamic-action-block {
@@ -184,7 +194,7 @@
         }
         .slide-nav button:hover { background: var(--gold); color: #000; transform: scale(1.15); }
         
-        .slide-dots { width: 100%; display: flex; justify-content: center; gap: 10px; }
+        .slide-dots { width: 100%; display: flex; justify-content: center; gap: 10px; padding: 15px 0 20px 0; background: #000; z-index: 10; position: relative; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;}
         .slide-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; transition: 0.3s; border: 1px solid transparent; box-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         .slide-dot.active { background: var(--gold); transform: scale(1.4); border-color: #000; box-shadow: 0 0 10px rgba(212,175,55,0.8); }
 
@@ -641,19 +651,31 @@
             const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
 
             if (slide.type === 'text' || (!rawUrl && !isVideo)) {
-                // If it's pure text, we just render an animated dark background for the media box
-                mediaHtml = `<div class="bg-text-slide"></div>`;
+                // If it's pure text, we render the glowing background AND the text inside the media layer.
+                const caption = slide.caption || slide.description || slide.text || '';
+                mediaHtml = `
+                    <div class="bg-text-slide"></div>
+                    <div style="position: relative; z-index: 5; text-align: center; padding: 40px 30px;">
+                        <h3 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 2.2rem; margin-bottom: 15px; text-shadow: 0 2px 8px rgba(0,0,0,1); line-height: 1.2;">${title || 'PROMO'}</h3>
+                        <p style="font-size: 1.1rem; color: #fff; opacity: 0.95; margin-bottom: 0; font-weight: 600; line-height: 1.6; text-shadow: 0 2px 6px rgba(0,0,0,1);">${caption}</p>
+                    </div>`;
+                frameBuffer += `
+                <div class="slide-element text-only-slide ${viewportStateClass}" id="slide_node_index_${pointer}">
+                    ${mediaHtml}
+                </div>`;
             } else if (isVideo) {
                 mediaHtml = `<video src="${rawUrl}" class="slide-media-layer" controls playsinline preload="metadata"></video>`;
-            } else {
-                mediaHtml = `<img src="${rawUrl}" class="slide-media-layer" alt="${title || 'Promo'}">`;
-            }
-            
-            frameBuffer += `
+                frameBuffer += `
                 <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
                     ${mediaHtml}
-                </div>
-            `;
+                </div>`;
+            } else {
+                mediaHtml = `<img src="${rawUrl}" class="slide-media-layer" alt="${title || 'Promo'}">`;
+                frameBuffer += `
+                <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
+                    ${mediaHtml}
+                </div>`;
+            }
         });
         
         slideViewport.innerHTML = navHtml + frameBuffer;
@@ -668,10 +690,15 @@
         const caption = slide.caption || slide.description || slide.text || '';
         const actionLabel = slide.ctaText || 'EXPLORE NOW';
         const actionHyperlink = slide.link || slide.ctaLink || '#authTitle';
+        const rawUrl = slide.imageUrl || slide.mediaUrl || slide.image || slide.image_url || slide.url || '';
+        const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
+        const isTextOnly = slide.type === 'text' || (!rawUrl && !isVideo);
 
         // 1. Update Top Text Block
         const headerBlock = document.getElementById('dynamicTextHeader');
-        if (title || caption) {
+        
+        // Hide the top header ONLY if it's a "Text-Only" slide (since the text is inside the big box now)
+        if (!isTextOnly && (title || caption)) {
             headerBlock.style.display = 'block';
             document.getElementById('dynamicTitleText').innerText = title;
             document.getElementById('dynamicCaptionText').innerText = caption;
