@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,22 +67,16 @@
         .system-side::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
         .system-side::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
 
-        .auth-side { flex: 1; background: var(--panel-bg); backdrop-filter: blur(10px); display: flex; flex-direction: column; position: relative; box-shadow: -20px 0 50px rgba(0,0,0,0.5); overflow-y: auto; }
+        .auth-side { flex: 1; background: var(--panel-bg); backdrop-filter: blur(10px); display: flex; flex-direction: column; padding: 45px 40px 30px 40px; position: relative; box-shadow: -20px 0 50px rgba(0,0,0,0.5); overflow-y: auto; }
 
         .embedded-support-card {
             width: 100%; background: linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(12, 12, 12, 0.95) 50%, rgba(255, 255, 255, 0.12) 100%);
             border: 2.5px solid #ffffff; border-radius: 16px; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between;
-            cursor: pointer; transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); margin-top: 15px; margin-bottom: 25px; position: relative;
+            cursor: pointer; transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); margin-top: 15px; margin-bottom: 15px; position: relative;
             overflow: hidden; box-shadow: 0 0 30px rgba(212, 175, 55, 0.45); animation: hyper-luxury-plumbing 2s infinite ease-in-out; flex-shrink: 0;
         }
         
         .embedded-support-card:hover { background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(30, 30, 30, 0.98) 50%, rgba(212, 175, 55, 0.4) 100%); transform: translateY(-2px); border-color: #ffffff; }
-
-        .embedded-support-card::before {
-            content: ''; position: absolute; top: -120%; left: -150%; width: 350%; height: 350%;
-            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.98) 40%, rgba(212,175,55,0.7) 50%, rgba(255,255,255,0) 100%);
-            transform: rotate(28deg); animation: light-refract-sweep 1.8s infinite linear; pointer-events: none; z-index: 1;
-        }
 
         .support-info-block { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; position: relative; z-index: 2; }
         .support-text-details-wrapper { display: flex; flex-direction: column; justify-content: center; flex: 1; min-width: 0; }
@@ -120,71 +113,85 @@
         .btn-authorize:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255,255,255,0.2); }
 
         /* ========================================================
-           EXPANDED WIDE CARD SLIDESHOW (PERFECT FIT, TALLER HEIGHT)
+           COMPARTMENTALIZED SLIDESHOW (TEXT TOP, MEDIA MID, BTN BOT)
            ======================================================== */
         .promo-card {
             background: rgba(12, 12, 12, 0.9);
             border: 2px solid rgba(212, 175, 55, 0.4);
             border-radius: 20px;
-            padding: 18px;
-            margin: 0 -10px 30px -10px; /* Expands wider */
+            padding: 0; /* Ensures full width */
+            margin: 0 -10px 30px -10px; /* Stretch to sides */
             box-shadow: 0 10px 35px rgba(0,0,0,0.9);
+            overflow: hidden; 
         }
         
         .promo-header {
-            font-family: 'Cinzel'; font-size: 1rem; color: var(--gold); letter-spacing: 2px; font-weight: 900; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1.5px solid rgba(212,175,55,0.3); padding-bottom: 10px;
+            font-family: 'Cinzel'; font-size: 1rem; color: var(--gold); letter-spacing: 2px; font-weight: 900; 
+            padding: 15px 20px; display: flex; align-items: center; gap: 8px; 
+            border-bottom: 1.5px solid rgba(212,175,55,0.3); background: rgba(5,5,5,0.8); z-index: 10; position: relative;
         }
 
         .slideshow-viewport {
             width: 100%;
-            height: 380px; 
+            min-height: 400px; /* Base height */
             background: #000;
-            border-radius: 14px;
             position: relative;
             overflow: hidden;
-            border: 1px solid #333;
             display: flex; align-items: stretch; justify-content: center;
         }
 
         .slide-element {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s ease-in-out; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s ease-in-out; 
+            display: flex; flex-direction: column; background: #000;
         }
-        .slide-element.active { opacity: 1; z-index: 2; position: relative; width: 100%; height: 100%; }
+        .slide-element.active { opacity: 1; z-index: 2; position: relative; width: 100%; height: auto; min-height: 100%; }
         
-        /* Media fills the entire viewport, no heavy text blocking it */
+        /* 1. TOP SECTION: TEXT ONLY (No overlapping on media) */
+        .slide-text-block {
+            width: 100%; padding: 20px 25px; background: rgba(15,15,15,0.95); text-align: center; border-bottom: 1px solid rgba(212,175,55,0.2);
+        }
+        .slide-text-block h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.4rem; margin-bottom: 8px; text-shadow: 0 2px 4px rgba(0,0,0,1); line-height: 1.2; display: none; }
+        .slide-text-block p { font-size: 0.95rem; color: #fff; opacity: 0.95; margin-bottom: 0; font-weight: 600; line-height: 1.5; display: none; }
+
+        /* 2. MIDDLE SECTION: PURE MEDIA CONTAINER (Edge-to-Edge) */
+        .slide-media-container {
+            width: 100%; height: 350px; /* Fixed height for media specifically to keep structure solid */
+            position: relative; flex-grow: 1; background: #000; overflow: hidden;
+        }
         .slide-media-layer {
-            width: 100%; height: 100%; object-fit: cover; pointer-events: auto; background: #000;
+            width: 100%; height: 100%; object-fit: cover; pointer-events: auto; display: block;
         }
-        
-        /* Text overlay is now very subtle and minimal */
-        .slide-text-overlay {
-            position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px; 
-            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
-            pointer-events: none; z-index: 3; text-align: center;
+
+        /* 3. BOTTOM SECTION: CTA BUTTON */
+        .slide-action-block {
+            width: 100%; padding: 15px 20px; background: rgba(15,15,15,0.95); text-align: center; border-top: 1px solid rgba(212,175,55,0.2); display: none;
         }
-        .slide-text-overlay h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.1rem; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,1); display: none; }
-        .slide-text-overlay p { font-size: 0.8rem; color: #fff; opacity: 0.9; margin-bottom: 0; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,1); display: none; }
-        .slide-text-overlay a { pointer-events: auto; margin-top: 10px; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.8); }
+        .slide-action-block a { box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 80%; max-width: 300px; font-size: 1rem !important; padding: 12px !important; letter-spacing: 2px !important; }
 
         /* Specific styling for Text-Only slides */
-        .slide-element.text-only-slide { justify-content: center; padding: 40px; text-align: center; }
-        .slide-element.text-only-slide .slide-text-overlay { position: static; background: transparent; padding: 0; }
-        .slide-element.text-only-slide .slide-text-overlay h3 { display: block; font-size: 2rem; margin-bottom: 15px; }
-        .slide-element.text-only-slide .slide-text-overlay p { display: block; font-size: 1.1rem; margin-bottom: 25px; }
-        
+        .slide-element.text-only-slide { justify-content: center; align-items: center; padding: 40px 20px; text-align: center; }
+        .slide-element.text-only-slide .slide-text-block { background: transparent; border: none; padding: 0; margin-bottom: 30px; }
+        .slide-element.text-only-slide .slide-text-block h3 { display: block; font-size: 2rem; margin-bottom: 15px; }
+        .slide-element.text-only-slide .slide-text-block p { display: block; font-size: 1.1rem; }
+        .slide-element.text-only-slide .slide-action-block { background: transparent; border: none; padding: 0; display: block !important; }
+
         @keyframes textBgFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:-1; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
 
         /* Manual Controls */
         .slide-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 10px; z-index: 10; pointer-events: none; }
-        .slide-nav button { pointer-events: auto; background: rgba(0,0,0,0.5); color: var(--gold); border: 1.5px solid var(--gold); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(5px); }
-        .slide-nav button:hover { background: var(--gold); color: #000; transform: scale(1.1); }
+        .slide-nav button { 
+            pointer-events: auto; background: rgba(0, 0, 0, 0.75); color: var(--gold); border: 2px solid var(--gold); 
+            width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            font-size: 1.4rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+        }
+        .slide-nav button:hover { background: var(--gold); color: #000; transform: scale(1.15); }
         
-        .slide-dots { width: 100%; display: flex; justify-content: center; gap: 8px; margin-top: 15px; }
-        .slide-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.3); cursor: pointer; transition: 0.3s; border: 1px solid transparent; }
-        .slide-dot.active { background: var(--gold); transform: scale(1.3); border-color: #000; box-shadow: 0 0 10px rgba(212,175,55,0.6); }
+        .slide-dots { width: 100%; display: flex; justify-content: center; gap: 10px; padding: 15px 0 20px 0; background: #000; z-index: 10; position: relative; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;}
+        .slide-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; transition: 0.3s; border: 1px solid transparent; box-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .slide-dot.active { background: var(--gold); transform: scale(1.4); border-color: #000; box-shadow: 0 0 10px rgba(212,175,55,0.8); }
 
-        .slide-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.4; }
+        .slide-empty-state { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.4; min-height: 250px; }
         /* ======================================================== */
 
         .price-ticker { background: rgba(212, 175, 55, 0.04); border: 1.5px solid rgba(212, 175, 55, 0.15); border-radius: 30px; padding: 30px; flex-shrink: 0; margin-bottom: 30px; }
@@ -210,16 +217,8 @@
         .social-circle { width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: #888; text-decoration: none; border: 1px solid #333; transition: 0.3s; }
         .social-circle:hover { background: rgba(212,175,55,0.1); color: var(--gold); border-color: var(--gold); transform: translateY(-3px); }
 
-        /* THE FIX: Changed padding to wrap everything properly on mobile without hiding it */
-        .auth-side-inner { padding: 45px 30px; max-width: 600px; margin: 0 auto; width: 100%; }
-
-        @media (max-width: 1100px) { 
-            .system-side { display: none; } 
-            .auth-side { padding: 0; background: rgba(10, 10, 10, 0.4); } 
-            .viewport-wrapper { overflow-y: auto; } 
-            /* THE FIX: Tighter padding on mobile so it fits the screen nicely */
-            .auth-side-inner { padding: 30px 20px; }
-        }
+        /* Hide the left panel completely on mobile */
+        @media (max-width: 1100px) { .system-side { display: none; } .auth-side { padding: 40px 15px; background: rgba(10, 10, 10, 0.4); } .viewport-wrapper { overflow-y: auto; } }
     </style>
 </head>
 <body>
@@ -243,6 +242,7 @@
 
 <div class="viewport-wrapper">
     <div class="system-side">
+        <!-- System content that is hidden on mobile -->
         <div class="welcome-banner mb-4" style="border-left: 6px solid var(--gold); padding-left: 20px; flex-shrink: 0;">
             <h1 class="fw-black" style="font-size: clamp(2.2rem, 4.5vw, 3.5rem); font-family: 'Cinzel'; line-height: 0.9;">BEYOND<br><span style="color:var(--gold)">LIMITS</span></h1>
             <p class="small fw-bold opacity-75 mt-2" style="letter-spacing: 5px; color: var(--gold);">THE SUPER-APP ECOSYSTEM</p>
@@ -299,7 +299,7 @@
 
     <!-- MAIN INTERACTION AREA (Visible on Mobile) -->
     <div class="auth-side">
-        <!-- THE FIX: Wrapped everything inside auth-side-inner so nothing bleeds into the hidden overflow -->
+        <!-- Wrapped inside auth-side-inner so nothing bleeds into the hidden overflow -->
         <div class="auth-side-inner">
             <div class="auth-header" style="margin-bottom: 40px; border-left: 6px solid var(--gold); padding-left: 25px;">
                 <h2 id="authTitle" style="font-family:Cinzel; font-weight:900; color: #ffffff; letter-spacing: 1px;">NATER<span style="color:var(--gold)">-PAY</span></h2>
@@ -420,7 +420,7 @@
                 <i class="fas fa-chevron-right" style="color: #ffffff; opacity: 1; font-size: 1.2rem; padding-left: 10px; position: relative; z-index: 2;"></i>
             </div>
 
-            <!-- EXPANDED WIDE CARD SLIDESHOW (PERFECT FIT & SOUND ENABLED) -->
+            <!-- COMPARTMENTALIZED SLIDESHOW (TEXT TOP -> MEDIA MID -> BTN BOT) -->
             <div class="promo-card">
                 <div class="promo-header"><i class="fas fa-bullhorn"></i> SYSTEM UPDATES & PROMOS</div>
                 
@@ -430,7 +430,7 @@
                         <h6 class="text-gold fw-bold m-0" id="slideshowStatusText" style="font-size: 0.85rem;">Loading Slides...</h6>
                     </div>
                 </div>
-                <!-- Pagination dots moved below the viewport inside the card -->
+                <!-- Pagination dots appended at the very bottom of the card -->
                 <div id="slideDotsContainer" class="slide-dots"></div>
             </div>
             <!-- END SLIDESHOW SECTION -->
@@ -640,47 +640,54 @@
             const caption = slide.caption || slide.description || slide.text || '';
             
             const rawUrl = slide.imageUrl || slide.mediaUrl || slide.image || slide.image_url || slide.url || '';
-            let mediaHtml = '';
-
             const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
-
-            // Clean, minimal text overlay (only shows if title/caption exists)
             const hasText = title !== '' || caption !== '';
-            const overlayDisplay = hasText ? 'block' : 'none';
-            const overlayHtml = `
-                <div class="slide-text-overlay" style="display: ${overlayDisplay};">
-                    ${title ? `<h3>${title}</h3>` : ''}
-                    ${caption ? `<p>${caption}</p>` : ''}
-                    <a href="${actionHyperlink}" class="btn btn-sm btn-warning px-4 py-2 rounded-pill fw-bold text-dark" style="font-size:0.8rem; letter-spacing:1px;">${actionLabel}</a>
-                </div>`;
+
+            // 1. TOP TEXT BLOCK
+            const textBlockHtml = hasText ? `
+                <div class="slide-text-block" style="display: block;">
+                    ${title ? `<h3 style="display: block;">${title}</h3>` : ''}
+                    ${caption ? `<p style="display: block;">${caption}</p>` : ''}
+                </div>` : '';
+
+            // 3. BOTTOM CTA BLOCK
+            const actionBlockHtml = actionLabel ? `
+                <div class="slide-action-block" style="display: block;">
+                    <a href="${actionHyperlink}" class="btn btn-warning rounded-pill fw-bold text-dark">${actionLabel}</a>
+                </div>` : '';
 
             if (slide.type === 'text' || (!rawUrl && !isVideo)) {
-                // Animated Gradient for Text-Only Slides
-                mediaHtml = `<div class="bg-text-slide"></div>`;
+                // TEXT ONLY SLIDE
                 frameBuffer += `
                 <div class="slide-element text-only-slide ${viewportStateClass}" id="slide_node_index_${pointer}">
-                    ${mediaHtml}
-                    <div class="slide-text-overlay">
+                    <div class="bg-text-slide"></div>
+                    <div class="slide-text-block">
                         <h3>${title || 'PROMO'}</h3>
                         <p>${caption}</p>
-                        <a href="${actionHyperlink}" class="btn btn-sm btn-warning px-4 py-2 rounded-pill fw-bold text-dark" style="font-size:0.8rem; letter-spacing:1px;">${actionLabel}</a>
+                    </div>
+                    <div class="slide-action-block">
+                        <a href="${actionHyperlink}" class="btn btn-warning rounded-pill fw-bold text-dark">${actionLabel}</a>
                     </div>
                 </div>`;
             } else if (isVideo) {
-                // Video with controls, overlay floats at bottom
-                mediaHtml = `<video src="${rawUrl}" class="slide-media-layer" controls playsinline preload="metadata"></video>`;
+                // VIDEO SLIDE (Separated Text -> Video -> CTA)
                 frameBuffer += `
                 <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
-                    ${mediaHtml}
-                    ${overlayHtml}
+                    ${textBlockHtml}
+                    <div class="slide-media-container">
+                        <video src="${rawUrl}" class="slide-media-layer" controls playsinline preload="metadata"></video>
+                    </div>
+                    ${actionBlockHtml}
                 </div>`;
             } else {
-                // Image filling the space beautifully, overlay floats at bottom
-                mediaHtml = `<img src="${rawUrl}" class="slide-media-layer" alt="${title || 'Promo Image'}">`;
+                // IMAGE SLIDE (Separated Text -> Image -> CTA)
                 frameBuffer += `
                 <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
-                    ${mediaHtml}
-                    ${overlayHtml}
+                    ${textBlockHtml}
+                    <div class="slide-media-container">
+                        <img src="${rawUrl}" class="slide-media-layer" alt="${title || 'Promo Image'}">
+                    </div>
+                    ${actionBlockHtml}
                 </div>`;
             }
         });
@@ -935,3 +942,7 @@
 </script>
 </body>
 </html>
+
+check this code is really good but I think that the high to the media to show all image content so to be well display like how you write the logic for 400x 250 logic up there this is for width why we can use it to let card expand upward and downward why keeping full wide width to cover let card have small border radious so when displaying inside mobile app webview or any mobile device without the system side you hide it we show good 
+
+There is a file you can reference named "Screenshot_2024-11-20-00-51-18-090_com.google.android.apps.docs.jpg". Refer to this file by its name verbatim.
