@@ -1,4 +1,5 @@
 const CMS = require('../models/CMS');
+const cloudinary = require('cloudinary').v2;
 
 /**
  * Get homepage data (public)
@@ -43,6 +44,7 @@ async function getSlides(request, reply) {
       caption: slide.caption || 'Welcome to the NATER-PAY ecosystem.',
       mediaUrl: slide.mediaUrl || slide.imageUrl,
       imageUrl: slide.mediaUrl || slide.imageUrl, // Send both keys to be safe
+      type: slide.type || slide.mediaType || 'image', // THE FIX: Map the media type (video, image, text)
       ctaText: slide.ctaText || 'EXPLORE NOW',
       ctaLink: slide.ctaLink || slide.link || '#authTitle',
       link: slide.ctaLink || slide.link || '#authTitle' // Send both keys to be safe
@@ -80,28 +82,57 @@ async function updateHomepage(request, reply) {
 }
 
 /**
- * Add slide (admin) - NOW ACCEPTS BASE64 IMAGES
+ * Add slide (admin) - UPGRADED WITH CLOUDINARY ENGINE
  */
 async function addSlide(request, reply) {
   try {
-    const title = request.body.title;
-    const mediaUrl = request.body.imageUrl || request.body.mediaUrl;
-    const ctaLink = request.body.link || request.body.ctaLink || '#';
-    const caption = request.body.caption || 'Welcome to the NATER-PAY Ecosystem.';
-    const mediaType = request.body.mediaType || 'image';
-    const ctaText = request.body.ctaText || 'EXPLORE NOW';
+    const { title, caption, ctaText, link, type, mediaData } = request.body;
     
-    if (!title || !mediaUrl) {
-      return reply.status(400).send({ success: false, message: 'Title and image are required' });
+    if (!title) {
+      return reply.status(400).send({ success: false, message: 'Title is required' });
     }
+
+    let finalMediaUrl = '';
+
+    // === CLOUDINARY UPLOAD ENGINE ===
+    if (mediaData && type !== 'text') {
+        try {
+            // Check if Cloudinary is configured in .env
+            if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
+                cloudinary.config({
+                    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                    api_key: process.env.CLOUDINARY_API_KEY,
+                    api_secret: process.env.CLOUDINARY_API_SECRET
+                });
+
+                const resourceType = type === 'video' ? 'video' : 'image';
+                const uploadRes = await cloudinary.uploader.upload(mediaData, {
+                    resource_type: resourceType,
+                    folder: 'naterpay/slides'
+                });
+                
+                finalMediaUrl = uploadRes.secure_url;
+            } else {
+                // FALLBACK: If Cloudinary isn't in .env yet, save Base64 directly to database so it doesn't crash
+                finalMediaUrl = mediaData;
+            }
+        } catch (uploadError) {
+            console.error('Cloudinary Upload Failed:', uploadError);
+            return reply.status(500).send({ success: false, message: 'Failed to upload media to Cloudinary.' });
+        }
+    }
+    // =================================
     
     await CMS.addSlide({
       title,
-      caption,
-      mediaType,
-      mediaUrl, // Standardizing on mediaUrl for the database
-      ctaText,
-      ctaLink,
+      caption: caption || '',
+      type: type || 'image', // explicit type mapping
+      mediaType: type || 'image', // dual mapping for legacy schema safety
+      mediaUrl: finalMediaUrl, 
+      imageUrl: finalMediaUrl, // dual mapping for legacy schema safety
+      ctaText: ctaText || 'EXPLORE NOW',
+      ctaLink: link || '#',
+      link: link || '#',
       order: request.body.order || 0
     });
     
@@ -126,6 +157,7 @@ async function updateSlide(request, reply) {
     const updateData = {};
     if (request.body.title !== undefined) updateData.title = request.body.title;
     if (request.body.caption !== undefined) updateData.caption = request.body.caption;
+    if (request.body.type !== undefined) updateData.type = request.body.type;
     if (request.body.mediaType !== undefined) updateData.mediaType = request.body.mediaType;
     if (request.body.mediaUrl !== undefined) updateData.mediaUrl = request.body.mediaUrl;
     if (request.body.ctaText !== undefined) updateData.ctaText = request.body.ctaText;
