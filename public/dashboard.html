@@ -221,7 +221,6 @@
             <a href="support.html" class="sidebar-menu-link"><i class="fas fa-headset main-icon"></i> Support Tickets</a>
             <a href="api.html" class="sidebar-menu-link"><i class="fas fa-code main-icon"></i> Developer APIs</a>
             
-            <!-- NEW: Added links to Policy and About in the slide-out menu -->
             <hr class="border-secondary border-opacity-25 my-2">
             <a href="about.html" class="sidebar-menu-link" style="opacity: 0.8;"><i class="fas fa-info-circle main-icon"></i> About Ecosystem</a>
             <a href="policy.html" class="sidebar-menu-link" style="opacity: 0.8;"><i class="fas fa-shield-alt main-icon"></i> Legal & Policy</a>
@@ -492,6 +491,12 @@
     let socketConnectionLink = null;
     let unreadNotifications = [];
 
+    // Backend Commission Rates Sync (Must match backend logic)
+    const platformCommissionRates = { 
+        airtime: 0.03, data: 0.03, cable: 0.015, electricity: 0.015, 
+        betting: 0.01, insurance: 0.015, sms: 0.01, education: 0 
+    };
+
     function showComingSoon(serviceName) {
         Swal.fire({
             icon: 'info',
@@ -646,6 +651,9 @@
 
             if(data.success) {
                 document.getElementById('profileBadgeName').innerText = data.userFullName || "Verified Terminal Operator";
+                const userRole = (data.userRole || 'user').toLowerCase();
+                const roleMultiplier = (userRole === 'vip' || userRole === 'admin') ? 0.35 : (userRole === 'reseller' || userRole === 'agent') ? 0.20 : 0.05;
+                const vtuTypes = Object.keys(platformCommissionRates);
                 
                 try {
                     const kycRes = await fetch('/api/kyc', { headers: { 'Authorization': `Bearer ${authToken}` } });
@@ -683,20 +691,19 @@
                     console.warn("KYC badge sync failed.");
                 }
 
-                const role = (data.userRole || 'user').toLowerCase();
                 const tierBadge = document.getElementById('tierBadge');
                 const promoBanner = document.getElementById('dashboardPromoEngine');
                 const promoTitle = document.getElementById('promoTitle');
                 const promoDesc = document.getElementById('promoDesc');
                 const promoBtn = document.getElementById('promoBtn');
 
-                if (role === 'admin' || role === 'vip') {
+                if (userRole === 'admin' || userRole === 'vip') {
                     tierBadge.classList.remove('d-none');
                     tierBadge.className = "badge bg-warning text-dark fw-bolder px-3 py-2 rounded-pill";
-                    tierBadge.innerHTML = `<i class="fas fa-crown me-1"></i> ${role === 'admin' ? 'SYSTEM ADMIN' : 'VIP PARTNER'}`;
+                    tierBadge.innerHTML = `<i class="fas fa-crown me-1"></i> ${userRole === 'admin' ? 'SYSTEM ADMIN' : 'VIP PARTNER'}`;
                     if(promoBanner) promoBanner.style.display = 'none';
                     
-                } else if (role === 'reseller' || role === 'agent') {
+                } else if (userRole === 'reseller' || userRole === 'agent') {
                     tierBadge.classList.remove('d-none');
                     tierBadge.className = "badge bg-primary text-white fw-bolder px-3 py-2 rounded-pill";
                     tierBadge.style.border = "1px solid #4da6ff";
@@ -732,7 +739,7 @@
                     secPill.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Security Alert';
                 }
 
-                if (role === 'admin') {
+                if (userRole === 'admin') {
                     document.getElementById('adminMenuWrapper').style.display = 'block';
                     document.getElementById('adminDivider').style.display = 'block';
                 }
@@ -744,9 +751,30 @@
                 document.getElementById('statTrans').innerText = `${data.totalLogs || 0} Logs`;
                 document.getElementById('statSpent').innerText = '₦' + Number(safeSpent).toLocaleString();
                 
-                const safeBonus = data.referralBonus?.$numberDecimal || data.referralBonus || 0;
+                // === CALCULATE TOTAL EARNINGS (REFERRALS + LIFETIME DISCOUNTS) ===
+                let totalDiscountsEarned = 0;
+                if (data.recentTransactions && data.recentTransactions.length > 0) {
+                    data.recentTransactions.forEach(tx => {
+                        if (vtuTypes.includes(tx.type) && tx.status === 'success') {
+                            const baseRate = platformCommissionRates[tx.type] || 0;
+                            if (baseRate > 0) {
+                                const payableAmount = Number(tx.amount?.$numberDecimal || tx.amount || 0);
+                                const originalAmount = payableAmount / (1 - (baseRate * roleMultiplier));
+                                const discountEarned = originalAmount - payableAmount;
+                                if (discountEarned > 0.01) {
+                                    totalDiscountsEarned += discountEarned;
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                const safeRefBonus = Number(data.referralBonus?.$numberDecimal || data.referralBonus || 0);
+                const grandTotalEarnings = safeRefBonus + totalDiscountsEarned;
+                
                 document.getElementById('statRefs').innerText = `${data.referralCount || 0} Nodes`;
-                document.getElementById('statBonus').innerText = '₦' + Number(safeBonus).toLocaleString();
+                document.getElementById('statBonus').innerText = '₦' + grandTotalEarnings.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+                // =================================================================
 
                 const tbody = document.getElementById('txBody');
                 tbody.innerHTML = '';
@@ -755,7 +783,6 @@
                         const rawDate = tx.createdAt || tx.date || new Date().toISOString();
                         const dateString = new Date(rawDate).toLocaleDateString() + ' <span class="ms-2 opacity-50">' + new Date(rawDate).toLocaleTimeString() + '</span>';
                         
-                        // === NEW DASHBOARD TRANSACTION LOGIC (FEES & PROCESSING DETECTED) ===
                         const isCredit = tx.isCredit; 
                         const baseAmount = Number(tx.amount || 0);
                         const feeAmount = Number(tx.fee || 0);
@@ -782,7 +809,6 @@
                                 </div>
                             </div>
                         `;
-                        // ====================================================================
                     });
                 } else {
                     tbody.innerHTML = '<div class="text-center py-5 opacity-50">No transaction logs found.</div>';
@@ -828,4 +854,8 @@
 </body>
 </html>
 
-ok great this is the file I'm happy now please write it on its place what next we build the money on out right?
+we don't change the name cashback.html to earning yet let just change it no so all are inline with each other 
+before proceding to add fund 
+change the naming every where in all code that is refering to cashback to saving on all file
+
+and yes we need to bulid the found next as that is very important to get the app running
