@@ -78,6 +78,12 @@
         
         .embedded-support-card:hover { background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(30, 30, 30, 0.98) 50%, rgba(212, 175, 55, 0.4) 100%); transform: translateY(-2px); border-color: #ffffff; }
 
+        .embedded-support-card::before {
+            content: ''; position: absolute; top: -120%; left: -150%; width: 350%; height: 350%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.98) 40%, rgba(212,175,55,0.7) 50%, rgba(255,255,255,0) 100%);
+            transform: rotate(28deg); animation: light-refract-sweep 1.8s infinite linear; pointer-events: none; z-index: 1;
+        }
+
         .support-info-block { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; position: relative; z-index: 2; }
         .support-text-details-wrapper { display: flex; flex-direction: column; justify-content: center; flex: 1; min-width: 0; }
         
@@ -131,9 +137,18 @@
             border-bottom: 1.5px solid rgba(212,175,55,0.3); background: rgba(5,5,5,0.8); z-index: 10; position: relative;
         }
 
+        /* 1. TOP SECTION: DYNAMIC TEXT ONLY (No overlapping on media) */
+        .dynamic-text-block {
+            width: 100%; padding: 20px 25px; background: rgba(15,15,15,0.95); text-align: center; border-bottom: 1px solid rgba(212,175,55,0.2);
+            transition: opacity 0.3s ease;
+        }
+        .dynamic-text-block h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.4rem; margin-bottom: 8px; text-shadow: 0 2px 4px rgba(0,0,0,1); line-height: 1.2; }
+        .dynamic-text-block p { font-size: 0.95rem; color: #fff; opacity: 0.95; margin-bottom: 0; font-weight: 600; line-height: 1.5; }
+
+        /* 2. MIDDLE SECTION: PURE MEDIA CONTAINER (Edge-to-Edge) */
         .slideshow-viewport {
             width: 100%;
-            min-height: 400px; /* Base height */
+            height: 350px; /* Fixed height for media specifically to keep structure solid */
             background: #000;
             position: relative;
             overflow: hidden;
@@ -144,39 +159,21 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.4s ease-in-out; 
             display: flex; flex-direction: column; background: #000;
         }
-        .slide-element.active { opacity: 1; z-index: 2; position: relative; width: 100%; height: auto; min-height: 100%; }
+        .slide-element.active { opacity: 1; z-index: 2; position: relative; width: 100%; height: 100%; }
         
-        /* 1. TOP SECTION: TEXT ONLY (No overlapping on media) */
-        .slide-text-block {
-            width: 100%; padding: 20px 25px; background: rgba(15,15,15,0.95); text-align: center; border-bottom: 1px solid rgba(212,175,55,0.2);
-        }
-        .slide-text-block h3 { font-family: 'Cinzel'; color: var(--gold); font-weight: 900; font-size: 1.4rem; margin-bottom: 8px; text-shadow: 0 2px 4px rgba(0,0,0,1); line-height: 1.2; display: none; }
-        .slide-text-block p { font-size: 0.95rem; color: #fff; opacity: 0.95; margin-bottom: 0; font-weight: 600; line-height: 1.5; display: none; }
-
-        /* 2. MIDDLE SECTION: PURE MEDIA CONTAINER (Edge-to-Edge) */
-        .slide-media-container {
-            width: 100%; height: 350px; /* Fixed height for media specifically to keep structure solid */
-            position: relative; flex-grow: 1; background: #000; overflow: hidden;
-        }
         .slide-media-layer {
             width: 100%; height: 100%; object-fit: cover; pointer-events: auto; display: block;
         }
 
-        /* 3. BOTTOM SECTION: CTA BUTTON */
-        .slide-action-block {
-            width: 100%; padding: 15px 20px; background: rgba(15,15,15,0.95); text-align: center; border-top: 1px solid rgba(212,175,55,0.2); display: none;
-        }
-        .slide-action-block a { box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 80%; max-width: 300px; font-size: 1rem !important; padding: 12px !important; letter-spacing: 2px !important; }
-
-        /* Specific styling for Text-Only slides */
-        .slide-element.text-only-slide { justify-content: center; align-items: center; padding: 40px 20px; text-align: center; }
-        .slide-element.text-only-slide .slide-text-block { background: transparent; border: none; padding: 0; margin-bottom: 30px; }
-        .slide-element.text-only-slide .slide-text-block h3 { display: block; font-size: 2rem; margin-bottom: 15px; }
-        .slide-element.text-only-slide .slide-text-block p { display: block; font-size: 1.1rem; }
-        .slide-element.text-only-slide .slide-action-block { background: transparent; border: none; padding: 0; display: block !important; }
-
+        /* Animated Background for Text-Only Slides */
         @keyframes textBgFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:-1; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
+        .bg-text-slide { position: absolute; top:0; left:0; width:100%; height:100%; z-index:0; background: linear-gradient(-45deg, #0a0a0a, #2a1f00, #1a0000, #050505); background-size: 400% 400%; animation: textBgFlow 12s ease infinite; }
+        
+        /* 3. BOTTOM SECTION: CTA BUTTON & DOTS */
+        .dynamic-action-block {
+            width: 100%; padding: 15px 20px; background: rgba(15,15,15,0.95); text-align: center; border-top: 1px solid rgba(212,175,55,0.2);
+        }
+        .dynamic-action-block a { box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 80%; max-width: 300px; font-size: 0.9rem !important; padding: 10px !important; letter-spacing: 2px !important; display: inline-block; margin-bottom: 15px;}
 
         /* Manual Controls */
         .slide-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 100%; display: flex; justify-content: space-between; padding: 0 10px; z-index: 10; pointer-events: none; }
@@ -187,7 +184,7 @@
         }
         .slide-nav button:hover { background: var(--gold); color: #000; transform: scale(1.15); }
         
-        .slide-dots { width: 100%; display: flex; justify-content: center; gap: 10px; padding: 15px 0 20px 0; background: #000; z-index: 10; position: relative; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;}
+        .slide-dots { width: 100%; display: flex; justify-content: center; gap: 10px; }
         .slide-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; transition: 0.3s; border: 1px solid transparent; box-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         .slide-dot.active { background: var(--gold); transform: scale(1.4); border-color: #000; box-shadow: 0 0 10px rgba(212,175,55,0.8); }
 
@@ -299,7 +296,7 @@
 
     <!-- MAIN INTERACTION AREA (Visible on Mobile) -->
     <div class="auth-side">
-        <!-- Wrapped inside auth-side-inner so nothing bleeds into the hidden overflow -->
+        <!-- THE FIX: Wrapped everything inside auth-side-inner so nothing bleeds into the hidden overflow -->
         <div class="auth-side-inner">
             <div class="auth-header" style="margin-bottom: 40px; border-left: 6px solid var(--gold); padding-left: 25px;">
                 <h2 id="authTitle" style="font-family:Cinzel; font-weight:900; color: #ffffff; letter-spacing: 1px;">NATER<span style="color:var(--gold)">-PAY</span></h2>
@@ -424,14 +421,24 @@
             <div class="promo-card">
                 <div class="promo-header"><i class="fas fa-bullhorn"></i> SYSTEM UPDATES & PROMOS</div>
                 
+                <!-- DYNAMIC TEXT HEADER: Will update via JS based on current slide -->
+                <div class="dynamic-text-block" id="dynamicTextHeader" style="display: none;">
+                    <h3 id="dynamicTitleText"></h3>
+                    <p id="dynamicCaptionText"></p>
+                </div>
+
                 <div class="slideshow-viewport" id="mediaSlideshowEngine">
                     <div class="slide-empty-state">
                         <i class="fas fa-photo-video fa-3x mb-3 text-secondary"></i>
                         <h6 class="text-gold fw-bold m-0" id="slideshowStatusText" style="font-size: 0.85rem;">Loading Slides...</h6>
                     </div>
                 </div>
-                <!-- Pagination dots appended at the very bottom of the card -->
-                <div id="slideDotsContainer" class="slide-dots"></div>
+                
+                <!-- DYNAMIC CTA BUTTON & DOTS: Will update via JS based on current slide -->
+                <div class="dynamic-action-block" id="dynamicActionFooter" style="display: none;">
+                    <a href="#" id="dynamicActionBtn" class="btn btn-warning rounded-pill fw-bold text-dark"></a>
+                    <div id="slideDotsContainer" class="slide-dots mt-3"></div>
+                </div>
             </div>
             <!-- END SLIDESHOW SECTION -->
 
@@ -581,7 +588,7 @@
     }
 
     // =====================================================================
-    // MANUAL SLIDESHOW LOGIC
+    // MANUAL SLIDESHOW LOGIC (COMPARTMENTALIZED)
     // =====================================================================
     async function deployMediaSlideshowEngine() {
         try {
@@ -598,6 +605,7 @@
             if(Array.isArray(slidesArray) && slidesArray.length > 0) {
                 applicationSlides = slidesArray;
                 compileSlideshowMarkup();
+                updateDynamicOuterBlocks(0); // Load the first slide's text/button data
             } else {
                 document.getElementById('slideshowStatusText').innerText = "No Announcements Right Now.";
             }
@@ -609,7 +617,6 @@
 
     function compileSlideshowMarkup() {
         const slideViewport = document.getElementById('mediaSlideshowEngine');
-        const dotsContainer = document.getElementById('slideDotsContainer');
         if(!slideViewport || applicationSlides.length === 0) return;
         
         let frameBuffer = '';
@@ -624,121 +631,116 @@
             </div>`;
         }
 
-        // Build Navigation Dots
-        let dotsHtml = '';
-        applicationSlides.forEach((_, pointer) => {
-            dotsHtml += `<div class="slide-dot ${pointer === 0 ? 'active' : ''}" id="slide_dot_${pointer}" onclick="goToSlide(${pointer})"></div>`;
-        });
-        dotsContainer.innerHTML = dotsHtml;
-
-        // Build Slides
+        // Build Slides (Purely Media now)
         applicationSlides.forEach((slide, pointer) => {
             const viewportStateClass = pointer === 0 ? 'active' : '';
-            const actionHyperlink = slide.link || slide.ctaLink || '#authTitle'; 
-            const actionLabel = slide.ctaText || 'EXPLORE NOW';
             const title = slide.title || slide.heading || '';
-            const caption = slide.caption || slide.description || slide.text || '';
-            
             const rawUrl = slide.imageUrl || slide.mediaUrl || slide.image || slide.image_url || slide.url || '';
+            let mediaHtml = '';
+
             const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
-            const hasText = title !== '' || caption !== '';
-
-            // 1. TOP TEXT BLOCK
-            const textBlockHtml = hasText ? `
-                <div class="slide-text-block" style="display: block;">
-                    ${title ? `<h3 style="display: block;">${title}</h3>` : ''}
-                    ${caption ? `<p style="display: block;">${caption}</p>` : ''}
-                </div>` : '';
-
-            // 3. BOTTOM CTA BLOCK
-            const actionBlockHtml = actionLabel ? `
-                <div class="slide-action-block" style="display: block;">
-                    <a href="${actionHyperlink}" class="btn btn-warning rounded-pill fw-bold text-dark">${actionLabel}</a>
-                </div>` : '';
 
             if (slide.type === 'text' || (!rawUrl && !isVideo)) {
-                // TEXT ONLY SLIDE
-                frameBuffer += `
-                <div class="slide-element text-only-slide ${viewportStateClass}" id="slide_node_index_${pointer}">
-                    <div class="bg-text-slide"></div>
-                    <div class="slide-text-block">
-                        <h3>${title || 'PROMO'}</h3>
-                        <p>${caption}</p>
-                    </div>
-                    <div class="slide-action-block">
-                        <a href="${actionHyperlink}" class="btn btn-warning rounded-pill fw-bold text-dark">${actionLabel}</a>
-                    </div>
-                </div>`;
+                // If it's pure text, we just render an animated dark background for the media box
+                mediaHtml = `<div class="bg-text-slide"></div>`;
             } else if (isVideo) {
-                // VIDEO SLIDE (Separated Text -> Video -> CTA)
-                frameBuffer += `
-                <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
-                    ${textBlockHtml}
-                    <div class="slide-media-container">
-                        <video src="${rawUrl}" class="slide-media-layer" controls playsinline preload="metadata"></video>
-                    </div>
-                    ${actionBlockHtml}
-                </div>`;
+                mediaHtml = `<video src="${rawUrl}" class="slide-media-layer" controls playsinline preload="metadata"></video>`;
             } else {
-                // IMAGE SLIDE (Separated Text -> Image -> CTA)
-                frameBuffer += `
-                <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
-                    ${textBlockHtml}
-                    <div class="slide-media-container">
-                        <img src="${rawUrl}" class="slide-media-layer" alt="${title || 'Promo Image'}">
-                    </div>
-                    ${actionBlockHtml}
-                </div>`;
+                mediaHtml = `<img src="${rawUrl}" class="slide-media-layer" alt="${title || 'Promo'}">`;
             }
+            
+            frameBuffer += `
+                <div class="slide-element ${viewportStateClass}" id="slide_node_index_${pointer}">
+                    ${mediaHtml}
+                </div>
+            `;
         });
         
         slideViewport.innerHTML = navHtml + frameBuffer;
         activeSlidePointer = 0;
     }
 
+    function updateDynamicOuterBlocks(index) {
+        if (!applicationSlides[index]) return;
+        const slide = applicationSlides[index];
+
+        const title = slide.title || slide.heading || '';
+        const caption = slide.caption || slide.description || slide.text || '';
+        const actionLabel = slide.ctaText || 'EXPLORE NOW';
+        const actionHyperlink = slide.link || slide.ctaLink || '#authTitle';
+
+        // 1. Update Top Text Block
+        const headerBlock = document.getElementById('dynamicTextHeader');
+        if (title || caption) {
+            headerBlock.style.display = 'block';
+            document.getElementById('dynamicTitleText').innerText = title;
+            document.getElementById('dynamicCaptionText').innerText = caption;
+        } else {
+            headerBlock.style.display = 'none';
+        }
+
+        // 2. Update Bottom Action Block & Dots
+        const actionBlock = document.getElementById('dynamicActionFooter');
+        const actionBtn = document.getElementById('dynamicActionBtn');
+        const dotsContainer = document.getElementById('slideDotsContainer');
+        
+        actionBlock.style.display = 'block'; // Always display the footer because it holds the dots
+        
+        if (actionLabel) {
+            actionBtn.style.display = 'inline-block';
+            actionBtn.innerText = actionLabel;
+            actionBtn.href = actionHyperlink;
+        } else {
+            actionBtn.style.display = 'none';
+        }
+
+        // Render Dots inside the footer block
+        if (applicationSlides.length > 1) {
+            let dotsHtml = '';
+            applicationSlides.forEach((_, pointer) => {
+                dotsHtml += `<div class="slide-dot ${pointer === index ? 'active' : ''}" onclick="goToSlide(${pointer})"></div>`;
+            });
+            dotsContainer.innerHTML = dotsHtml;
+            dotsContainer.style.display = 'flex';
+        } else {
+            dotsContainer.style.display = 'none';
+        }
+    }
+
     function prevSlide() {
         if(applicationSlides.length <= 1) return;
-        
         const oldVideo = document.getElementById(`slide_node_index_${activeSlidePointer}`).querySelector('video');
         if (oldVideo) oldVideo.pause();
 
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.remove('active');
-        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.remove('active');
-        
         activeSlidePointer = (activeSlidePointer - 1 + applicationSlides.length) % applicationSlides.length;
-        
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.add('active');
-        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.add('active');
+        
+        updateDynamicOuterBlocks(activeSlidePointer);
     }
 
     function nextSlide() {
         if(applicationSlides.length <= 1) return;
-        
         const oldVideo = document.getElementById(`slide_node_index_${activeSlidePointer}`).querySelector('video');
         if (oldVideo) oldVideo.pause();
 
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.remove('active');
-        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.remove('active');
-        
         activeSlidePointer = (activeSlidePointer + 1) % applicationSlides.length;
-        
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.add('active');
-        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.add('active');
+        
+        updateDynamicOuterBlocks(activeSlidePointer);
     }
 
     function goToSlide(index) {
         if(index === activeSlidePointer) return;
-        
         const oldVideo = document.getElementById(`slide_node_index_${activeSlidePointer}`).querySelector('video');
         if (oldVideo) oldVideo.pause();
 
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.remove('active');
-        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.remove('active');
-        
         activeSlidePointer = index;
-        
         document.getElementById(`slide_node_index_${activeSlidePointer}`).classList.add('active');
-        document.getElementById(`slide_dot_${activeSlidePointer}`).classList.add('active');
+        
+        updateDynamicOuterBlocks(activeSlidePointer);
     }
 
     function initializeSocketConnection() {
@@ -942,7 +944,3 @@
 </script>
 </body>
 </html>
-
-check this code is really good but I think that the high to the media to show all image content so to be well display like how you write the logic for 400x 250 logic up there this is for width why we can use it to let card expand upward and downward why keeping full wide width to cover let card have small border radious so when displaying inside mobile app webview or any mobile device without the system side you hide it we show good 
-
-There is a file you can reference named "Screenshot_2024-11-20-00-51-18-090_com.google.android.apps.docs.jpg". Refer to this file by its name verbatim.
