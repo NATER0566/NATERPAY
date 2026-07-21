@@ -190,6 +190,11 @@
         @keyframes slideUpNotif { from { transform: translateY(150px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
         .fee-badge-small { display: inline-block; background: rgba(255, 68, 68, 0.15); color: #ff4444; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-top: 4px; font-weight: bold; border: 1px solid rgba(255, 68, 68, 0.3); }
+        
+        /* Footer Links Styles */
+        .footer-links a { color: #aaa; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: color 0.3s ease; }
+        .footer-links a:hover { color: var(--gold); }
+        .footer-links-divider { color: #555; margin: 0 10px; }
     </style>
 </head>
 <body>
@@ -215,6 +220,11 @@
             <a href="security.html" class="sidebar-menu-link"><i class="fas fa-lock main-icon"></i> Vault Security</a>
             <a href="support.html" class="sidebar-menu-link"><i class="fas fa-headset main-icon"></i> Support Tickets</a>
             <a href="api.html" class="sidebar-menu-link"><i class="fas fa-code main-icon"></i> Developer APIs</a>
+            
+            <!-- NEW: Added links to Policy and About in the slide-out menu -->
+            <hr class="border-secondary border-opacity-25 my-2">
+            <a href="about.html" class="sidebar-menu-link" style="opacity: 0.8;"><i class="fas fa-info-circle main-icon"></i> About Ecosystem</a>
+            <a href="policy.html" class="sidebar-menu-link" style="opacity: 0.8;"><i class="fas fa-shield-alt main-icon"></i> Legal & Policy</a>
         </nav>
     </div>
 </div>
@@ -439,6 +449,15 @@
         </div>
         
         <p class="text-muted small fw-bold mb-4">Connect with us for updates, tech tutorials, and 24/7 support.</p>
+        
+        <!-- NEW: Added links to Policy and About in the footer -->
+        <div class="footer-links mb-4">
+            <a href="about.html">About Ecosystem</a>
+            <span class="footer-links-divider">|</span>
+            <a href="policy.html">Legal & Policy Terms</a>
+            <span class="footer-links-divider">|</span>
+            <a href="status.html">System Status</a>
+        </div>
         
         <div class="d-flex justify-content-center gap-3 mb-4">
             <!-- Facebook -->
@@ -808,3 +827,5 @@
 </script>
 </body>
 </html>
+
+ok great this is the file I'm happy now please write it on its place what next we build the money on out right?
