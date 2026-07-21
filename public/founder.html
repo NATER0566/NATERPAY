@@ -39,6 +39,7 @@
             background: linear-gradient(90deg, transparent, var(--gold), transparent);
         }
 
+        /* UPGRADED FOUNDER PHOTO DISPLAY */
         .founder-photo-wrapper {
             width: 200px; height: 200px; border-radius: 50%; padding: 6px;
             background: conic-gradient(from 0deg, var(--gold), #ff4d4d, var(--bg), var(--gold));
@@ -54,7 +55,8 @@
         .founder-photo-container {
             width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
             animation: counterSpinBorder 10s linear infinite;
-            background: transparent; border: 4px solid #000;
+            background: #111; border: 4px solid #000;
+            display: flex; align-items: center; justify-content: center;
         }
 
         @keyframes counterSpinBorder {
@@ -64,6 +66,7 @@
         
         .founder-photo {
             width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;
+            display: none; /* Hidden by default until an image is loaded */
         }
 
         .founder-photo-container:hover .founder-photo {
@@ -131,8 +134,10 @@
 
         <div id="dynamicProfile" style="display: none; width: 100%; flex-direction: column; align-items: center;">
             
-            <div class="founder-photo-wrapper" id="photoWrapper" style="display: none;">
+            <!-- THE PREMIUM WRAPPER ALWAYS SHOWS -->
+            <div class="founder-photo-wrapper" id="photoWrapper">
                 <div class="founder-photo-container">
+                    <!-- NO HARDCODED IMAGE. ONLY SHOWS IF DATABASE HAS A URL -->
                     <img src="" alt="Founder Profile" class="founder-photo" id="founderPhoto">
                 </div>
             </div>
@@ -226,10 +231,10 @@
             const data = await res.json();
             
             if (data.success && data.founder) {
-                // PHOTO
+                // EXACT PHOTO FROM DATABASE. NO PLACEHOLDERS.
                 if (data.founder.photoUrl && data.founder.photoUrl.trim() !== "") {
                     document.getElementById('founderPhoto').src = data.founder.photoUrl;
-                    document.getElementById('photoWrapper').style.display = 'block';
+                    document.getElementById('founderPhoto').style.display = 'block';
                 }
 
                 // NAME
@@ -262,7 +267,7 @@
                     document.getElementById('missionCard').style.display = 'block';
                 }
 
-                // CONTACT INFO - Only show the contact card if at least one contact method exists
+                // CONTACT INFO 
                 let hasContact = false;
 
                 if (data.founder.whatsapp && data.founder.whatsapp.trim() !== "") {
@@ -285,7 +290,6 @@
                     document.getElementById('contactCard').style.display = 'block';
                 }
 
-                // Always show Skills section if the page loads successfully
                 document.getElementById('skillsCard').style.display = 'block';
             }
         } catch (e) {
