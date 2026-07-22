@@ -46,7 +46,7 @@
         .admin-tab { 
             background: rgba(30,30,30,0.95); border: 1px solid #555; color: #ffffff; 
             padding: 10px 15px; border-radius: 8px; font-weight: 700; transition: 0.3s; 
-            flex: 1 1 auto; text-align: center; font-size: 0.85rem; min-width: 130px; white-space: nowrap;
+            flex: 1 1 auto; text-align: center; font-size: 0.85rem; min-width: 130px; white-space: nowrap; position: relative;
         }
         .admin-tab.active { border-color: var(--gold); background: rgba(212,175,55,0.15); color: var(--gold); box-shadow: 0 0 10px rgba(212,175,55,0.3); }
         .admin-tab:hover { background: rgba(50,50,50,0.9); }
@@ -88,14 +88,15 @@
     
     <div class="tab-nav">
         <button class="admin-tab active" onclick="showTab('overview')"><i class="fas fa-chart-pie me-2"></i>Overview</button>
-        <button class="admin-tab" onclick="showTab('slides')"><i class="fas fa-images me-2"></i>Slideshow</button>
-        <button class="admin-tab" onclick="showTab('founder')"><i class="fas fa-user-tie me-2"></i>Founder Profile</button>
+        <button class="admin-tab" onclick="showTab('deposits')">Deposits <span id="depositsBadge" class="badge bg-success badge-dynamic d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('withdrawals')">Payouts <span id="withdrawBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
-        <button class="admin-tab" onclick="showTab('kyc')">KYC <span id="kycBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
-        <button class="admin-tab" onclick="showTab('adverts')">Adverts <span id="advertsBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
+        <button class="admin-tab" onclick="showTab('kyc')">KYC <span id="kycBadge" class="badge bg-warning text-dark badge-dynamic d-none">0</span></button>
+        <button class="admin-tab" onclick="showTab('adverts')">Adverts <span id="advertsBadge" class="badge bg-info text-dark badge-dynamic d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('transactions')">Audit Log</button>
         <button class="admin-tab" onclick="showTab('users')">Users</button>
         <button class="admin-tab" onclick="showTab('marketplace')">Market Store</button>
+        <button class="admin-tab" onclick="showTab('slides')"><i class="fas fa-images me-2"></i>Slideshow</button>
+        <button class="admin-tab" onclick="showTab('founder')"><i class="fas fa-user-tie me-2"></i>Founder</button>
         <button class="admin-tab" onclick="showTab('notifications')">Announce</button>
     </div>
     
@@ -107,108 +108,26 @@
         </div>
     </div>
 
-    <!-- NEW SLIDESHOW ENGINE MANAGER -->
-    <div id="tab-slides" class="tab-content" style="display: none;">
-        <div class="row">
-            <div class="col-lg-4 mb-3">
-                <div class="admin-card h-100">
-                    <h5 class="mb-3 text-gold fw-bold text-center border-bottom border-secondary pb-2">CREATE NEW SLIDE</h5>
-                    <form id="slideForm" onsubmit="submitNewSlide(event)">
-                        <label class="high-vis-label">Media Setup</label>
-                        <select id="slideMediaType" class="input-dark mb-2" onchange="toggleSlideMediaInput()">
-                            <option value="image">Image Display</option>
-                            <option value="video">Video Autoplay</option>
-                            <option value="text">Text Only</option>
-                        </select>
-
-                        <div id="slideMediaWrapper" class="file-upload-wrapper">
-                            <input type="file" id="slideMediaFile" accept="image/*,video/*" onchange="updateSlideFileName(this)">
-                            <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-warning" id="slideMediaIcon"></i>
-                            <div class="fw-bold" id="slideFileName">Drag & Drop Media Here</div>
-                            <small class="text-muted" id="slideFileHint">Supports Images and Videos</small>
-                        </div>
-
-                        <label class="high-vis-label">Header Title</label>
-                        <input type="text" id="slideTitle" class="input-dark" placeholder="e.g. New Promo!" required>
-                        
-                        <label class="high-vis-label">Caption / Description</label>
-                        <textarea id="slideCaption" class="input-dark" rows="2" placeholder="Slide text content..."></textarea>
-                        
-                        <div class="row">
-                            <div class="col-6">
-                                <label class="high-vis-label">Button Text</label>
-                                <input type="text" id="slideCtaText" class="input-dark" placeholder="e.g. BUY NOW">
-                            </div>
-                            <div class="col-6">
-                                <label class="high-vis-label">Button Link</label>
-                                <input type="text" id="slideCtaLink" class="input-dark" placeholder="e.g. /vtu.html">
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn btn-warning w-100 py-3 rounded-pill fw-bold" id="btnSubmitSlide"><i class="fas fa-satellite-dish me-2"></i> PUBLISH SLIDE TO USERS</button>
-                    </form>
-                </div>
+    <!-- NEW: MANUAL DEPOSITS QUEUE -->
+    <div id="tab-deposits" class="tab-content" style="display: none;">
+        <div class="admin-card">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <h5 class="text-gold fw-bold m-0"><i class="fas fa-file-invoice-dollar me-2"></i> PENDING MANUAL DEPOSITS</h5>
+                <button class="btn btn-sm btn-outline-light" onclick="fetchManualDeposits()"><i class="fas fa-sync-alt me-1"></i> Sync Queue</button>
             </div>
-            <div class="col-lg-8 mb-3">
-                <div class="admin-card h-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="text-gold fw-bold m-0">ACTIVE LIVE SLIDES</h5>
-                        <button class="btn btn-sm btn-outline-light" onclick="fetchSlides()"><i class="fas fa-sync-alt"></i></button>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-dark align-middle">
-                            <thead><tr><th>MEDIA PREVIEW</th><th>TEXT CONTENT</th><th>TYPE</th><th class="text-end">ACTION</th></tr></thead>
-                            <tbody id="slidesTable"><tr><td colspan="4" class="text-center opacity-50 py-4">Loading active slides...</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-dark align-middle">
+                    <thead><tr><th>DATE & REF</th><th>USER & KYC</th><th>NARRATION & RECEIPT</th><th>AMOUNT</th><th class="text-end">ACTION</th></tr></thead>
+                    <tbody id="depositsTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading manual deposits...</td></tr></tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- NEW: FOUNDER PROFILE MANAGER -->
-    <div id="tab-founder" class="tab-content" style="display: none;">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="admin-card">
-                    <h5 class="mb-4 text-gold fw-bold text-center border-bottom border-secondary pb-3"><i class="fas fa-user-tie me-2"></i> CONFIGURE FOUNDER PROFILE</h5>
-                    <form id="founderForm" onsubmit="updateFounderProfile(event)">
-                        
-                        <div class="row">
-                            <div class="col-md-4 text-center mb-3">
-                                <label class="high-vis-label text-start">Profile Photo</label>
-                                <div class="file-upload-wrapper" style="padding: 40px 10px;">
-                                    <input type="file" id="founderPhotoInput" accept="image/*" onchange="previewFounderImage(this)">
-                                    <img id="founderPhotoPreview" src="https://via.placeholder.com/150/111/d4af37?text=Upload+Photo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); margin-bottom: 10px;">
-                                    <div class="small fw-bold text-muted mt-2">Click to change</div>
-                                </div>
-                            </div>
-                            <div class="col-md-8">
-                                <label class="high-vis-label">Full Name</label>
-                                <input type="text" id="founderNameInput" class="input-dark" placeholder="e.g. Nater Mbashau" required>
-                                
-                                <label class="high-vis-label">Executive Title</label>
-                                <input type="text" id="founderTitleInput" class="input-dark" placeholder="e.g. Chief Executive Officer & Lead Architect" required>
-                                
-                                <label class="high-vis-label">Academic / Credential Status</label>
-                                <input type="text" id="founderAcademicInput" class="input-dark" placeholder="e.g. 300L Computer Science • Nasarawa State University" required>
-                            </div>
-                        </div>
-
-                        <label class="high-vis-label mt-3">The Vision & Autobiography</label>
-                        <textarea id="founderBioInput" class="input-dark" rows="8" placeholder="Write your full biography and vision for NATER-PAY here..." required></textarea>
-
-                        <button type="submit" class="btn btn-warning w-100 py-3 rounded-pill fw-bold mt-3" id="btnSubmitFounder"><i class="fas fa-upload me-2"></i> UPDATE FOUNDER PAGE</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    
     <div id="tab-withdrawals" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h5 class="text-gold fw-bold m-0">PENDING PAYOUT QUEUE</h5>
+                <h5 class="text-gold fw-bold m-0"><i class="fas fa-money-bill-wave me-2"></i> PENDING PAYOUT QUEUE</h5>
                 <button class="btn btn-sm btn-outline-light" onclick="fetchWithdrawals()"><i class="fas fa-sync-alt me-1"></i> Sync Queue</button>
             </div>
             <div class="table-responsive">
@@ -223,12 +142,12 @@
     <div id="tab-transactions" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h5 class="text-gold fw-bold m-0">LIVE TRANSACTION AUDIT</h5>
+                <h5 class="text-gold fw-bold m-0"><i class="fas fa-list-alt me-2"></i> LIVE TRANSACTION AUDIT</h5>
                 <button class="btn btn-sm btn-outline-light" onclick="loadAdminEcosystem()"><i class="fas fa-sync-alt me-1"></i> Sync Log</button>
             </div>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>DATE & REF</th><th>TYPE</th><th>USER</th><th>AMOUNT</th><th>STATUS</th><th class="text-end">ACTION</th></tr></thead>
+                    <thead><tr><th>DATE & REF</th><th>TYPE & PROVIDER</th><th>USER</th><th>AMOUNT</th><th>STATUS</th><th class="text-end">ACTION</th></tr></thead>
                     <tbody id="transactionsTable"><tr><td colspan="6" class="text-center opacity-50 py-4">Loading audit log...</td></tr></tbody>
                 </table>
             </div>
@@ -246,6 +165,7 @@
         </div>
     </div>
 
+    <!-- KYC, ADVERTS, MARKETPLACE, SLIDES, FOUNDER, NOTIFICATIONS TABS CONTINUED -->
     <div id="tab-kyc" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="table-responsive">
@@ -275,6 +195,86 @@
                     <thead><tr><th>PRODUCT</th><th>MERCHANT & KYC</th><th>PRICE</th><th>SALES</th><th class="text-end">ACTIONS</th></tr></thead>
                     <tbody id="marketplaceTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading marketplace products...</td></tr></tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-slides" class="tab-content" style="display: none;">
+        <div class="row">
+            <div class="col-lg-4 mb-3">
+                <div class="admin-card h-100">
+                    <h5 class="mb-3 text-gold fw-bold text-center border-bottom border-secondary pb-2">CREATE NEW SLIDE</h5>
+                    <form id="slideForm" onsubmit="submitNewSlide(event)">
+                        <label class="high-vis-label">Media Setup</label>
+                        <select id="slideMediaType" class="input-dark mb-2" onchange="toggleSlideMediaInput()">
+                            <option value="image">Image Display</option>
+                            <option value="video">Video Autoplay</option>
+                            <option value="text">Text Only</option>
+                        </select>
+                        <div id="slideMediaWrapper" class="file-upload-wrapper">
+                            <input type="file" id="slideMediaFile" accept="image/*,video/*" onchange="updateSlideFileName(this)">
+                            <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-warning" id="slideMediaIcon"></i>
+                            <div class="fw-bold" id="slideFileName">Drag & Drop Media Here</div>
+                            <small class="text-muted" id="slideFileHint">Supports Images and Videos</small>
+                        </div>
+                        <label class="high-vis-label">Header Title</label>
+                        <input type="text" id="slideTitle" class="input-dark" placeholder="e.g. New Promo!" required>
+                        <label class="high-vis-label">Caption / Description</label>
+                        <textarea id="slideCaption" class="input-dark" rows="2" placeholder="Slide text content..."></textarea>
+                        <div class="row">
+                            <div class="col-6"><label class="high-vis-label">Button Text</label><input type="text" id="slideCtaText" class="input-dark" placeholder="e.g. BUY NOW"></div>
+                            <div class="col-6"><label class="high-vis-label">Button Link</label><input type="text" id="slideCtaLink" class="input-dark" placeholder="e.g. /vtu.html"></div>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100 py-3 rounded-pill fw-bold" id="btnSubmitSlide"><i class="fas fa-satellite-dish me-2"></i> PUBLISH SLIDE TO USERS</button>
+                    </form>
+                </div>
+            </div>
+            <div class="col-lg-8 mb-3">
+                <div class="admin-card h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="text-gold fw-bold m-0">ACTIVE LIVE SLIDES</h5>
+                        <button class="btn btn-sm btn-outline-light" onclick="fetchSlides()"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-dark align-middle">
+                            <thead><tr><th>MEDIA PREVIEW</th><th>TEXT CONTENT</th><th>TYPE</th><th class="text-end">ACTION</th></tr></thead>
+                            <tbody id="slidesTable"><tr><td colspan="4" class="text-center opacity-50 py-4">Loading active slides...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-founder" class="tab-content" style="display: none;">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="admin-card">
+                    <h5 class="mb-4 text-gold fw-bold text-center border-bottom border-secondary pb-3"><i class="fas fa-user-tie me-2"></i> CONFIGURE FOUNDER PROFILE</h5>
+                    <form id="founderForm" onsubmit="updateFounderProfile(event)">
+                        <div class="row">
+                            <div class="col-md-4 text-center mb-3">
+                                <label class="high-vis-label text-start">Profile Photo</label>
+                                <div class="file-upload-wrapper" style="padding: 40px 10px;">
+                                    <input type="file" id="founderPhotoInput" accept="image/*" onchange="previewFounderImage(this)">
+                                    <img id="founderPhotoPreview" src="https://via.placeholder.com/150/111/d4af37?text=Upload+Photo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); margin-bottom: 10px;">
+                                    <div class="small fw-bold text-muted mt-2">Click to change</div>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="high-vis-label">Full Name</label>
+                                <input type="text" id="founderNameInput" class="input-dark" placeholder="e.g. Nater Mbashau" required>
+                                <label class="high-vis-label">Executive Title</label>
+                                <input type="text" id="founderTitleInput" class="input-dark" placeholder="e.g. Chief Executive Officer & Lead Architect" required>
+                                <label class="high-vis-label">Academic / Credential Status</label>
+                                <input type="text" id="founderAcademicInput" class="input-dark" placeholder="e.g. 300L Computer Science • Nasarawa State University" required>
+                            </div>
+                        </div>
+                        <label class="high-vis-label mt-3">The Vision & Autobiography</label>
+                        <textarea id="founderBioInput" class="input-dark" rows="8" placeholder="Write your full biography and vision for NATER-PAY here..." required></textarea>
+                        <button type="submit" class="btn btn-warning w-100 py-3 rounded-pill fw-bold mt-3" id="btnSubmitFounder"><i class="fas fa-upload me-2"></i> UPDATE FOUNDER PAGE</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -321,14 +321,13 @@
         document.getElementById('tab-'+t).style.display='block'; 
         event.currentTarget.classList.add('active'); 
         
-        // If clicking founder tab, auto-load current data
         if(t === 'founder') loadCurrentFounderData();
+        if(t === 'deposits') fetchManualDeposits();
     }
 
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
     window.globalSystemUsers = [];
 
-    // Helper: Convert File to Base64
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -356,220 +355,11 @@
         try {
             await loadAdminEcosystem(); 
             await Promise.all([
-                fetchWithdrawals(), fetchKYC(), fetchAdverts(), fetchMarketplace(), fetchSlides() 
+                fetchWithdrawals(), fetchManualDeposits(), fetchKYC(), fetchAdverts(), fetchMarketplace(), fetchSlides() 
             ]);
         } catch (e) { console.log('Background Sync Delay'); }
     }
     setInterval(syncAllBadges, 30000); 
-
-    // ==========================================
-    // FOUNDER PROFILE MANAGER
-    // ==========================================
-    let founderImageBase64 = null;
-
-    function previewFounderImage(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                document.getElementById('founderPhotoPreview').src = e.target.result;
-            }
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-
-    async function loadCurrentFounderData() {
-        try {
-            const res = await fetch('/api/cms/founder');
-            const data = await res.json();
-            if (data.success && data.founder) {
-                document.getElementById('founderNameInput').value = data.founder.name || '';
-                document.getElementById('founderTitleInput').value = data.founder.title || '';
-                document.getElementById('founderAcademicInput').value = data.founder.academic || '';
-                document.getElementById('founderBioInput').value = data.founder.bio || '';
-                if(data.founder.photoUrl) {
-                    document.getElementById('founderPhotoPreview').src = data.founder.photoUrl;
-                }
-            }
-        } catch (e) {}
-    }
-
-    async function updateFounderProfile(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btnSubmitFounder');
-        const fileInput = document.getElementById('founderPhotoInput');
-        
-        let mediaData = null;
-        if (fileInput.files && fileInput.files[0]) {
-            Swal.fire({ title: 'Compressing Photo...', didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
-            mediaData = await fileToBase64(fileInput.files[0]);
-        }
-
-        const payload = {
-            name: document.getElementById('founderNameInput').value,
-            title: document.getElementById('founderTitleInput').value,
-            academic: document.getElementById('founderAcademicInput').value,
-            bio: document.getElementById('founderBioInput').value,
-            mediaData: mediaData
-        };
-
-        btn.disabled = true; btn.innerText = "UPDATING...";
-        Swal.fire({ title: 'Updating Database & Cloudinary...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
-
-        try {
-            const res = await fetch('/api/cms/founder', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await res.json();
-            if (res.ok && data.success) {
-                Swal.fire({ icon: 'success', title: 'Profile Updated', text: 'Changes are now live on founder.html', background: '#0a0a0a', color: '#fff' });
-                fileInput.value = ""; // Clear file input
-            } else {
-                Swal.fire({ icon: 'error', title: 'Update Failed', text: data.message, background: '#0a0a0a', color: '#fff' });
-            }
-        } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to communicate with server.', background: '#0a0a0a', color: '#fff' });
-        } finally {
-            btn.disabled = false; btn.innerHTML = '<i class="fas fa-upload me-2"></i> UPDATE FOUNDER PAGE';
-        }
-    }
-
-
-    // ==========================================
-    // MULTIMEDIA SLIDESHOW MANAGER ENGINE
-    // ==========================================
-    function toggleSlideMediaInput() {
-        const type = document.getElementById('slideMediaType').value;
-        const wrapper = document.getElementById('slideMediaWrapper');
-        if (type === 'text') {
-            wrapper.style.display = 'none';
-        } else {
-            wrapper.style.display = 'block';
-            document.getElementById('slideFileHint').innerText = type === 'video' ? 'Supports MP4/WebM Video' : 'Supports JPG/PNG Image';
-            document.getElementById('slideMediaIcon').className = type === 'video' ? 'fas fa-video fa-2x mb-2 text-info' : 'fas fa-image fa-2x mb-2 text-warning';
-        }
-    }
-
-    function updateSlideFileName(input) {
-        if (input.files && input.files[0]) {
-            document.getElementById('slideFileName').innerText = input.files[0].name;
-            document.getElementById('slideFileName').style.color = '#00ff88';
-        }
-    }
-
-    async function fetchSlides() {
-        try {
-            const res = await fetch('/api/slides?_t=' + Date.now());
-            const data = await res.json();
-            
-            let slidesArray = Array.isArray(data) ? data : (data.slides || data.data?.slides || []);
-            const tbody = document.getElementById('slidesTable');
-            
-            if(slidesArray.length === 0) { 
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center opacity-50 py-4">No active slides deployed.</td></tr>'; 
-                return; 
-            }
-            
-            tbody.innerHTML = slidesArray.map(slide => {
-                const rawUrl = slide.imageUrl || slide.mediaUrl || slide.url || slide.image || '';
-                const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
-                
-                let mediaThumb = '';
-                if (isVideo) {
-                    mediaThumb = `<div class="product-img-thumb"><i class="fas fa-video text-info"></i></div>`;
-                } else if (rawUrl) {
-                    mediaThumb = `<img src="${rawUrl}" class="product-img-thumb">`;
-                } else {
-                    mediaThumb = `<div class="product-img-thumb"><i class="fas fa-font text-secondary"></i></div>`;
-                }
-                
-                return `<tr>
-                    <td>${mediaThumb}</td>
-                    <td><div class="fw-bold text-white">${slide.title || 'Untitled'}</div><small class="text-muted text-truncate d-inline-block" style="max-width: 150px;">${slide.caption || slide.description || ''}</small></td>
-                    <td><span class="badge bg-secondary">${slide.type || 'Media'}</span></td>
-                    <td class="text-end"><button class="btn btn-danger btn-sm" onclick="deleteSlideForever('${slide._id}')"><i class="fas fa-trash"></i> Drop</button></td>
-                </tr>`;
-            }).join('');
-        } catch (e) {
-            console.error('Failed to load slides', e);
-        }
-    }
-
-    async function submitNewSlide(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btnSubmitSlide');
-        const type = document.getElementById('slideMediaType').value;
-        const title = document.getElementById('slideTitle').value;
-        const caption = document.getElementById('slideCaption').value;
-        const ctaText = document.getElementById('slideCtaText').value;
-        const link = document.getElementById('slideCtaLink').value;
-        const fileInput = document.getElementById('slideMediaFile');
-
-        let base64Media = null;
-        if (type !== 'text') {
-            if (!fileInput.files || !fileInput.files[0]) {
-                Swal.fire({ icon: 'warning', title: 'Missing Media', text: 'Please select a file to upload.', background: '#0a0a0a', color: '#fff' });
-                return;
-            }
-            Swal.fire({ title: 'Compressing Media...', didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
-            try {
-                base64Media = await fileToBase64(fileInput.files[0]);
-            } catch (err) {
-                Swal.fire({ icon: 'error', title: 'File Error', text: 'Failed to read media file.', background: '#0a0a0a', color: '#fff' });
-                return;
-            }
-        }
-
-        const payload = {
-            title,
-            caption,
-            ctaText,
-            link,
-            type,
-            mediaData: base64Media
-        };
-
-        btn.disabled = true;
-        btn.innerText = "TRANSMITTING...";
-        Swal.fire({ title: 'Uploading to Cloudinary/DB...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
-
-        try {
-            const res = await fetch('/api/cms/slides', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await res.json();
-            if (res.ok && data.success !== false) {
-                Swal.fire({ icon: 'success', title: 'Slide Deployed', text: 'It is now live on the user index page.', background: '#0a0a0a', color: '#fff' });
-                document.getElementById('slideForm').reset();
-                document.getElementById('slideFileName').innerText = 'Drag & Drop Media Here';
-                document.getElementById('slideFileName').style.color = '#fff';
-                toggleSlideMediaInput(); 
-                fetchSlides();
-            } else {
-                Swal.fire({ icon: 'error', title: 'Upload Failed', text: data.message || 'Server rejected the file.', background: '#0a0a0a', color: '#fff' });
-            }
-        } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Transmission failed.', background: '#0a0a0a', color: '#fff' });
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-plus-circle me-2"></i> PUBLISH SLIDE';
-        }
-    }
-
-    async function deleteSlideForever(id) {
-        if((await Swal.fire({ title: 'Remove Slide?', icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff' })).isConfirmed) {
-            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-            try { 
-                const res = await fetch(`/api/cms/slides/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
-                if(res.ok) { Swal.fire('Dropped!', '', 'success'); fetchSlides(); } 
-            } catch (e) {}
-        }
-    }
 
     // ==========================================
     // OVERVIEW, TRANSACTIONS & USERS
@@ -578,7 +368,6 @@
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
         try {
-            // Analytics
             const statRes = await fetch('/api/admin/analytics', { headers: { 'Authorization': `Bearer ${token}` } });
             const stats = await statRes.json();
             if(stats.success) {
@@ -587,7 +376,6 @@
                 document.getElementById('statVault').innerText = '₦' + parseNum(stats.summary?.totalVaultBalance).toLocaleString();
             }
 
-            // Users
             const userRes = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
             const usersData = await userRes.json();
             if(usersData.users) {
@@ -597,17 +385,13 @@
                         <td><div class="fw-bold">${u.name}</div><small class="text-secondary">${u._id}</small></td>
                         <td><div class="text-white">${u.email}</div><small class="text-muted">${u.phoneNumber}</small></td>
                         <td class="text-warning fw-bold fs-5">₦${parseNum(u.walletBalance).toLocaleString()}</td>
-                        <td>
-                            <span class="status-pill bg-dark border mb-1">${u.role.toUpperCase()}</span><br>
-                            ${getUserKycBadge(u)}
-                        </td>
+                        <td><span class="status-pill bg-dark border mb-1">${u.role.toUpperCase()}</span><br>${getUserKycBadge(u)}</td>
                         <td class="text-end"><div class="action-btns"><button class="btn btn-success fw-bold" onclick="modifyUserBalance('${u._id}', 'credit', null, '${u.name}')" title="Add Money"><i class="fas fa-plus"></i></button><button class="btn btn-danger fw-bold" onclick="modifyUserBalance('${u._id}', 'debit', null, '${u.name}')" title="Deduct Money"><i class="fas fa-minus"></i></button></div></td>
                     </tr>
                 `).join('');
             }
 
-            // Transactions
-            const txRes = await fetch('/api/admin/transactions?limit=100', { headers: { 'Authorization': `Bearer ${token}` } });
+            const txRes = await fetch('/api/admin/transactions?limit=200', { headers: { 'Authorization': `Bearer ${token}` } });
             const txData = await txRes.json();
             let txHtml = ''; 
             
@@ -620,13 +404,15 @@
                 
                 if (tx.status === 'processing' && tx.type === 'withdrawal') {
                     actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="processWithdrawal('${tx._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-sm btn-danger rounded fw-bold ms-1" onclick="processWithdrawal('${tx._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>`;
+                } else if (tx.status === 'processing' && tx.provider === 'manual' && tx.type === 'funding') {
+                    actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="processManualDeposit('${tx._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-sm btn-danger rounded fw-bold ms-1" onclick="processManualDeposit('${tx._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>`;
                 } else if (tx.status === 'pending') {
                     actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="forceVerifyTransaction('${tx._id}')" title="Force Success"><i class="fas fa-check"></i></button>`;
                 } else if (tx.status === 'failed') { 
                     actionBtns += `<button class="btn btn-sm btn-gold rounded fw-bold ms-1" onclick="forceVerifyTransaction('${tx._id}')" title="Force Clear">Clear</button>`; 
                 }
 
-                txHtml += `<tr><td><div class="fw-bold">${date}</div><small class="text-secondary">${tx.reference || tx._id}</small></td><td><span class="status-pill bg-secondary">${tx.type.replace('_', ' ')}</span></td><td><div class="text-truncate text-white" style="max-width: 150px;">${tx.userEmail || 'Unknown'}</div></td><td class="fw-bold text-gold fs-5">₦${amt.toLocaleString()}</td><td><span class="status-pill ${tx.status==='success'?'bg-success':(tx.status==='failed'?'bg-danger':'bg-warning text-dark')}">${tx.status}</span></td><td class="text-end"><div class="action-btns justify-content-end">${actionBtns}</div></td></tr>`;
+                txHtml += `<tr><td><div class="fw-bold">${date}</div><small class="text-secondary">${tx.reference || tx.providerReference || tx._id}</small></td><td><span class="status-pill bg-secondary">${tx.type.replace('_', ' ')}</span><br><small class="text-muted text-uppercase">${tx.provider || 'System'}</small></td><td><div class="text-truncate text-white" style="max-width: 150px;">${tx.userEmail || 'Unknown'}</div></td><td class="fw-bold text-gold fs-5">₦${amt.toLocaleString()}</td><td><span class="status-pill ${tx.status==='success'?'bg-success':(tx.status==='failed'?'bg-danger':'bg-warning text-dark')}">${tx.status}</span></td><td class="text-end"><div class="action-btns justify-content-end">${actionBtns}</div></td></tr>`;
             });
             document.getElementById('transactionsTable').innerHTML = txHtml;
         } catch (e) {}
@@ -635,23 +421,38 @@
     function viewTxDossier(encodedData) {
         try {
             const tx = JSON.parse(decodeURIComponent(encodedData));
-            let bankDetailsHtml = '';
+            let extraHtml = '';
+            
+            // Withdrawal Extension
             if (tx.type === 'withdrawal') {
                 let bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
-                let bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || 'Unknown Account';
+                let bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account';
                 let bUser = tx.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
-                bankDetailsHtml = `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--gold);"><h6 class="text-gold mb-2 fw-bold"><i class="fas fa-university me-1"></i> Destination Bank Details</h6><p class="mb-1 text-white"><strong class="text-secondary">Bank:</strong> ${bName}</p><p class="mb-1 text-white"><strong class="text-secondary">Account No:</strong> <span class="text-warning fs-6 fw-bold" style="letter-spacing: 1px;">${bAcc}</span></p><p class="mb-0 text-white"><strong class="text-secondary">Account Name:</strong> ${bUser}</p></div>`;
+                extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--gold);"><h6 class="text-gold mb-2 fw-bold"><i class="fas fa-university me-1"></i> Destination Bank Details</h6><p class="mb-1 text-white"><strong class="text-secondary">Bank:</strong> ${bName}</p><p class="mb-1 text-white"><strong class="text-secondary">Account No:</strong> <span class="text-warning fs-6 fw-bold" style="letter-spacing: 1px;">${bAcc}</span></p><p class="mb-0 text-white"><strong class="text-secondary">Account Name:</strong> ${bUser}</p></div>`;
+            }
+
+            // Manual Funding Extension
+            if (tx.type === 'funding' && tx.provider === 'manual') {
+                let narration = tx.metadata?.narration || 'Not Provided';
+                let receiptUrl = tx.metadata?.receiptUrl;
+                let receiptDisplay = receiptUrl ? `<div class="mt-3 text-center"><a href="${receiptUrl}" target="_blank"><img src="${receiptUrl}" style="max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid var(--gold); object-fit: contain;"></a><div class="small text-muted mt-1"><i class="fas fa-search-plus"></i> Click image to enlarge</div></div>` : `<div class="mt-2 p-2 bg-dark rounded text-center small text-muted"><i class="fas fa-times-circle"></i> No receipt uploaded</div>`;
+                extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--success);"><h6 class="text-success mb-2 fw-bold"><i class="fas fa-file-invoice-dollar me-1"></i> Manual Deposit Details</h6><p class="mb-1 text-white"><strong class="text-secondary">User Narration:</strong> ${narration}</p>${receiptDisplay}</div>`;
+            }
+
+            // Rejection Metadata
+            if (tx.status === 'failed' && tx.metadata?.rejectionReason) {
+                extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 1px solid var(--red);"><h6 class="text-danger mb-1 fw-bold"><i class="fas fa-exclamation-circle me-1"></i> Rejection Reason</h6><p class="mb-0 text-white small">${tx.metadata.rejectionReason}</p></div>`;
             }
 
             Swal.fire({
                 title: 'Transaction Dossier',
                 html: `<div class="text-start mt-2" style="font-size: 0.9rem;">
-                        <p class="mb-1"><strong class="text-gold">Type:</strong> <span class="text-uppercase badge bg-secondary">${tx.type.replace('_', ' ')}</span></p>
+                        <p class="mb-1"><strong class="text-gold">Type/Provider:</strong> <span class="text-uppercase badge bg-secondary">${tx.type.replace('_', ' ')} / ${tx.provider || 'System'}</span></p>
                         <p class="mb-1"><strong class="text-gold">Amount:</strong> <span class="text-warning fw-bold fs-5">₦${parseNum(tx.amount).toLocaleString()}</span></p>
                         <p class="mb-1"><strong class="text-gold">Fee:</strong> <span class="text-danger fw-bold">₦${parseNum(tx.fee).toLocaleString()}</span></p>
-                        <p class="mb-1"><strong class="text-gold">Status:</strong> <span class="text-uppercase fw-bold">${tx.status}</span></p>
-                        ${bankDetailsHtml}
-                        <div class="p-2 mt-2 bg-dark rounded border border-secondary"><strong class="text-gold d-block mb-1">Description log:</strong><span class="text-white">${tx.description || 'System Record'}</span></div>
+                        <p class="mb-1"><strong class="text-gold">Status:</strong> <span class="text-uppercase fw-bold ${tx.status==='success'?'text-success':(tx.status==='failed'?'text-danger':'text-warning')}">${tx.status}</span></p>
+                        ${extraHtml}
+                        <div class="p-2 mt-3 bg-dark rounded border border-secondary"><strong class="text-gold d-block mb-1">System Log:</strong><span class="text-white small">${tx.description || 'System Record'}</span></div>
                     </div>`,
                 background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444'
             });
@@ -675,6 +476,84 @@
     }
 
     // ==========================================
+    // NEW: MANUAL DEPOSITS QUEUE
+    // ==========================================
+    async function fetchManualDeposits() {
+        const token = localStorage.getItem("naterpay_token");
+        if(!token) return;
+        try {
+            const res = await fetch('/api/admin/transactions?limit=500', { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            const pending = (data.transactions || []).filter(tx => tx.type === 'funding' && tx.provider === 'manual' && tx.status === 'processing');
+            
+            const badge = document.getElementById('depositsBadge'); 
+            const tbody = document.getElementById('depositsTable');
+            
+            if(pending.length > 0) {
+                badge.innerText = pending.length; 
+                badge.classList.remove('d-none');
+                tbody.innerHTML = pending.map(tx => {
+                    const encodedTx = encodeURIComponent(JSON.stringify(tx));
+                    const baseAmt = parseNum(tx.amount);
+                    const kycBadgeHtml = getUserKycBadge(tx.user); 
+                    const userEmail = tx.userEmail || 'Unknown Email';
+                    const narration = tx.metadata?.narration || 'Not Provided';
+                    const hasReceipt = tx.metadata?.receiptUrl ? '<i class="fas fa-paperclip text-info ms-2" title="Receipt Attached"></i>' : '';
+                    
+                    return `<tr>
+                        <td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx.providerReference || tx._id}</small></td>
+                        <td><div class="text-white text-truncate" style="max-width:150px;">${userEmail}</div>${kycBadgeHtml}</td>
+                        <td><div class="text-muted small text-truncate" style="max-width:200px;">${narration}${hasReceipt}</div></td>
+                        <td><div class="fw-bold text-success fs-5">₦${baseAmt.toLocaleString()}</div></td>
+                        <td class="text-end">
+                            <div class="action-btns justify-content-end">
+                                <button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Receipt & Data"><i class="fas fa-eye"></i></button>
+                                <button class="btn btn-success fw-bold" onclick="processManualDeposit('${tx._id}', 'approve')" title="Approve & Credit"><i class="fas fa-check"></i></button>
+                                <button class="btn btn-danger fw-bold" onclick="processManualDeposit('${tx._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } else { 
+                badge.classList.add('d-none'); 
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No pending manual deposits in queue.</td></tr>'; 
+            }
+        } catch(e) {}
+    }
+
+    async function processManualDeposit(txId, action) {
+        let reason = '';
+        if (action === 'reject') {
+            const { value: inputReason } = await Swal.fire({
+                title: 'Reject Deposit', input: 'text', inputLabel: 'Rejection Reason', inputPlaceholder: 'e.g. Funds not received in bank',
+                background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonColor: '#d32f2f'
+            });
+            if (inputReason === undefined) return; 
+            reason = inputReason || 'Payment not found in company bank account.';
+        } else {
+            const confirm = await Swal.fire({title: `Approve Deposit?`, text: `This will instantly credit the user's wallet with the requested funds.`, icon: 'question', showCancelButton: true, confirmButtonColor: '#00ff88', background: '#0a0a0a', color: '#fff'});
+            if (!confirm.isConfirmed) return;
+        }
+
+        Swal.fire({title:'Processing Protocol...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
+        try {
+            const endpoint = action === 'approve' ? '/api/admin/wallet/manual/approve' : '/api/admin/wallet/manual/reject';
+            const res = await fetch(endpoint, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                body: JSON.stringify({ transactionId: txId, reason })
+            });
+            const data = await res.json();
+            if(data.success) { 
+                Swal.fire({icon: 'success', title: 'Success', text: data.message, background: '#0a0a0a', color: '#fff'}); 
+                syncAllBadges(); 
+            } else { 
+                Swal.fire({icon: 'error', title: 'Action Failed', text: data.message || 'Operation failed', background: '#0a0a0a', color: '#fff'}); 
+            }
+        } catch (err) { Swal.fire({icon: 'error', title: 'Network Error', text: 'Server communication failed.', background: '#0a0a0a', color: '#fff'}); }
+    }
+
+    // ==========================================
     // WITHDRAWALS
     // ==========================================
     async function fetchWithdrawals() {
@@ -693,7 +572,7 @@
                 tbody.innerHTML = pending.map(tx => {
                     const encodedTx = encodeURIComponent(JSON.stringify(tx));
                     const bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
-                    const bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || 'Unknown Account';
+                    const bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account';
                     const baseAmt = parseNum(tx.amount); const feeAmt = parseNum(tx.fee);
                     const kycBadgeHtml = getUserKycBadge(tx.user?._id || tx.user); 
                     
@@ -891,6 +770,109 @@
         if((await Swal.fire({ title: 'Wipe Product?', icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff' })).isConfirmed) {
             Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try { const res = await fetch(`/api/admin/products/${productId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); if(res.ok) { Swal.fire('Deleted!', '', 'success'); fetchMarketplace(); } } catch (e) {}
+        }
+    }
+
+    // ==========================================
+    // MULTIMEDIA SLIDESHOW MANAGER ENGINE
+    // ==========================================
+    function toggleSlideMediaInput() {
+        const type = document.getElementById('slideMediaType').value;
+        const wrapper = document.getElementById('slideMediaWrapper');
+        if (type === 'text') {
+            wrapper.style.display = 'none';
+        } else {
+            wrapper.style.display = 'block';
+            document.getElementById('slideFileHint').innerText = type === 'video' ? 'Supports MP4/WebM Video' : 'Supports JPG/PNG Image';
+            document.getElementById('slideMediaIcon').className = type === 'video' ? 'fas fa-video fa-2x mb-2 text-info' : 'fas fa-image fa-2x mb-2 text-warning';
+        }
+    }
+
+    function updateSlideFileName(input) {
+        if (input.files && input.files[0]) {
+            document.getElementById('slideFileName').innerText = input.files[0].name;
+            document.getElementById('slideFileName').style.color = '#00ff88';
+        }
+    }
+
+    async function fetchSlides() {
+        try {
+            const res = await fetch('/api/slides?_t=' + Date.now());
+            const data = await res.json();
+            
+            let slidesArray = Array.isArray(data) ? data : (data.slides || data.data?.slides || []);
+            const tbody = document.getElementById('slidesTable');
+            
+            if(slidesArray.length === 0) { 
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center opacity-50 py-4">No active slides deployed.</td></tr>'; 
+                return; 
+            }
+            
+            tbody.innerHTML = slidesArray.map(slide => {
+                const rawUrl = slide.imageUrl || slide.mediaUrl || slide.url || slide.image || '';
+                const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
+                
+                let mediaThumb = '';
+                if (isVideo) {
+                    mediaThumb = `<div class="product-img-thumb"><i class="fas fa-video text-info"></i></div>`;
+                } else if (rawUrl) {
+                    mediaThumb = `<img src="${rawUrl}" class="product-img-thumb">`;
+                } else {
+                    mediaThumb = `<div class="product-img-thumb"><i class="fas fa-font text-secondary"></i></div>`;
+                }
+                
+                return `<tr>
+                    <td>${mediaThumb}</td>
+                    <td><div class="fw-bold text-white">${slide.title || 'Untitled'}</div><small class="text-muted text-truncate d-inline-block" style="max-width: 150px;">${slide.caption || slide.description || ''}</small></td>
+                    <td><span class="badge bg-secondary">${slide.type || 'Media'}</span></td>
+                    <td class="text-end"><button class="btn btn-danger btn-sm" onclick="deleteSlideForever('${slide._id}')"><i class="fas fa-trash"></i> Drop</button></td>
+                </tr>`;
+            }).join('');
+        } catch (e) {}
+    }
+
+    async function submitNewSlide(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubmitSlide');
+        const type = document.getElementById('slideMediaType').value;
+        const title = document.getElementById('slideTitle').value;
+        const caption = document.getElementById('slideCaption').value;
+        const ctaText = document.getElementById('slideCtaText').value;
+        const link = document.getElementById('slideCtaLink').value;
+        const fileInput = document.getElementById('slideMediaFile');
+
+        let base64Media = null;
+        if (type !== 'text') {
+            if (!fileInput.files || !fileInput.files[0]) {
+                Swal.fire({ icon: 'warning', title: 'Missing Media', text: 'Please select a file to upload.', background: '#0a0a0a', color: '#fff' });
+                return;
+            }
+            Swal.fire({ title: 'Compressing Media...', didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+            try { base64Media = await fileToBase64(fileInput.files[0]); } catch (err) { Swal.fire({ icon: 'error', title: 'File Error', text: 'Failed to read media file.', background: '#0a0a0a', color: '#fff' }); return; }
+        }
+
+        const payload = { title, caption, ctaText, link, type, mediaData: base64Media };
+
+        btn.disabled = true; btn.innerText = "TRANSMITTING...";
+        Swal.fire({ title: 'Uploading to Cloudinary/DB...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+
+        try {
+            const res = await fetch('/api/cms/slides', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok && data.success !== false) {
+                Swal.fire({ icon: 'success', title: 'Slide Deployed', text: 'It is now live on the user index page.', background: '#0a0a0a', color: '#fff' });
+                document.getElementById('slideForm').reset(); document.getElementById('slideFileName').innerText = 'Drag & Drop Media Here'; document.getElementById('slideFileName').style.color = '#fff'; toggleSlideMediaInput(); fetchSlides();
+            } else { Swal.fire({ icon: 'error', title: 'Upload Failed', text: data.message || 'Server rejected the file.', background: '#0a0a0a', color: '#fff' }); }
+        } catch (err) { Swal.fire({ icon: 'error', title: 'Network Error', text: 'Transmission failed.', background: '#0a0a0a', color: '#fff' });
+        } finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-satellite-dish me-2"></i> PUBLISH SLIDE TO USERS'; }
+    }
+
+    async function deleteSlideForever(id) {
+        if((await Swal.fire({ title: 'Remove Slide?', icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff' })).isConfirmed) {
+            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try { const res = await fetch(`/api/cms/slides/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); if(res.ok) { Swal.fire('Dropped!', '', 'success'); fetchSlides(); } } catch (e) {}
         }
     }
 
