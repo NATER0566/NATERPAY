@@ -84,12 +84,14 @@
             width: 100%; outline: none; transition: 0.3s; font-family: 'Montserrat', sans-serif;
         }
         .amount-input:focus { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,175,55,0.3); }
+        .amount-input:disabled { opacity: 0.6; cursor: not-allowed; }
 
         .premium-input {
             background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px;
             color: #fff; width: 100%; font-size: 0.9rem; outline: none; transition: 0.3s; margin-bottom: 15px;
         }
         .premium-input:focus { border-color: var(--gold); }
+        .premium-input:disabled { opacity: 0.6; cursor: not-allowed; }
 
         /* Custom File Upload */
         .file-upload-wrapper { width: 100%; text-align: center; margin-bottom: 20px; }
@@ -98,13 +100,15 @@
             padding: 20px; cursor: pointer; transition: 0.3s; color: #888; font-size: 0.9rem; font-weight: 600;
         }
         .file-upload-label:hover { border-color: var(--gold); color: var(--gold); background: rgba(212,175,55,0.05); }
+        .file-upload-label.disabled { pointer-events: none; opacity: 0.5; }
         .file-name-display { color: var(--gold); font-size: 0.8rem; font-weight: 700; margin-top: 8px; }
 
         .quick-amount-btn {
             background: #111; border: 1px solid #333; color: white;
             padding: 12px 20px; border-radius: 10px; font-weight: 700; transition: 0.3s; flex: 1; min-width: 90px;
         }
-        .quick-amount-btn:hover { border-color: var(--gold); background: rgba(212,175,55,0.1); color: var(--gold); }
+        .quick-amount-btn:hover:not(:disabled) { border-color: var(--gold); background: rgba(212,175,55,0.1); color: var(--gold); }
+        .quick-amount-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
         /* LIVE CALCULATOR */
         .live-calc-box { background: #080808; border: 1px solid #222; border-radius: 15px; padding: 25px; margin: 30px 0; }
@@ -170,18 +174,18 @@
             </div>
 
             <div class="bank-name">
-                MONIEPOINT MFB 
-                <i class="far fa-copy ms-2 copy-icon-inline" onclick="copyDetail('MONIEPOINT MFB', 'Bank Name')"></i>
+                <span id="bankNameDisplay">Loading Bank...</span>
+                <i class="far fa-copy ms-2 copy-icon-inline" id="copyBankBtn" onclick=""></i>
             </div>
-            <div class="acc-number" id="companyAccountNo">
-                1234567890 
-                <i class="far fa-copy ms-2 copy-icon-inline fs-5" onclick="copyDetail('1234567890', 'Account Number')"></i>
+            <div class="acc-number">
+                <span id="companyAccountNoDisplay">...</span>
+                <i class="far fa-copy ms-2 copy-icon-inline fs-5" id="copyAccNoBtn1" onclick=""></i>
             </div>
             <div class="acc-name">
-                NATERPAY ENTERPRISE INC 
-                <i class="far fa-copy ms-2 copy-icon-inline" onclick="copyDetail('NATERPAY ENTERPRISE INC', 'Account Name')"></i>
+                <span id="accountNameDisplay">...</span>
+                <i class="far fa-copy ms-2 copy-icon-inline" id="copyAccNameBtn" onclick=""></i>
             </div>
-            <button class="btn-copy mt-2" onclick="copyDetail('1234567890', 'Account Number')"><i class="far fa-copy me-1"></i> Copy Account Number</button>
+            <button class="btn-copy mt-2" id="copyAccNoBtn2" onclick=""><i class="far fa-copy me-1"></i> Copy Account Number</button>
             <div class="mt-4 text-warning small fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> Transfer the exact Total Expected Charge shown below.</div>
         </div>
 
@@ -208,7 +212,7 @@
                     <i class="fas fa-cloud-upload-alt fa-2x mb-2 d-block"></i>
                     Click to Upload Payment Receipt (Optional Image/PDF)
                 </label>
-                <input type="file" id="receiptUpload" accept="image/*,application/pdf" style="display:none;">
+                <input type="file" id="receiptUpload" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none;">
                 <div class="file-name-display" id="fileNameDisplay"></div>
             </div>
         </div>
@@ -233,8 +237,9 @@
 
 <script>
     let currentMethod = 'paystack';
-    let selectedReceiptFile = null; // Holds the actual File object for FormData transport
+    let selectedReceiptFile = null; 
 
+    // Star Canvas Animation
     function initStars() {
         const c = document.getElementById('starCanvas');
         c.width = window.innerWidth; c.height = window.innerHeight;
@@ -249,23 +254,80 @@
         animate();
     }
 
-    // Capture the file directly instead of converting to Base64
+    // Load Bank Details Dynamically
+    async function fetchCompanyBankDetails() {
+        try {
+            const res = await fetch('/api/settings/company-bank');
+            if (res.ok) {
+                const bank = await res.json();
+                const bankName = bank.bankName || 'MONIEPOINT MFB';
+                const accountNo = bank.accountNumber || '1234567890';
+                const accountName = bank.accountName || 'NATERPAY ENTERPRISE INC';
+
+                document.getElementById('bankNameDisplay').innerText = bankName;
+                document.getElementById('companyAccountNoDisplay').innerText = accountNo;
+                document.getElementById('accountNameDisplay').innerText = accountName;
+
+                document.getElementById('copyBankBtn').setAttribute('onclick', `copyDetail('${bankName}', 'Bank Name')`);
+                document.getElementById('copyAccNoBtn1').setAttribute('onclick', `copyDetail('${accountNo}', 'Account Number')`);
+                document.getElementById('copyAccNameBtn').setAttribute('onclick', `copyDetail('${accountName}', 'Account Name')`);
+                document.getElementById('copyAccNoBtn2').setAttribute('onclick', `copyDetail('${accountNo}', 'Account Number')`);
+            }
+        } catch (e) {
+            console.warn('Using default bank details. Failed to fetch from API.');
+            document.getElementById('bankNameDisplay').innerText = 'MONIEPOINT MFB';
+            document.getElementById('companyAccountNoDisplay').innerText = '1234567890';
+            document.getElementById('accountNameDisplay').innerText = 'NATERPAY ENTERPRISE INC';
+            document.getElementById('copyBankBtn').setAttribute('onclick', `copyDetail('MONIEPOINT MFB', 'Bank Name')`);
+            document.getElementById('copyAccNoBtn1').setAttribute('onclick', `copyDetail('1234567890', 'Account Number')`);
+            document.getElementById('copyAccNameBtn').setAttribute('onclick', `copyDetail('NATERPAY ENTERPRISE INC', 'Account Name')`);
+            document.getElementById('copyAccNoBtn2').setAttribute('onclick', `copyDetail('1234567890', 'Account Number')`);
+        }
+    }
+
+    // UI Locking mechanism to prevent editing while processing
+    function toggleUIState(isProcessing) {
+        document.getElementById('payBtn').disabled = isProcessing;
+        document.getElementById('fundAmount').disabled = isProcessing;
+        document.getElementById('paymentReference').disabled = isProcessing;
+        
+        document.querySelectorAll('.quick-amount-btn').forEach(b => b.disabled = isProcessing);
+        
+        const methodCards = document.querySelectorAll('.method-card');
+        methodCards.forEach(c => {
+            c.style.pointerEvents = isProcessing ? 'none' : 'auto';
+            c.style.opacity = isProcessing ? '0.6' : '1';
+        });
+
+        const uploadLabel = document.getElementById('uploadLabel');
+        if(isProcessing) uploadLabel.classList.add('disabled');
+        else uploadLabel.classList.remove('disabled');
+    }
+
+    // Strict File Validation
     document.getElementById('receiptUpload').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+            if (!allowedTypes.includes(file.type)) {
+                Swal.fire({ icon: 'error', title: 'Invalid Format', text: 'Only JPG, PNG, WEBP, or PDF files are allowed.', background: '#111', color: '#fff' });
+                this.value = ''; 
+                return;
+            }
             if(file.size > 5 * 1024 * 1024) {
                 Swal.fire({ icon: 'error', title: 'File Too Large', text: 'Receipt must be less than 5MB.', background: '#111', color: '#fff' });
-                this.value = ''; return;
+                this.value = ''; 
+                return;
             }
             document.getElementById('fileNameDisplay').innerText = `Attached: ${file.name}`;
             document.getElementById('uploadLabel').style.borderColor = "var(--success)";
             document.getElementById('uploadLabel').style.color = "var(--success)";
-
             selectedReceiptFile = file;
         }
     });
 
     function selectMethod(method) {
+        if (document.getElementById('payBtn').disabled) return; // Prevent change if processing
         currentMethod = method;
         document.getElementById('method-paystack').classList.remove('active');
         document.getElementById('method-manual').classList.remove('active');
@@ -318,6 +380,7 @@
     }
 
     function setAmount(amount) {
+        if (document.getElementById('payBtn').disabled) return;
         document.getElementById('fundAmount').value = amount;
         updateCalculator();
     }
@@ -329,13 +392,21 @@
     }
 
     async function processFunding() {
+        const btn = document.getElementById('payBtn');
+        if (btn.disabled) return;
+
         const amount = parseFloat(document.getElementById('fundAmount').value);
         if (!amount || amount < 100) return Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'Minimum funding amount is ₦100', background: '#111', color: '#fff' });
 
         if (currentMethod === 'manual') {
+            const narration = document.getElementById('paymentReference').value.trim();
+            if (narration.length > 100) {
+                return Swal.fire({ icon: 'error', title: 'Narration Too Long', text: 'Please limit narration to 100 characters.', background: '#111', color: '#fff' });
+            }
+
             const confirm = await Swal.fire({
                 title: 'Confirm Payment',
-                html: `Have you successfully completed the bank transfer of <strong style="color:var(--gold);">₦${amount.toLocaleString()}</strong> to NATERPAY ENTERPRISE INC?`,
+                html: `Have you successfully completed the bank transfer of <strong style="color:var(--gold);">₦${amount.toLocaleString()}</strong>?`,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#00ff88',
@@ -345,24 +416,20 @@
                 background: '#111', color: '#fff'
             });
 
-            if (confirm.isConfirmed) { executeManualFunding(amount); }
+            if (confirm.isConfirmed) { executeManualFunding(amount, narration); }
         } else {
             executePaystackFunding(amount);
         }
     }
 
-    async function executeManualFunding(amount) {
+    async function executeManualFunding(amount, narration) {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return window.location.href = '/index.html';
         
-        const narration = document.getElementById('paymentReference').value.trim();
-
-        const btn = document.getElementById('payBtn');
-        btn.disabled = true; 
+        toggleUIState(true);
         Swal.fire({ title: 'Logging Request...', html: 'Securely uploading details...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
 
         try {
-            // Using FormData for optimal file transport instead of Base64 JSON
             const formData = new FormData();
             formData.append('amount', amount);
             formData.append('narration', narration);
@@ -372,27 +439,31 @@
 
             const res = await fetch('/api/wallet/fund-manual', {
                 method: 'POST',
-                headers: { 
-                    'Authorization': `Bearer ${authToken}`
-                    // DO NOT manually set Content-Type to multipart/form-data. The browser does it automatically.
-                },
+                headers: { 'Authorization': `Bearer ${authToken}` },
                 body: formData 
             });
             const data = await res.json();
             
             if (data.success) {
                 Swal.fire({
-                    icon: 'success', title: 'Request Submitted!',
-                    html: `Your manual funding request (<strong style="color:var(--gold);">${data.paymentReference}</strong>) has been received and is now <strong>Processing</strong>.<br><br>Our finance team will verify your bank transfer before your wallet is credited.`,
+                    icon: 'success', 
+                    title: 'Request Submitted!',
+                    html: `Your manual funding request has been received and is now <strong>Processing</strong>.<br><br>
+                           <div style="background:#0a0a0a; padding:15px; border-radius:10px; border:1px solid #333; margin:15px 0;">
+                               <span style="font-size:0.75rem; color:#888; text-transform:uppercase; letter-spacing:1px;">Funding Reference</span><br>
+                               <strong style="color:var(--gold); font-family:monospace; font-size:1.3rem; letter-spacing:1px;">${data.paymentReference}</strong>
+                               <i class="far fa-copy ms-2" onclick="navigator.clipboard.writeText('${data.paymentReference}'); this.className='fas fa-check text-success ms-2';" style="cursor:pointer; color:var(--gold-dim); transition:0.3s; font-size:1.1rem;"></i>
+                           </div>
+                           Our finance team will verify your bank transfer before your wallet is credited.`,
                     confirmButtonColor: '#d4af37', background: '#111', color: '#fff'
                 }).then(() => { window.location.href = 'dashboard.html'; });
             } else {
                 Swal.fire({ icon: 'error', title: 'Failed', text: data.message, background: '#111', color: '#fff' });
-                btn.disabled = false;
+                toggleUIState(false);
             }
         } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Please check your connection.', background: '#111', color: '#fff' });
-            btn.disabled = false;
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Please check your connection. If uploading a large receipt, it may have timed out.', background: '#111', color: '#fff' });
+            toggleUIState(false);
         }
     }
 
@@ -400,8 +471,7 @@
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return window.location.href = '/index.html';
         
-        const btn = document.getElementById('payBtn');
-        btn.disabled = true; 
+        toggleUIState(true);
         Swal.fire({ title: 'Securing Gateway...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
 
         try {
@@ -416,15 +486,19 @@
                 window.location.href = data.checkoutUrl;
             } else {
                 Swal.fire({ icon: 'error', title: 'Failed', text: data.message, background: '#111', color: '#fff' });
-                btn.disabled = false;
+                toggleUIState(false);
             }
         } catch (err) {
             Swal.fire({ icon: 'error', title: 'Network Error', text: 'Please check your connection.', background: '#111', color: '#fff' });
-            btn.disabled = false;
+            toggleUIState(false);
         }
     }
 
-    window.onload = initStars; window.onresize = initStars;
+    window.onload = () => {
+        initStars();
+        fetchCompanyBankDetails();
+    };
+    window.onresize = initStars;
 </script>
 </body>
 </html>
