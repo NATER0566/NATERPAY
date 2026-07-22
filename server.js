@@ -68,11 +68,8 @@ async function registerRoutes() {
   const authRoutes = require('./routes/auth');
   fastify.post('/api/auth/register', authRoutes.register);
   fastify.post('/api/auth/verify-otp', authRoutes.verifyOTP);
-  
-  // THE FIX: ADDED THE MISSING VERIFICATION ROUTES HERE
   fastify.post('/api/auth/resend-verification', authRoutes.resendVerification);
   fastify.post('/api/auth/verify-email', authRoutes.verifyEmail);
-  
   fastify.post('/api/auth/login', authRoutes.login);
   fastify.post('/api/auth/verify-login-input', authRoutes.verifyLoginInput);
   fastify.post('/api/auth/refresh-token', authRoutes.refreshToken);
@@ -90,7 +87,6 @@ async function registerRoutes() {
   fastify.get('/api/user/referral-tree', { preHandler: require('./middleware/auth').authenticate }, userRoutes.getReferralTree);
   fastify.post('/api/user/upgrade', { preHandler: require('./middleware/auth').authenticate }, userRoutes.upgradeUser);
 
-  // ---> BUSINESS PROFILE ROUTE ADDED HERE <---
   fastify.post('/api/user/business-profile', { preHandler: require('./middleware/auth').authenticate }, async (request, reply) => {
     try {
       const { name, email, phone, web, address, logoBase64 } = request.body;
@@ -131,6 +127,10 @@ async function registerRoutes() {
   const walletRoutes = require('./routes/wallet');
   fastify.get('/api/wallet', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.getWallet);
   fastify.post('/api/wallet/fund', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.fundWallet);
+  
+  // NEW: Manual Funding User Route [ADDED]
+  fastify.post('/api/wallet/fund-manual', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.fundManualWallet);
+  
   fastify.post('/api/wallet/verify', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.verifyFunding);
   fastify.post('/api/wallet/withdraw', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.withdraw);
   fastify.post('/api/wallet/transfer', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.transfer);
@@ -148,7 +148,6 @@ async function registerRoutes() {
   fastify.post('/api/vtu/education', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyEducation);
   fastify.post('/api/vtu/betting', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyBetting);
   fastify.post('/api/vtu/insurance', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyInsurance);
-  
   fastify.post('/api/vtu/sms', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buySms);
   
   fastify.get('/api/vtu/rates', vtuRoutes.getRates);
@@ -193,11 +192,8 @@ async function registerRoutes() {
   const invoiceRoutes = require('./routes/invoice');
   fastify.get('/api/invoices', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.getInvoices);
   fastify.post('/api/invoices', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.createInvoice);
-  
-  // ---> THE FIX: EXPLICITLY ADDING DELETE AND MARK-PAID ROUTES <---
   fastify.delete('/api/invoices/:id', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.deleteInvoice);
   fastify.put('/api/invoices/:id/mark-paid', { preHandler: require('./middleware/auth').authenticate }, invoiceRoutes.markInvoicePaid);
-  
   fastify.get('/api/invoices/:invoiceId', invoiceRoutes.getInvoice);
   fastify.post('/api/invoices/:invoiceId/pay', invoiceRoutes.payInvoice);
   
@@ -220,6 +216,10 @@ async function registerRoutes() {
   fastify.get('/api/admin/transactions', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getTransactions);
   fastify.get('/api/admin/analytics', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getAnalytics);
   
+  // NEW: Admin Manual Funding Approvals [ADDED]
+  fastify.post('/api/admin/wallet/manual/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminApproveManualFunding);
+  fastify.post('/api/admin/wallet/manual/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminRejectManualFunding);
+
   fastify.get('/api/admin/withdrawals/pending', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingWithdrawals);
   fastify.put('/api/admin/withdrawals/:id/:action', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.processWithdrawal);
 
@@ -271,6 +271,9 @@ async function registerRoutes() {
 
   const statusRoutes = require('./routes/status');
   fastify.get('/api/system-status', statusRoutes.getSystemStatus);
+
+  // NEW: Central Health Check Engine [ADDED]
+  fastify.get('/api/health', walletRoutes.healthCheck);
   
   // FEATURE FLAG MIDDLEWARE
   fastify.addHook('onRequest', async (request, reply) => {
