@@ -186,8 +186,8 @@ async function checkDailyLimit(userId, type, amount, limit) {
     startOfDay.setHours(0, 0, 0, 0);
     
     const txs = await Transaction.aggregate([
-        { $match: { user: userId, type: type, status: { $in: [TX_STATUS.SUCCESS, TX_STATUS.PENDING, TX_STATUS.PROCESSING] }, createdAt: { $gte: startOfDay } } },
-        { $group: { _id: null, total: { $sum: { $toDouble: "$amount" } } } }
+        { $match: { user: userId, type: type, status: { $in: [TX_STATUS.SUCCESS, TX_STATUS.PENDING, TX_STATUS.PROCESSING] }, createdAt: {$gte: startOfDay } } },
+        { $group: { _id: null, total: {$sum: { $toDouble: "$amount" } } } }
     ]);
     
     const totalToday = txs.length > 0 ? txs[0].total : 0;
@@ -307,63 +307,54 @@ async function getWallet(request, reply) {
 }
 
 /* =========================================================================
-   2. INITIALIZE FUNDING (PAYSTACK)
+   2. FUND VIA PAYSTACK (FORCES REDIRECT TO DASHBOARD.HTML OR CALLBACK)
 ========================================================================= */
 async function fundWallet(request, reply) {
     try {
-        // [3] Validate Request
-        const schema = Joi.object({ amount: Joi.number().min(100).required(), provider: Joi.string() });
+        // [FIXED] Added callbackUrl to the Joi Validation Schema
+        const schema = Joi.object({ 
+            amount: Joi.number().min(100).required(), 
+            provider: Joi.string().default('paystack'),
+            callbackUrl: Joi.string().uri().allow('', null).optional()
+        });
+        
         const { error, value } = schema.validate(request.body);
-        if (error) throw error;
+        if (error) throw { status: 400, message: error.details[0].message };
 
-        if (!await checkRateLimit(request, 'fund')) throw new Error('Too Many Requests. Please try again later.');
-        const existingTx = await checkIdempotency(request, 'funding'); 
-        if (existingTx) return reply.send({ success: true, message: 'Payment already initialized', paymentReference: existingTx.providerReference, provider: PROVIDERS.PAYSTACK, checkoutUrl: existingTx.metadata?.checkoutUrl || '/dashboard.html' }); 
+        if (!await checkRateLimit(request, 'fund_init', 10)) throw { status: 429, message: 'Too many funding attempts.' };
+
+        const amount = sanitizeAmount(value.amount);
         
-        const requestedAmount = sanitizeAmount(value.amount); 
-        const minFunding = config.business?.minFunding || 100; 
-        const maxFunding = config.business?.maxFunding || 10000000; 
-        
-        if (requestedAmount > maxFunding) throw new Error(`Maximum funding amount is ₦${maxFunding.toLocaleString()}`); 
-        
-        const wallet = await Wallet.findOne({ user: request.user._id }); 
-        const user = await User.findById(request.user._id); 
-        if (!wallet || !user) throw new Error('User or Wallet not found'); 
-        
-        let gatewayFee = requestedAmount < 2500 ? (requestedAmount * 0.015) / (1 - 0.015) : ((requestedAmount * 0.015) + 100) / (1 - 0.015); 
-        if (gatewayFee > 2000) gatewayFee = 2000; 
-        
-        const totalToCharge = Math.ceil(requestedAmount + gatewayFee); 
-        const paymentReference = typeof generateTransactionReference === 'function' ? generateTransactionReference() : `FUND_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`; 
-        const startBalance = String(wallet.availableBalance || 0); 
-        const idempotencyKey = request.headers['x-idempotency-key'] || `idem_${Date.now()}`; 
-        
-        // [4] Axios Timeout + [5] Network Retry
-        const paystackResponse = await withRetry(() => axios.post(`${PAYSTACK_BASE_URL}/transaction/initialize`, { 
-            email: user.email, amount: totalToCharge * 100, reference: paymentReference, callback_url: `${APP_URL}/dashboard.html` 
-        }, { 
-            headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' },
-            timeout: 15000 
-        })); 
-        
-        const checkoutUrl = paystackResponse.data.data.authorization_url; 
-        
-        const transaction = new Transaction({ 
-            user: request.user._id, type: 'funding', description: `Wallet funding via Paystack`, 
-            amount: requestedAmount, fee: Math.ceil(gatewayFee), balanceBefore: startBalance, balanceAfter: startBalance, 
-            status: TX_STATUS.PENDING, provider: PROVIDERS.PAYSTACK, providerReference: paymentReference, 
-            idempotencyKey: idempotencyKey, ipAddress: request.ip, userAgent: request.headers['user-agent'], metadata: { checkoutUrl } 
-        }); 
-        await transaction.save(); 
-        
-        await createAuditLog({ 
-            user: request.user._id, transactionId: transaction._id, reference: paymentReference, amount: requestedAmount, 
-            type: 'funding', previousBalance: startBalance, newBalance: startBalance, ipAddress: request.ip, 
-            userAgent: request.headers['user-agent'], status: TX_STATUS.PENDING, source: 'Funding API' 
-        }); 
-        
-        reply.send({ success: true, message: 'Payment initialized', paymentReference, checkoutUrl, provider: PROVIDERS.PAYSTACK }); 
-    } catch (error) { handleError(reply, error, 'Failed to initiate payment gateway.'); }
+        let fee = amount < 2500 ? (amount * 0.015) / (1 - 0.015) : ((amount * 0.015) + 100) / (1 - 0.015);
+        if (fee > 2000) fee = 2000;
+        fee = Math.ceil(fee);
+        const totalCharge = amount + fee;
+
+        const txReference = 'TX_FND_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex').toUpperCase();
+
+        // THIS FORCES PAYSTACK TO RETURN DIRECTLY TO YOUR LIVE DASHBOARD (OR PROVIDED URL)
+        const liveDashboardUrl = value.callbackUrl || `${request.protocol}://${request.hostname}/dashboard.html`;
+
+        const paystackRes = await axios.post('https://api.paystack.co/transaction/initialize', {
+            email: request.user.email,
+            amount: Math.round(totalCharge * 100),
+            reference: txReference,
+            callback_url: liveDashboardUrl,
+            metadata: { userId: request.user._id.toString(), type: 'wallet_fund', amount: amount, fee: fee }
+        }, {
+            headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
+        });
+
+        const transaction = new Transaction({
+            user: request.user._id, type: 'funding', description: 'Wallet Funding via Paystack',
+            amount: amount, fee: fee, status: 'pending', provider: 'paystack', providerReference: txReference
+        });
+        await transaction.save();
+
+        reply.send({ success: true, paymentReference: txReference, checkoutUrl: paystackRes.data.data.authorization_url });
+    } catch (error) {
+        reply.status(error.status || 500).send({ success: false, message: error.message || 'Failed to initialize payment' });
+    }
 }
 
 /* =========================================================================
