@@ -102,6 +102,17 @@ async function registerPlugins() {
 // ENTERPRISE ROUTE REGISTRATION API MAP
 // ============================================================================
 async function registerRoutes() {
+
+    // [NEW] DYNAMIC BANK DETAILS ROUTE
+    fastify.get('/api/settings/company-bank', async (request, reply) => {
+        reply.send({
+            success: true,
+            bankName: process.env.COMPANY_BANK_NAME || "MONIEPOINT MFB",
+            accountNumber: process.env.COMPANY_ACCOUNT_NO || "8160979620",
+            accountName: process.env.COMPANY_ACCOUNT_NAME || "NATER GRACE CODE"
+        });
+    });
+
     const authRoutes = require('./routes/auth');
     fastify.post('/api/auth/register', authRoutes.register);
     fastify.post('/api/auth/verify-otp', authRoutes.verifyOTP);
@@ -165,8 +176,8 @@ async function registerRoutes() {
     fastify.get('/api/wallet', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.getWallet);
     fastify.post('/api/wallet/fund', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.fundWallet);
     
-    // [FIXED] Commented out undefined manual funding routes
-    // fastify.post('/api/wallet/fund-manual', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.fundManualWallet);
+    // [FIXED] Manual funding route is now fully active
+    fastify.post('/api/wallet/fund-manual', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.fundManualWallet);
     
     fastify.post('/api/wallet/verify', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.verifyFunding);
     fastify.post('/api/wallet/withdraw', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.withdraw);
@@ -251,9 +262,9 @@ async function registerRoutes() {
     fastify.get('/api/admin/transactions', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getTransactions);
     fastify.get('/api/admin/analytics', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getAnalytics);
     
-    // [FIXED] Commented out undefined admin manual funding routes
-    // fastify.post('/api/admin/wallet/manual/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminApproveManualFunding);
-    // fastify.post('/api/admin/wallet/manual/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminRejectManualFunding);
+    // [FIXED] Admin manual funding routes are now fully active
+    fastify.post('/api/admin/wallet/manual/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminApproveManualFunding);
+    fastify.post('/api/admin/wallet/manual/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminRejectManualFunding);
 
     fastify.get('/api/admin/withdrawals/pending', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingWithdrawals);
     fastify.put('/api/admin/withdrawals/:id/:action', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.processWithdrawal);
