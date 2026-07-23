@@ -239,27 +239,26 @@
     let currentMethod = 'paystack';
     let selectedReceiptFile = null; 
 
-    // ====================================================================
-    // EDIT YOUR COMPANY RECEIVING BANK DETAILS RIGHT HERE:
-    // ====================================================================
-    const ADMIN_BANK_DETAILS = {
-        bankName: "MONIEPOINT MFB",
-        accountNumber: "8160979620", 
-        accountName: "NATER GRACE CODE"
-    };
+    // DYNAMICALLY FETCH BANK DETAILS FROM BACKEND API
+    async function loadCompanyBankDetails() {
+        try {
+            const res = await fetch('/api/settings/company-bank');
+            const data = await res.json();
+            
+            document.getElementById('bankNameDisplay').innerText = data.bankName;
+            document.getElementById('companyAccountNoDisplay').innerText = data.accountNumber;
+            document.getElementById('accountNameDisplay').innerText = data.accountName;
 
-    function loadCompanyBankDetails() {
-        document.getElementById('bankNameDisplay').innerText = ADMIN_BANK_DETAILS.bankName;
-        document.getElementById('companyAccountNoDisplay').innerText = ADMIN_BANK_DETAILS.accountNumber;
-        document.getElementById('accountNameDisplay').innerText = ADMIN_BANK_DETAILS.accountName;
-
-        document.getElementById('copyBankBtn').setAttribute('onclick', `copyDetail('${ADMIN_BANK_DETAILS.bankName}', 'Bank Name')`);
-        document.getElementById('copyAccNoBtn1').setAttribute('onclick', `copyDetail('${ADMIN_BANK_DETAILS.accountNumber}', 'Account Number')`);
-        document.getElementById('copyAccNameBtn').setAttribute('onclick', `copyDetail('${ADMIN_BANK_DETAILS.accountName}', 'Account Name')`);
-        document.getElementById('copyAccNoBtn2').setAttribute('onclick', `copyDetail('${ADMIN_BANK_DETAILS.accountNumber}', 'Account Number')`);
+            document.getElementById('copyBankBtn').setAttribute('onclick', `copyDetail('${data.bankName}', 'Bank Name')`);
+            document.getElementById('copyAccNoBtn1').setAttribute('onclick', `copyDetail('${data.accountNumber}', 'Account Number')`);
+            document.getElementById('copyAccNameBtn').setAttribute('onclick', `copyDetail('${data.accountName}', 'Account Name')`);
+            document.getElementById('copyAccNoBtn2').setAttribute('onclick', `copyDetail('${data.accountNumber}', 'Account Number')`);
+        } catch (e) {
+            console.error("Failed to load bank details dynamically.");
+        }
     }
 
-    // Star Canvas Animation
+    // Canvas Background Animation
     function initStars() {
         const c = document.getElementById('starCanvas');
         c.width = window.innerWidth; c.height = window.innerHeight;
@@ -268,13 +267,21 @@
         for(let i = 0; i < 120; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
         function animate() {
             ctx.clearRect(0, 0, c.width, c.height);
-            stars.forEach(s => { ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill(); s.y += s.v; if(s.y > c.height) s.y = -5; });
+            stars.forEach(s => { 
+                ctx.globalAlpha = s.o; 
+                ctx.fillStyle = "white"; 
+                ctx.beginPath(); 
+                ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); 
+                ctx.fill(); 
+                s.y += s.v; 
+                if(s.y > c.height) s.y = -5; 
+            });
             requestAnimationFrame(animate);
         }
         animate();
     }
 
-    // UI Locking mechanism to prevent editing while processing
+    // UI Lock Mechanism
     function toggleUIState(isProcessing) {
         document.getElementById('payBtn').disabled = isProcessing;
         document.getElementById('fundAmount').disabled = isProcessing;
@@ -293,28 +300,22 @@
         else uploadLabel.classList.remove('disabled');
     }
 
-    // Strict File Validation
+    // File Upload Validation
     document.getElementById('receiptUpload').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-            if (!allowedTypes.includes(file.type)) {
-                Swal.fire({ icon: 'error', title: 'Invalid Format', text: 'Only JPG, PNG, WEBP, or PDF files are allowed.', background: '#111', color: '#fff' });
-                this.value = ''; 
-                return;
-            }
             if(file.size > 5 * 1024 * 1024) {
-                Swal.fire({ icon: 'error', title: 'File Too Large', text: 'Receipt must be less than 5MB.', background: '#111', color: '#fff' });
-                this.value = ''; 
-                return;
+                this.value = '';
+                return Swal.fire({ icon: 'error', title: 'File Too Large', text: 'Receipt must be less than 5MB.', background: '#111', color: '#fff' });
             }
             document.getElementById('fileNameDisplay').innerText = `Attached: ${file.name}`;
-            document.getElementById('uploadLabel').style.borderColor = "var(--success)";
             document.getElementById('uploadLabel').style.color = "var(--success)";
+            document.getElementById('uploadLabel').style.borderColor = "var(--success)";
             selectedReceiptFile = file;
         }
     });
 
+    // Method Selection
     function selectMethod(method) {
         if (document.getElementById('payBtn').disabled) return; 
         currentMethod = method;
@@ -322,160 +323,118 @@
         document.getElementById('method-manual').classList.remove('active');
         document.getElementById(`method-${method}`).classList.add('active');
 
-        const bankBox = document.getElementById('bankDetailsBox');
-        const extraFields = document.getElementById('manualExtraFields');
-        const feeLine = document.getElementById('feeLine');
-        const feeText = document.getElementById('feeInfoText');
-        const payBtn = document.getElementById('payBtn');
-
         if (method === 'manual') {
-            bankBox.classList.add('active');
-            extraFields.classList.add('active');
-            feeLine.classList.add('free');
-            feeText.innerText = "No gateway fees for manual transfers.";
-            payBtn.innerHTML = `<i class="fas fa-check-double me-2"></i> I HAVE PAID EXACT AMOUNT`;
-            payBtn.style.background = 'linear-gradient(90deg, #00ff88, #00cc6a)';
-            payBtn.style.color = '#000';
+            document.getElementById('bankDetailsBox').classList.add('active');
+            document.getElementById('manualExtraFields').classList.add('active');
+            document.getElementById('feeLine').classList.add('free');
+            document.getElementById('feeInfoText').innerText = "No gateway fees for manual transfers.";
+            document.getElementById('payBtn').innerHTML = `<i class="fas fa-check-double me-2"></i> I HAVE PAID EXACT AMOUNT`;
+            document.getElementById('payBtn').style.background = 'linear-gradient(90deg, #00ff88, #00cc6a)';
+            document.getElementById('payBtn').style.color = '#000';
         } else {
-            bankBox.classList.remove('active');
-            extraFields.classList.remove('active');
-            feeLine.classList.remove('free');
-            feeText.innerText = "Applied directly by Paystack (1.5% + ₦100)";
-            payBtn.innerHTML = `<i class="fas fa-lock me-2"></i> PROCEED TO SECURE PAYMENT`;
-            payBtn.style.background = 'linear-gradient(90deg, var(--gold-dim), var(--gold))';
-            payBtn.style.color = '#000';
+            document.getElementById('bankDetailsBox').classList.remove('active');
+            document.getElementById('manualExtraFields').classList.remove('active');
+            document.getElementById('feeLine').classList.remove('free');
+            document.getElementById('feeInfoText').innerText = "Applied directly by Paystack (1.5% + ₦100)";
+            document.getElementById('payBtn').innerHTML = `<i class="fas fa-lock me-2"></i> PROCEED TO SECURE PAYMENT`;
+            document.getElementById('payBtn').style.background = 'linear-gradient(90deg, var(--gold-dim), var(--gold))';
+            document.getElementById('payBtn').style.color = '#000';
         }
         updateCalculator();
     }
 
+    // Fee Calculator
     function calculateGatewayFee(amount) {
         if (currentMethod === 'manual') return 0;
         if (!amount || amount < 100) return 0;
-        let fee = 0;
-        if (amount < 2500) { fee = (amount * 0.015) / (1 - 0.015); } 
-        else { fee = ((amount * 0.015) + 100) / (1 - 0.015); }
-        if (fee > 2000) fee = 2000;
-        return Math.ceil(fee); 
+        let fee = amount < 2500 ? (amount * 0.015) / (1 - 0.015) : ((amount * 0.015) + 100) / (1 - 0.015);
+        return Math.ceil(fee > 2000 ? 2000 : fee); 
     }
 
     function updateCalculator() {
         const amount = parseFloat(document.getElementById('fundAmount').value) || 0;
         const fee = calculateGatewayFee(amount);
-        const totalCharge = amount + fee;
-
         document.getElementById('calcPrincipal').innerText = '₦' + amount.toLocaleString(undefined, {minimumFractionDigits:2});
         document.getElementById('calcFee').innerText = (fee === 0 && currentMethod === 'manual') ? 'FREE' : '₦' + fee.toLocaleString(undefined, {minimumFractionDigits:2});
-        document.getElementById('calcTotal').innerText = '₦' + totalCharge.toLocaleString(undefined, {minimumFractionDigits:2});
+        document.getElementById('calcTotal').innerText = '₦' + (amount + fee).toLocaleString(undefined, {minimumFractionDigits:2});
     }
 
     function setAmount(amount) {
-        if (document.getElementById('payBtn').disabled) return;
-        document.getElementById('fundAmount').value = amount;
-        updateCalculator();
+        if (!document.getElementById('payBtn').disabled) {
+            document.getElementById('fundAmount').value = amount;
+            updateCalculator();
+        }
     }
 
     function copyDetail(text, label) {
-        navigator.clipboard.writeText(text).then(() => {
-            Swal.fire({ icon: 'success', title: 'Copied!', text: `${label} copied to clipboard.`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' });
-        });
+        navigator.clipboard.writeText(text).then(() => Swal.fire({ icon: 'success', title: 'Copied!', text: `${label} copied.`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' }));
     }
 
+    // Process Button Router
     async function processFunding() {
-        const btn = document.getElementById('payBtn');
-        if (btn.disabled) return;
-
         const amount = parseFloat(document.getElementById('fundAmount').value);
         if (!amount || amount < 100) return Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'Minimum funding amount is ₦100', background: '#111', color: '#fff' });
 
         if (currentMethod === 'manual') {
             const narration = document.getElementById('paymentReference').value.trim();
-            if (narration.length > 100) {
-                return Swal.fire({ icon: 'error', title: 'Narration Too Long', text: 'Please limit narration to 100 characters.', background: '#111', color: '#fff' });
-            }
-
             const confirm = await Swal.fire({
-                title: 'Confirm Payment',
-                html: `Have you successfully completed the bank transfer of <strong style="color:var(--gold);">₦${amount.toLocaleString()}</strong>?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#00ff88',
-                cancelButtonColor: '#d33',
-                confirmButtonText: '<i class="fas fa-check-circle me-1"></i> Yes, I Have Paid',
-                cancelButtonText: 'Cancel',
-                background: '#111', color: '#fff'
+                title: 'Confirm Payment', html: `Have you successfully completed the bank transfer?`, icon: 'question',
+                showCancelButton: true, confirmButtonColor: '#00ff88', confirmButtonText: 'Yes, I Have Paid', background: '#111', color: '#fff'
             });
-
-            if (confirm.isConfirmed) { executeManualFunding(amount, narration); }
+            if (confirm.isConfirmed) executeManualFunding(amount, narration);
         } else {
             executePaystackFunding(amount);
         }
     }
 
+    // Execute Manual Funding
     async function executeManualFunding(amount, narration) {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return window.location.href = '/index.html';
         
         toggleUIState(true);
-        Swal.fire({ title: 'Logging Request...', html: 'Securely uploading details...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
+        Swal.fire({ title: 'Logging Request...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
 
         try {
             const formData = new FormData();
             formData.append('amount', amount);
             formData.append('narration', narration);
-            if (selectedReceiptFile) {
-                formData.append('receipt', selectedReceiptFile);
-            }
+            if (selectedReceiptFile) formData.append('receipt', selectedReceiptFile);
 
-            const res = await fetch('/api/wallet/fund-manual', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${authToken}` },
-                body: formData 
-            });
+            const res = await fetch('/api/wallet/fund-manual', { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` }, body: formData });
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({
-                    icon: 'success', 
-                    title: 'Request Submitted!',
-                    html: `Your manual funding request has been received and is now <strong>Processing</strong>.<br><br>
-                           <div style="background:#0a0a0a; padding:15px; border-radius:10px; border:1px solid #333; margin:15px 0;">
-                               <span style="font-size:0.75rem; color:#888; text-transform:uppercase; letter-spacing:1px;">Funding Reference</span><br>
-                               <strong style="color:var(--gold); font-family:monospace; font-size:1.3rem; letter-spacing:1px;">${data.paymentReference}</strong>
-                               <i class="far fa-copy ms-2" onclick="navigator.clipboard.writeText('${data.paymentReference}'); this.className='fas fa-check text-success ms-2';" style="cursor:pointer; color:var(--gold-dim); transition:0.3s; font-size:1.1rem;"></i>
-                           </div>
-                           Our finance team will verify your bank transfer before your wallet is credited.`,
-                    confirmButtonColor: '#d4af37', background: '#111', color: '#fff'
-                }).then(() => { window.location.href = 'dashboard.html'; });
+                Swal.fire({ icon: 'success', title: 'Request Submitted!', text: 'Our finance team will verify your transfer shortly.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+                .then(() => window.location.href = 'dashboard.html');
             } else {
                 Swal.fire({ icon: 'error', title: 'Failed', text: data.message, background: '#111', color: '#fff' });
                 toggleUIState(false);
             }
         } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Please check your connection. If uploading a large receipt, it may have timed out.', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Upload timed out. Please try again.', background: '#111', color: '#fff' });
             toggleUIState(false);
         }
     }
 
+    // Execute Paystack Funding
     async function executePaystackFunding(amount) {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return window.location.href = '/index.html';
-        
+
         toggleUIState(true);
         Swal.fire({ title: 'Securing Gateway...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
 
         try {
-            // WE NOW PASS THE LIVE CALLBACK URL SO IT NEVER REDIRECTS TO LOCALHOST AGAIN
-            const liveCallbackUrl = window.location.origin + window.location.pathname;
-
+            // No callbackUrl sent from frontend anymore! The backend securely injects the dashboard URL.
             const res = await fetch('/api/wallet/fund', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ amount, provider: 'paystack', callbackUrl: liveCallbackUrl })
+                body: JSON.stringify({ amount, provider: 'paystack' }) 
             });
             const data = await res.json();
 
             if (data.success && data.checkoutUrl) {
-                localStorage.setItem('pending_funding_ref', data.paymentReference);
                 window.location.href = data.checkoutUrl;
             } else {
                 Swal.fire({ icon: 'error', title: 'Failed', text: data.message, background: '#111', color: '#fff' });
@@ -487,60 +446,10 @@
         }
     }
 
-    // ====================================================================
-    // NEW: AUTO-VERIFY PAYSTACK RETURN
-    // If the URL has ?reference=... it instantly checks the status and redirects
-    // ====================================================================
-    async function verifyReturnedPayment(reference) {
-        const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) return window.location.href = '/index.html';
-
-        Swal.fire({
-            title: 'Verifying Transaction...',
-            html: 'Please wait while we sync with the banking gateway.',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading(),
-            background: '#111', color: '#fff'
-        });
-
-        try {
-            const res = await fetch('/api/wallet/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ reference })
-            });
-            const data = await res.json();
-
-            // Clear the ugly URL params so it looks clean again
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Your wallet has been credited.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
-                .then(() => window.location.href = 'dashboard.html');
-            } else {
-                // Instantly fail cancelled transactions
-                Swal.fire({ icon: 'error', title: 'Payment Incomplete', text: data.message || 'Transaction was abandoned or failed.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' })
-                .then(() => window.location.href = 'dashboard.html');
-            }
-        } catch (error) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Could not verify payment automatically. The system will auto-reconcile shortly.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' })
-            .then(() => window.location.href = 'dashboard.html');
-        }
-    }
-
     window.onload = () => {
         initStars();
         loadCompanyBankDetails();
-
-        // Check if Paystack just redirected the user back here
-        const urlParams = new URLSearchParams(window.location.search);
-        const reference = urlParams.get('reference') || urlParams.get('trxref');
-        
-        if (reference) {
-            verifyReturnedPayment(reference);
-        }
     };
-
     window.onresize = initStars;
 </script>
 </body>
