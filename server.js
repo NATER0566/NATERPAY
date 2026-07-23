@@ -164,7 +164,10 @@ async function registerRoutes() {
     const walletRoutes = require('./routes/wallet');
     fastify.get('/api/wallet', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.getWallet);
     fastify.post('/api/wallet/fund', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.fundWallet);
-    fastify.post('/api/wallet/fund-manual', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.fundManualWallet);
+    
+    // [FIXED] Commented out undefined manual funding routes
+    // fastify.post('/api/wallet/fund-manual', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.fundManualWallet);
+    
     fastify.post('/api/wallet/verify', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.verifyFunding);
     fastify.post('/api/wallet/withdraw', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.withdraw);
     fastify.post('/api/wallet/transfer', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.transfer);
@@ -248,8 +251,9 @@ async function registerRoutes() {
     fastify.get('/api/admin/transactions', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getTransactions);
     fastify.get('/api/admin/analytics', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getAnalytics);
     
-    fastify.post('/api/admin/wallet/manual/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminApproveManualFunding);
-    fastify.post('/api/admin/wallet/manual/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminRejectManualFunding);
+    // [FIXED] Commented out undefined admin manual funding routes
+    // fastify.post('/api/admin/wallet/manual/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminApproveManualFunding);
+    // fastify.post('/api/admin/wallet/manual/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminRejectManualFunding);
 
     fastify.get('/api/admin/withdrawals/pending', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getPendingWithdrawals);
     fastify.put('/api/admin/withdrawals/:id/:action', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.processWithdrawal);
@@ -301,7 +305,9 @@ async function registerRoutes() {
 
     const statusRoutes = require('./routes/status');
     fastify.get('/api/system-status', statusRoutes.getSystemStatus);
-    fastify.get('/api/health', walletRoutes.healthCheck);
+
+    // [FIXED] Pointed the health check to the correct status module
+    fastify.get('/api/health', statusRoutes.getSystemStatus);
     
     // [4] FEATURE FLAG MIDDLEWARE
     fastify.addHook('onRequest', async (request, reply) => {
@@ -448,7 +454,10 @@ async function start() {
         await fastify.listen({ port: config.port, host: config.host });
         logger.info(`[SYSTEM] Core Engine Successfully Bound to Port ${config.port}`);
     } catch (error) {
-        logger.error('[FATAL BOOT ERROR] Server failed to start', error);
+        // [FIXED] Force raw error output so Render shows us exactly what broke if it crashes again!
+        console.error('============== CRITICAL BOOT CRASH ==============');
+        console.error(error);
+        console.error('=================================================');
         process.exit(1);
     }
 }
