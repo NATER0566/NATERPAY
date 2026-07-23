@@ -7,7 +7,7 @@ const config = require('../config');
 const axios = require('axios');
 const crypto = require('crypto');
 const cloudinary = require('cloudinary').v2;
-const Joi = require('joi'); // [3] Request Validation Middleware
+const Joi = require('joi'); 
 
 // [6] STRUCTURED LOGGING ENGINE (Pino)
 let logger;
@@ -39,15 +39,6 @@ try {
     generateIdempotencyKey = authUtils.generateIdempotencyKey;
     generateTransactionReference = authUtils.generateTransactionReference;
 } catch(e) {}
-
-/* =========================================================================
-   [12] RECOMMENDED MONGODB INDEXES (Apply in DB Initialization)
-   db.transactions.createIndex({ providerReference: 1 }, { unique: true });
-   db.transactions.createIndex({ idempotencyKey: 1 });
-   db.transactions.createIndex({ user: 1, status: 1 });
-   db.transactions.createIndex({ createdAt: -1 });
-   db.wallets.createIndex({ user: 1 }, { unique: true });
-========================================================================= */
 
 /* =========================================================================
    [16] CENTRALIZED ERROR HANDLING
@@ -84,9 +75,8 @@ async function withRetry(fn, retries = 3) {
     for (let i = 0; i < retries; i++) {
         try { return await fn(); } 
         catch (err) {
-            // Do not retry 4xx validation errors, only 5xx or network drops
             if (i === retries - 1 || (err.response && err.response.status >= 400 && err.response.status < 500)) throw err;
-            await new Promise(r => setTimeout(r, 1000 * (i + 1))); // Exponential backoff
+            await new Promise(r => setTimeout(r, 1000 * (i + 1))); 
         }
     }
 }
@@ -106,12 +96,11 @@ function encryptBankData(text) {
 }
 
 /* =========================================================================
-   [23] & [8] REDIS / DISTRIBUTED RATE LIMITING ENGINE + CLEANUP
+   [23] & [8] REDIS / DISTRIBUTED RATE LIMITING ENGINE
 ========================================================================= */
 const redisClient = (Redis && process.env.REDIS_URL) ? new Redis(process.env.REDIS_URL) : null;
 const fallbackRateLimits = new Map();
 
-// Automatically sweep memory to prevent RAM leaks
 setInterval(() => {
     const now = Date.now();
     for (const [key, data] of fallbackRateLimits.entries()) {
@@ -145,10 +134,7 @@ async function checkRateLimit(request, action) {
             return true;
         };
 
-        if (!checkKey(ipKey) || !checkKey(userKey)) {
-            logger.warn(`[RATE LIMIT BLOCKED - MEMORY] Action: ${action}`, { ip, userId });
-            return false;
-        }
+        if (!checkKey(ipKey) || !checkKey(userKey)) return false;
         return true;
     };
 
@@ -164,13 +150,9 @@ async function checkRateLimit(request, action) {
             if (ipCount === 1) await redisClient.expire(ipKey, windowSeconds);
             if (userCount === 1) await redisClient.expire(userKey, windowSeconds);
 
-            if (ipCount > limit || userCount > limit) {
-                logger.warn(`[RATE LIMIT BLOCKED - REDIS] Action: ${action}`, { ip, userId });
-                return false;
-            }
+            if (ipCount > limit || userCount > limit) return false;
             return true;
         } catch (err) {
-            logger.error('Redis Rate Limit Error, falling back to memory', err);
             return executeFallback();
         }
     } else {
@@ -186,8 +168,8 @@ async function checkDailyLimit(userId, type, amount, limit) {
     startOfDay.setHours(0, 0, 0, 0);
     
     const txs = await Transaction.aggregate([
-        { $match: { user: userId, type: type, status: { $in: [TX_STATUS.SUCCESS, TX_STATUS.PENDING, TX_STATUS.PROCESSING] }, createdAt: {$gte: startOfDay } } },
-        { $group: { _id: null, total: {$sum: { $toDouble: "$amount" } } } }
+        { $match: { user: userId, type: type, status: { $in: [TX_STATUS.SUCCESS, TX_STATUS.PENDING, TX_STATUS.PROCESSING] }, createdAt: { $gte: startOfDay } } },
+        { $group: { _id: null, total: { $sum: { $toDouble: "$amount" } } } }
     ]);
     
     const totalToday = txs.length > 0 ? txs[0].total : 0;
@@ -195,7 +177,7 @@ async function checkDailyLimit(userId, type, amount, limit) {
 }
 
 /* =========================================================================
-   [18] IMMUTABLE AUDIT LOGGING ENGINE (COMPLETE)
+   [18] IMMUTABLE AUDIT LOGGING ENGINE
 ========================================================================= */
 async function createAuditLog(params, session = null) {
     if (!AuditLog) return;
@@ -208,7 +190,7 @@ async function createAuditLog(params, session = null) {
         });
         if (session) await log.save({ session });
         else await log.save();
-    } catch(e) { logger.error('Audit Log Error (Requires Immediate Admin Attention)', e); }
+    } catch(e) { logger.error('Audit Log Error', e); }
 }
 
 /* =========================================================================
@@ -218,10 +200,7 @@ async function checkIdempotency(request, type) {
     const idemKey = request.headers['x-idempotency-key'];
     if (idemKey) {
         const existingTx = await Transaction.findOne({ idempotencyKey: idemKey, user: request.user._id, type });
-        if (existingTx) {
-            logger.info(`[IDEMPOTENCY HIT] Type: ${type}`, { key: idemKey, user: request.user._id });
-            return existingTx;
-        }
+        if (existingTx) return existingTx;
     }
     return null;
 }
@@ -307,11 +286,10 @@ async function getWallet(request, reply) {
 }
 
 /* =========================================================================
-   2. FUND VIA PAYSTACK (FORCES REDIRECT TO DASHBOARD.HTML OR CALLBACK)
+   2. INITIALIZE FUNDING (PAYSTACK) - [FIXED MONGOOSE BALANCE BUG]
 ========================================================================= */
 async function fundWallet(request, reply) {
     try {
-        // [FIXED] Added callbackUrl to the Joi Validation Schema
         const schema = Joi.object({ 
             amount: Joi.number().min(100).required(), 
             provider: Joi.string().default('paystack'),
@@ -332,8 +310,12 @@ async function fundWallet(request, reply) {
 
         const txReference = 'TX_FND_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex').toUpperCase();
 
-        // THIS FORCES PAYSTACK TO RETURN DIRECTLY TO YOUR LIVE DASHBOARD (OR PROVIDED URL)
         const liveDashboardUrl = value.callbackUrl || `${request.protocol}://${request.hostname}/dashboard.html`;
+
+        // [FIX] Fetch wallet to satisfy Mongoose's requirement for balanceBefore/balanceAfter
+        const wallet = await Wallet.findOne({ user: request.user._id });
+        if (!wallet) throw new Error("Wallet not found");
+        const startBalance = String(wallet.availableBalance || '0');
 
         const paystackRes = await axios.post('https://api.paystack.co/transaction/initialize', {
             email: request.user.email,
@@ -347,7 +329,9 @@ async function fundWallet(request, reply) {
 
         const transaction = new Transaction({
             user: request.user._id, type: 'funding', description: 'Wallet Funding via Paystack',
-            amount: amount, fee: fee, status: 'pending', provider: 'paystack', providerReference: txReference
+            amount: amount, fee: fee, status: 'pending', provider: 'paystack', providerReference: txReference,
+            balanceBefore: startBalance, // [FIXED ERROR 1]
+            balanceAfter: startBalance   // [FIXED ERROR 1]
         });
         await transaction.save();
 
@@ -358,18 +342,36 @@ async function fundWallet(request, reply) {
 }
 
 /* =========================================================================
-   MANUAL BANK TRANSFER FUNDING (ATOMIC DUPLICATE CHECK & FORMDATA)
+   MANUAL BANK TRANSFER FUNDING [FIXED FASTIFY MULTIPART FORM BUG]
 ========================================================================= */
 async function fundManualWallet(request, reply) {
     try {
-        // [3] Validate Request (Handled via manual checking for FormData boundaries in Fastify/Express)
-        const amount = request.body.amount || request.body.amount?.value;
-        const narration = request.body.narration || request.body.narration?.value;
-        
-        if (!amount) throw new Error('Amount is required.');
+        let amountRaw = null;
+        let narrationRaw = '';
+        let fileBuffer = null;
+        let mimeType = null;
+
+        // [FIXED ERROR 2] Safely parse Multipart FormData (Images/Files)
+        if (request.isMultipart && request.isMultipart()) {
+            const parts = request.parts();
+            for await (const part of parts) {
+                if (part.type === 'file') {
+                    fileBuffer = await part.toBuffer();
+                    mimeType = part.mimetype;
+                } else {
+                    if (part.fieldname === 'amount') amountRaw = part.value;
+                    if (part.fieldname === 'narration') narrationRaw = part.value;
+                }
+            }
+        } else {
+            amountRaw = request.body?.amount;
+            narrationRaw = request.body?.narration;
+        }
+
+        if (!amountRaw) throw new Error('Amount is required.');
         if (!await checkRateLimit(request, 'fund_manual')) throw new Error('Too Many Requests.');
 
-        const requestedAmount = sanitizeAmount(amount);
+        const requestedAmount = sanitizeAmount(amountRaw);
         if (requestedAmount < (config.business?.minFunding || 100)) throw new Error(`Minimum funding is ₦${config.business?.minFunding || 100}`);
 
         const session = await mongoose.startSession();
@@ -388,29 +390,18 @@ async function fundManualWallet(request, reply) {
                 return reply.send({ success: true, message: 'Request already logged', paymentReference: existingTx.providerReference });
             }
 
-            // [17] Secure File Uploads
+            // Secure File Uploads natively via buffer
             let secureReceiptUrl = null;
-            const fileObj = request.file || request.body.receipt; // Support multer or fastify-multipart
-            if (fileObj) { 
-                const mimeType = fileObj.mimetype || fileObj.type;
+            if (fileBuffer) {
                 const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
                 if (!allowedMimeTypes.includes(mimeType)) throw new Error('Invalid file type. Allowed: JPG, PNG, WEBP, PDF.');
 
-                let fileToUpload = fileObj.path || fileObj.filepath; 
-                if (!fileToUpload && fileObj.buffer) { 
-                    fileToUpload = `data:${mimeType};base64,${Buffer.from(fileObj.buffer).toString('base64')}`;
-                } else if (!fileToUpload && fileObj._buf) {
-                    fileToUpload = `data:${mimeType};base64,${fileObj._buf.toString('base64')}`;
-                }
-
-                if (fileToUpload) {
-                    // [5] Retry Cloudinary
-                    const uploadResult = await withRetry(() => cloudinary.uploader.upload(fileToUpload, { folder: 'naterpay_receipts', resource_type: 'auto', timeout: 15000 }));
-                    secureReceiptUrl = uploadResult.secure_url;
-                }
+                const fileToUpload = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+                const uploadResult = await withRetry(() => cloudinary.uploader.upload(fileToUpload, { folder: 'naterpay_receipts', resource_type: 'auto', timeout: 15000 }));
+                secureReceiptUrl = uploadResult.secure_url;
             }
 
-            const safeNarration = sanitizeText(narration) || 'Not Provided';
+            const safeNarration = sanitizeText(narrationRaw) || 'Not Provided';
             const paymentReference = `MF-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
             const startBalance = String(wallet.availableBalance || 0);
             const idempotencyKey = request.headers['x-idempotency-key'] || `idem_man_${Date.now()}`;
@@ -445,7 +436,7 @@ async function fundManualWallet(request, reply) {
 }
 
 /* =========================================================================
-   ADMIN APPROVE MANUAL FUNDING (ATOMIC) [7] & [13]
+   ADMIN APPROVE MANUAL FUNDING (ATOMIC)
 ========================================================================= */
 async function adminApproveManualFunding(request, reply) {
     try {
@@ -481,7 +472,7 @@ async function adminApproveManualFunding(request, reply) {
                 { user: tx.user }, { $inc: { availableBalance: creditAmount, balance: creditAmount } }, { session, new: true }
             );
 
-            tx.balanceBefore = String(Number(updatedWallet.availableBalance) - creditAmount);
+            tx.balanceBefore = String(sanitizeAmount(Number(updatedWallet.availableBalance) - creditAmount));
             tx.balanceAfter = String(updatedWallet.availableBalance);
             tx.description = 'Manual Bank Transfer (Approved)';
             await tx.save({ session });
@@ -510,7 +501,7 @@ async function adminApproveManualFunding(request, reply) {
 }
 
 /* =========================================================================
-   ADMIN REJECT MANUAL FUNDING [7] & [13]
+   ADMIN REJECT MANUAL FUNDING
 ========================================================================= */
 async function adminRejectManualFunding(request, reply) {
     try {
