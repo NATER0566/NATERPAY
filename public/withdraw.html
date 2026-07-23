@@ -61,14 +61,15 @@
             overflow-wrap: break-word;
         }
         
-        .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; transition: 0.3s; position: relative; }
+        .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px 10px 20px; margin-bottom: 20px; transition: 0.3s; position: relative; }
         .input-group-custom:focus-within { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-glow); }
         .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
-        .input-group-custom input, .input-group-custom select { background: transparent; border: none; color: white; width: 100%; font-size: 1.2rem; font-weight: 700; outline: none; }
+        .input-group-custom input, .input-group-custom select { background: transparent; border: none; color: white; width: 100%; font-size: 1.2rem; font-weight: 700; outline: none; padding-bottom: 5px; }
         .input-group-custom select option { background: #111; }
 
+        /* FIXED: Anchored to the bottom so it perfectly aligns with the input text, avoiding the label */
         .verify-btn {
-            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            position: absolute; right: 15px; bottom: 12px;
             background: #222; border: 1px solid var(--gold); color: var(--gold);
             padding: 8px 15px; border-radius: 10px; font-size: 0.8rem; font-weight: 800;
             cursor: pointer; transition: 0.3s; z-index: 5;
@@ -146,13 +147,13 @@
         <div class="balance-amount" id="availableBalance">₦0.00</div>
     </div>
 
-    <!-- STRICT KYC ALERT BANNER -->
-    <div class="alert alert-warning border-warning bg-dark text-white fw-bold mb-4" style="box-shadow: 0 0 15px rgba(255, 152, 0, 0.2); border-radius: 20px;">
+    <!-- STRICT KYC ALERT BANNER (ID Added for JS Targeting) -->
+    <div id="kycAlertBanner" class="alert alert-warning border-warning bg-dark text-white fw-bold mb-4" style="box-shadow: 0 0 15px rgba(255, 152, 0, 0.2); border-radius: 20px;">
         <div class="d-flex align-items-center">
             <i class="fas fa-shield-alt fa-2x text-warning me-3"></i>
             <div>
                 <strong class="d-block mb-1" style="color: var(--gold); font-size: 1.1rem; letter-spacing: 1px;">MANDATORY KYC ENFORCEMENT</strong>
-                <span style="font-size: 0.85rem; font-weight: 500;">To prevent unauthorized transfers, your account <strong>MUST be KYC Verified</strong> before payouts are approved. Withdrawals from unverified accounts will be rejected by the admin.</span>
+                <span style="font-size: 0.85rem; font-weight: 500;">To prevent unauthorized transfers, your account <strong>MUST be KYC Verified</strong> before payouts are approved. Withdrawals from unverified accounts will be rejected.</span>
                 <a href="kyc.html" class="text-info text-decoration-none ms-1 fw-bold border-bottom border-info" style="font-size: 0.85rem;">Verify Identity Now <i class="fas fa-arrow-right text-info"></i></a>
             </div>
         </div>
@@ -270,6 +271,12 @@
                 const safeBal = data.balance?.$numberDecimal || data.balance || 0;
                 currentWalletBalance = Number(safeBal);
                 document.getElementById('availableBalance').innerText = '₦' + currentWalletBalance.toLocaleString(undefined, {minimumFractionDigits:2});
+                
+                // Hide KYC Banner if User is already verified
+                if (data.user && data.user.kycLevel >= 1) {
+                    document.getElementById('kycAlertBanner').style.display = 'none';
+                }
+
                 calculateAfterBalance();
             }
         } catch (e) {}
@@ -368,7 +375,6 @@
             Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'Amount must be between ₦1,000 and ₦500,000.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' }); return;
         }
 
-        // Apply dynamic fee exactly like the backend
         const dynamicFee = getDynamicFee(amount);
 
         if ((amount + dynamicFee) > currentWalletBalance) {
