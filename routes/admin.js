@@ -8,31 +8,89 @@ const Notification = require('../models/Notification');
 const PaymentLink = require('../models/PaymentLink'); 
 const Ad = require('../models/Ad'); 
 const axios = require('axios'); 
-const Joi = require('joi'); // Added validation
 const crypto = require('crypto');
+const Joi = require('joi'); // [1] Strict Request Validation
 
-// [1] STRUCTURED LOGGING ENGINE
+// [2] STRUCTURED LOGGING ENGINE
 let logger;
 try { 
     logger = require('pino')(); 
 } catch (e) { 
     logger = { 
         info: (msg, meta = {}) => console.log(JSON.stringify({ level: 'info', timestamp: new Date().toISOString(), message: msg, ...meta })),
+        warn: (msg, meta = {}) => console.warn(JSON.stringify({ level: 'warn', timestamp: new Date().toISOString(), message: msg, ...meta })),
         error: (msg, err, meta = {}) => console.error(JSON.stringify({ level: 'error', timestamp: new Date().toISOString(), message: msg, error: err?.message || err, ...meta }))
     };
 }
 
-let AuditLog;
+let AuditLog, Redis;
 try { AuditLog = require('../models/AuditLog'); } catch(e) {}
+try { Redis = require('ioredis'); } catch(e) {}
 
-// [2] STRICT MONEY PRECISION HELPER
+// [3] CENTRALIZED ERROR HANDLING
+function handleError(reply, error, defaultMessage = 'System error occurred.') {
+    if (error.isJoi) return reply.status(400).send({ success: false, message: error.details[0].message });
+    logger.error(error.message, error);
+    reply.status(error.status || 400).send({ success: false, message: error.message || defaultMessage });
+}
+
+// [4] STRICT MONEY PRECISION HELPER
 const sanitizeAmount = (amount) => {
     const num = Number(parseFloat(amount).toFixed(2));
     if (isNaN(num)) throw new Error('Invalid monetary amount.');
     return num;
 };
 
-// [3] IMMUTABLE AUDIT LOGGING ENGINE
+// [5] TEXT SANITIZATION (XSS Protection)
+const sanitizeText = (str) => str ? String(str).replace(/[<>]/g, '').trim().substring(0, 500) : '';
+
+/* =========================================================================
+   [6] REDIS RATE LIMITING ENGINE (Admin Abuse Protection)
+========================================================================= */
+const redisClient = (Redis && process.env.REDIS_URL) ? new Redis(process.env.REDIS_URL) : null;
+const fallbackRateLimits = new Map();
+
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, data] of fallbackRateLimits.entries()) {
+        if (now > data.resetTime) fallbackRateLimits.delete(key);
+    }
+}, 60000);
+
+async function checkRateLimit(request, action, limit = 60) {
+    const identifier = request.user ? request.user._id : request.ip;
+    const windowSeconds = 60;
+
+    const executeFallback = () => {
+        const now = Date.now();
+        const key = `rate_${action}_${identifier}`;
+        if (!fallbackRateLimits.has(key)) {
+            fallbackRateLimits.set(key, { count: 1, resetTime: now + (windowSeconds * 1000) });
+            return true;
+        }
+        const data = fallbackRateLimits.get(key);
+        if (now > data.resetTime) {
+            fallbackRateLimits.set(key, { count: 1, resetTime: now + (windowSeconds * 1000) });
+            return true;
+        }
+        if (data.count >= limit) return false;
+        data.count++;
+        return true;
+    };
+
+    if (redisClient && redisClient.status === 'ready') {
+        try {
+            const key = `rate:${action}:${identifier}`;
+            const count = await redisClient.incr(key);
+            if (count === 1) await redisClient.expire(key, windowSeconds);
+            return count <= limit;
+        } catch (err) { return executeFallback(); }
+    } else { return executeFallback(); }
+}
+
+/* =========================================================================
+   [7] IMMUTABLE AUDIT LOGGING ENGINE
+========================================================================= */
 async function createAuditLog(params, session = null) {
     if (!AuditLog) return;
     try {
@@ -52,75 +110,108 @@ async function createAuditLog(params, session = null) {
 
 async function getUsers(request, reply) {
     try {
-        const { page = 1, limit = 50, search, role, status } = request.query;
+        if (!await checkRateLimit(request, 'admin_get_users', 60)) throw { status: 429, message: 'Too many requests.' };
+
+        const schema = Joi.object({
+            page: Joi.number().min(1).default(1), limit: Joi.number().min(1).max(500).default(50),
+            search: Joi.string().allow('', null), role: Joi.string().allow('', null), status: Joi.string().allow('', null)
+        });
+        const { error, value } = schema.validate(request.query);
+        if (error) throw error;
+
         const query = {};
-        if (search) query.$or = [{ name: { $regex: search,$options: 'i' } }, { email: { $regex: search,$options: 'i' } }, { phoneNumber: { $regex: search,$options: 'i' } }];
-        if (role) query.role = role;
-        if (status === 'active') query.isActive = true;
-        if (status === 'inactive') query.isActive = false;
-        if (status === 'suspended') query.isSuspended = true;
+        if (value.search) {
+            const safeSearch = sanitizeText(value.search);
+            query.$or = [{ name: { $regex: safeSearch, $options: 'i' } }, { email: { $regex: safeSearch, $options: 'i' } }, { phoneNumber: { $regex: safeSearch, $options: 'i' } }];
+        }
+        if (value.role) query.role = sanitizeText(value.role);
+        if (value.status === 'active') query.isActive = true;
+        if (value.status === 'inactive') query.isActive = false;
+        if (value.status === 'suspended') query.isSuspended = true;
         
-        const users = await User.find(query).select('-password -transactionPin -otp').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(parseInt(limit)).lean();
+        const users = await User.find(query).select('-password -transactionPin -otp').sort({ createdAt: -1 }).skip((value.page - 1) * value.limit).limit(value.limit).lean();
         for (let user of users) {
             const wallet = await Wallet.findOne({ user: user._id });
             user.walletBalance = wallet ? wallet.availableBalance.toString() : '0';
         }
         const total = await User.countDocuments(query);
-        reply.send({ success: true, users, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / limit) } });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch users' }); }
+        reply.send({ success: true, users, pagination: { page: value.page, limit: value.limit, total, pages: Math.ceil(total / value.limit) } });
+    } catch (error) { handleError(reply, error, 'Failed to fetch users'); }
 }
 
 async function getUser(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'admin_get_user', 120)) throw { status: 429, message: 'Too many requests.' };
         const { id } = request.params;
-        const user = await User.findById(id).select('-password -transactionPin -otp');
-        if (!user) return reply.status(404).send({ success: false, message: 'User not found' });
+        const user = await User.findById(sanitizeText(id)).select('-password -transactionPin -otp');
+        if (!user) throw { status: 404, message: 'User not found' };
+
         const wallet = await Wallet.findOne({ user: user._id });
         const kyc = await KYC.findOne({ user: user._id });
         const recentTransactions = await Transaction.find({ user: user._id }).sort({ createdAt: -1 }).limit(10);
         reply.send({ success: true, user, wallet, kyc, recentTransactions });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch user' }); }
+    } catch (error) { handleError(reply, error, 'Failed to fetch user'); }
 }
 
 async function updateUser(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'admin_update_user', 30)) throw { status: 429, message: 'Too many requests.' };
+
+        const schema = Joi.object({
+            name: Joi.string().allow('', null), role: Joi.string().allow('', null),
+            isActive: Joi.boolean(), isSuspended: Joi.boolean(),
+            suspensionReason: Joi.string().allow('', null), isSecured: Joi.boolean()
+        });
+        const { error, value } = schema.validate(request.body);
+        if (error) throw error;
+
         const { id } = request.params;
-        const { name, role, isActive, isSuspended, suspensionReason, isSecured } = request.body;
-        const user = await User.findById(id);
-        if (!user) return reply.status(404).send({ success: false, message: 'User not found' });
+        const user = await User.findById(sanitizeText(id));
+        if (!user) throw { status: 404, message: 'User not found' };
         
-        if (name) user.name = name;
-        if (role) user.role = role;
-        if (typeof isActive === 'boolean') user.isActive = isActive;
-        if (typeof isSuspended === 'boolean') { 
-            user.isSuspended = isSuspended; 
-            user.suspensionReason = suspensionReason; 
-            user.suspendedAt = isSuspended ? new Date() : null; 
+        if (value.name) user.name = sanitizeText(value.name);
+        if (value.role) user.role = sanitizeText(value.role);
+        if (typeof value.isActive === 'boolean') user.isActive = value.isActive;
+        if (typeof value.isSuspended === 'boolean') { 
+            user.isSuspended = value.isSuspended; 
+            user.suspensionReason = sanitizeText(value.suspensionReason); 
+            user.suspendedAt = value.isSuspended ? new Date() : null; 
         }
-        if (typeof isSecured === 'boolean') user.isSecured = isSecured;
+        if (typeof value.isSecured === 'boolean') user.isSecured = value.isSecured;
         await user.save();
         
+        await createAuditLog({ user: request.user._id, action: `Updated User: ${user.email}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
         reply.send({ success: true, message: 'User updated successfully', user });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to update user' }); }
+    } catch (error) { handleError(reply, error, 'Failed to update user'); }
 }
 
 async function getTransactions(request, reply) {
     try {
-        const { page = 1, limit = 50, type, status } = request.query;
+        if (!await checkRateLimit(request, 'admin_get_tx', 60)) throw { status: 429, message: 'Too many requests.' };
+
+        const schema = Joi.object({
+            page: Joi.number().min(1).default(1), limit: Joi.number().min(1).max(500).default(50),
+            type: Joi.string().allow('', null), status: Joi.string().allow('', null)
+        });
+        const { error, value } = schema.validate(request.query);
+        if (error) throw error;
+
         const query = {};
-        if (type) query.type = type;
-        if (status) query.status = status;
+        if (value.type) query.type = sanitizeText(value.type);
+        if (value.status) query.status = sanitizeText(value.status);
         
-        const transactions = await Transaction.find(query).populate('user', 'name email phoneNumber').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(parseInt(limit)).lean();
+        const transactions = await Transaction.find(query).populate('user', 'name email phoneNumber').sort({ createdAt: -1 }).skip((value.page - 1) * value.limit).limit(value.limit).lean();
         const formattedTx = transactions.map(tx => ({ ...tx, userEmail: tx.user ? tx.user.email : 'Unknown User' }));
         const total = await Transaction.countDocuments(query);
         
-        reply.send({ success: true, transactions: formattedTx, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / limit) } });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch transactions' }); }
+        reply.send({ success: true, transactions: formattedTx, pagination: { page: value.page, limit: value.limit, total, pages: Math.ceil(total / value.limit) } });
+    } catch (error) { handleError(reply, error, 'Failed to fetch transactions'); }
 }
 
 async function getAnalytics(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'admin_analytics', 30)) throw { status: 429, message: 'Too many requests.' };
+
         const userCount = await User.countDocuments({ isActive: true });
         const transactionCount = await Transaction.countDocuments({ status: 'success' });
         const pendingKYC = await KYC.countDocuments({ status: 'under_review' });
@@ -129,7 +220,7 @@ async function getAnalytics(request, reply) {
         const totalVaultBalance = wallets.reduce((acc, w) => acc + parseFloat(w.availableBalance?.toString() || '0'), 0);
         
         reply.send({ success: true, summary: { totalUsers: userCount, totalTransactions: transactionCount, pendingKYC, openTickets, totalVaultBalance } });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch analytics' }); }
+    } catch (error) { handleError(reply, error, 'Failed to fetch analytics'); }
 }
 
 // ============================================================================
@@ -138,32 +229,30 @@ async function getAnalytics(request, reply) {
 
 async function getPendingWithdrawals(request, reply) {
     try {
-        const pendingWithdrawals = await Transaction.find({ type: 'withdrawal', status: 'processing' })
-            .populate('user', 'name email phoneNumber') 
-            .sort({ createdAt: -1 });
-
+        if (!await checkRateLimit(request, 'admin_withdrawals', 60)) throw { status: 429, message: 'Too many requests.' };
+        const pendingWithdrawals = await Transaction.find({ type: 'withdrawal', status: 'processing' }).populate('user', 'name email phoneNumber').sort({ createdAt: -1 });
         reply.send({ success: true, pendingWithdrawals });
-    } catch (error) {
-        reply.status(500).send({ success: false, message: 'Failed to fetch pending withdrawals.' });
-    }
+    } catch (error) { handleError(reply, error, 'Failed to fetch pending withdrawals.'); }
 }
 
 async function processWithdrawal(request, reply) {
+    if (!await checkRateLimit(request, 'admin_process_withdrawal', 30)) return reply.status(429).send({ success: false, message: 'Too many requests.' });
+
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
+        const schema = Joi.object({ reason: Joi.string().allow('', null) });
+        const { error, value } = schema.validate(request.body);
+        if (error) throw error;
+
         const { id, action } = request.params; 
-        const { reason } = request.body || {}; 
+        const safeAction = sanitizeText(action);
         
-        // [1] Atomic Lock
-        const transaction = await Transaction.findOne({ _id: id, type: 'withdrawal', status: 'processing' }).populate('user', 'name email').session(session);
+        const transaction = await Transaction.findOne({ _id: sanitizeText(id), type: 'withdrawal', status: 'processing' }).populate('user', 'name email').session(session);
         if (!transaction) throw new Error('Invalid or already processed transaction.');
 
-        // ==========================================
-        // APPROVAL LOGIC
-        // ==========================================
-        if (action === 'approve') {
+        if (safeAction === 'approve') {
             transaction.status = 'success';
             transaction.metadata = transaction.metadata || {};
             transaction.metadata.approvedBy = request.user?._id;
@@ -186,17 +275,13 @@ async function processWithdrawal(request, reply) {
             if (request.server && request.server.io) request.server.io.to(`user:${transaction.user._id}`).emit('notification', { title: 'Withdrawal Approved', message: 'Funds sent to bank!', type: 'success' });
             return reply.send({ success: true, message: 'Withdrawal approved and marked as success.' });
 
-        // ==========================================
-        // REJECTION LOGIC (ATOMIC REFUND)
-        // ==========================================
-        } else if (action === 'reject') {
+        } else if (safeAction === 'reject') {
             const wallet = await Wallet.findOne({ user: transaction.user._id }).session(session);
             if (!wallet) throw new Error('User wallet not found for refund.');
 
             const refundAmount = sanitizeAmount(Number(transaction.amount) + Number(transaction.fee));
             const currentAvail = sanitizeAmount(wallet.availableBalance);
             const currentTotal = sanitizeAmount(wallet.balance);
-
             const newAvail = currentAvail + refundAmount;
 
             wallet.availableBalance = String(newAvail);
@@ -206,7 +291,7 @@ async function processWithdrawal(request, reply) {
             transaction.status = 'failed';
             transaction.balanceAfter = String(newAvail); 
             transaction.metadata = transaction.metadata || {};
-            transaction.metadata.rejectionReason = reason || 'Rejected by Administrator';
+            transaction.metadata.rejectionReason = sanitizeText(value.reason) || 'Rejected by Administrator';
             transaction.metadata.rejectedBy = request.user?._id;
             transaction.metadata.rejectedAt = new Date();
             await transaction.save({ session });
@@ -226,7 +311,7 @@ async function processWithdrawal(request, reply) {
 
             if (request.server && request.server.io) {
                 request.server.io.to(`user:${transaction.user._id}`).emit('wallet:update', { balance: wallet.availableBalance });
-                request.server.io.to(`user:${transaction.user._id}`).emit('notification', { type: 'error', title: 'Withdrawal Rejected', message: `Refunded: ${reason || 'Admin decision'}` });
+                request.server.io.to(`user:${transaction.user._id}`).emit('notification', { type: 'error', title: 'Withdrawal Rejected', message: `Refunded: ${sanitizeText(value.reason) || 'Admin decision'}` });
             }
             return reply.send({ success: true, message: `Withdrawal rejected. ₦${refundAmount} has been safely refunded to user.` });
         } else {
@@ -235,8 +320,7 @@ async function processWithdrawal(request, reply) {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        logger.error('Admin Process Withdrawal Error:', error);
-        reply.status(400).send({ success: false, message: error.message || 'Failed to process withdrawal.' });
+        handleError(reply, error, 'Failed to process withdrawal.');
     }
 }
 
@@ -246,20 +330,22 @@ async function processWithdrawal(request, reply) {
 
 async function getPendingKYC(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'admin_get_kyc', 60)) throw { status: 429, message: 'Too many requests.' };
         const pendingKYC = await KYC.find({ status: 'under_review' }).populate('user', 'name email phoneNumber').sort({ createdAt: 1 });
         reply.send({ success: true, kycRequests: pendingKYC });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch pending KYC requests' }); }
+    } catch (error) { handleError(reply, error, 'Failed to fetch pending KYC requests'); }
 }
 
 async function verifyRealWorldKYC(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'admin_verify_kyc_api', 30)) throw { status: 429, message: 'Too many requests.' };
         const { kycId } = request.params;
-        const kycRecord = await KYC.findById(kycId).populate('user', 'name');
+        const kycRecord = await KYC.findById(sanitizeText(kycId)).populate('user', 'name');
         
-        if (!kycRecord) return reply.status(404).send({ success: false, message: 'KYC record not found' });
+        if (!kycRecord) throw { status: 404, message: 'KYC record not found' };
         
         const bvn = kycRecord.level1?.bvn;
-        if (!bvn) return reply.status(400).send({ success: false, message: 'No BVN provided by user to verify.' });
+        if (!bvn) throw { status: 400, message: 'No BVN provided by user to verify.' };
 
         try {
             const paystackResponse = await axios.get(`https://api.paystack.co/bank/resolve_bvn/${bvn}`, {
@@ -269,46 +355,53 @@ async function verifyRealWorldKYC(request, reply) {
             return reply.send({ success: true, message: 'Paystack verification complete', systemName: kycRecord.user.name, paystackDetails: { firstName: paystackData.first_name, lastName: paystackData.last_name, dob: paystackData.formatted_dob, phone: paystackData.mobile } });
         } catch (paystackError) {
             const errorMessage = paystackError.response?.data?.message || 'Paystack BVN service is offline or rejected the request.';
-            return reply.status(400).send({ success: false, message: `Paystack Error: ${errorMessage}` });
+            throw { status: 400, message: `Paystack Error: ${errorMessage}` };
         }
-    } catch (error) { reply.status(500).send({ success: false, message: 'Server error during verification.' }); }
+    } catch (error) { handleError(reply, error, 'Server error during verification.'); }
 }
 
 async function approveKYC(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'admin_approve_kyc', 30)) throw { status: 429, message: 'Too many requests.' };
         const { kycId } = request.params;
-        const kyc = await KYC.findById(kycId);
-        if (!kyc) return reply.status(404).send({ success: false, message: 'KYC not found' });
+        const kyc = await KYC.findById(sanitizeText(kycId));
+        if (!kyc) throw { status: 404, message: 'KYC not found' };
 
         const user = await User.findById(kyc.user);
-        if (!user) return reply.status(404).send({ success: false, message: 'User not found' });
+        if (!user) throw { status: 404, message: 'User not found' };
         
         if (kyc.currentLevel === 1) { await kyc.approveLevel1(request.user._id); user.kycLevel = 1; } 
         else if (kyc.currentLevel === 2) { await kyc.approveLevel2(request.user._id); user.kycLevel = 2; } 
         else if (kyc.currentLevel === 3) { await kyc.approveLevel3(request.user._id); user.kycLevel = 3; }
         
         await user.save();
+        await createAuditLog({ user: request.user._id, action: `Approved KYC Level ${kyc.currentLevel} for ${user.email}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
 
         if (request.server && request.server.io) request.server.io.to(`user:${user._id}`).emit('notification', { title: 'KYC Approved', message: `Your Tier ${kyc.currentLevel} verification is approved!` });
-        
         reply.send({ success: true, message: 'KYC approved successfully' });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Server error during KYC approval' }); }
+    } catch (error) { handleError(reply, error, 'Server error during KYC approval'); }
 }
 
 async function rejectKYC(request, reply) {
     try {
-        const { kycId } = request.params;
-        const reason = request.body && request.body.reason ? request.body.reason : 'Your provided details could not be verified.';
+        if (!await checkRateLimit(request, 'admin_reject_kyc', 30)) throw { status: 429, message: 'Too many requests.' };
         
-        const kyc = await KYC.findById(kycId);
-        if (!kyc) return reply.status(404).send({ success: false, message: 'KYC not found' });
+        const schema = Joi.object({ reason: Joi.string().allow('', null) });
+        const { error, value } = schema.validate(request.body);
+        if (error) throw error;
+
+        const { kycId } = request.params;
+        const reason = sanitizeText(value.reason) || 'Your provided details could not be verified.';
+        
+        const kyc = await KYC.findById(sanitizeText(kycId));
+        if (!kyc) throw { status: 404, message: 'KYC not found' };
 
         await kyc.reject(reason);
+        await createAuditLog({ user: request.user._id, action: `Rejected KYC for user ${kyc.user}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
 
         if (request.server && request.server.io) request.server.io.to(`user:${kyc.user}`).emit('notification', { title: 'KYC Rejected', message: `Reason: ${kyc.rejectionReason}` });
-
         reply.send({ success: true, message: 'KYC rejected successfully.' });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Server error during KYC rejection' }); }
+    } catch (error) { handleError(reply, error, 'Server error during KYC rejection'); }
 }
 
 // ============================================================================
@@ -317,29 +410,41 @@ async function rejectKYC(request, reply) {
 
 async function updateProduct(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'admin_update_product', 30)) throw { status: 429, message: 'Too many requests.' };
+
+        const schema = Joi.object({
+            title: Joi.string().allow('', null), amount: Joi.number().allow('', null),
+            category: Joi.string().allow('', null), description: Joi.string().allow('', null)
+        });
+        const { error, value } = schema.validate(request.body);
+        if (error) throw error;
+
         const { id } = request.params;
-        const { title, amount, category, description } = request.body;
+        const product = await PaymentLink.findById(sanitizeText(id));
+        if (!product) throw { status: 404, message: 'Product item not found' };
 
-        const product = await PaymentLink.findById(id);
-        if (!product) return reply.status(404).send({ success: false, message: 'Product item not found' });
-
-        if (title) product.title = title;
-        if (category) product.category = category;
-        if (description) product.description = description;
-        if (amount !== undefined && !product.isFlexibleAmount) product.amount = String(amount);
+        if (value.title) product.title = sanitizeText(value.title);
+        if (value.category) product.category = sanitizeText(value.category);
+        if (value.description) product.description = sanitizeText(value.description);
+        if (value.amount !== undefined && value.amount !== null && !product.isFlexibleAmount) product.amount = String(sanitizeAmount(value.amount));
 
         await product.save();
+        await createAuditLog({ user: request.user._id, action: `Admin Updated Product: ${product.linkId}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
+
         reply.send({ success: true, message: 'Product listing modified successfully', product });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to update marketplace item' }); }
+    } catch (error) { handleError(reply, error, 'Failed to update marketplace item'); }
 }
 
 async function deleteProduct(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'admin_delete_product', 20)) throw { status: 429, message: 'Too many requests.' };
         const { id } = request.params;
-        const product = await PaymentLink.findByIdAndDelete(id);
-        if (!product) return reply.status(404).send({ success: false, message: 'Listing already purged or not found' });
+        const product = await PaymentLink.findByIdAndDelete(sanitizeText(id));
+        if (!product) throw { status: 404, message: 'Listing already purged or not found' };
+        
+        await createAuditLog({ user: request.user._id, action: `Admin Deleted Product: ${id}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
         reply.send({ success: true, message: 'Product completely purged from global ledger' });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to delete product from ledger' }); }
+    } catch (error) { handleError(reply, error, 'Failed to delete product from ledger'); }
 }
 
 // ============================================================================
@@ -348,32 +453,38 @@ async function deleteProduct(request, reply) {
 
 async function getPendingAds(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'admin_get_ads', 60)) throw { status: 429, message: 'Too many requests.' };
         const ads = await Ad.find({}).populate('user', 'name email').sort({ status: -1, createdAt: -1 }); 
         reply.send({ success: true, ads });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch adverts' }); }
+    } catch (error) { handleError(reply, error, 'Failed to fetch adverts'); }
 }
 
 async function approveAd(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'admin_approve_ad', 30)) throw { status: 429, message: 'Too many requests.' };
         const { id } = request.params;
-        const ad = await Ad.findById(id);
-        if (!ad) return reply.status(404).send({ success: false, message: 'Advert not found' });
+        const ad = await Ad.findById(sanitizeText(id));
+        if (!ad) throw { status: 404, message: 'Advert not found' };
         
         ad.status = 'approved';
         await ad.save();
 
+        await createAuditLog({ user: request.user._id, action: `Admin Approved Ad: ${ad._id}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
         if (request.server && request.server.io) request.server.io.to(`user:${ad.user}`).emit('notification', { title: 'Campaign Approved!', type: 'success', message: `Your campaign "${ad.title}" is now LIVE.` });
+        
         reply.send({ success: true, message: 'Advert approved and is now live.' });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to approve advert' }); }
+    } catch (error) { handleError(reply, error, 'Failed to approve advert'); }
 }
 
 async function rejectAd(request, reply) {
+    if (!await checkRateLimit(request, 'admin_reject_ad', 20)) return reply.status(429).send({ success: false, message: 'Too many requests.' });
+
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
         const { id } = request.params;
-        const ad = await Ad.findOne({ _id: id, status: { $ne: 'rejected' } }).session(session);
+        const ad = await Ad.findOne({ _id: sanitizeText(id), status: { $ne: 'rejected' } }).session(session);
         if (!ad) throw new Error('Advert not found or already rejected.');
         
         const totalRefund = sanitizeAmount(Number(ad.packageCost || 0) + Number(ad.viewBudgetCost || 0));
@@ -415,18 +526,20 @@ async function rejectAd(request, reply) {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        logger.error('Admin Reject Ad Error:', error);
-        reply.status(400).send({ success: false, message: error.message || 'Failed to reject advert' });
+        handleError(reply, error, 'Failed to reject advert');
     }
 }
 
 async function deleteAd(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'admin_delete_ad', 20)) throw { status: 429, message: 'Too many requests.' };
         const { id } = request.params;
-        const ad = await Ad.findByIdAndDelete(id);
-        if (!ad) return reply.status(404).send({ success: false, message: 'Advert already deleted or not found' });
+        const ad = await Ad.findByIdAndDelete(sanitizeText(id));
+        if (!ad) throw { status: 404, message: 'Advert already deleted or not found' };
+        
+        await createAuditLog({ user: request.user._id, action: `Admin Deleted Ad: ${id}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
         reply.send({ success: true, message: 'Advert permanently obliterated from database.' });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to permanently delete advert' }); }
+    } catch (error) { handleError(reply, error, 'Failed to permanently delete advert'); }
 }
 
 // ============================================================================
@@ -434,16 +547,24 @@ async function deleteAd(request, reply) {
 // ============================================================================
 
 async function updateUserBalance(request, reply) {
+    if (!await checkRateLimit(request, 'admin_update_balance', 20)) return reply.status(429).send({ success: false, message: 'Too many requests.' });
+
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
+        const schema = Joi.object({
+            action: Joi.string().valid('credit', 'debit').required(),
+            amount: Joi.number().min(1).required(),
+            reason: Joi.string().required()
+        });
+        const { error, value } = schema.validate(request.body);
+        if (error) throw error;
+
         const { id } = request.params;
-        const { action, amount, reason } = request.body;
+        const { action, amount, reason } = value;
 
-        if (!amount || amount <= 0 || !reason) throw new Error('Valid amount and reason are required');
-
-        const wallet = await Wallet.findOne({ user: id }).session(session);
+        const wallet = await Wallet.findOne({ user: sanitizeText(id) }).session(session);
         if (!wallet) throw new Error('User wallet not found');
 
         const currentAvail = sanitizeAmount(wallet.availableBalance);
@@ -459,8 +580,6 @@ async function updateUserBalance(request, reply) {
             if (currentAvail < amountFloat) throw new Error('Insufficient user balance for this debit.');
             newAvail = currentAvail - amountFloat;
             newLedger = currentLedger - amountFloat;
-        } else {
-            throw new Error('Invalid action provided.');
         }
 
         wallet.availableBalance = String(newAvail);
@@ -468,7 +587,7 @@ async function updateUserBalance(request, reply) {
         await wallet.save({ session });
 
         const adminTx = new Transaction({
-            user: id, type: action === 'credit' ? 'funding' : 'withdrawal', description: `Admin ${action.toUpperCase()}: ${reason}`, 
+            user: id, type: action === 'credit' ? 'funding' : 'withdrawal', description: `Admin ${action.toUpperCase()}: ${sanitizeText(reason)}`, 
             amount: amountFloat, fee: 0, balanceBefore: String(currentAvail), balanceAfter: String(newAvail),
             status: 'success', provider: 'internal', providerReference: `ADM-${Date.now()}`
         });
@@ -477,7 +596,7 @@ async function updateUserBalance(request, reply) {
         await createAuditLog({
             user: id, transactionId: adminTx._id, reference: adminTx.providerReference, amount: amountFloat,
             type: action === 'credit' ? 'admin_credit' : 'admin_debit', previousBalance: currentAvail, newBalance: newAvail, 
-            ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'success', source: `Admin API: ${request.user._id}`, details: { reason }
+            ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'success', source: `Admin API: ${request.user._id}`, details: { reason: sanitizeText(reason) }
         }, session);
 
         await session.commitTransaction();
@@ -488,18 +607,22 @@ async function updateUserBalance(request, reply) {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        logger.error('Admin balance update error:', error);
-        reply.status(400).send({ success: false, message: error.message || 'Failed to update ledger balance.' });
+        handleError(reply, error, 'Failed to update ledger balance.');
     }
 }
 
 async function verifyTransaction(request, reply) {
+    if (!await checkRateLimit(request, 'admin_verify_tx', 30)) return reply.status(429).send({ success: false, message: 'Too many requests.' });
+
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const { transactionId } = request.body;
-        const tx = await Transaction.findById(transactionId).session(session);
+        const schema = Joi.object({ transactionId: Joi.string().required() });
+        const { error, value } = schema.validate(request.body);
+        if (error) throw error;
+
+        const tx = await Transaction.findById(sanitizeText(value.transactionId)).session(session);
         
         if (!tx) throw new Error('Transaction not found');
         if (tx.status === 'success') throw new Error('Transaction is already verified');
@@ -550,30 +673,39 @@ async function verifyTransaction(request, reply) {
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
-        logger.error('Admin force verify error:', error);
-        reply.status(400).send({ success: false, message: error.message || 'Failed to verify transaction' });
+        handleError(reply, error, 'Failed to verify transaction');
     }
 }
 
 async function sendPushNotification(request, reply) {
     try {
-        const { targetEmail, title, message, type, fileData } = request.body;
+        if (!await checkRateLimit(request, 'admin_push_notif', 20)) throw { status: 429, message: 'Too many requests.' };
+
+        const schema = Joi.object({
+            targetEmail: Joi.string().allow('', null, 'ALL'), title: Joi.string().required(),
+            message: Joi.string().required(), type: Joi.string().default('info'), fileData: Joi.string().allow('', null)
+        });
+        const { error, value } = schema.validate(request.body);
+        if (error) throw error;
         
-        if (targetEmail === 'ALL' || !targetEmail) {
-            if (request.server && request.server.io) request.server.io.emit('notification', { title, message, type: type || 'info', image: fileData });
+        if (value.targetEmail === 'ALL' || !value.targetEmail) {
+            if (request.server && request.server.io) request.server.io.emit('notification', { title: sanitizeText(value.title), message: sanitizeText(value.message), type: value.type, image: value.fileData });
+            await createAuditLog({ user: request.user._id, action: `Broadcast Notification: ${value.title}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
             return reply.send({ success: true, message: 'Broadcast transmitted' });
         }
 
-        const user = await User.findOne({ email: targetEmail });
-        if (!user) return reply.status(404).send({ success: false, message: 'Target user not found' });
+        const user = await User.findOne({ email: sanitizeText(value.targetEmail).toLowerCase() });
+        if (!user) throw { status: 404, message: 'Target user not found' };
 
         if (Notification && typeof Notification.create === 'function') {
-            await Notification.create({ user: user._id, title, message, type: 'system', priority: 'high' });
+            await Notification.create({ user: user._id, title: sanitizeText(value.title), message: sanitizeText(value.message), type: 'system', priority: 'high' });
         }
 
-        if (request.server && request.server.io) request.server.io.to(`user:${user._id}`).emit('notification', { title, message, type: type || 'info', image: fileData });
+        if (request.server && request.server.io) request.server.io.to(`user:${user._id}`).emit('notification', { title: sanitizeText(value.title), message: sanitizeText(value.message), type: value.type, image: value.fileData });
+        
+        await createAuditLog({ user: request.user._id, action: `Sent Notification to ${user.email}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
         reply.send({ success: true, message: 'Notification transmitted to user' });
-    } catch (error) { reply.status(500).send({ success: false, message: 'Failed to transmit notification' }); }
+    } catch (error) { handleError(reply, error, 'Failed to transmit notification'); }
 }
 
 async function getSupportTickets(request, reply) { reply.send({ success: true, tickets: [] }); }
