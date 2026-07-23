@@ -7,7 +7,7 @@
     <title>NATER-PAY | Support Center</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
     <style>
@@ -22,46 +22,54 @@
             display: flex; justify-content: space-between; align-items: center; z-index: 1000;
         }
 
-        .brand-text { 
-            font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; 
-            text-transform: uppercase; display: flex; flex-direction: column; align-items: center;
-        }
-        
-        /* Adjusted for the header */
-        header .brand-text { align-items: flex-start; }
-        
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; }
         .site-part-1 { color: var(--gold); font-size: 1.4rem; } 
         .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
 
-        .container { max-width: 900px; margin: 50px auto; padding: 0 20px; flex: 1; }
+        .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; flex: 1; }
         
         .support-card {
-            background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
-            padding: 40px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            position: relative; overflow: hidden;
+            background: var(--card-bg); border: 1px solid #333; border-radius: 16px;
+            padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            position: relative; overflow: hidden; transition: 0.3s;
         }
 
-        .instruction-box {
-            background: rgba(212, 175, 55, 0.05);
-            border: 1.5px dashed var(--gold);
-        }
+        /* TABS */
+        .nav-pills .nav-link { color: #888; font-weight: 600; border-radius: 8px; transition: 0.3s; padding: 12px 25px; }
+        .nav-pills .nav-link.active { background-color: var(--gold); color: #000; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); }
+        .nav-pills .nav-link:hover:not(.active) { color: var(--gold); background: rgba(212, 175, 55, 0.1); }
+
+        /* DIRECT CONTACT */
+        .contact-hover:hover { border-color: var(--gold); transform: translateY(-5px); box-shadow: 0 15px 35px rgba(212, 175, 55, 0.15); }
+        .btn-action { font-weight: 800; border-radius: 10px; padding: 12px; letter-spacing: 1px; transition: 0.3s; border-width: 2px; text-transform: uppercase; }
         
-        .contact-hover {
-            transition: all 0.3s ease;
-            cursor: default;
-        }
-        .contact-hover:hover {
-            border-color: var(--gold);
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(212, 175, 55, 0.15);
-        }
+        /* TICKET LIST */
+        .ticket-item { background: #111; border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; cursor: pointer; }
+        .ticket-item:hover { border-color: var(--gold); background: #1a1a1a; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .status-open { background: rgba(212, 175, 55, 0.2); color: var(--gold); border: 1px solid var(--gold); }
+        .status-resolved { background: rgba(40, 167, 69, 0.2); color: #28a745; border: 1px solid #28a745; }
+        .status-closed { background: rgba(108, 117, 125, 0.2); color: #adb5bd; border: 1px solid #6c757d; }
 
-        .btn-action {
-            font-weight: 800; border-radius: 12px; padding: 15px; letter-spacing: 1px;
-            transition: 0.3s; border-width: 2px; text-transform: uppercase;
-        }
-        .btn-action:hover { transform: translateY(-2px); }
+        /* MODALS (DARK THEME) */
+        .modal-content { background-color: #0f0f0f; border: 1px solid var(--gold); border-radius: 16px; color: white; }
+        .modal-header { border-bottom: 1px solid #333; }
+        .modal-footer { border-top: 1px solid #333; }
+        .form-control, .form-select { background-color: #1a1a1a; border: 1px solid #333; color: white; border-radius: 8px; }
+        .form-control:focus, .form-select:focus { background-color: #222; border-color: var(--gold); color: white; box-shadow: 0 0 0 0.25rem rgba(212, 175, 55, 0.25); }
 
+        /* CHAT INTERFACE */
+        .chat-container { max-height: 400px; overflow-y: auto; padding: 15px; background: #050505; border-radius: 12px; border: 1px solid #222; margin-bottom: 15px; }
+        .chat-bubble { max-width: 80%; padding: 12px 18px; border-radius: 15px; margin-bottom: 15px; position: relative; font-size: 0.95rem; }
+        .chat-user { background: rgba(212, 175, 55, 0.15); border: 1px solid var(--gold); color: white; margin-left: auto; border-bottom-right-radius: 2px; }
+        .chat-admin { background: #1a1a1a; border: 1px solid #333; color: white; margin-right: auto; border-bottom-left-radius: 2px; }
+        .chat-meta { font-size: 0.7rem; color: #888; margin-top: 5px; display: block; }
+        
+        /* SCROLLBAR */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
     </style>
 </head>
 <body>
@@ -77,50 +85,183 @@
 </header>
 
 <div class="container">
-    <h1 class="text-center mb-5" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); text-shadow: 0 4px 10px rgba(0,0,0,0.8);">
-        <i class="fas fa-headset me-2"></i> HELP & SUPPORT
+    <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); text-shadow: 0 4px 10px rgba(0,0,0,0.8);">
+        <i class="fas fa-headset me-2"></i> SUPPORT CENTER
     </h1>
-    
-    <!-- STRICT INSTRUCTIONS BANNER -->
-    <div class="support-card instruction-box text-center mb-5">
-        <h4 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;">IMPORTANT INSTRUCTIONS</h4>
-        <p class="text-light fs-6 mb-4" style="line-height: 1.8;">
-            To ensure our security team can resolve your issue as quickly as possible, you <strong>MUST</strong> include the following details when sending us a message on WhatsApp or Email:
-        </p>
-        <div class="d-inline-block text-start" style="background: rgba(0,0,0,0.5); padding: 20px 30px; border-radius: 12px; border: 1px solid #444;">
-            <p class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> <strong>1. Your Registered Naterpay Email Address</strong></p>
-            <p class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> <strong>2. A clear Subject/Title of your problem</strong></p>
-            <p class="mb-0"><i class="fas fa-check-circle text-success me-2"></i> <strong>3. A detailed description of the error or request</strong></p>
-        </div>
-    </div>
 
-    <!-- DIRECT CONTACT OPTIONS -->
-    <div class="row g-4">
-        <!-- WHATSAPP -->
-        <div class="col-md-6">
-            <div class="support-card text-center contact-hover h-100 d-flex flex-column justify-content-between">
-                <div>
-                    <i class="fab fa-whatsapp fa-4x text-success mb-4" style="filter: drop-shadow(0 0 15px rgba(40, 167, 69, 0.4));"></i>
-                    <h4 class="fw-bold mb-2">Live Chat</h4>
-                    <p class="text-muted small mb-4">Fastest response time. Available 24/7 for urgent inquiries and transaction disputes.</p>
+    <!-- NAVIGATION TABS -->
+    <ul class="nav nav-pills justify-content-center mb-4" id="supportTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tickets-tab" data-bs-toggle="pill" data-bs-target="#tickets" type="button" role="tab"><i class="fas fa-ticket-alt me-2"></i> My Tickets</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="contact-tab" data-bs-toggle="pill" data-bs-target="#contact" type="button" role="tab"><i class="fas fa-comments me-2"></i> Direct Contact</button>
+        </li>
+    </ul>
+
+    <!-- TAB CONTENTS -->
+    <div class="tab-content" id="supportTabsContent">
+        
+        <!-- ========================================== -->
+        <!-- TAB 1: TICKETING SYSTEM                    -->
+        <!-- ========================================== -->
+        <div class="tab-pane fade show active" id="tickets" role="tabpanel">
+            <div class="support-card">
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+                    <h4 class="m-0 fw-bold"><i class="fas fa-list-ul text-warning me-2"></i> Support History</h4>
+                    <button class="btn btn-warning fw-bold text-dark rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createTicketModal">
+                        <i class="fas fa-plus me-1"></i> Open New Ticket
+                    </button>
                 </div>
-                <a href="https://wa.me/2348160979620" target="_blank" class="btn btn-outline-success btn-action w-100">
-                    <i class="fab fa-whatsapp me-2"></i> Message on WhatsApp
-                </a>
+                
+                <div id="ticketListLoader" class="text-center py-5">
+                    <div class="spinner-border text-warning" role="status"></div>
+                    <p class="mt-2 text-muted">Loading your tickets...</p>
+                </div>
+
+                <div id="ticketListContainer" style="display: none;">
+                    <!-- Tickets injected here via JS -->
+                </div>
+                
+                <div id="noTicketsMessage" class="text-center py-5" style="display: none;">
+                    <i class="fas fa-box-open fa-3x text-secondary mb-3"></i>
+                    <h5 class="text-muted">You have no support tickets.</h5>
+                    <p class="text-secondary small">If you have an issue, click the button above to open a ticket.</p>
+                </div>
             </div>
         </div>
-        
-        <!-- EMAIL -->
-        <div class="col-md-6">
-            <div class="support-card text-center contact-hover h-100 d-flex flex-column justify-content-between">
-                <div>
-                    <i class="fas fa-envelope fa-4x text-warning mb-4" style="filter: drop-shadow(0 0 15px rgba(255, 193, 7, 0.4));"></i>
-                    <h4 class="fw-bold mb-2">Email Support</h4>
-                    <p class="text-muted small mb-4">Best for detailed inquiries, submitting KYC documents, or formal account requests.</p>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: DIRECT CONTACT (WHATSAPP/EMAIL)     -->
+        <!-- ========================================== -->
+        <div class="tab-pane fade" id="contact" role="tabpanel">
+            <div class="support-card mb-4 text-center" style="background: rgba(212, 175, 55, 0.05); border: 1.5px dashed var(--gold);">
+                <h4 class="mb-3" style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800;">IMPORTANT INSTRUCTIONS</h4>
+                <p class="text-light fs-6 mb-4" style="line-height: 1.8;">
+                    To ensure our security team can resolve your issue quickly, you <strong>MUST</strong> include:
+                </p>
+                <div class="d-inline-block text-start" style="background: rgba(0,0,0,0.5); padding: 20px 30px; border-radius: 12px; border: 1px solid #444;">
+                    <p class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> <strong>Your Registered Naterpay Email Address</strong></p>
+                    <p class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> <strong>A clear Subject/Title of your problem</strong></p>
+                    <p class="mb-0"><i class="fas fa-check-circle text-success me-2"></i> <strong>A detailed description of the error</strong></p>
                 </div>
-                <a href="mailto:nmbashau@gmail.com" class="btn btn-outline-warning btn-action w-100">
-                    <i class="fas fa-paper-plane me-2"></i> Send an Email
-                </a>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="support-card text-center contact-hover h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <i class="fab fa-whatsapp fa-4x text-success mb-3" style="filter: drop-shadow(0 0 15px rgba(40, 167, 69, 0.4));"></i>
+                            <h4 class="fw-bold mb-2">Live Chat</h4>
+                            <p class="text-muted small mb-4">Fastest response time. Available 24/7 for urgent inquiries.</p>
+                        </div>
+                        <a href="https://wa.me/2348160979620" target="_blank" class="btn btn-outline-success btn-action w-100"><i class="fab fa-whatsapp me-2"></i> Message on WhatsApp</a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="support-card text-center contact-hover h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <i class="fas fa-envelope fa-4x text-warning mb-3" style="filter: drop-shadow(0 0 15px rgba(255, 193, 7, 0.4));"></i>
+                            <h4 class="fw-bold mb-2">Email Support</h4>
+                            <p class="text-muted small mb-4">Best for submitting KYC documents or formal requests.</p>
+                        </div>
+                        <a href="mailto:nmbashau@gmail.com" class="btn btn-outline-warning btn-action w-100"><i class="fas fa-paper-plane me-2"></i> Send an Email</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: CREATE TICKET                       -->
+<!-- ========================================== -->
+<div class="modal fade" id="createTicketModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-warning"><i class="fas fa-pen-alt me-2"></i> Open Support Ticket</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createTicketForm">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Subject</label>
+                        <input type="text" id="t-subject" class="form-control" placeholder="E.g. Deposit not reflecting" required minlength="3">
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label text-muted small fw-bold">Category</label>
+                            <select id="t-category" class="form-select" required>
+                                <option value="funding">Wallet Funding</option>
+                                <option value="withdrawal">Withdrawal</option>
+                                <option value="vtu">Airtime / Data / Bills</option>
+                                <option value="kyc">KYC Verification</option>
+                                <option value="account">Account Settings</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label text-muted small fw-bold">Priority</label>
+                            <select id="t-priority" class="form-select" required>
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent" class="text-danger">Urgent</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Transaction Reference (Optional)</label>
+                        <input type="text" id="t-ref" class="form-control" placeholder="TX_123456789">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Detailed Description</label>
+                        <textarea id="t-desc" class="form-control" rows="4" placeholder="Explain the issue clearly..." required minlength="10"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-bold text-dark" id="btnSubmitTicket">
+                        Submit Ticket
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: VIEW TICKET & CHAT                  -->
+<!-- ========================================== -->
+<div class="modal fade" id="viewTicketModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header align-items-center">
+                <div>
+                    <h5 class="modal-title fw-bold text-warning mb-1" id="v-subject">Ticket Subject</h5>
+                    <span class="badge bg-secondary" id="v-id">#TICKET_ID</span>
+                    <span id="v-status-badge" class="ms-2 status-badge">STATUS</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="p-3 border-bottom border-secondary bg-black">
+                    <p class="text-light m-0" id="v-desc" style="font-size: 0.95rem; white-space: pre-wrap;"></p>
+                </div>
+                
+                <div class="chat-container mx-3 mt-3" id="chatContainer">
+                    <!-- Chat bubbles injected here -->
+                    <div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Loading messages...</div>
+                </div>
+
+                <div class="p-3 bg-black border-top border-secondary">
+                    <form id="replyForm" class="d-flex gap-2">
+                        <input type="hidden" id="replyTicketId">
+                        <input type="text" id="replyMessage" class="form-control" placeholder="Type your reply..." required autocomplete="off">
+                        <button type="submit" class="btn btn-warning text-dark fw-bold px-4" id="btnReply">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -128,40 +269,222 @@
 
 <!-- GLOBAL SOCIAL FOOTER -->
 <footer class="mt-auto text-center" style="background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%;">
-    <div class="brand-text mb-3" style="align-items: center;">
-        <span class="site-part-1" style="font-size: 1.2rem;">NATER</span>
-        <span class="site-part-2" style="font-size: 0.8rem;">PAY</span>
-    </div>
-    
-    <p class="text-muted small fw-bold mb-4">Connect with us for updates, tech tutorials, and alternative support channels.</p>
-    
-    <div class="d-flex justify-content-center gap-3 mb-4">
-        <!-- Facebook -->
-        <a href="https://facebook.com/natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
-            <i class="fab fa-facebook-f fs-5"></i>
-        </a>
-        
-        <!-- Instagram -->
-        <a href="https://instagram.com/natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
-            <i class="fab fa-instagram fs-5"></i>
-        </a>
-        
-        <!-- TikTok -->
-        <a href="https://tiktok.com/@natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
-            <i class="fab fa-tiktok fs-5"></i>
-        </a>
-        
-        <!-- YouTube -->
-        <a href="https://youtube.com/@natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
-            <i class="fab fa-youtube fs-5"></i>
-        </a>
-    </div>
-    
     <p class="text-white m-0" style="font-size: 0.85rem; font-weight: 800; letter-spacing: 2px;">v3.0 SECURED BY NATER-PAY INFRASTRUCTURES PROTOCOL</p>
     <p class="small text-secondary fw-bold mt-2 pb-2 m-0">© 2026 NATER-PAY. All rights reserved.</p>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    const API_URL = '/api';
+    const token = localStorage.getItem('np_token');
+    
+    // Redirect if not logged in (Ticketing requires auth)
+    if (!token) {
+        alert("Please log in to access the Ticketing System. Redirecting to login...");
+        window.location.href = 'index.html';
+    }
+
+    // Escape HTML to prevent XSS in rendering
+    const escapeHtml = (unsafe) => {
+        return (unsafe || "").toString()
+             .replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#039;");
+    };
+
+    // Load Tickets on Page Load
+    document.addEventListener('DOMContentLoaded', fetchTickets);
+
+    async function fetchTickets() {
+        const loader = document.getElementById('ticketListLoader');
+        const container = document.getElementById('ticketListContainer');
+        const emptyMsg = document.getElementById('noTicketsMessage');
+        
+        try {
+            const response = await fetch(`${API_URL}/support/tickets`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+
+            loader.style.display = 'none';
+
+            if (data.success) {
+                if (data.tickets.length === 0) {
+                    emptyMsg.style.display = 'block';
+                } else {
+                    container.innerHTML = '';
+                    data.tickets.forEach(ticket => {
+                        let statusClass = 'status-open';
+                        if(ticket.status === 'resolved') statusClass = 'status-resolved';
+                        if(ticket.status === 'closed') statusClass = 'status-closed';
+
+                        const date = new Date(ticket.createdAt).toLocaleDateString();
+
+                        container.innerHTML += `
+                            <div class="ticket-item" onclick="openTicket('${ticket.ticketId}')">
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-light">${escapeHtml(ticket.subject)}</h6>
+                                    <small class="text-muted">#${ticket.ticketId} • ${escapeHtml(ticket.category.toUpperCase())} • ${date}</small>
+                                </div>
+                                <span class="status-badge ${statusClass}">${ticket.status}</span>
+                            </div>
+                        `;
+                    });
+                    container.style.display = 'block';
+                }
+            } else {
+                alert(data.message || 'Failed to load tickets.');
+            }
+        } catch (err) {
+            loader.style.display = 'none';
+            alert("Network error fetching tickets.");
+        }
+    }
+
+    // Submit New Ticket
+    document.getElementById('createTicketForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubmitTicket');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        btn.disabled = true;
+
+        const payload = {
+            subject: document.getElementById('t-subject').value,
+            category: document.getElementById('t-category').value,
+            priority: document.getElementById('t-priority').value,
+            relatedTransaction: document.getElementById('t-ref').value,
+            description: document.getElementById('t-desc').value
+        };
+
+        try {
+            const response = await fetch(`${API_URL}/support/tickets`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                alert("Ticket created successfully!");
+                document.getElementById('createTicketForm').reset();
+                bootstrap.Modal.getInstance(document.getElementById('createTicketModal')).hide();
+                
+                // Show loading state and refresh
+                document.getElementById('ticketListContainer').style.display = 'none';
+                document.getElementById('noTicketsMessage').style.display = 'none';
+                document.getElementById('ticketListLoader').style.display = 'block';
+                fetchTickets();
+            } else {
+                alert(data.message || 'Failed to create ticket.');
+            }
+        } catch (err) {
+            alert("Network error.");
+        } finally {
+            btn.innerHTML = 'Submit Ticket';
+            btn.disabled = false;
+        }
+    });
+
+    // View Single Ticket
+    async function openTicket(ticketId) {
+        // Reset UI
+        document.getElementById('v-subject').innerText = "Loading...";
+        document.getElementById('v-id').innerText = `#${ticketId}`;
+        document.getElementById('v-desc').innerText = "";
+        document.getElementById('chatContainer').innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Loading messages...</div>';
+        document.getElementById('replyTicketId').value = ticketId;
+        
+        const modal = new bootstrap.Modal(document.getElementById('viewTicketModal'));
+        modal.show();
+
+        try {
+            const response = await fetch(`${API_URL}/support/tickets/${ticketId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                const t = data.ticket;
+                document.getElementById('v-subject').innerText = t.subject;
+                document.getElementById('v-desc').innerText = t.description;
+                
+                const badge = document.getElementById('v-status-badge');
+                badge.innerText = t.status;
+                badge.className = `ms-2 status-badge ${t.status === 'resolved' ? 'status-resolved' : (t.status === 'closed' ? 'status-closed' : 'status-open')}`;
+
+                const chatBox = document.getElementById('chatContainer');
+                chatBox.innerHTML = '';
+
+                if (t.messages && t.messages.length > 0) {
+                    t.messages.forEach(msg => {
+                        // If isInternal is true, or user ID doesn't match the logged-in user, treat as Admin reply
+                        // Note: A simpler check in frontend is checking if user matches the ticket creator, but since we don't have our own ID stored easily, we assume msg.isInternal=false and msg.user != null means it's us (if backend assigns it right).
+                        // Better check: If it has "Naterpay Support" or similar (Backend usually handles this by role). 
+                        // For display, we'll assume any message NOT from the creator is an Admin message.
+                        
+                        // We will just style them sequentially for now, or check a flag.
+                        const isAdmin = msg.isInternal || msg.user !== t.user; // Approx check
+                        const bubbleClass = isAdmin ? 'chat-admin' : 'chat-user';
+                        const senderName = isAdmin ? 'Naterpay Support' : 'You';
+                        const date = new Date(msg.createdAt).toLocaleString();
+
+                        chatBox.innerHTML += `
+                            <div class="chat-bubble ${bubbleClass}">
+                                <strong>${senderName}</strong><br>
+                                ${escapeHtml(msg.message)}
+                                <span class="chat-meta">${date}</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    chatBox.innerHTML = '<div class="text-center text-muted py-4">No replies yet. We will respond shortly.</div>';
+                }
+
+                // Scroll to bottom
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+            } else {
+                document.getElementById('chatContainer').innerHTML = `<div class="text-center text-danger py-4">${escapeHtml(data.message)}</div>`;
+            }
+        } catch (err) {
+            document.getElementById('chatContainer').innerHTML = '<div class="text-center text-danger py-4">Network error loading ticket.</div>';
+        }
+    }
+
+    // Submit Reply
+    document.getElementById('replyForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnReply');
+        const input = document.getElementById('replyMessage');
+        const ticketId = document.getElementById('replyTicketId').value;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        try {
+            const response = await fetch(`${API_URL}/support/tickets/${ticketId}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ message: input.value })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                input.value = '';
+                openTicket(ticketId); // Refresh chat view
+            } else {
+                alert(data.message || 'Failed to send message.');
+            }
+        } catch (err) {
+            alert("Network error sending reply.");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        }
+    });
+
     // Background Star Animation
     function initStars() {
         const canvas = document.getElementById('starCanvas');
