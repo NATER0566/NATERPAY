@@ -239,6 +239,26 @@
     let currentMethod = 'paystack';
     let selectedReceiptFile = null; 
 
+    // ====================================================================
+    // EDIT YOUR COMPANY RECEIVING BANK DETAILS RIGHT HERE:
+    // ====================================================================
+    const ADMIN_BANK_DETAILS = {
+        bankName: "MONIEPOINT MFB",
+        accountNumber: "8160979620", 
+        accountName: "NATER GRACE CODE"
+    };
+
+    function loadCompanyBankDetails() {
+        document.getElementById('bankNameDisplay').innerText = ADMIN_BANK_DETAILS.bankName;
+        document.getElementById('companyAccountNoDisplay').innerText = ADMIN_BANK_DETAILS.accountNumber;
+        document.getElementById('accountNameDisplay').innerText = ADMIN_BANK_DETAILS.accountName;
+
+        document.getElementById('copyBankBtn').setAttribute('onclick', `copyDetail('${ADMIN_BANK_DETAILS.bankName}', 'Bank Name')`);
+        document.getElementById('copyAccNoBtn1').setAttribute('onclick', `copyDetail('${ADMIN_BANK_DETAILS.accountNumber}', 'Account Number')`);
+        document.getElementById('copyAccNameBtn').setAttribute('onclick', `copyDetail('${ADMIN_BANK_DETAILS.accountName}', 'Account Name')`);
+        document.getElementById('copyAccNoBtn2').setAttribute('onclick', `copyDetail('${ADMIN_BANK_DETAILS.accountNumber}', 'Account Number')`);
+    }
+
     // Star Canvas Animation
     function initStars() {
         const c = document.getElementById('starCanvas');
@@ -252,37 +272,6 @@
             requestAnimationFrame(animate);
         }
         animate();
-    }
-
-    // Load Bank Details Dynamically
-    async function fetchCompanyBankDetails() {
-        try {
-            const res = await fetch('/api/settings/company-bank');
-            if (res.ok) {
-                const bank = await res.json();
-                const bankName = bank.bankName || 'MONIEPOINT MFB';
-                const accountNo = bank.accountNumber || '1234567890';
-                const accountName = bank.accountName || 'NATERPAY ENTERPRISE INC';
-
-                document.getElementById('bankNameDisplay').innerText = bankName;
-                document.getElementById('companyAccountNoDisplay').innerText = accountNo;
-                document.getElementById('accountNameDisplay').innerText = accountName;
-
-                document.getElementById('copyBankBtn').setAttribute('onclick', `copyDetail('${bankName}', 'Bank Name')`);
-                document.getElementById('copyAccNoBtn1').setAttribute('onclick', `copyDetail('${accountNo}', 'Account Number')`);
-                document.getElementById('copyAccNameBtn').setAttribute('onclick', `copyDetail('${accountName}', 'Account Name')`);
-                document.getElementById('copyAccNoBtn2').setAttribute('onclick', `copyDetail('${accountNo}', 'Account Number')`);
-            }
-        } catch (e) {
-            console.warn('Using default bank details. Failed to fetch from API.');
-            document.getElementById('bankNameDisplay').innerText = 'MONIEPOINT MFB';
-            document.getElementById('companyAccountNoDisplay').innerText = '1234567890';
-            document.getElementById('accountNameDisplay').innerText = 'NATERPAY ENTERPRISE INC';
-            document.getElementById('copyBankBtn').setAttribute('onclick', `copyDetail('MONIEPOINT MFB', 'Bank Name')`);
-            document.getElementById('copyAccNoBtn1').setAttribute('onclick', `copyDetail('1234567890', 'Account Number')`);
-            document.getElementById('copyAccNameBtn').setAttribute('onclick', `copyDetail('NATERPAY ENTERPRISE INC', 'Account Name')`);
-            document.getElementById('copyAccNoBtn2').setAttribute('onclick', `copyDetail('1234567890', 'Account Number')`);
-        }
     }
 
     // UI Locking mechanism to prevent editing while processing
@@ -327,7 +316,7 @@
     });
 
     function selectMethod(method) {
-        if (document.getElementById('payBtn').disabled) return; // Prevent change if processing
+        if (document.getElementById('payBtn').disabled) return; 
         currentMethod = method;
         document.getElementById('method-paystack').classList.remove('active');
         document.getElementById('method-manual').classList.remove('active');
@@ -475,12 +464,16 @@
         Swal.fire({ title: 'Securing Gateway...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
 
         try {
+            // WE NOW PASS THE LIVE CALLBACK URL SO IT NEVER REDIRECTS TO LOCALHOST AGAIN
+            const liveCallbackUrl = window.location.origin + window.location.pathname;
+
             const res = await fetch('/api/wallet/fund', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ amount, provider: 'paystack' })
+                body: JSON.stringify({ amount, provider: 'paystack', callbackUrl: liveCallbackUrl })
             });
             const data = await res.json();
+
             if (data.success && data.checkoutUrl) {
                 localStorage.setItem('pending_funding_ref', data.paymentReference);
                 window.location.href = data.checkoutUrl;
@@ -494,10 +487,60 @@
         }
     }
 
+    // ====================================================================
+    // NEW: AUTO-VERIFY PAYSTACK RETURN
+    // If the URL has ?reference=... it instantly checks the status and redirects
+    // ====================================================================
+    async function verifyReturnedPayment(reference) {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) return window.location.href = '/index.html';
+
+        Swal.fire({
+            title: 'Verifying Transaction...',
+            html: 'Please wait while we sync with the banking gateway.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading(),
+            background: '#111', color: '#fff'
+        });
+
+        try {
+            const res = await fetch('/api/wallet/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ reference })
+            });
+            const data = await res.json();
+
+            // Clear the ugly URL params so it looks clean again
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Your wallet has been credited.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+                .then(() => window.location.href = 'dashboard.html');
+            } else {
+                // Instantly fail cancelled transactions
+                Swal.fire({ icon: 'error', title: 'Payment Incomplete', text: data.message || 'Transaction was abandoned or failed.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' })
+                .then(() => window.location.href = 'dashboard.html');
+            }
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Could not verify payment automatically. The system will auto-reconcile shortly.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' })
+            .then(() => window.location.href = 'dashboard.html');
+        }
+    }
+
     window.onload = () => {
         initStars();
-        fetchCompanyBankDetails();
+        loadCompanyBankDetails();
+
+        // Check if Paystack just redirected the user back here
+        const urlParams = new URLSearchParams(window.location.search);
+        const reference = urlParams.get('reference') || urlParams.get('trxref');
+        
+        if (reference) {
+            verifyReturnedPayment(reference);
+        }
     };
+
     window.onresize = initStars;
 </script>
 </body>
