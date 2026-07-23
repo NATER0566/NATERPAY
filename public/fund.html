@@ -199,7 +199,6 @@
             <button class="quick-amount-btn" onclick="setAmount(50000)">₦50,000</button>
         </div>
 
-        <!-- NEW EXTRA FIELDS FOR MANUAL FUNDING -->
         <div id="manualExtraFields">
             <div class="processing-notice">
                 <i class="fas fa-clock text-success me-1"></i> Processing usually takes <strong>5-30 minutes</strong> during business hours. High volumes may cause slight delays.
@@ -239,7 +238,6 @@
     let currentMethod = 'paystack';
     let selectedReceiptFile = null; 
 
-    // DYNAMICALLY FETCH BANK DETAILS FROM BACKEND API
     async function loadCompanyBankDetails() {
         try {
             const res = await fetch('/api/settings/company-bank');
@@ -258,7 +256,6 @@
         }
     }
 
-    // Canvas Background Animation
     function initStars() {
         const c = document.getElementById('starCanvas');
         c.width = window.innerWidth; c.height = window.innerHeight;
@@ -281,7 +278,6 @@
         animate();
     }
 
-    // UI Lock Mechanism
     function toggleUIState(isProcessing) {
         document.getElementById('payBtn').disabled = isProcessing;
         document.getElementById('fundAmount').disabled = isProcessing;
@@ -300,7 +296,6 @@
         else uploadLabel.classList.remove('disabled');
     }
 
-    // File Upload Validation
     document.getElementById('receiptUpload').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {
@@ -315,7 +310,6 @@
         }
     });
 
-    // Method Selection
     function selectMethod(method) {
         if (document.getElementById('payBtn').disabled) return; 
         currentMethod = method;
@@ -343,7 +337,6 @@
         updateCalculator();
     }
 
-    // Fee Calculator
     function calculateGatewayFee(amount) {
         if (currentMethod === 'manual') return 0;
         if (!amount || amount < 100) return 0;
@@ -370,7 +363,6 @@
         navigator.clipboard.writeText(text).then(() => Swal.fire({ icon: 'success', title: 'Copied!', text: `${label} copied.`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' }));
     }
 
-    // Process Button Router
     async function processFunding() {
         const amount = parseFloat(document.getElementById('fundAmount').value);
         if (!amount || amount < 100) return Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'Minimum funding amount is ₦100', background: '#111', color: '#fff' });
@@ -387,7 +379,6 @@
         }
     }
 
-    // Execute Manual Funding
     async function executeManualFunding(amount, narration) {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return window.location.href = '/index.html';
@@ -417,7 +408,6 @@
         }
     }
 
-    // Execute Paystack Funding
     async function executePaystackFunding(amount) {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return window.location.href = '/index.html';
@@ -426,7 +416,7 @@
         Swal.fire({ title: 'Securing Gateway...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
 
         try {
-            // No callbackUrl sent from frontend anymore! The backend securely injects the dashboard URL.
+            // FIX: Removed callbackUrl completely to let your Paystack Dashboard settings handle it.
             const res = await fetch('/api/wallet/fund', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
@@ -437,11 +427,11 @@
             if (data.success && data.checkoutUrl) {
                 window.location.href = data.checkoutUrl;
             } else {
-                Swal.fire({ icon: 'error', title: 'Failed', text: data.message, background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'error', title: 'Gateway Error', text: data.message, background: '#111', color: '#fff' });
                 toggleUIState(false);
             }
         } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Please check your connection.', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Could not reach server. Check connection.', background: '#111', color: '#fff' });
             toggleUIState(false);
         }
     }
