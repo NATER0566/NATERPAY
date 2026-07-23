@@ -1,32 +1,126 @@
+const mongoose = require('mongoose');
 const KYC = require('../models/KYC');
 const User = require('../models/User');
+const Joi = require('joi'); // [1] Strict Request Validation
+const cloudinary = require('cloudinary').v2;
 
-/**
- * Get Current KYC Status for the User
- */
+// [2] STRUCTURED LOGGING ENGINE
+let logger;
+try { 
+    logger = require('pino')(); 
+} catch (e) { 
+    logger = { 
+        info: (msg, meta = {}) => console.log(JSON.stringify({ level: 'info', timestamp: new Date().toISOString(), message: msg, ...meta })),
+        warn: (msg, meta = {}) => console.warn(JSON.stringify({ level: 'warn', timestamp: new Date().toISOString(), message: msg, ...meta })),
+        error: (msg, err, meta = {}) => console.error(JSON.stringify({ level: 'error', timestamp: new Date().toISOString(), message: msg, error: err?.message || err, ...meta }))
+    };
+}
+
+let Redis;
+try { Redis = require('ioredis'); } catch(e) {}
+
+// [3] CENTRALIZED ERROR HANDLING
+function handleError(reply, error, defaultMessage = 'System error occurred.') {
+    if (error.isJoi) return reply.status(400).send({ success: false, message: error.details[0].message });
+    logger.error(error.message, error);
+    reply.status(error.status || 400).send({ success: false, message: error.message || defaultMessage });
+}
+
+// [4] TEXT SANITIZATION (XSS Protection for Addresses & IDs)
+const sanitizeText = (str) => str ? String(str).replace(/[<>]/g, '').trim().substring(0, 255) : '';
+
+/* =========================================================================
+   [5] CLOUDINARY NETWORK RETRY ENGINE
+========================================================================= */
+async function withRetry(fn, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try { return await fn(); } 
+        catch (err) {
+            if (i === retries - 1) throw err;
+            await new Promise(r => setTimeout(r, 1000 * (i + 1))); 
+        }
+    }
+}
+
+/* =========================================================================
+   [6] REDIS / DISTRIBUTED RATE LIMITING ENGINE
+========================================================================= */
+const redisClient = (Redis && process.env.REDIS_URL) ? new Redis(process.env.REDIS_URL) : null;
+const fallbackRateLimits = new Map();
+
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, data] of fallbackRateLimits.entries()) {
+        if (now > data.resetTime) fallbackRateLimits.delete(key);
+    }
+}, 60000);
+
+async function checkRateLimit(request, action, limit = 5) {
+    const ip = request.ip;
+    const userId = request.user ? request.user._id : 'anon';
+    const windowSeconds = 60;
+
+    const executeFallback = () => {
+        const now = Date.now();
+        const userKey = `rate_${action}_user_${userId}`;
+        if (!fallbackRateLimits.has(userKey)) {
+            fallbackRateLimits.set(userKey, { count: 1, resetTime: now + (windowSeconds * 1000) });
+            return true;
+        }
+        const data = fallbackRateLimits.get(userKey);
+        if (now > data.resetTime) {
+            fallbackRateLimits.set(userKey, { count: 1, resetTime: now + (windowSeconds * 1000) });
+            return true;
+        }
+        if (data.count >= limit) return false;
+        data.count++;
+        return true;
+    };
+
+    if (redisClient && redisClient.status === 'ready') {
+        try {
+            const userKey = `rate:${action}:user:${userId}`;
+            const count = await redisClient.incr(userKey);
+            if (count === 1) await redisClient.expire(userKey, windowSeconds);
+            return count <= limit;
+        } catch (err) { return executeFallback(); }
+    } else { return executeFallback(); }
+}
+
+/* =========================================================================
+   GET CURRENT KYC STATUS
+========================================================================= */
 async function getKYC(request, reply) {
     try {
+        if (!await checkRateLimit(request, 'get_kyc', 30)) throw { status: 429, message: 'Too many requests.' };
+
         let kyc = await KYC.findOne({ user: request.user._id });
         if (!kyc) {
             kyc = new KYC({ user: request.user._id, currentLevel: 0, status: 'pending' });
             await kyc.save();
         }
         reply.send({ success: true, kyc: { currentLevel: kyc.currentLevel, status: kyc.status } });
-    } catch (error) {
-        reply.status(500).send({ success: false, message: 'Failed to retrieve KYC data.' });
-    }
+    } catch (error) { handleError(reply, error, 'Failed to retrieve KYC data.'); }
 }
 
-/**
- * Submit Level 1: Basic Info
- */
+/* =========================================================================
+   SUBMIT LEVEL 1: BASIC IDENTITY INFO
+========================================================================= */
 async function submitLevel1(request, reply) {
     try {
-        const { bvn, nin } = request.body;
+        // [1] Strict Joi Validation (Prevents NoSQL Injection)
+        const schema = Joi.object({
+            bvn: Joi.string().pattern(/^\d{11}$/).allow('', null),
+            nin: Joi.string().pattern(/^\d{11}$/).allow('', null)
+        }).or('bvn', 'nin'); // Requires AT LEAST ONE
         
-        if (!bvn && !nin) return reply.status(400).send({ success: false, message: 'BVN or NIN is required.' });
-        if (bvn && !/^\d{11}$/.test(bvn)) return reply.status(400).send({ success: false, message: 'BVN must be exactly 11 digits.' });
-        if (nin && !/^\d{11}$/.test(nin)) return reply.status(400).send({ success: false, message: 'NIN must be exactly 11 digits.' });
+        const { error, value } = schema.validate(request.body);
+        if (error) throw error;
+
+        // [6] Extremely strict rate limit to prevent BVN brute-forcing
+        if (!await checkRateLimit(request, 'submit_kyc_l1', 3)) throw new Error('Too many verification attempts. Please wait 60 seconds.');
+
+        const { bvn, nin } = value;
 
         // ANTI-DUPLICATION ENGINE
         const orConditions = [];
@@ -35,68 +129,116 @@ async function submitLevel1(request, reply) {
 
         const duplicateCheck = await KYC.findOne({ $or: orConditions, user: { $ne: request.user._id } });
         if (duplicateCheck) {
-            return reply.status(403).send({ success: false, message: 'SECURITY ALERT: This BVN or NIN is already linked to an existing NATERPAY account.' });
+            throw { status: 403, message: 'SECURITY ALERT: This BVN or NIN is already linked to an existing NATERPAY account.' };
         }
 
         let kyc = await KYC.findOne({ user: request.user._id });
         if (!kyc) kyc = new KYC({ user: request.user._id });
 
+        // Spam Prevention Lock
+        if (kyc.currentLevel === 1 && kyc.status === 'under_review') {
+            throw new Error('Your Tier 1 submission is already under review. Please wait for an administrator to process it.');
+        }
+
         kyc.currentLevel = 1; 
-        // This schema method saves the data securely to level1 and sets status to 'under_review'
         await kyc.submitLevel1(bvn, nin);
 
         reply.send({ success: true, message: 'Details submitted! Awaiting global verification by an Administrator.' });
-    } catch (error) {
-        reply.status(500).send({ success: false, message: 'Failed to process verification.' });
-    }
+    } catch (error) { handleError(reply, error, 'Failed to process Tier 1 verification.'); }
 }
 
-/**
- * Submit Level 2: Document Uploads
- */
+/* =========================================================================
+   SUBMIT LEVEL 2: DOCUMENT UPLOADS (WITH CLOUDINARY INTERCEPTOR)
+========================================================================= */
 async function submitLevel2(request, reply) {
     try {
-        const { idType, idNumber, idImage, selfieImage } = request.body;
-        if (!idType || !idNumber || !idImage || !selfieImage) return reply.status(400).send({ success: false, message: 'All Document fields are required.' });
+        // [1] Validation
+        const schema = Joi.object({
+            idType: Joi.string().required(),
+            idNumber: Joi.string().required(),
+            idImage: Joi.string().required(),   // Expected Base64 or URL
+            selfieImage: Joi.string().required() // Expected Base64 or URL
+        });
+        
+        const { error, value } = schema.validate(request.body);
+        if (error) throw error;
+
+        if (!await checkRateLimit(request, 'submit_kyc_l2', 3)) throw new Error('Too many verification attempts.');
 
         const user = await User.findById(request.user._id);
         let kyc = await KYC.findOne({ user: request.user._id });
         
         if (!kyc || user.kycLevel < 1) {
-            return reply.status(400).send({ success: false, message: 'Your TIER 1 Identity must be APPROVED by an Admin before submitting TIER 2.' });
+            throw new Error('Your TIER 1 Identity must be APPROVED by an Admin before submitting TIER 2.');
         }
 
-        kyc.currentLevel = 2;
-        await kyc.submitLevel2(idType, idNumber, idImage, selfieImage);
+        if (kyc.currentLevel === 2 && kyc.status === 'under_review') {
+            throw new Error('Your Tier 2 documents are already under review.');
+        }
 
-        reply.send({ success: true, message: 'Documents submitted! Please wait for manual admin review.' });
-    } catch (error) {
-        reply.status(500).send({ success: false, message: 'Failed to process document uploads.' });
-    }
+        // [5] CLOUDINARY SECURE UPLOAD INTERCEPTOR (PREVENTS DATABASE BLOAT)
+        // If the frontend sent heavy Base64 strings, we upload them to Cloudinary FIRST
+        let secureIdUrl = value.idImage;
+        let secureSelfieUrl = value.selfieImage;
+
+        if (secureIdUrl.startsWith('data:image')) {
+            const idUpload = await withRetry(() => cloudinary.uploader.upload(secureIdUrl, { folder: 'naterpay_kyc', resource_type: 'auto', timeout: 15000 }));
+            secureIdUrl = idUpload.secure_url;
+        }
+
+        if (secureSelfieUrl.startsWith('data:image')) {
+            const selfieUpload = await withRetry(() => cloudinary.uploader.upload(secureSelfieUrl, { folder: 'naterpay_kyc', resource_type: 'auto', timeout: 15000 }));
+            secureSelfieUrl = selfieUpload.secure_url;
+        }
+
+        const safeIdType = sanitizeText(value.idType);
+        const safeIdNumber = sanitizeText(value.idNumber);
+
+        kyc.currentLevel = 2;
+        // Notice we pass the SECURE URLs to the model, NEVER the raw Base64 data
+        await kyc.submitLevel2(safeIdType, safeIdNumber, secureIdUrl, secureSelfieUrl);
+
+        reply.send({ success: true, message: 'Documents submitted successfully! Please wait for manual admin review.' });
+    } catch (error) { handleError(reply, error, 'Failed to process document uploads.'); }
 }
 
-/**
- * Submit Level 3: Address Proof
- */
+/* =========================================================================
+   SUBMIT LEVEL 3: ADDRESS PROOF
+========================================================================= */
 async function submitLevel3(request, reply) {
     try {
-        const { address, city, state } = request.body;
-        if (!address || !city || !state) return reply.status(400).send({ success: false, message: 'Complete address details are required.' });
+        const schema = Joi.object({
+            address: Joi.string().required(),
+            city: Joi.string().required(),
+            state: Joi.string().required()
+        });
+        
+        const { error, value } = schema.validate(request.body);
+        if (error) throw error;
+
+        if (!await checkRateLimit(request, 'submit_kyc_l3', 3)) throw new Error('Too many verification attempts.');
 
         const user = await User.findById(request.user._id);
         let kyc = await KYC.findOne({ user: request.user._id });
         
         if (!kyc || user.kycLevel < 2) {
-            return reply.status(400).send({ success: false, message: 'Your TIER 2 Documents must be APPROVED before submitting Address.' });
+            throw new Error('Your TIER 2 Documents must be APPROVED before submitting Address Verification.');
         }
 
+        if (kyc.currentLevel === 3 && kyc.status === 'under_review') {
+            throw new Error('Your Tier 3 address is already under review.');
+        }
+
+        // [4] Sanitization
+        const safeAddress = sanitizeText(value.address);
+        const safeCity = sanitizeText(value.city);
+        const safeState = sanitizeText(value.state);
+
         kyc.currentLevel = 3;
-        await kyc.submitLevel3(address, city, state, null);
+        await kyc.submitLevel3(safeAddress, safeCity, safeState, null);
 
         reply.send({ success: true, message: 'Address submitted! Please wait for final admin approval.' });
-    } catch (error) {
-        reply.status(500).send({ success: false, message: 'Failed to process address verification.' });
-    }
+    } catch (error) { handleError(reply, error, 'Failed to process address verification.'); }
 }
 
 module.exports = { getKYC, submitLevel1, submitLevel2, submitLevel3 };
