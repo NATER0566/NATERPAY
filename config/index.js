@@ -115,6 +115,12 @@ const config = {
         url: envVars.REDIS_URL
     },
 
+    // [FIXED] THIS IS THE MISSING BLOCK THAT WAS CRASHING SERVER.JS!
+    rateLimit: {
+        windowMs: parseInt(process.env.RATE_LIMIT_WINDOW) || 900000,
+        max: parseInt(process.env.RATE_LIMIT_MAX) || 100
+    },
+
     featureFlags: {
         wallet: checkBool(process.env.ENABLE_WALLET, true), 
         loans: checkBool(process.env.ENABLE_LOANS),
@@ -137,7 +143,7 @@ const config = {
     },
     
     business: {
-        defaultReferralBonus: parseFloat(process.env.DEFAULT_REFERRAL_BONUS) || 50, // Synced to task logic
+        defaultReferralBonus: parseFloat(process.env.DEFAULT_REFERRAL_BONUS) || 50, 
         minWithdrawal: parseFloat(process.env.MIN_WITHDRAWAL) || 100,
         maxWithdrawal: parseFloat(process.env.MAX_WITHDRAWAL) || 500000,
         transactionFeePercentage: parseFloat(process.env.TRANSACTION_FEE_PERCENTAGE) || 1.5
