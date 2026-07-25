@@ -416,7 +416,6 @@
         Swal.fire({ title: 'Securing Gateway...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
 
         try {
-            // FIX: Removed callbackUrl completely to let your Paystack Dashboard settings handle it.
             const res = await fetch('/api/wallet/fund', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
@@ -425,6 +424,8 @@
             const data = await res.json();
 
             if (data.success && data.checkoutUrl) {
+                // SAVE REFERENCE BEFORE REDIRECTING SO WE CAN VERIFY IT ON RETURN
+                localStorage.setItem('pending_funding_ref', data.paymentReference);
                 window.location.href = data.checkoutUrl;
             } else {
                 Swal.fire({ icon: 'error', title: 'Gateway Error', text: data.message, background: '#111', color: '#fff' });
@@ -436,10 +437,58 @@
         }
     }
 
+    // ====================================================================
+    // NEW AUTO-VERIFY SCRIPT FOR WHEN USER RETURNS TO THIS PAGE
+    // ====================================================================
+    async function verifyReturnedPayment(reference) {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) return;
+
+        Swal.fire({
+            title: 'Verifying Transaction...',
+            html: 'Please wait while we sync with the banking gateway.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading(),
+            background: '#111', color: '#fff'
+        });
+
+        try {
+            const res = await fetch('/api/wallet/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ reference })
+            });
+            const data = await res.json();
+
+            // Clean the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            localStorage.removeItem('pending_funding_ref');
+
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Your wallet has been credited.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+                .then(() => window.location.href = 'dashboard.html');
+            } else {
+                Swal.fire({ icon: 'error', title: 'Payment Failed', text: data.message || 'Transaction was abandoned or failed.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            }
+        } catch (error) {
+            Swal.fire({ icon: 'warning', title: 'Pending Sync', text: 'Could not verify instantly. The system will auto-reconcile shortly.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+            .then(() => window.location.href = 'dashboard.html');
+        }
+    }
+
     window.onload = () => {
         initStars();
         loadCompanyBankDetails();
+
+        // Check if Paystack dumped the user back here
+        const urlParams = new URLSearchParams(window.location.search);
+        const paystackRef = urlParams.get('reference') || urlParams.get('trxref') || localStorage.getItem('pending_funding_ref');
+        
+        if (paystackRef) {
+            verifyReturnedPayment(paystackRef);
+        }
     };
+
     window.onresize = initStars;
 </script>
 </body>
