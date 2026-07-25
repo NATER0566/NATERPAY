@@ -204,7 +204,6 @@
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label text-muted small fw-bold">Priority</label>
-                            <!-- FIXED: Restored lowercase values to satisfy backend Joi validation -->
                             <select id="t-priority" class="form-select" required>
                                 <option value="low">Low</option>
                                 <option value="medium" selected>Medium</option>
@@ -279,13 +278,11 @@
     const API_URL = '/api';
     const token = localStorage.getItem('naterpay_token');
     
-    // Redirect if not logged in (Ticketing requires auth)
     if (!token) {
         alert("Please log in to access the Ticketing System. Redirecting to login...");
         window.location.href = 'index.html';
     }
 
-    // Escape HTML to prevent XSS in rendering
     const escapeHtml = (unsafe) => {
         return (unsafe || "").toString()
              .replace(/&/g, "&amp;")
@@ -295,7 +292,6 @@
              .replace(/'/g, "&#039;");
     };
 
-    // Load Tickets on Page Load
     document.addEventListener('DOMContentLoaded', fetchTickets);
 
     async function fetchTickets() {
@@ -354,19 +350,15 @@
         const refText = document.getElementById('t-ref').value.trim();
         const descText = document.getElementById('t-desc').value.trim();
 
-        // FIX 1: Merge the reference safely inside the description so Mongoose doesn't crash on "Cast to ObjectId"
+        // MERGED the reference into the description safely
         const safeDescription = refText ? `[Transaction Reference Provided: ${refText}]\n\n${descText}` : descText;
 
-        // FIX 2: Generate the ticket ID automatically so Mongoose doesn't crash on "ticketId is required"
-        const generatedTicketId = 'TKT-' + Math.floor(10000000 + Math.random() * 90000000);
-
+        // REMOVED the ticketId line to pass Joi validation
         const payload = {
-            ticketId: generatedTicketId,
             subject: document.getElementById('t-subject').value,
             category: document.getElementById('t-category').value,
             priority: document.getElementById('t-priority').value,
             description: safeDescription
-            // FIX 3: Removed "relatedTransaction" completely to bypass backend strictness
         };
 
         try {
@@ -382,7 +374,6 @@
                 document.getElementById('createTicketForm').reset();
                 bootstrap.Modal.getInstance(document.getElementById('createTicketModal')).hide();
                 
-                // Show loading state and refresh
                 document.getElementById('ticketListContainer').style.display = 'none';
                 document.getElementById('noTicketsMessage').style.display = 'none';
                 document.getElementById('ticketListLoader').style.display = 'block';
@@ -398,9 +389,7 @@
         }
     });
 
-    // View Single Ticket
     async function openTicket(ticketId) {
-        // Reset UI
         document.getElementById('v-subject').innerText = "Loading...";
         document.getElementById('v-id').innerText = `#${ticketId}`;
         document.getElementById('v-desc').innerText = "";
@@ -446,8 +435,6 @@
                 } else {
                     chatBox.innerHTML = '<div class="text-center text-muted py-4">No replies yet. We will respond shortly.</div>';
                 }
-
-                // Scroll to bottom
                 chatBox.scrollTop = chatBox.scrollHeight;
 
             } else {
@@ -458,7 +445,6 @@
         }
     }
 
-    // Submit Reply
     document.getElementById('replyForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btnReply');
@@ -478,7 +464,7 @@
 
             if (data.success) {
                 input.value = '';
-                openTicket(ticketId); // Refresh chat view
+                openTicket(ticketId); 
             } else {
                 alert(data.message || 'Failed to send message.');
             }
@@ -490,7 +476,6 @@
         }
     });
 
-    // Background Star Animation
     function initStars() {
         const canvas = document.getElementById('starCanvas');
         canvas.width = window.innerWidth; canvas.height = window.innerHeight;
