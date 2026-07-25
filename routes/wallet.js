@@ -103,7 +103,7 @@ setInterval(() => {
 async function checkRateLimit(request, action) {
     const ip = request.ip;
     const userId = request.user ? request.user._id : 'anon';
-    const limit = 5; 
+    const limit = 10; 
     const windowSeconds = 60;
 
     if (redisClient && redisClient.status === 'ready') {
@@ -211,11 +211,11 @@ async function getWallet(request, reply) {
 }
 
 /* =========================================================================
-   2. INITIALIZE FUNDING (PAYSTACK) - FORCES DASHBOARD REDIRECT
+   2. INITIALIZE FUNDING (PAYSTACK)
 ========================================================================= */
 async function fundWallet(request, reply) {
     try {
-        const schema = Joi.object({ amount: Joi.number().min(100).required(), provider: Joi.string() });
+        const schema = Joi.object({ amount: Joi.number().min(100).required(), provider: Joi.string().default('paystack') });
         const { error, value } = schema.validate(request.body);
         if (error) throw { status: 400, message: error.details[0].message };
 
@@ -233,19 +233,25 @@ async function fundWallet(request, reply) {
         if (!wallet) throw new Error("Wallet not found");
         const startBalance = wallet.availableBalance ? wallet.availableBalance.toString() : '0';
 
-        // FORCE PAYSTACK DASHBOARD REDIRECT HERE
-        const dashboardCallback = `${APP_URL}/dashboard.html`;
-
-        const paystackRes = await axios.post('https://api.paystack.co/transaction/initialize', {
-            email: request.user.email,
-            amount: Math.round(totalCharge * 100),
-            reference: txReference,
-            callback_url: dashboardCallback,
-            metadata: { userId: request.user._id.toString(), type: 'wallet_fund', amount: amount, fee: fee }
-        }, {
-            headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
-            timeout: 10000 
-        });
+        // NOTE: We rely entirely on Paystack's dashboard config to route the user
+        const paystackUrl = `${request.protocol}://${request.hostname}/fund.html`; // Fail-safe strictly to our own domain
+        
+        let paystackRes;
+        try {
+            paystackRes = await axios.post('https://api.paystack.co/transaction/initialize', {
+                email: request.user.email,
+                amount: Math.round(totalCharge * 100),
+                reference: txReference,
+                callback_url: paystackUrl,
+                metadata: { userId: request.user._id.toString(), type: 'wallet_fund', amount: amount, fee: fee }
+            }, {
+                headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+                timeout: 10000 
+            });
+        } catch (gatewayError) {
+            const exactError = gatewayError.response?.data?.message || 'Paystack servers are not responding. Please check your API keys.';
+            throw new Error(`Gateway Error: ${exactError}`);
+        }
 
         const transaction = new Transaction({
             user: request.user._id, type: 'funding', description: 'Wallet Funding via Paystack',
@@ -255,7 +261,7 @@ async function fundWallet(request, reply) {
         await transaction.save({ validateBeforeSave: false });
 
         reply.send({ success: true, paymentReference: txReference, checkoutUrl: paystackRes.data.data.authorization_url });
-    } catch (error) { handleError(reply, error, 'Failed to initialize Paystack Gateway.'); }
+    } catch (error) { handleError(reply, error, 'Failed to initialize payment'); }
 }
 
 /* =========================================================================
