@@ -238,6 +238,14 @@
     let currentMethod = 'paystack';
     let selectedReceiptFile = null; 
 
+    // FIX: Fallback to unlock UI if browser hits the physical back button
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+            Swal.close();
+            toggleUIState(false);
+        }
+    });
+
     async function loadCompanyBankDetails() {
         try {
             const res = await fetch('/api/settings/company-bank');
@@ -424,8 +432,8 @@
             const data = await res.json();
 
             if (data.success && data.checkoutUrl) {
-                // SAVE REFERENCE BEFORE REDIRECTING SO WE CAN VERIFY IT ON RETURN
-                localStorage.setItem('pending_funding_ref', data.paymentReference);
+                // FIX: Strip the "Securing Gateway" spinner completely right before redirecting so it NEVER gets stuck
+                Swal.close();
                 window.location.href = data.checkoutUrl;
             } else {
                 Swal.fire({ icon: 'error', title: 'Gateway Error', text: data.message, background: '#111', color: '#fff' });
@@ -438,7 +446,7 @@
     }
 
     // ====================================================================
-    // NEW AUTO-VERIFY SCRIPT FOR WHEN USER RETURNS TO THIS PAGE
+    // VERIFY ON RETURN TO THIS PAGE ONLY
     // ====================================================================
     async function verifyReturnedPayment(reference) {
         const authToken = localStorage.getItem("naterpay_token");
@@ -460,19 +468,18 @@
             });
             const data = await res.json();
 
-            // Clean the URL
+            // Strip the ugly reference tracking from the URL so it looks clean
             window.history.replaceState({}, document.title, window.location.pathname);
-            localStorage.removeItem('pending_funding_ref');
 
             if (data.success) {
                 Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Your wallet has been credited.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
                 .then(() => window.location.href = 'dashboard.html');
             } else {
+                // Instantly tell user it failed if they cancelled or if the card was declined
                 Swal.fire({ icon: 'error', title: 'Payment Failed', text: data.message || 'Transaction was abandoned or failed.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({ icon: 'warning', title: 'Pending Sync', text: 'Could not verify instantly. The system will auto-reconcile shortly.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
-            .then(() => window.location.href = 'dashboard.html');
+            Swal.fire({ icon: 'warning', title: 'Pending Sync', text: 'Could not verify instantly. The system will auto-reconcile shortly.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
         }
     }
 
@@ -480,9 +487,9 @@
         initStars();
         loadCompanyBankDetails();
 
-        // Check if Paystack dumped the user back here
+        // FIX: Removed dangerous localStorage check. ONLY verify if Paystack specifically puts "?reference=" in the URL
         const urlParams = new URLSearchParams(window.location.search);
-        const paystackRef = urlParams.get('reference') || urlParams.get('trxref') || localStorage.getItem('pending_funding_ref');
+        const paystackRef = urlParams.get('reference') || urlParams.get('trxref');
         
         if (paystackRef) {
             verifyReturnedPayment(paystackRef);
