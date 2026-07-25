@@ -27,60 +27,65 @@
         .site-part-1 { color: var(--gold); font-size: 1.4rem; text-shadow: 0 0 10px var(--gold-glow); } 
         .site-part-2 { color: var(--red); font-size: 1rem; letter-spacing: 3px; }
 
-        .container { max-width: 850px; margin: 40px auto; padding: 0 20px; }
+        /* FIXED: Reduced outer margins and padding on mobile */
+        .container { max-width: 850px; margin: 25px auto; padding: 0 15px; }
         
+        /* FIXED: Dynamic padding so it doesn't crush the inner content on phones */
         .fund-card {
             background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
-            padding: 40px; margin-bottom: 30px; box-shadow: 0 15px 50px rgba(0,0,0,0.9);
+            padding: clamp(20px, 4vw, 40px); margin-bottom: 30px; box-shadow: 0 15px 50px rgba(0,0,0,0.9);
             position: relative; overflow: hidden; backdrop-filter: blur(10px);
         }
         .fund-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
 
-        /* Premium Method Selector */
-        .method-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+        .method-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 30px; }
+        @media (min-width: 576px) { .method-selector { gap: 15px; } }
+        
         .method-card {
             background: rgba(0,0,0,0.6); border: 2px solid #222; border-radius: 15px;
-            padding: 20px 15px; text-align: center; cursor: pointer; transition: 0.3s;
+            padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.3s;
             position: relative; overflow: hidden;
         }
+        @media (min-width: 576px) { .method-card { padding: 20px 15px; } }
         .method-card:hover { border-color: #555; background: rgba(255,255,255,0.02); }
         .method-card.active { border-color: var(--gold); background: rgba(212,175,55,0.05); box-shadow: 0 0 20px rgba(212,175,55,0.2); }
         .method-card.active::after { content: '\f058'; font-family: 'Font Awesome 5 Free'; font-weight: 900; position: absolute; top: 10px; right: 10px; color: var(--gold); font-size: 1.2rem; }
-        .method-icon { font-size: 2rem; margin-bottom: 10px; transition: 0.3s; }
+        .method-icon { font-size: clamp(1.5rem, 4vw, 2rem); margin-bottom: 10px; transition: 0.3s; }
         .method-card.active .method-icon.paystack { color: #00bfff; }
         .method-card.active .method-icon.manual { color: var(--success); }
-        .method-title { font-weight: 800; font-size: 0.95rem; color: #fff; margin-bottom: 5px; }
-        .method-desc { font-size: 0.7rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .method-title { font-weight: 800; font-size: clamp(0.8rem, 3vw, 0.95rem); color: #fff; margin-bottom: 5px; }
+        .method-desc { font-size: clamp(0.6rem, 2vw, 0.7rem); color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* Bank Details Box */
+        /* FIXED: Shrunk inner padding so text fits */
         .bank-details-box {
             display: none; background: #0a0a0a; border: 1px dashed var(--gold); border-radius: 15px;
-            padding: 25px; margin-bottom: 30px; text-align: center; position: relative;
+            padding: clamp(15px, 4vw, 25px); margin-bottom: 30px; text-align: center; position: relative;
         }
         .bank-details-box.active { display: block; animation: fadeIn 0.4s ease-in-out; }
         .bank-name { font-size: 0.85rem; color: #aaa; text-transform: uppercase; letter-spacing: 2px; font-weight: 800; margin-bottom: 5px; }
-        .acc-number { font-family: 'Cinzel', monospace; font-size: 2.2rem; color: var(--gold); font-weight: 900; letter-spacing: 4px; margin-bottom: 5px; text-shadow: 0 0 15px var(--gold-glow); }
-        .acc-name { font-size: 1.1rem; color: #fff; font-weight: 800; margin-bottom: 15px; }
-        .btn-copy { background: #111; color: var(--gold); border: 1px solid var(--gold-dim); padding: 8px 20px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+        
+        /* FIXED: Scalable account number and dynamic letter spacing to prevent breaking out of box */
+        .acc-number { font-family: 'Cinzel', monospace; font-size: clamp(1.6rem, 6vw, 2.2rem); color: var(--gold); font-weight: 900; letter-spacing: clamp(1px, 1vw, 4px); margin-bottom: 5px; text-shadow: 0 0 15px var(--gold-glow); word-break: break-all; }
+        .acc-name { font-size: clamp(0.9rem, 3vw, 1.1rem); color: #fff; font-weight: 800; margin-bottom: 15px; }
+        .btn-copy { background: #111; color: var(--gold); border: 1px solid var(--gold-dim); padding: 8px 15px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; white-space: nowrap; }
         .btn-copy:hover { background: var(--gold); color: #000; }
         .copy-icon-inline { cursor: pointer; color: var(--gold-dim); transition: 0.3s; }
         .copy-icon-inline:hover { color: var(--gold); transform: scale(1.1); }
         
-        /* Premium Alerts & Notices */
+        /* FIXED: Shrunk padding and added line breaks so text flows naturally */
         .premium-alert {
             background: linear-gradient(90deg, rgba(211, 47, 47, 0.1) 0%, rgba(0,0,0,0) 100%);
-            border-left: 4px solid var(--red); padding: 15px 20px; margin-bottom: 20px;
-            border-radius: 0 10px 10px 0; text-align: left; font-size: 0.8rem; color: #ddd; line-height: 1.6;
+            border-left: 4px solid var(--red); padding: clamp(10px, 3vw, 15px); margin-bottom: 20px;
+            border-radius: 0 10px 10px 0; text-align: left; font-size: clamp(0.75rem, 2.5vw, 0.8rem); color: #ddd; line-height: 1.5; word-wrap: break-word;
         }
         .processing-notice {
             background: rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.2);
-            padding: 12px 15px; border-radius: 10px; margin-bottom: 20px; font-size: 0.8rem; color: #aaa; text-align: center;
+            padding: clamp(10px, 3vw, 12px); border-radius: 10px; margin-bottom: 20px; font-size: clamp(0.75rem, 2.5vw, 0.8rem); color: #aaa; text-align: center;
         }
 
-        /* Input Fields */
         .amount-input {
             background: #0a0a0a; border: 2px solid rgba(212,175,55,0.3); border-radius: 15px;
-            padding: 20px; font-size: clamp(2rem, 5vw, 3rem); color: white; font-weight: 700; text-align: center;
+            padding: 15px; font-size: clamp(1.8rem, 5vw, 3rem); color: white; font-weight: 700; text-align: center;
             width: 100%; outline: none; transition: 0.3s; font-family: 'Montserrat', sans-serif;
         }
         .amount-input:focus { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,175,55,0.3); }
@@ -93,7 +98,6 @@
         .premium-input:focus { border-color: var(--gold); }
         .premium-input:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        /* Custom File Upload */
         .file-upload-wrapper { width: 100%; text-align: center; margin-bottom: 20px; }
         .file-upload-label {
             display: block; background: #1a1a1a; border: 1px dashed #444; border-radius: 10px;
@@ -101,26 +105,26 @@
         }
         .file-upload-label:hover { border-color: var(--gold); color: var(--gold); background: rgba(212,175,55,0.05); }
         .file-upload-label.disabled { pointer-events: none; opacity: 0.5; }
-        .file-name-display { color: var(--gold); font-size: 0.8rem; font-weight: 700; margin-top: 8px; }
+        .file-name-display { color: var(--gold); font-size: 0.8rem; font-weight: 700; margin-top: 8px; word-break: break-word; }
 
         .quick-amount-btn {
             background: #111; border: 1px solid #333; color: white;
-            padding: 12px 20px; border-radius: 10px; font-weight: 700; transition: 0.3s; flex: 1; min-width: 90px;
+            padding: 10px 15px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; transition: 0.3s; flex: 1; min-width: 70px;
         }
+        @media (min-width: 576px) { .quick-amount-btn { padding: 12px 20px; font-size: 1rem; min-width: 90px; } }
         .quick-amount-btn:hover:not(:disabled) { border-color: var(--gold); background: rgba(212,175,55,0.1); color: var(--gold); }
         .quick-amount-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        /* LIVE CALCULATOR */
-        .live-calc-box { background: #080808; border: 1px solid #222; border-radius: 15px; padding: 25px; margin: 30px 0; }
-        .calc-line { display: flex; justify-content: space-between; margin-bottom: 12px; font-weight: 600; color: #aaa; font-size: 0.95rem; }
+        .live-calc-box { background: #080808; border: 1px solid #222; border-radius: 15px; padding: clamp(15px, 4vw, 25px); margin: 30px 0; }
+        .calc-line { display: flex; justify-content: space-between; margin-bottom: 12px; font-weight: 600; color: #aaa; font-size: clamp(0.85rem, 3vw, 0.95rem); }
         .calc-line.fee span:last-child { color: var(--red); }
         .calc-line.fee.free span:last-child { color: var(--success); }
-        .calc-line.total { border-top: 1px dashed #444; padding-top: 15px; margin-top: 10px; font-size: 1.3rem; color: #fff; }
+        .calc-line.total { border-top: 1px dashed #444; padding-top: 15px; margin-top: 10px; font-size: clamp(1.1rem, 4vw, 1.3rem); color: #fff; }
         .calc-line.total span:last-child { color: var(--gold); font-family: 'Cinzel', serif; font-weight: 900; }
 
         .btn-fund {
             background: linear-gradient(90deg, var(--gold-dim), var(--gold)); color: black; font-weight: 900; border-radius: 15px;
-            padding: 20px; width: 100%; border: none; font-size: 1.1rem; letter-spacing: 2px;
+            padding: clamp(15px, 4vw, 20px); width: 100%; border: none; font-size: clamp(0.9rem, 3vw, 1.1rem); letter-spacing: 2px;
             transition: 0.3s; box-shadow: 0 10px 20px rgba(212,175,55,0.2);
         }
         .btn-fund:hover:not(:disabled) { background: white; transform: translateY(-3px); box-shadow: 0 15px 30px rgba(255,255,255,0.3); }
@@ -157,13 +161,13 @@
                 <i class="fas fa-bolt" style="position: absolute; top: 10px; left: 10px; color: var(--gold); font-size: 0.8rem;"></i>
                 <i class="fas fa-credit-card method-icon paystack" style="color: #444;"></i>
                 <div class="method-title">Instant Gateway</div>
-                <div class="method-desc">Cards & Automated Bank</div>
+                <div class="method-desc">Cards & Bank</div>
             </div>
             <div class="method-card" id="method-manual" onclick="selectMethod('manual')">
                 <i class="fas fa-clock" style="position: absolute; top: 10px; left: 10px; color: #888; font-size: 0.8rem;"></i>
                 <i class="fas fa-university method-icon manual" style="color: #444;"></i>
                 <div class="method-title">Manual Transfer</div>
-                <div class="method-desc text-success">Zero Fees • Admin Verifies</div>
+                <div class="method-desc text-success">Zero Fees • Admin</div>
             </div>
         </div>
 
