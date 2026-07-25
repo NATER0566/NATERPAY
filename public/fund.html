@@ -238,11 +238,17 @@
     let currentMethod = 'paystack';
     let selectedReceiptFile = null; 
 
-    // FIX: Fallback to unlock UI if browser hits the physical back button
+    // THE BULLETPROOF UI UNLOCKER & PHYSICAL BACK-BUTTON DETECTOR
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
             Swal.close();
             toggleUIState(false);
+            
+            // If they hit the physical back button to escape Paystack, instantly verify and mark FAILED
+            const pendingRef = localStorage.getItem('pending_funding_ref');
+            if (pendingRef) {
+                verifyReturnedPayment(pendingRef);
+            }
         }
     });
 
@@ -432,7 +438,10 @@
             const data = await res.json();
 
             if (data.success && data.checkoutUrl) {
-                // FIX: Strip the "Securing Gateway" spinner completely right before redirecting so it NEVER gets stuck
+                // THE FIX: Memorize the transaction ID *before* leaving the page
+                localStorage.setItem('pending_funding_ref', data.paymentReference);
+                
+                // Strip the "Securing Gateway" spinner completely right before redirecting
                 Swal.close();
                 window.location.href = data.checkoutUrl;
             } else {
@@ -446,11 +455,14 @@
     }
 
     // ====================================================================
-    // VERIFY ON RETURN TO THIS PAGE ONLY
+    // BULLETPROOF VERIFICATION SYSTEM
     // ====================================================================
     async function verifyReturnedPayment(reference) {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
+
+        // Wipe the memory instantly so it doesn't get stuck in a verification loop
+        localStorage.removeItem('pending_funding_ref');
 
         Swal.fire({
             title: 'Verifying Transaction...',
@@ -475,11 +487,13 @@
                 Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Your wallet has been credited.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
                 .then(() => window.location.href = 'dashboard.html');
             } else {
-                // Instantly tell user it failed if they cancelled or if the card was declined
-                Swal.fire({ icon: 'error', title: 'Payment Failed', text: data.message || 'Transaction was abandoned or failed.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+                // Instantly tell user it failed if they cancelled, and mark it FAILED in the DB
+                Swal.fire({ icon: 'error', title: 'Payment Failed', text: data.message || 'Transaction was abandoned or failed.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' })
+                .then(() => window.location.href = 'dashboard.html');
             }
         } catch (error) {
-            Swal.fire({ icon: 'warning', title: 'Pending Sync', text: 'Could not verify instantly. The system will auto-reconcile shortly.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'warning', title: 'Pending Sync', text: 'Could not verify instantly. The system will auto-reconcile shortly.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+            .then(() => window.location.href = 'dashboard.html');
         }
     }
 
@@ -487,9 +501,9 @@
         initStars();
         loadCompanyBankDetails();
 
-        // FIX: Removed dangerous localStorage check. ONLY verify if Paystack specifically puts "?reference=" in the URL
+        // THE FIX: Look for the reference in the URL OR the local memory
         const urlParams = new URLSearchParams(window.location.search);
-        const paystackRef = urlParams.get('reference') || urlParams.get('trxref');
+        const paystackRef = urlParams.get('reference') || urlParams.get('trxref') || localStorage.getItem('pending_funding_ref');
         
         if (paystackRef) {
             verifyReturnedPayment(paystackRef);
