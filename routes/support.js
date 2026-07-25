@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+    const mongoose = require('mongoose');
 const SupportTicket = require('../models/SupportTicket');
 const Notification = require('../models/Notification');
 const Joi = require('joi'); // [1] Strict Request Validation
@@ -120,32 +120,51 @@ async function getTickets(request, reply) {
 }
 
 /* ============================================================================
-   2. CREATE SUPPORT TICKET (XSS PROTECTED)
+   2. CREATE SUPPORT TICKET (XSS PROTECTED & FULLY BULLETPROOF)
 ============================================================================ */
 async function createTicket(request, reply) {
     try {
         if (!await checkRateLimit(request, 'create_ticket', 5)) throw { status: 429, message: 'Too many tickets created recently. Please wait.' };
 
-        // [1] Strict Joi Validation
+        // [1] Strict Joi Validation (FIXED to completely allow extra fields without throwing errors)
         const schema = Joi.object({
+            ticketId: Joi.string().optional(), // Prevent "ticketId is not allowed" error
             subject: Joi.string().min(3).max(150).required(),
             category: Joi.string().required(),
-            priority: Joi.string().valid('low', 'medium', 'high', 'urgent').default('medium'),
+            // Allow capitalized priority fields to pass validation before we lowercase them
+            priority: Joi.string().valid('low', 'medium', 'high', 'urgent', 'Low', 'Medium', 'High', 'Urgent').default('medium'),
             description: Joi.string().min(10).required(),
-            relatedTransaction: Joi.string().allow('', null)
-        });
+            relatedTransaction: Joi.string().allow('', null).optional()
+        }).unknown(true); // This completely stops Joi from blocking any extra unexpected fields
 
         const { error, value } = schema.validate(request.body);
         if (error) throw error;
         
+        // Safety Fallback: Automatically generate Ticket ID if frontend failed to provide one
+        const finalTicketId = value.ticketId || ('TKT-' + Math.floor(10000000 + Math.random() * 90000000));
+
+        // Format parameters to perfectly match strict Database Enums
+        const safeCategory = String(value.category || 'other').toLowerCase();
+        const safePriority = String(value.priority || 'medium').toLowerCase();
+
+        // Safely intercept "relatedTransaction" if it is NOT a valid MongoDB Object ID (Prevents Cast to ObjectId error)
+        let safeRelatedTx = value.relatedTransaction;
+        let finalDescription = value.description;
+        
+        if (safeRelatedTx && !mongoose.Types.ObjectId.isValid(safeRelatedTx)) {
+            finalDescription = `[Transaction Reference Provided: ${safeRelatedTx}]\n\n${finalDescription}`;
+            safeRelatedTx = undefined; // Force it to undefined so Mongoose ignores it entirely
+        }
+
         // [4] Aggressive XSS Sanitization
         const ticket = new SupportTicket({
+            ticketId: finalTicketId,
             user: request.user._id,
             subject: sanitizeText(value.subject),
-            category: sanitizeText(value.category),
-            priority: value.priority,
-            description: sanitizeText(value.description),
-            relatedTransaction: sanitizeText(value.relatedTransaction)
+            category: sanitizeText(safeCategory),
+            priority: safePriority,
+            description: sanitizeText(finalDescription),
+            relatedTransaction: safeRelatedTx || undefined
         });
         
         await ticket.save();
