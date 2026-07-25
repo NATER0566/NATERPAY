@@ -10,8 +10,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
-    <!-- Google AdSense Main Script -->
-<script>(function(s){s.dataset.zone='11384020',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+    <!-- MONETAG VIGNETTE / IN-PAGE PUSH SCRIPT -->
+    <script>(function(s){s.dataset.zone='11384420',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+
     <style>
         :root { 
             --gold: #FFD700; --gold-dim: #d4af37; --gold-glow: rgba(255, 215, 0, 0.4); 
@@ -76,27 +77,6 @@
         }
         .cat-pill:hover, .cat-pill.active { background: rgba(255,215,0,0.1); border-color: var(--gold); color: var(--gold); }
 
-        /* Google AdSense Compliant Wrapper */
-        .google-ad-wrapper {
-            background: rgba(15, 15, 15, 0.4);
-            border: 1px dashed #333;
-            border-radius: 15px;
-            padding: 10px;
-            margin: 0 auto 40px;
-            max-width: 1200px;
-            width: 90%;
-            text-align: center;
-            overflow: hidden;
-        }
-        .ad-label {
-            display: block;
-            font-size: 0.6rem;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 5px;
-        }
-
         /* LAYOUT SECTIONS */
         .section-wrapper { padding: 0 5% 50px; }
         .section-header {
@@ -159,7 +139,6 @@
         .trust-item:hover i { color: var(--gold); }
         .trust-item h5 { color: #fff; font-weight: 900; font-size: 1rem; margin-bottom: 8px; }
         .trust-item p { color: #777; font-size: 0.8rem; font-weight: 600; line-height: 1.5; margin: 0; }
-
     </style>
 </head>
 <body>
@@ -204,21 +183,6 @@
     <div class="cat-pill" onclick="filterCategory('Physical Goods', this)"><i class="fas fa-box"></i> Physical Goods</div>
 </div>
 
-<!-- GOOGLE ADSENSE - TOP PLACEMENT -->
-<div class="google-ad-wrapper">
-    <span class="ad-label">Advertisement</span>
-    <!-- Marketplace Display -->
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-4661775522120249"
-         data-ad-slot="3761706050"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>
-         (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
-</div>
-
 <!-- DYNAMIC SECTIONS -->
 <div class="section-wrapper" id="trendingSection">
     <div class="section-header">
@@ -243,21 +207,6 @@
         <a href="#" class="view-all">Explore New <i class="fas fa-chevron-right ms-1"></i></a>
     </div>
     <div class="grid-layout" id="recentGrid"></div>
-</div>
-
-<!-- GOOGLE ADSENSE - BOTTOM PLACEMENT -->
-<div class="google-ad-wrapper">
-    <span class="ad-label">Advertisement</span>
-    <!-- Marketplace Display -->
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-4661775522120249"
-         data-ad-slot="3761706050"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>
-         (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
 </div>
 
 <!-- BUYER TRUST FOOTER -->
@@ -293,7 +242,6 @@
     let currentCategory = 'All';
     let searchQuery = '';
 
-    // BACKGROUND ANIMATION
     function initStars() {
         const c = document.getElementById('starCanvas');
         c.width = window.innerWidth; c.height = window.innerHeight;
@@ -308,7 +256,6 @@
         animate();
     }
 
-    // FETCH DATA
     async function fetchLiveMarketplace() {
         try {
             const res = await fetch('/api/marketplace/all');
@@ -323,14 +270,9 @@
         }
     }
 
-    // EXACT, REAL-TIME STATS UPDATE
     function updateGlobalStats() {
         const totalProds = globalProducts.length;
-        
-        // Exact real-time extraction of unique sellers
         const uniqueMerchants = new Set(globalProducts.map(p => p.email || p.merchantName)).size;
-        
-        // Exact real-time aggregation of completed transactions
         const totalSales = globalProducts.reduce((acc, p) => acc + (p.transactionCount || 0), 0);
 
         document.getElementById('statProducts').innerText = totalProds.toLocaleString();
@@ -338,7 +280,6 @@
         document.getElementById('statSales').innerText = totalSales.toLocaleString();
     }
 
-    // FILTER ENGINE
     function filterCategory(cat, element) {
         document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
         element.classList.add('active');
@@ -351,7 +292,6 @@
         renderAllSections();
     }
 
-    // RENDER ENGINE
     function renderAllSections() {
         let filtered = globalProducts.filter(p => {
             const matchCat = currentCategory === 'All' || (p.category && p.category.includes(currentCategory));
@@ -362,7 +302,6 @@
             return matchCat && matchSearch;
         });
 
-        // If searching or filtering heavily, dump everything into the Trending grid and hide others
         if (currentCategory !== 'All' || searchQuery !== '') {
             document.getElementById('sponsoredSection').style.display = 'none';
             document.getElementById('recentSection').style.display = 'none';
@@ -375,15 +314,12 @@
         document.getElementById('recentSection').style.display = 'block';
         document.querySelector('#trendingSection .section-title').innerHTML = '<i class="fas fa-fire text-danger"></i> Trending Today';
 
-        // 1. Trending (Sorted by Sales)
         const trending = [...filtered].sort((a, b) => (b.transactionCount || 0) - (a.transactionCount || 0)).slice(0, 8);
         renderGrid(trending, 'trendingGrid', false);
 
-        // 2. Sponsored / Elite (Random selection to simulate featured)
         const sponsored = [...filtered].sort(() => 0.5 - Math.random()).slice(0, 4);
         renderGrid(sponsored, 'sponsoredGrid', true);
 
-        // 3. Recent (Default order from DB which is usually chronological)
         const recent = [...filtered].slice(0, 8);
         renderGrid(recent, 'recentGrid', false);
     }
@@ -402,12 +338,11 @@
             const cat = p.category || 'Digital';
             const img = p.cloudinaryUrl || p.productImageBase64 || 'https://via.placeholder.com/600x400/111/444?text=NO+IMAGE';
             const sales = p.transactionCount || 0;
-            const views = p.views || 0; // The Fix: Real View Count
-            const rating = p.rating || 0; // The Fix: Real Rating
-            const reviews = p.reviews || 0; // The Fix: Real Review Count
+            const views = p.views || 0;
+            const rating = p.rating || 0;
+            const reviews = p.reviews || 0;
             const merchantName = p.merchantName || 'Verified Merchant';
 
-            // STRICT KYC VISUAL ENGINE 
             const isVerified = p.kycLevel && p.kycLevel >= 1;
             
             const verifiedIcon = isVerified 
