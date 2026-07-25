@@ -9,8 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
-    <!-- Google AdSense Main Script (Loaded once in head for performance & compliance) -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
+    <!-- MONETAG VIGNETTE / IN-PAGE PUSH SCRIPT -->
+    <script>(function(s){s.dataset.zone='11384420',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
 
     <style>
         :root { --red: #d32f2f; --gold: #d4af37; --bg: #050505; --panel-bg: rgba(15, 15, 15, 0.85); }
@@ -111,24 +111,17 @@
         }
         .action-button:hover { background: #fff; transform: translateY(-2px); color: #000; }
 
-        /* ================= ADS SECTION SAFE STYLES ================= */
-        .google-ad-wrapper {
-            background: rgba(15, 15, 15, 0.4);
-            border: 1px dashed #333;
+        /* ================= SPONSORED BANNER SECTION ================= */
+        .sponsored-banner-wrapper {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(15, 15, 15, 0.95) 100%);
+            border: 1px dashed var(--gold);
             border-radius: 15px;
-            padding: 10px;
+            padding: 40px 20px;
             margin: 0 auto 40px;
             width: 100%;
             text-align: center;
             overflow: hidden;
-        }
-        .ad-label {
-            display: block;
-            font-size: 0.6rem;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 5px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
         }
         /* =========================================================== */
 
@@ -209,21 +202,17 @@
 
     </div>
 
-    <!-- ================= START: GOOGLE ADSENSE SECTION ================= -->
-    <div class="google-ad-wrapper">
-        <span class="ad-label">Advertisement</span>
-        <!-- Support Display Unit -->
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-4661775522120249"
-             data-ad-slot="5831280284"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
+    <!-- ================= START: MONETAG DIRECT LINK SECTION ================= -->
+    <div class="sponsored-banner-wrapper">
+        <h4 style="font-family: 'Cinzel'; color: var(--gold); font-weight: 800; margin-bottom: 15px;">SPONSORED PARTNER</h4>
+        <p class="text-muted mb-4 mx-auto" style="max-width: 600px;">
+            Explore premium deals and offers from our global advertising partners.
+        </p>
+        <button class="btn btn-warning btn-lg rounded-pill px-5 fw-bold text-dark" onclick="window.open('https://omg10.com/4/11384459', '_blank')">
+            <i class="fas fa-external-link-alt me-2"></i> View Special Offer
+        </button>
     </div>
-    <!-- ================= END: GOOGLE ADSENSE SECTION ================= -->
+    <!-- ================= END: MONETAG DIRECT LINK SECTION ================= -->
 
 </div>
 
