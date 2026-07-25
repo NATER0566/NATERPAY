@@ -404,7 +404,7 @@
                 
                 if (tx.status === 'processing' && tx.type === 'withdrawal') {
                     actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="processWithdrawal('${tx._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-sm btn-danger rounded fw-bold ms-1" onclick="processWithdrawal('${tx._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>`;
-                } else if (tx.status === 'processing' && tx.provider === 'manual' && tx.type === 'funding') {
+                } else if (tx.status === 'processing' && tx.provider === 'internal' && tx.type === 'funding') {
                     actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="processManualDeposit('${tx._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-sm btn-danger rounded fw-bold ms-1" onclick="processManualDeposit('${tx._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>`;
                 } else if (tx.status === 'pending') {
                     actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="forceVerifyTransaction('${tx._id}')" title="Force Success"><i class="fas fa-check"></i></button>`;
@@ -432,7 +432,7 @@
             }
 
             // Manual Funding Extension
-            if (tx.type === 'funding' && tx.provider === 'manual') {
+            if (tx.type === 'funding' && tx.provider === 'internal') {
                 let narration = tx.metadata?.narration || 'Not Provided';
                 let receiptUrl = tx.metadata?.receiptUrl;
                 let receiptDisplay = receiptUrl ? `<div class="mt-3 text-center"><a href="${receiptUrl}" target="_blank"><img src="${receiptUrl}" style="max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid var(--gold); object-fit: contain;"></a><div class="small text-muted mt-1"><i class="fas fa-search-plus"></i> Click image to enlarge</div></div>` : `<div class="mt-2 p-2 bg-dark rounded text-center small text-muted"><i class="fas fa-times-circle"></i> No receipt uploaded</div>`;
@@ -484,7 +484,7 @@
         try {
             const res = await fetch('/api/admin/transactions?limit=500', { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
-            const pending = (data.transactions || []).filter(tx => tx.type === 'funding' && tx.provider === 'manual' && tx.status === 'processing');
+            const pending = (data.transactions || []).filter(tx => tx.type === 'funding' && tx.provider === 'internal' && tx.status === 'processing');
             
             const badge = document.getElementById('depositsBadge'); 
             const tbody = document.getElementById('depositsTable');
@@ -895,3 +895,6 @@
 </script>
 </body>
 </html>
+
+
+check I said manual deposit don't assume
