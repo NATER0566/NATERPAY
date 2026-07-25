@@ -17,7 +17,6 @@ try {
     logger = { 
         info: (msg) => console.log(JSON.stringify({ level: 'info', timestamp: new Date().toISOString(), message: msg })),
         warn: (msg) => console.warn(JSON.stringify({ level: 'warn', timestamp: new Date().toISOString(), message: msg })),
-        // FIXED: Extracts string safely to prevent "Circular JSON" crashes that cause the UI to hang forever
         error: (msg, err) => {
             const safeErr = err?.response?.data?.message || err?.message || String(err);
             console.error(JSON.stringify({ level: 'error', timestamp: new Date().toISOString(), message: msg, error: safeErr }));
@@ -25,7 +24,6 @@ try {
     };
 }
 
-// ENVIRONMENT VARIABLES
 const APP_URL = config.appUrl || process.env.APP_URL || 'https://naterpay-yrf7.onrender.com';
 const PAYSTACK_BASE_URL = config.paystack?.baseUrl || process.env.PAYSTACK_BASE_URL || 'https://api.paystack.co';
 
@@ -43,7 +41,6 @@ function handleError(reply, error, defaultMessage = 'System error occurred.') {
     if (error.isJoi) return reply.status(400).send({ success: false, message: error.details[0].message });
     
     let safeMessage = error.message || defaultMessage;
-    // Extract exact Paystack API error if it fails
     if (error.response && error.response.data && error.response.data.message) {
         safeMessage = error.response.data.message;
     }
@@ -53,13 +50,18 @@ function handleError(reply, error, defaultMessage = 'System error occurred.') {
 }
 
 /* =========================================================================
-   [3] DATA SANITIZERS (FIXED FOR MONGOOSE DECIMAL128 OBJECTS)
+   [3] DATA SANITIZERS
 ========================================================================= */
+const parseDecimal = (val) => {
+    if (val === null || val === undefined) return 0;
+    if (val.$numberDecimal) return Number(val.$numberDecimal);
+    if (typeof val === 'object' && typeof val.toString === 'function') return Number(val.toString());
+    return Number(val) || 0;
+};
+
 const sanitizeAmount = (amount) => {
     let val = amount;
-    // Safely parse Mongoose Decimal128 objects to string first
     if (val && typeof val === 'object' && val.toString) val = val.toString();
-    
     const num = Number(parseFloat(val).toFixed(2));
     if (isNaN(num) || num <= 0) throw new Error('Invalid monetary amount.');
     return num;
@@ -133,7 +135,7 @@ async function checkDailyLimit(userId, type, amount, limit) {
 }
 
 /* =========================================================================
-   [5] AUDIT LOGGER (FIXED VALIDATION BUG)
+   [5] AUDIT LOGGER 
 ========================================================================= */
 async function createAuditLog(params, session = null) {
     if (!AuditLog) return;
@@ -144,7 +146,6 @@ async function createAuditLog(params, session = null) {
             newBalance: String(params.newBalance || '0'), ipAddress: params.ipAddress || 'SYSTEM', userAgent: params.userAgent || 'SYSTEM',
             status: params.status, source: params.source || 'API', details: params.details || {}
         });
-        // Bypassing validation so strict Database Enums don't throw "Audit Log Error" in your console
         if (session) await log.save({ session, validateBeforeSave: false }); 
         else await log.save({ validateBeforeSave: false });
     } catch(e) { logger.error('Audit Log Error', e.message); }
@@ -176,7 +177,7 @@ async function failTransactionStrictly(txId, reason, request, source) {
     );
     if (failedTx) {
         await createAuditLog({
-            user: failedTx.user, transactionId: failedTx._id, reference: failedTx.providerReference, amount: failedTx.amount,
+            user: failedTx.user, transactionId: failedTx._id, reference: failedTx.providerReference, amount: parseDecimal(failedTx.amount),
             type: failedTx.type, previousBalance: failedTx.balanceBefore || '0', newBalance: failedTx.balanceAfter || '0',
             ipAddress: request ? request.ip : 'SYSTEM', userAgent: request ? request.headers['user-agent'] : 'SYSTEM',
             status: TX_STATUS.FAILED, source: source
@@ -336,7 +337,11 @@ async function fundManualWallet(request, reply) {
 ========================================================================= */
 async function adminApproveManualFunding(request, reply) {
     try {
-        const schema = Joi.object({ transactionId: Joi.string().required() });
+        // FIXED: The Joi schema now securely allows the empty 'reason' variable sent by the frontend
+        const schema = Joi.object({ 
+            transactionId: Joi.string().required(),
+            reason: Joi.string().allow('', null).optional()
+        });
         const { error, value } = schema.validate(request.body);
         if (error) throw error;
 
@@ -360,9 +365,10 @@ async function adminApproveManualFunding(request, reply) {
                 { user: tx.user }, { $inc: { availableBalance: creditAmount, balance: creditAmount } }, { session, new: true }
             );
 
-            // FIXED: Safely extracting Decimal128 using toString() before Math
-            tx.balanceBefore = String(sanitizeAmount(Number(updatedWallet.availableBalance?.toString() || 0) - creditAmount));
-            tx.balanceAfter = String(updatedWallet.availableBalance);
+            const currentWalletAvail = parseDecimal(updatedWallet.availableBalance);
+            
+            tx.balanceBefore = String(sanitizeAmount(currentWalletAvail - creditAmount));
+            tx.balanceAfter = String(currentWalletAvail);
             tx.description = 'Manual Bank Transfer (Approved)';
             await tx.save({ session, validateBeforeSave: false });
 
@@ -407,7 +413,7 @@ async function adminRejectManualFunding(request, reply) {
         if (!failedTx) throw new Error('Transaction not found or already processed.');
 
         await createAuditLog({
-            user: failedTx.user, transactionId: failedTx._id, reference: failedTx.providerReference, amount: failedTx.amount,
+            user: failedTx.user, transactionId: failedTx._id, reference: failedTx.providerReference, amount: parseDecimal(failedTx.amount),
             type: 'funding', previousBalance: failedTx.balanceBefore, newBalance: failedTx.balanceAfter, 
             ipAddress: request.ip, userAgent: request.headers['user-agent'], status: TX_STATUS.FAILED, 
             source: `Admin API: ${adminUser.email}`, details: { rejectedBy: adminUser._id, reason: rejectionReason }
@@ -454,24 +460,27 @@ async function verifyFunding(request, reply) {
             const lockedTx = await Transaction.findOneAndUpdate({ _id: txCheck._id, status: TX_STATUS.PENDING }, { status: TX_STATUS.SUCCESS }, { session, new: true }); 
             if (!lockedTx) { await session.abortTransaction(); session.endSession(); return reply.send({ success: true, message: 'Payment verified successfully.' }); } 
             
-            // FIXED: Safely parsing Decimal128 to String before performing addition
-            const expectedTotalKobo = sanitizeAmount(Number(txCheck.amount?.toString() || 0) + Number(txCheck.fee?.toString() || 0)) * 100;
-            if (gatewayData.amount < expectedTotalKobo) { 
-                await failTransactionStrictly(txCheck._id, 'Failed: Partial Payment Detected', request, 'Verification API'); 
-                await session.abortTransaction(); session.endSession();
-                throw new Error('SECURITY ALERT: Payment amount mismatch.'); 
-            } 
+            const amountVal = parseDecimal(lockedTx.amount);
+            const feeVal = parseDecimal(lockedTx.fee);
+            const expectedTotalKobo = Math.round((amountVal + feeVal) * 100);
 
-            const creditAmount = sanitizeAmount(lockedTx.amount); 
+            if (gatewayData.amount < expectedTotalKobo) { 
+                await session.abortTransaction(); session.endSession();
+                await failTransactionStrictly(txCheck._id, 'Failed: Partial Payment Detected', request, 'Verification API'); 
+                throw new Error('SECURITY ALERT: Payment amount mismatch.'); 
+            }
+
+            const creditAmount = sanitizeAmount(amountVal); 
             const updatedWallet = await Wallet.findOneAndUpdate({ user: lockedTx.user }, { $inc: { availableBalance: creditAmount, balance: creditAmount } }, { session, new: true }); 
             
-            // FIXED: Safely parsing Decimal128 to String before performing subtraction
-            lockedTx.balanceBefore = String(sanitizeAmount(Number(updatedWallet.availableBalance?.toString() || 0) - creditAmount)); 
-            lockedTx.balanceAfter = String(updatedWallet.availableBalance); 
+            const currentBalance = parseDecimal(updatedWallet.availableBalance);
+            
+            lockedTx.balanceBefore = String(sanitizeAmount(currentBalance - creditAmount)); 
+            lockedTx.balanceAfter = String(currentBalance); 
             await lockedTx.save({ session, validateBeforeSave: false }); 
             
             await session.commitTransaction(); session.endSession(); 
-            if (request.server && request.server.io) request.server.io.to(`user:${lockedTx.user}`).emit('wallet:update', { balance: String(updatedWallet.availableBalance) }); 
+            if (request.server && request.server.io) request.server.io.to(`user:${lockedTx.user}`).emit('wallet:update', { balance: String(currentBalance) }); 
             reply.send({ success: true, message: 'Payment verified and wallet credited!' }); 
         } catch (dbError) { await session.abortTransaction(); session.endSession(); throw dbError; } 
     } catch (error) { handleError(reply, error, 'Failed to verify payment.'); }
@@ -526,12 +535,13 @@ async function withdraw(request, reply) {
             const secureProviderRef = `MANUAL_WTH_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`; 
             const idempotencyKey = request.headers['x-idempotency-key'] || `wth_${Date.now()}`; 
             
+            const currentBalance = parseDecimal(updatedWallet.availableBalance);
+
             const transaction = new Transaction({ 
                 user: request.user._id, type: 'withdrawal', description: `Withdrawal to ${safeBankName} - ${maskedAccountNo}`, 
                 amount: withdrawAmount, fee: transferFee, totalDeduction: totalDeduction, 
-                // FIXED: Safely extracting Decimal128 using toString() before Math
-                balanceBefore: String(sanitizeAmount(Number(updatedWallet.availableBalance?.toString() || 0) + totalDeduction)), 
-                balanceAfter: String(updatedWallet.availableBalance), 
+                balanceBefore: String(sanitizeAmount(currentBalance + totalDeduction)), 
+                balanceAfter: String(currentBalance), 
                 status: TX_STATUS.PROCESSING, provider: 'internal', providerReference: secureProviderRef, 
                 idempotencyKey: idempotencyKey, ipAddress: request.ip, userAgent: request.headers['user-agent'], 
                 bankName: safeBankName, accountNumber: maskedAccountNo, accountName: safeAccountName, 
@@ -615,21 +625,20 @@ async function transfer(request, reply) {
             const txRefIn = `TRF_IN_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`; 
             const idempotencyKey = request.headers['x-idempotency-key'] || `trf_${Date.now()}`; 
             
+            const senderBalance = parseDecimal(updatedSenderWallet.availableBalance);
+            const recipientBalance = parseDecimal(updatedRecipientWallet.availableBalance);
+
             const senderTransaction = new Transaction({ 
                 user: request.user._id, type: 'transfer', description: `Transfer to ${recipientUser.name}`, 
-                amount: transferAmount, fee: 0, 
-                // FIXED: Safely extracting Decimal128 using toString() before Math
-                balanceBefore: String(sanitizeAmount(Number(updatedSenderWallet.availableBalance?.toString() || 0) + transferAmount)), 
-                balanceAfter: String(updatedSenderWallet.availableBalance), status: TX_STATUS.SUCCESS, provider: 'internal', 
+                amount: transferAmount, fee: 0, balanceBefore: String(sanitizeAmount(senderBalance + transferAmount)), 
+                balanceAfter: String(senderBalance), status: TX_STATUS.SUCCESS, provider: 'internal', 
                 providerReference: txRefOut, idempotencyKey: idempotencyKey, ipAddress: request.ip, userAgent: request.headers['user-agent'] 
             }); 
             
             const recipientTransaction = new Transaction({ 
                 user: recipientUser._id, type: 'transfer', description: `Received from ${sender.name}`, 
-                amount: transferAmount, fee: 0, 
-                // FIXED: Safely extracting Decimal128 using toString() before Math
-                balanceBefore: String(sanitizeAmount(Number(updatedRecipientWallet.availableBalance?.toString() || 0) - transferAmount)), 
-                balanceAfter: String(updatedRecipientWallet.availableBalance), status: TX_STATUS.SUCCESS, provider: 'internal', providerReference: txRefIn 
+                amount: transferAmount, fee: 0, balanceBefore: String(sanitizeAmount(recipientBalance - transferAmount)), 
+                balanceAfter: String(recipientBalance), status: TX_STATUS.SUCCESS, provider: 'internal', providerReference: txRefIn 
             }); 
             
             await senderTransaction.save({ session, validateBeforeSave: false }); 
@@ -756,8 +765,10 @@ async function handlePaystackWebhook(request, reply) {
                 return reply.code(200).send('Email Mismatch'); 
             } 
             
-            // FIXED: Safely parse Decimal128 objects before addition
-            const expectedTotalKobo = sanitizeAmount(Number(txCheck.amount?.toString() || 0) + Number(txCheck.fee?.toString() || 0)) * 100;
+            const amountVal = parseDecimal(txCheck.amount);
+            const feeVal = parseDecimal(txCheck.fee);
+            const expectedTotalKobo = Math.round((amountVal + feeVal) * 100);
+
             if (gatewayData.amount < expectedTotalKobo) { 
                 await failTransactionStrictly(txCheck._id, 'Webhook Failed: Partial Payment', request, 'Webhook API'); 
                 return reply.code(200).send('Amount mismatch'); 
@@ -778,16 +789,17 @@ async function handlePaystackWebhook(request, reply) {
                     return reply.code(200).send('Already processed'); 
                 } 
                 
-                const creditAmount = sanitizeAmount(lockedTx.amount); 
+                const creditAmount = sanitizeAmount(amountVal); 
                 const updatedWallet = await Wallet.findOneAndUpdate( 
                     { user: lockedTx.user }, 
                     { $inc: { availableBalance: creditAmount, balance: creditAmount } }, 
                     { session, new: true } 
                 ); 
                 
-                // FIXED: Safely parse Decimal128 objects before subtraction
-                lockedTx.balanceBefore = String(sanitizeAmount(Number(updatedWallet.availableBalance?.toString() || 0) - creditAmount)); 
-                lockedTx.balanceAfter = String(updatedWallet.availableBalance); 
+                const currentBalance = parseDecimal(updatedWallet.availableBalance);
+
+                lockedTx.balanceBefore = String(sanitizeAmount(currentBalance - creditAmount)); 
+                lockedTx.balanceAfter = String(currentBalance); 
                 await lockedTx.save({ session, validateBeforeSave: false }); 
                 
                 await createAuditLog({ 
@@ -802,7 +814,7 @@ async function handlePaystackWebhook(request, reply) {
                 session.endSession(); 
                 
                 if (request.server && request.server.io) { 
-                    request.server.io.to(`user:${lockedTx.user}`).emit('wallet:update', { balance: String(updatedWallet.availableBalance) }); 
+                    request.server.io.to(`user:${lockedTx.user}`).emit('wallet:update', { balance: String(currentBalance) }); 
                 } 
             } catch (dbError) { 
                 await session.abortTransaction(); 
