@@ -1,4 +1,4 @@
-    const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 const SupportTicket = require('../models/SupportTicket');
 const Notification = require('../models/Notification');
 const Joi = require('joi'); // [1] Strict Request Validation
@@ -126,37 +126,32 @@ async function createTicket(request, reply) {
     try {
         if (!await checkRateLimit(request, 'create_ticket', 5)) throw { status: 429, message: 'Too many tickets created recently. Please wait.' };
 
-        // [1] Strict Joi Validation (FIXED to completely allow extra fields without throwing errors)
         const schema = Joi.object({
-            ticketId: Joi.string().optional(), // Prevent "ticketId is not allowed" error
+            ticketId: Joi.string().optional(),
             subject: Joi.string().min(3).max(150).required(),
             category: Joi.string().required(),
-            // Allow capitalized priority fields to pass validation before we lowercase them
             priority: Joi.string().valid('low', 'medium', 'high', 'urgent', 'Low', 'Medium', 'High', 'Urgent').default('medium'),
             description: Joi.string().min(10).required(),
             relatedTransaction: Joi.string().allow('', null).optional()
-        }).unknown(true); // This completely stops Joi from blocking any extra unexpected fields
+        }).unknown(true);
 
         const { error, value } = schema.validate(request.body);
         if (error) throw error;
         
-        // Safety Fallback: Automatically generate Ticket ID if frontend failed to provide one
         const finalTicketId = value.ticketId || ('TKT-' + Math.floor(10000000 + Math.random() * 90000000));
 
-        // Format parameters to perfectly match strict Database Enums
-        const safeCategory = String(value.category || 'other').toLowerCase();
+        // FIX: Removed .toLowerCase() so "Funding", "VTU", etc. remain exactly as Mongoose expects them
+        const safeCategory = String(value.category || 'Other'); 
         const safePriority = String(value.priority || 'medium').toLowerCase();
 
-        // Safely intercept "relatedTransaction" if it is NOT a valid MongoDB Object ID (Prevents Cast to ObjectId error)
         let safeRelatedTx = value.relatedTransaction;
         let finalDescription = value.description;
         
         if (safeRelatedTx && !mongoose.Types.ObjectId.isValid(safeRelatedTx)) {
             finalDescription = `[Transaction Reference Provided: ${safeRelatedTx}]\n\n${finalDescription}`;
-            safeRelatedTx = undefined; // Force it to undefined so Mongoose ignores it entirely
+            safeRelatedTx = undefined;
         }
 
-        // [4] Aggressive XSS Sanitization
         const ticket = new SupportTicket({
             ticketId: finalTicketId,
             user: request.user._id,
