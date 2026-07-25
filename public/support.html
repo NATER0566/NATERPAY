@@ -191,7 +191,6 @@
                         <input type="text" id="t-subject" class="form-control" placeholder="E.g. Deposit not reflecting" required minlength="3">
                     </div>
                     <div class="row">
-                        <!-- FIXED: Capitalized values to match strict Database Enums -->
                         <div class="col-6 mb-3">
                             <label class="form-label text-muted small fw-bold">Category</label>
                             <select id="t-category" class="form-select" required>
@@ -205,11 +204,12 @@
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label text-muted small fw-bold">Priority</label>
+                            <!-- FIXED: Restored lowercase values to satisfy backend Joi validation -->
                             <select id="t-priority" class="form-select" required>
-                                <option value="Low">Low</option>
-                                <option value="Medium" selected>Medium</option>
-                                <option value="High">High</option>
-                                <option value="Urgent" class="text-danger">Urgent</option>
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent" class="text-danger">Urgent</option>
                             </select>
                         </div>
                     </div>
