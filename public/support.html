@@ -9,6 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
+    <!-- SWEETALERT2 ADDED FOR PROFESSIONAL POPUPS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <style>
         :root { --gold: #d4af37; --bg: #050505; --card-bg: rgba(20, 20, 20, 0.95); }
         body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
@@ -190,7 +193,7 @@
                         <input type="text" id="t-subject" class="form-control" placeholder="E.g. Deposit not reflecting" required minlength="3">
                     </div>
                     <div class="row">
-                        <!-- FIXED: Hidden Values Now Strictly Match Database Enums -->
+                        <!-- Values strictly match the database Enums -->
                         <div class="col-6 mb-3">
                             <label class="form-label text-muted small fw-bold">Category</label>
                             <select id="t-category" class="form-select" required>
@@ -279,8 +282,13 @@
     const token = localStorage.getItem('naterpay_token');
     
     if (!token) {
-        alert("Please log in to access the Ticketing System. Redirecting to login...");
-        window.location.href = 'index.html';
+        Swal.fire({
+            icon: 'warning',
+            title: 'Authentication Required',
+            text: 'Redirecting to login...',
+            background: '#0a0a0a', color: '#fff',
+            showConfirmButton: false, timer: 2000
+        }).then(() => { window.location.href = 'index.html'; });
     }
 
     const escapeHtml = (unsafe) => {
@@ -332,11 +340,11 @@
                     container.style.display = 'block';
                 }
             } else {
-                alert(data.message || 'Failed to load tickets.');
+                Swal.fire({ icon: 'error', title: 'Error', text: data.message || 'Failed to load tickets.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d32f2f' });
             }
         } catch (err) {
             loader.style.display = 'none';
-            alert("Network error fetching tickets.");
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Failed to fetch tickets. Please check your connection.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d32f2f' });
         }
     }
 
@@ -369,7 +377,16 @@
             const data = await response.json();
 
             if (data.success) {
-                alert("Ticket created successfully!");
+                // PROFESSIONAL SUCCESS MESSAGE
+                Swal.fire({ 
+                    icon: 'success', 
+                    title: 'Ticket Submitted!', 
+                    text: 'Your support ticket has been created successfully. Our team will respond shortly.', 
+                    confirmButtonColor: '#d4af37', 
+                    background: '#0a0a0a', 
+                    color: '#fff' 
+                });
+
                 document.getElementById('createTicketForm').reset();
                 bootstrap.Modal.getInstance(document.getElementById('createTicketModal')).hide();
                 
@@ -378,10 +395,10 @@
                 document.getElementById('ticketListLoader').style.display = 'block';
                 fetchTickets();
             } else {
-                alert(data.message || 'Failed to create ticket.');
+                Swal.fire({ icon: 'error', title: 'Submission Failed', text: data.message || 'Failed to create ticket.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d32f2f' });
             }
         } catch (err) {
-            alert("Network error.");
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Could not connect to the server.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d32f2f' });
         } finally {
             btn.innerHTML = 'Submit Ticket';
             btn.disabled = false;
@@ -465,10 +482,10 @@
                 input.value = '';
                 openTicket(ticketId); 
             } else {
-                alert(data.message || 'Failed to send message.');
+                Swal.fire({ icon: 'error', title: 'Reply Failed', text: data.message || 'Failed to send message.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d32f2f' });
             }
         } catch (err) {
-            alert("Network error sending reply.");
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Could not send reply.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d32f2f' });
         } finally {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
