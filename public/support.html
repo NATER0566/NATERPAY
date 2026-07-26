@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NATER-PAY | Support Center</title>
@@ -191,15 +190,16 @@
                         <input type="text" id="t-subject" class="form-control" placeholder="E.g. Deposit not reflecting" required minlength="3">
                     </div>
                     <div class="row">
+                        <!-- FIXED: Hidden Values Now Strictly Match Database Enums -->
                         <div class="col-6 mb-3">
                             <label class="form-label text-muted small fw-bold">Category</label>
                             <select id="t-category" class="form-select" required>
-                                <option value="Funding">Wallet Funding</option>
-                                <option value="Withdrawal">Withdrawal</option>
-                                <option value="VTU">Airtime / Data / Bills</option>
-                                <option value="KYC">KYC Verification</option>
-                                <option value="Account">Account Settings</option>
-                                <option value="Other">Other</option>
+                                <option value="payment">Wallet Funding</option>
+                                <option value="transaction">Withdrawal</option>
+                                <option value="transaction">Airtime / Data / Bills</option>
+                                <option value="kyc">KYC Verification</option>
+                                <option value="account">Account Settings</option>
+                                <option value="other">Other</option>
                             </select>
                         </div>
                         <div class="col-6 mb-3">
@@ -353,7 +353,6 @@
         // MERGED the reference into the description safely
         const safeDescription = refText ? `[Transaction Reference Provided: ${refText}]\n\n${descText}` : descText;
 
-        // REMOVED the ticketId line to pass Joi validation
         const payload = {
             subject: document.getElementById('t-subject').value,
             category: document.getElementById('t-category').value,
