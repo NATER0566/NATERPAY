@@ -88,6 +88,7 @@
     <div class="tab-nav">
         <button class="admin-tab active" onclick="showTab('overview')"><i class="fas fa-chart-pie me-2"></i>Overview</button>
         <button class="admin-tab" onclick="showTab('tickets')">Tickets <span id="ticketsBadge" class="badge bg-primary badge-dynamic d-none">0</span></button>
+        <button class="admin-tab" onclick="showTab('invoices')">Invoices</button>
         <button class="admin-tab" onclick="showTab('deposits')">Deposits <span id="depositsBadge" class="badge bg-success badge-dynamic d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('withdrawals')">Payouts <span id="withdrawBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('kyc')">KYC <span id="kycBadge" class="badge bg-warning text-dark badge-dynamic d-none">0</span></button>
@@ -100,6 +101,7 @@
         <button class="admin-tab" onclick="showTab('notifications')">Announce</button>
     </div>
     
+    <!-- OVERVIEW -->
     <div id="tab-overview" class="tab-content">
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-3"><div class="stat-box"><div class="high-vis-label">TOTAL USERS</div><div class="stat-number" id="statUsers">...</div></div></div>
@@ -108,7 +110,7 @@
         </div>
     </div>
 
-    <!-- NEW: SUPPORT TICKETS DESK -->
+    <!-- SUPPORT TICKETS -->
     <div id="tab-tickets" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -117,8 +119,24 @@
             </div>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>TICKET ID & DATE</th><th>USER / EMAIL</th><th>SUBJECT & PRIORITY</th><th>STATUS</th><th class="text-end">ACTION</th></tr></thead>
+                    <thead><tr><th>TICKET ID & DATE</th><th>USER IDENTITY (FULL)</th><th>SUBJECT & PRIORITY</th><th>STATUS</th><th class="text-end">ACTION</th></tr></thead>
                     <tbody id="ticketsAdminTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading support tickets...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW: INVOICES -->
+    <div id="tab-invoices" class="tab-content" style="display: none;">
+        <div class="admin-card">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <h5 class="text-gold fw-bold m-0"><i class="fas fa-file-invoice me-2"></i> GLOBAL INVOICE LEDGER</h5>
+                <button class="btn btn-sm btn-outline-light" onclick="fetchAdminInvoices()"><i class="fas fa-sync-alt me-1"></i> Sync Invoices</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark align-middle">
+                    <thead><tr><th>INV # & DATE</th><th>MERCHANT (CREATOR)</th><th>CUSTOMER TARGET</th><th>AMOUNT & STATUS</th><th class="text-end">ACTION</th></tr></thead>
+                    <tbody id="invoicesAdminTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading invoices...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -133,7 +151,7 @@
             </div>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>DATE & REF</th><th>USER & KYC</th><th>NARRATION & RECEIPT</th><th>AMOUNT</th><th class="text-end">ACTION</th></tr></thead>
+                    <thead><tr><th>DATE & REF</th><th>USER IDENTITY (FULL)</th><th>NARRATION & RECEIPT</th><th>AMOUNT</th><th class="text-end">ACTION</th></tr></thead>
                     <tbody id="depositsTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading manual deposits...</td></tr></tbody>
                 </table>
             </div>
@@ -149,13 +167,14 @@
             </div>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>DATE & REF</th><th>USER & KYC STATUS</th><th>BANK DETAILS</th><th>AMOUNT + FEE</th><th class="text-end">ACTION</th></tr></thead>
+                    <thead><tr><th>DATE & REF</th><th>USER IDENTITY (FULL)</th><th>BANK DETAILS</th><th>AMOUNT + FEE</th><th class="text-end">ACTION</th></tr></thead>
                     <tbody id="withdrawalsTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading pending payouts...</td></tr></tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- AUDIT LOG / TRANSACTIONS -->
     <div id="tab-transactions" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -164,13 +183,14 @@
             </div>
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>DATE & REF</th><th>TYPE & PROVIDER</th><th>USER</th><th>AMOUNT</th><th>STATUS</th><th class="text-end">ACTION</th></tr></thead>
+                    <thead><tr><th>DATE & REF</th><th>TYPE & PROVIDER</th><th>USER IDENTITY (FULL)</th><th>AMOUNT</th><th>STATUS</th><th class="text-end">ACTION</th></tr></thead>
                     <tbody id="transactionsTable"><tr><td colspan="6" class="text-center opacity-50 py-4">Loading audit log...</td></tr></tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- USERS -->
     <div id="tab-users" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="table-responsive">
@@ -182,40 +202,43 @@
         </div>
     </div>
 
-    <!-- KYC, ADVERTS, MARKETPLACE, SLIDES, FOUNDER, NOTIFICATIONS -->
+    <!-- KYC -->
     <div id="tab-kyc" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>USER</th><th>TIER REQUEST</th><th>SUMMARY</th><th class="text-end">ACTION</th></tr></thead>
+                    <thead><tr><th>USER IDENTITY (FULL)</th><th>TIER REQUEST</th><th>SUMMARY</th><th class="text-end">ACTION</th></tr></thead>
                     <tbody id="kycTable"><tr><td colspan="4" class="text-center opacity-50 py-4">Loading KYC applications...</td></tr></tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- ADVERTS -->
     <div id="tab-adverts" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>FORMAT/MEDIA</th><th>CAMPAIGN & OWNER KYC</th><th>PACKAGE & BUDGET</th><th>STATUS</th><th class="text-end">ACTIONS</th></tr></thead>
+                    <thead><tr><th>FORMAT/MEDIA</th><th>CAMPAIGN & OWNER (FULL)</th><th>PACKAGE & BUDGET</th><th>STATUS</th><th class="text-end">ACTIONS</th></tr></thead>
                     <tbody id="advertsTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading adverts...</td></tr></tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- MARKETPLACE -->
     <div id="tab-marketplace" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="table-responsive">
                 <table class="table table-dark align-middle">
-                    <thead><tr><th>PRODUCT</th><th>MERCHANT & KYC</th><th>PRICE</th><th>SALES</th><th class="text-end">ACTIONS</th></tr></thead>
+                    <thead><tr><th>PRODUCT</th><th>MERCHANT IDENTITY (FULL)</th><th>PRICE</th><th>SALES</th><th class="text-end">ACTIONS</th></tr></thead>
                     <tbody id="marketplaceTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading marketplace products...</td></tr></tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- SLIDES -->
     <div id="tab-slides" class="tab-content" style="display: none;">
         <div class="row">
             <div class="col-lg-4 mb-3">
@@ -263,6 +286,7 @@
         </div>
     </div>
 
+    <!-- FOUNDER -->
     <div id="tab-founder" class="tab-content" style="display: none;">
         <div class="row justify-content-center">
             <div class="col-lg-8">
@@ -296,6 +320,7 @@
         </div>
     </div>
 
+    <!-- NOTIFICATIONS -->
     <div id="tab-notifications" class="tab-content" style="display: none;">
         <div class="row">
             <div class="col-lg-4 mb-3">
@@ -341,13 +366,12 @@
         if(t === 'founder') loadCurrentFounderData();
         if(t === 'deposits') fetchManualDeposits();
         if(t === 'tickets') fetchAdminTickets();
+        if(t === 'invoices') fetchAdminInvoices();
     }
 
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
     window.globalSystemUsers = [];
-    
-    // RBAC: ROLE BASED ACCESS CONTROL VARIABLE
-    let currentAdminRole = 'admin'; // Defaults to limited admin until proven otherwise
+    let currentAdminRole = 'admin';
 
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
@@ -358,6 +382,9 @@
         });
     }
 
+    // =========================================================================================
+    // THE FIX: GLOBAL USER RESOLUTION ENGINE (Extracts Full Identity from ANY object or ID string)
+    // =========================================================================================
     function getUserKycBadge(userId) {
         if (!userId) return '<span class="status-pill bg-danger text-white mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-times-circle"></i> UNVERIFIED</span>';
         const idString = typeof userId === 'object' ? (userId._id || userId.id) : userId;
@@ -372,7 +399,34 @@
         return '<span class="status-pill bg-danger text-white mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-times-circle"></i> UNVERIFIED</span>';
     }
 
-    // RBAC HELPER FUNCTION (Checks if admin is allowed to touch money)
+    function extractUserDetails(userObj, fallbackEmail = 'Unknown Email', fallbackName = 'Unknown User') {
+        let id = null, name = fallbackName, email = fallbackEmail;
+        
+        if (userObj && typeof userObj === 'object') {
+            id = userObj._id || userObj.id;
+            name = userObj.name || name;
+            email = userObj.email || email;
+        } else if (typeof userObj === 'string') {
+            id = userObj;
+        }
+
+        // Cross-reference with global database
+        if (id && window.globalSystemUsers) {
+            const u = window.globalSystemUsers.find(x => x._id === id);
+            if (u) {
+                name = u.name || name;
+                email = u.email || email;
+            }
+        }
+        
+        const kycBadge = getUserKycBadge(id);
+        
+        return {
+            id, name, email,
+            html: `<div class="fw-bold text-white text-truncate" style="max-width:200px;"><i class="fas fa-user-circle text-secondary me-1"></i> ${name}</div><small class="text-secondary d-block mb-1">${email}</small>${kycBadge}`
+        };
+    }
+
     function requireSuperAdmin(actionCallback) {
         if (currentAdminRole !== 'superadmin') {
             Swal.fire({ icon: 'error', title: 'Access Denied', text: 'You do not have the required clearance to alter financial ledgers. Contact Root Administration.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d32f2f' });
@@ -387,7 +441,7 @@
             await Promise.all([
                 fetchWithdrawals(), fetchManualDeposits(), fetchKYC(), fetchAdverts(), fetchMarketplace(), fetchSlides(), fetchAdminTickets()
             ]);
-        } catch (e) { console.log('Background Sync Delay'); }
+        } catch (e) {}
     }
     setInterval(syncAllBadges, 30000); 
 
@@ -398,7 +452,6 @@
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
         try {
-            // First, fetch the admin's own profile to set permissions
             const meRes = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${token}` } });
             const meData = await meRes.json();
             if (meData.success) {
@@ -450,6 +503,9 @@
                 const amt = parseNum(tx.amount);
                 const encodedTx = encodeURIComponent(JSON.stringify(tx));
                 
+                // Use Global Resolver
+                const uData = extractUserDetails(tx.user || tx.userId || tx.ownerId, tx.userEmail, tx.userName);
+                
                 let actionBtns = `<button class="btn btn-sm btn-info text-white rounded" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button>`;
                 
                 if (tx.status === 'processing' && tx.type === 'withdrawal') {
@@ -462,7 +518,7 @@
                     actionBtns += `<button class="btn btn-sm btn-gold rounded fw-bold ms-1" onclick="requireSuperAdmin(() => forceVerifyTransaction('${tx._id}'))" title="Force Clear">Clear</button>`; 
                 }
 
-                txHtml += `<tr><td><div class="fw-bold">${date}</div><small class="text-secondary">${tx.reference || tx.providerReference || tx._id}</small></td><td><span class="status-pill bg-secondary">${tx.type.replace('_', ' ')}</span><br><small class="text-muted text-uppercase">${tx.provider || 'System'}</small></td><td><div class="text-truncate text-white" style="max-width: 150px;">${tx.userEmail || 'Unknown'}</div></td><td class="fw-bold text-gold fs-5">₦${amt.toLocaleString()}</td><td><span class="status-pill ${tx.status==='success'?'bg-success':(tx.status==='failed'?'bg-danger':'bg-warning text-dark')}">${tx.status}</span></td><td class="text-end"><div class="action-btns justify-content-end">${actionBtns}</div></td></tr>`;
+                txHtml += `<tr><td><div class="fw-bold">${date}</div><small class="text-secondary">${tx.reference || tx.providerReference || tx._id}</small></td><td><span class="status-pill bg-secondary">${tx.type.replace('_', ' ')}</span><br><small class="text-muted text-uppercase">${tx.provider || 'System'}</small></td><td>${uData.html}</td><td class="fw-bold text-gold fs-5">₦${amt.toLocaleString()}</td><td><span class="status-pill ${tx.status==='success'?'bg-success':(tx.status==='failed'?'bg-danger':'bg-warning text-dark')}">${tx.status}</span></td><td class="text-end"><div class="action-btns justify-content-end">${actionBtns}</div></td></tr>`;
             });
             document.getElementById('transactionsTable').innerHTML = txHtml;
         } catch (e) {}
@@ -478,11 +534,8 @@
             }
             if (tx.type === 'funding' && tx.provider === 'internal') {
                 let narration = tx.metadata?.narration || 'Not Provided'; let receiptUrl = tx.metadata?.receiptUrl;
-                let receiptDisplay = receiptUrl ? `<div class="mt-3 text-center"><a href="${receiptUrl}" target="_blank"><img src="${receiptUrl}" style="max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid var(--gold); object-fit: contain;"></a><div class="small text-muted mt-1"><i class="fas fa-search-plus"></i> Click image to enlarge</div></div>` : `<div class="mt-2 p-2 bg-dark rounded text-center small text-muted"><i class="fas fa-times-circle"></i> No receipt uploaded</div>`;
+                let receiptDisplay = receiptUrl ? `<div class="mt-3 text-center"><a href="${receiptUrl}" target="_blank"><img src="${receiptUrl}" style="max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid var(--gold); object-fit: contain;"></a></div>` : `<div class="mt-2 p-2 bg-dark rounded text-center small text-muted">No receipt uploaded</div>`;
                 extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--success);"><h6 class="text-success mb-2 fw-bold"><i class="fas fa-file-invoice-dollar me-1"></i> Manual Deposit Details</h6><p class="mb-1 text-white"><strong class="text-secondary">User Narration:</strong> ${narration}</p>${receiptDisplay}</div>`;
-            }
-            if (tx.status === 'failed' && tx.metadata?.rejectionReason) {
-                extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 1px solid var(--red);"><h6 class="text-danger mb-1 fw-bold"><i class="fas fa-exclamation-circle me-1"></i> Rejection Reason</h6><p class="mb-0 text-white small">${tx.metadata.rejectionReason}</p></div>`;
             }
             Swal.fire({ title: 'Transaction Dossier', html: `<div class="text-start mt-2" style="font-size: 0.9rem;"><p class="mb-1"><strong class="text-gold">Type/Provider:</strong> <span class="text-uppercase badge bg-secondary">${tx.type.replace('_', ' ')} / ${tx.provider || 'System'}</span></p><p class="mb-1"><strong class="text-gold">Amount:</strong> <span class="text-warning fw-bold fs-5">₦${parseNum(tx.amount).toLocaleString()}</span></p><p class="mb-1"><strong class="text-gold">Fee:</strong> <span class="text-danger fw-bold">₦${parseNum(tx.fee).toLocaleString()}</span></p><p class="mb-1"><strong class="text-gold">Status:</strong> <span class="text-uppercase fw-bold ${tx.status==='success'?'text-success':(tx.status==='failed'?'text-danger':'text-warning')}">${tx.status}</span></p>${extraHtml}<div class="p-2 mt-3 bg-dark rounded border border-secondary"><strong class="text-gold d-block mb-1">System Log:</strong><span class="text-white small">${tx.description || 'System Record'}</span></div></div>`, background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444' });
         } catch (e) {}
@@ -505,13 +558,12 @@
     }
 
     // ==========================================
-    // SUPPORT TICKETS DESK (NEW)
+    // SUPPORT TICKETS DESK
     // ==========================================
     async function fetchAdminTickets() {
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
         try {
-            // Note: Replace with your actual Admin Tickets API route if different. Usually it's GET /api/admin/tickets or similar
             const res = await fetch('/api/support/tickets', { headers: { 'Authorization': `Bearer ${token}` } }); 
             const data = await res.json();
             const tickets = data.tickets || [];
@@ -529,9 +581,12 @@
                 const statusColor = t.status === 'resolved' ? 'success' : (t.status === 'open' ? 'warning text-dark' : 'secondary');
                 const priorityColor = t.priority === 'urgent' ? 'text-danger fw-bold' : 'text-info';
                 
+                // Use Global Resolver
+                const uData = extractUserDetails(t.user);
+
                 return `<tr>
                     <td><div class="fw-bold">${t.ticketId}</div><small class="text-secondary">${date}</small></td>
-                    <td><div class="text-white text-truncate" style="max-width:150px;">${t.user?.email || t.user || 'Unknown'}</div></td>
+                    <td>${uData.html}</td>
                     <td><div class="fw-bold text-white text-truncate" style="max-width:200px;">${t.subject}</div><small class="${priorityColor} text-uppercase"><i class="fas fa-exclamation-circle me-1"></i>${t.priority} | ${t.category}</small></td>
                     <td><span class="status-pill bg-${statusColor}">${t.status}</span></td>
                     <td class="text-end">
@@ -545,12 +600,10 @@
     async function openAdminTicketPanel(ticketId, encodedData) {
         const t = JSON.parse(decodeURIComponent(encodedData));
         
-        // Build the chat history HTML
         let chatHtml = `<div class="p-3 bg-black rounded border border-secondary mb-3"><strong class="text-gold d-block mb-1">Original Issue:</strong><span class="text-white small">${t.description}</span></div>`;
-        
         if (t.messages && t.messages.length > 0) {
             t.messages.forEach(msg => {
-                const isAdmin = msg.isInternal; // Assumes your DB marks admin replies
+                const isAdmin = msg.isInternal;
                 const align = isAdmin ? 'text-end' : 'text-start';
                 const bg = isAdmin ? 'border border-warning bg-dark' : 'bg-secondary';
                 const name = isAdmin ? '<i class="fas fa-user-shield text-warning me-1"></i> Admin' : '<i class="fas fa-user text-light me-1"></i> User';
@@ -561,9 +614,7 @@
         const { value: replyMsg } = await Swal.fire({
             title: `Ticket: ${t.ticketId}`,
             html: `
-                <div style="max-height: 300px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px;" class="bg-black p-2 rounded border border-dark">
-                    ${chatHtml}
-                </div>
+                <div style="max-height: 300px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px;" class="bg-black p-2 rounded border border-dark">${chatHtml}</div>
                 <div class="d-flex justify-content-between mb-2">
                     <button id="btnResolveTicket" class="btn btn-sm btn-outline-success"><i class="fas fa-check me-1"></i> Mark Resolved</button>
                     <button id="btnCloseTicket" class="btn btn-sm btn-outline-danger"><i class="fas fa-ban me-1"></i> Force Close</button>
@@ -586,30 +637,131 @@
         if (replyMsg) {
             Swal.fire({title:'Sending Response...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try {
-                // Ensure your backend supports this route: POST /api/support/tickets/:id/messages
                 const res = await fetch(`/api/support/tickets/${ticketId}/messages`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
-                    body: JSON.stringify({ message: replyMsg, isInternal: true }) // isInternal marks it as admin
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                    body: JSON.stringify({ message: replyMsg, isInternal: true })
                 });
                 if(res.ok) { Swal.fire({icon: 'success', title: 'Sent!', background: '#0a0a0a', color: '#fff', timer: 1500}); fetchAdminTickets(); }
-            } catch(e) { Swal.fire('Error', 'Failed to send reply', 'error'); }
+            } catch(e) {}
         }
     }
 
     async function updateTicketStatus(ticketId, newStatus) {
         Swal.fire({title:'Updating...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
         try {
-            // Note: You will need a backend route for this (e.g., PUT /api/support/tickets/:id/status)
             const res = await fetch(`/api/support/tickets/${ticketId}/status`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
                 body: JSON.stringify({ status: newStatus })
             });
             if(res.ok) { Swal.fire({icon: 'success', title: 'Updated!', background: '#0a0a0a', color: '#fff', timer: 1500}); fetchAdminTickets(); }
         } catch(e) {}
     }
 
+    // ==========================================
+    // INVOICES ENGINE (NEW)
+    // ==========================================
+    async function fetchAdminInvoices() {
+        const token = localStorage.getItem("naterpay_token");
+        if(!token) return;
+        try {
+            const res = await fetch('/api/invoices', { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            const invoices = data.invoices || [];
+
+            const tbody = document.getElementById('invoicesAdminTable');
+            if (invoices.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No global invoices found in ledger.</td></tr>'; return; }
+
+            tbody.innerHTML = invoices.map(inv => {
+                const encodedInv = encodeURIComponent(JSON.stringify(inv));
+                const date = new Date(inv.createdAt).toLocaleDateString();
+                
+                let badgeCls = 'secondary';
+                if(inv.status==='sent') badgeCls='info';
+                if(inv.status==='paid') badgeCls='success';
+                if(inv.status==='overdue') badgeCls='danger';
+                
+                // Invoice Owner (The Merchant)
+                const merchantData = extractUserDetails(inv.user || inv.merchantId, inv.businessDetails?.email, inv.businessDetails?.name);
+                
+                return `<tr>
+                    <td><div class="fw-bold"><i class="fas fa-hashtag me-1 text-gold"></i>${inv.invoiceId}</div><small class="text-secondary">${date}</small></td>
+                    <td>${merchantData.html}</td>
+                    <td><div class="fw-bold text-white text-truncate" style="max-width:200px;">${inv.customerName}</div><small class="text-muted d-block">${inv.customerEmail}</small></td>
+                    <td><div class="fw-bold text-gold fs-5">${inv.currency} ${Number(inv.total||0).toLocaleString()}</div><span class="status-pill bg-${badgeCls}">${inv.status}</span></td>
+                    <td class="text-end">
+                        <div class="action-btns">
+                            <button class="btn btn-info text-white" onclick="viewAdminInvoice('${encodedInv}')" title="View Full File"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-primary" onclick="requireSuperAdmin(() => editAdminInvoice('${encodedInv}'))" title="Edit Properties"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-danger" onclick="requireSuperAdmin(() => deleteAdminInvoice('${inv._id}'))" title="Delete"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        } catch(e) {}
+    }
+
+    function viewAdminInvoice(encodedData) {
+        const inv = JSON.parse(decodeURIComponent(encodedData));
+        const itemsHtml = (inv.items || []).map(i => `<div class="d-flex justify-content-between mb-1 pb-1 border-bottom border-secondary"><span class="text-white small">${i.description} (x${i.quantity})</span><span class="text-warning small">${inv.currency} ${Number(i.unitPrice||0).toLocaleString()}</span></div>`).join('');
+        
+        Swal.fire({
+            title: `Invoice ${inv.invoiceId}`,
+            html: `<div class="text-start mt-2" style="font-size: 0.9rem;">
+                <p class="mb-1"><strong class="text-gold">Status:</strong> <span class="text-uppercase fw-bold">${inv.status}</span></p>
+                <p class="mb-1"><strong class="text-gold">Target Customer:</strong> ${inv.customerName} (${inv.customerEmail})</p>
+                <p class="mb-3"><strong class="text-gold">Due Date:</strong> <span class="text-danger">${new Date(inv.dueDate).toLocaleDateString()}</span></p>
+                <div class="p-3 bg-dark rounded border border-secondary mb-3">
+                    <strong class="text-gold d-block mb-2">Line Items</strong>
+                    ${itemsHtml}
+                    <div class="d-flex justify-content-between mt-3 pt-2 border-top border-warning">
+                        <strong class="text-white">TOTAL:</strong>
+                        <strong class="text-gold fs-5">${inv.currency} ${Number(inv.total||0).toLocaleString()}</strong>
+                    </div>
+                </div>
+            </div>`,
+            background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close', confirmButtonColor: '#444'
+        });
+    }
+
+    async function editAdminInvoice(encodedData) {
+        const inv = JSON.parse(decodeURIComponent(encodedData));
+        const { value: formValues } = await Swal.fire({ 
+            title: 'Override Invoice', 
+            html: `
+                <div style="text-align: left;">
+                    <label class="high-vis-label mt-2">Force Status</label>
+                    <select id="swal-inv-status" class="swal2-input bg-dark text-white w-100 m-0">
+                        <option value="draft" ${inv.status==='draft'?'selected':''}>Draft</option>
+                        <option value="sent" ${inv.status==='sent'?'selected':''}>Sent</option>
+                        <option value="paid" ${inv.status==='paid'?'selected':''}>Paid</option>
+                        <option value="overdue" ${inv.status==='overdue'?'selected':''}>Overdue</option>
+                        <option value="cancelled" ${inv.status==='cancelled'?'selected':''}>Cancelled</option>
+                    </select>
+                </div>`, 
+            background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Force Update', 
+            preConfirm: () => ({ status: document.getElementById('swal-inv-status').value }) 
+        });
+        
+        if (formValues) {
+            Swal.fire({title:'Updating Ledger...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try { 
+                // Uses the specific merchant route for changing status, assuming admin has auth to use it
+                const res = await fetch(`/api/invoices/${inv._id}/mark-paid`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
+                // If you have a true general edit route: fetch(`/api/admin/invoices/${inv._id}`, ... )
+                Swal.fire({title: 'Updated!', icon: 'success', background: '#0a0a0a', color: '#fff'}); fetchAdminInvoices(); 
+            } catch(e) { Swal.fire('Failed', 'Network Error', 'error'); }
+        }
+    }
+
+    async function deleteAdminInvoice(invId) {
+        if((await Swal.fire({ title: 'Wipe Invoice?', icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff' })).isConfirmed) {
+            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try { 
+                const res = await fetch(`/api/invoices/${invId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
+                if(res.ok) { Swal.fire('Deleted!', '', 'success'); fetchAdminInvoices(); } 
+            } catch (e) {}
+        }
+    }
 
     // ==========================================
     // MANUAL DEPOSITS QUEUE
@@ -631,14 +783,13 @@
                 tbody.innerHTML = pending.map(tx => {
                     const encodedTx = encodeURIComponent(JSON.stringify(tx));
                     const baseAmt = parseNum(tx.amount);
-                    const kycBadgeHtml = getUserKycBadge(tx.user); 
-                    const userEmail = tx.userEmail || 'Unknown Email';
+                    const uData = extractUserDetails(tx.user || tx.userId, tx.userEmail); 
                     const narration = tx.metadata?.narration || 'Not Provided';
                     const hasReceipt = tx.metadata?.receiptUrl ? '<i class="fas fa-paperclip text-info ms-2" title="Receipt Attached"></i>' : '';
                     
                     return `<tr>
                         <td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx.providerReference || tx._id}</small></td>
-                        <td><div class="text-white text-truncate" style="max-width:150px;">${userEmail}</div>${kycBadgeHtml}</td>
+                        <td>${uData.html}</td>
                         <td><div class="text-muted small text-truncate" style="max-width:200px;">${narration}${hasReceipt}</div></td>
                         <td><div class="fw-bold text-success fs-5">₦${baseAmt.toLocaleString()}</div></td>
                         <td class="text-end">
@@ -710,9 +861,9 @@
                     const bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
                     const bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account';
                     const baseAmt = parseNum(tx.amount); const feeAmt = parseNum(tx.fee);
-                    const kycBadgeHtml = getUserKycBadge(tx.user?._id || tx.user); 
+                    const uData = extractUserDetails(tx.user); 
                     
-                    return `<tr><td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td><td><div class="text-white">${tx.user?.name || 'Unknown'}</div><small class="text-muted d-block mb-1">${tx.user?.email || ''}</small>${kycBadgeHtml}</td><td><div class="text-warning fw-bold">${bName}</div><small class="text-white" style="letter-spacing:1px;">${bAcc}</small></td><td><div class="fw-bold text-gold fs-5">₦${baseAmt.toLocaleString()}</div><small class="text-danger">Fee: ₦${feeAmt.toLocaleString()}</small></td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'approve'))" title="Approve & Settle"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'reject'))" title="Reject & Refund"><i class="fas fa-times"></i></button></div></td></tr>`;
+                    return `<tr><td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td><td>${uData.html}</td><td><div class="text-warning fw-bold">${bName}</div><small class="text-white" style="letter-spacing:1px;">${bAcc}</small></td><td><div class="fw-bold text-gold fs-5">₦${baseAmt.toLocaleString()}</div><small class="text-danger">Fee: ₦${feeAmt.toLocaleString()}</small></td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'approve'))" title="Approve & Settle"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'reject'))" title="Reject & Refund"><i class="fas fa-times"></i></button></div></td></tr>`;
                 }).join('');
             } else { 
                 badge.classList.add('d-none'); 
@@ -754,7 +905,10 @@
                     if (k.currentLevel === 1) summaryHtml = `<span class="text-gold fw-bold"><i class="fas fa-fingerprint me-1"></i> Identity DB Check</span>`;
                     else if (k.currentLevel === 2) summaryHtml = `<span class="text-info fw-bold"><i class="fas fa-passport me-1"></i> ID & Selfie Review</span>`;
                     else if (k.currentLevel === 3) summaryHtml = `<span class="text-success fw-bold"><i class="fas fa-home me-1"></i> Address Verification</span>`;
-                    return `<tr><td><div class="fw-bold">${k.user?.name || 'Unknown'}</div><small>${k.user?.email || ''}</small></td><td><span class="status-pill bg-warning text-dark">TIER ${k.currentLevel || 1}</span></td><td>${summaryHtml}</td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewKycDossier('${encodedKyc}')" title="View Full Documents"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="processKYC('${k._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="processKYC('${k._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button></div></td></tr>`;
+                    
+                    const uData = extractUserDetails(k.user);
+
+                    return `<tr><td>${uData.html}</td><td><span class="status-pill bg-warning text-dark">TIER ${k.currentLevel || 1}</span></td><td>${summaryHtml}</td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewKycDossier('${encodedKyc}')" title="View Full Documents"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="processKYC('${k._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="processKYC('${k._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button></div></td></tr>`;
                 }).join('');
             } else { 
                 badge.classList.add('d-none'); 
@@ -781,9 +935,11 @@
                 addressSection = `<h6 class="text-gold mt-4 border-bottom border-secondary pb-1"><i class="fas fa-home"></i> Address Proof</h6><p class="mb-1 text-white"><strong class="text-secondary">Street:</strong> ${k.level3.address}</p><p class="mb-1 text-white"><strong class="text-secondary">City:</strong> ${k.level3.city}</p><p class="mb-1 text-white"><strong class="text-secondary">State:</strong> ${k.level3.state}</p>`;
             }
 
+            const uData = extractUserDetails(k.user);
+
             Swal.fire({
                 title: `Tier ${k.currentLevel} KYC Dossier`,
-                html: `<div class="text-start mt-2" style="font-size: 0.9rem;"><div class="p-3 bg-dark rounded border border-secondary mb-3"><h5 class="mb-1 text-white">${k.user?.name}</h5><span class="text-muted">${k.user?.email}</span></div>${bvnSection}${docSection}${addressSection}</div>`,
+                html: `<div class="text-start mt-2" style="font-size: 0.9rem;"><div class="p-3 bg-dark rounded border border-secondary mb-3">${uData.html}</div>${bvnSection}${docSection}${addressSection}</div>`,
                 background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444', width: '600px'
             });
         } catch(e) {}
@@ -825,11 +981,11 @@
             tbody.innerHTML = ads.map(ad => {
                 const statusColor = ad.status === 'approved' ? 'success' : (ad.status === 'pending' ? 'warning text-dark' : 'danger');
                 const encodedAd = encodeURIComponent(JSON.stringify(ad));
-                const kycBadgeHtml = getUserKycBadge(ad.user || ad.userId || ad.ownerId); 
+                const uData = extractUserDetails(ad.user || ad.userId || ad.ownerId, ad.email);
                 
                 let mediaThumb = ad.adType === 'Video' ? `<div style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #444; display:flex; align-items:center; justify-content:center; background:#111; cursor:pointer;" onclick="viewAdDossier('${encodedAd}')"><i class="fas fa-video fa-2x text-info"></i></div>` : (ad.adType === 'Text' || ad.adType === 'PDF' ? `<div style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #444; display:flex; align-items:center; justify-content:center; background:#111; cursor:pointer;" onclick="viewAdDossier('${encodedAd}')"><i class="fas fa-file-alt fa-2x text-danger"></i></div>` : `<img src="${ad.mediaUrl || 'https://via.placeholder.com/60/111/d4af37?text=Ad'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #444; cursor: pointer;" onclick="viewAdDossier('${encodedAd}')">`);
                 
-                return `<tr><td>${mediaThumb}</td><td><div class="fw-bold text-white text-truncate" style="max-width: 200px;">${ad.title}</div><small class="text-gold d-block mb-1"><i class="fas fa-store"></i> ${ad.businessName}</small>${kycBadgeHtml}<br><small class="text-muted mt-1 d-inline-block"><i class="fas fa-tag"></i> ${ad.adType || 'Ad'} | ${ad.category}</small></td><td><span class="badge bg-secondary text-uppercase">${ad.packageType || 'BASIC'}</span><br><small class="text-warning">₦${ad.packageCost || 0} / ${ad.maxRewardedViews || 0} Views</small></td><td><span class="status-pill bg-${statusColor}">${ad.status}</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewAdDossier('${encodedAd}')" title="View Details"><i class="fas fa-eye"></i></button>${ad.status === 'pending' ? `<button class="btn btn-success" onclick="processAd('${ad._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-warning text-dark fw-bold" onclick="processAd('${ad._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>` : `<button class="btn btn-outline-warning" onclick="processAd('${ad._id}', 'reject')" title="Revoke"><i class="fas fa-ban"></i></button>`}<button class="btn btn-danger" onclick="deleteAdForever('${ad._id}')" title="Delete"><i class="fas fa-trash"></i></button></div></td></tr>`;
+                return `<tr><td>${mediaThumb}</td><td><div class="fw-bold text-white text-truncate" style="max-width: 200px;">${ad.title}</div><small class="text-gold d-block mb-1"><i class="fas fa-store"></i> ${ad.businessName}</small>${uData.html}<br><small class="text-muted mt-1 d-inline-block"><i class="fas fa-tag"></i> ${ad.adType || 'Ad'} | ${ad.category}</small></td><td><span class="badge bg-secondary text-uppercase">${ad.packageType || 'BASIC'}</span><br><small class="text-warning">₦${ad.packageCost || 0} / ${ad.maxRewardedViews || 0} Views</small></td><td><span class="status-pill bg-${statusColor}">${ad.status}</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewAdDossier('${encodedAd}')" title="View Details"><i class="fas fa-eye"></i></button>${ad.status === 'pending' ? `<button class="btn btn-success" onclick="processAd('${ad._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-warning text-dark fw-bold" onclick="processAd('${ad._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>` : `<button class="btn btn-outline-warning" onclick="processAd('${ad._id}', 'reject')" title="Revoke"><i class="fas fa-ban"></i></button>`}<button class="btn btn-danger" onclick="requireSuperAdmin(() => deleteAdForever('${ad._id}'))" title="Delete"><i class="fas fa-trash"></i></button></div></td></tr>`;
             }).join('');
         } catch (error) {}
     }
@@ -871,16 +1027,15 @@
             
             tbody.innerHTML = products.map(p => {
                 const priceDisplay = p.isFlexibleAmount ? 'Flexible' : `₦${Number(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
-                
                 const mediaUrl = p.cloudinaryUrl || p.imageUrl || p.productImageBase64;
                 let imgHtml = mediaUrl ? `<img src="${mediaUrl}" class="product-img-thumb me-3" style="object-fit: cover;">` : `<div class="product-img-thumb me-3"><i class="fas fa-box text-secondary fs-5"></i></div>`;
                 
-                const ownerId = p.user || p.userId || p.merchant || p.creator; const foundUser = window.globalSystemUsers.find(u => u._id === ownerId) || {};
-                const mName = foundUser.name || p.merchantName || p.userName || 'Verified Merchant'; const mEmail = foundUser.email || p.userEmail || p.email || 'No Email';
-                p.displayMerchantName = mName; p.displayEmail = mEmail; const encodedProduct = encodeURIComponent(JSON.stringify(p));
-                const kycBadgeHtml = getUserKycBadge(ownerId); 
+                const uData = extractUserDetails(p.user || p.userId || p.merchant || p.creator, p.userEmail || p.email, p.merchantName || p.userName);
+                p.displayMerchantName = uData.name; 
+                p.displayEmail = uData.email; 
+                const encodedProduct = encodeURIComponent(JSON.stringify(p));
 
-                return `<tr><td><div class="d-flex align-items-center">${imgHtml}<div><div class="fw-bold text-truncate" style="max-width: 200px;">${p.title}</div><span class="status-pill bg-dark border mt-1">${p.category || 'Product'}</span></div></div></td><td><div class="text-white fw-bold"><i class="fas fa-store text-gold me-1"></i> ${mName}</div><small class="text-secondary d-block mb-1">${mEmail}</small>${kycBadgeHtml}</td><td class="text-warning fw-bold fs-5">${priceDisplay}</td><td><span class="badge bg-secondary">${p.transactionCount || 0} Sales</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewProductDetails('${encodedProduct}')"><i class="fas fa-eye"></i></button><button class="btn btn-primary" onclick="editProduct('${encodedProduct}')"><i class="fas fa-edit"></i></button><button class="btn btn-danger" onclick="deleteProduct('${p._id || p.linkId}')"><i class="fas fa-trash"></i></button></div></td></tr>`;
+                return `<tr><td><div class="d-flex align-items-center">${imgHtml}<div><div class="fw-bold text-truncate" style="max-width: 200px;">${p.title}</div><span class="status-pill bg-dark border mt-1">${p.category || 'Product'}</span></div></div></td><td>${uData.html}</td><td class="text-warning fw-bold fs-5">${priceDisplay}</td><td><span class="badge bg-secondary">${p.transactionCount || 0} Sales</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewProductDetails('${encodedProduct}')"><i class="fas fa-eye"></i></button><button class="btn btn-primary" onclick="requireSuperAdmin(() => editProduct('${encodedProduct}'))"><i class="fas fa-edit"></i></button><button class="btn btn-danger" onclick="requireSuperAdmin(() => deleteProduct('${p._id || p.linkId}'))"><i class="fas fa-trash"></i></button></div></td></tr>`;
             }).join('');
         } catch (error) {}
     }
@@ -915,94 +1070,56 @@
     function toggleSlideMediaInput() {
         const type = document.getElementById('slideMediaType').value;
         const wrapper = document.getElementById('slideMediaWrapper');
-        if (type === 'text') {
-            wrapper.style.display = 'none';
-        } else {
-            wrapper.style.display = 'block';
-            document.getElementById('slideFileHint').innerText = type === 'video' ? 'Supports MP4/WebM Video' : 'Supports JPG/PNG Image';
-            document.getElementById('slideMediaIcon').className = type === 'video' ? 'fas fa-video fa-2x mb-2 text-info' : 'fas fa-image fa-2x mb-2 text-warning';
-        }
+        if (type === 'text') { wrapper.style.display = 'none'; } 
+        else { wrapper.style.display = 'block'; document.getElementById('slideFileHint').innerText = type === 'video' ? 'Supports MP4/WebM Video' : 'Supports JPG/PNG Image'; document.getElementById('slideMediaIcon').className = type === 'video' ? 'fas fa-video fa-2x mb-2 text-info' : 'fas fa-image fa-2x mb-2 text-warning'; }
     }
 
-    function updateSlideFileName(input) {
-        if (input.files && input.files[0]) {
-            document.getElementById('slideFileName').innerText = input.files[0].name;
-            document.getElementById('slideFileName').style.color = '#00ff88';
-        }
-    }
+    function updateSlideFileName(input) { if (input.files && input.files[0]) { document.getElementById('slideFileName').innerText = input.files[0].name; document.getElementById('slideFileName').style.color = '#00ff88'; } }
 
     async function fetchSlides() {
         try {
             const res = await fetch('/api/slides?_t=' + Date.now());
             const data = await res.json();
-            
             let slidesArray = Array.isArray(data) ? data : (data.slides || data.data?.slides || []);
             const tbody = document.getElementById('slidesTable');
             
-            if(slidesArray.length === 0) { 
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center opacity-50 py-4">No active slides deployed.</td></tr>'; 
-                return; 
-            }
+            if(slidesArray.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-center opacity-50 py-4">No active slides deployed.</td></tr>'; return; }
             
             tbody.innerHTML = slidesArray.map(slide => {
                 const rawUrl = slide.imageUrl || slide.mediaUrl || slide.url || slide.image || '';
                 const isVideo = rawUrl.match(/\.(mp4|webm|ogg)$/i) || slide.type === 'video';
-                
-                let mediaThumb = '';
-                if (isVideo) {
-                    mediaThumb = `<div class="product-img-thumb"><i class="fas fa-video text-info"></i></div>`;
-                } else if (rawUrl) {
-                    mediaThumb = `<img src="${rawUrl}" class="product-img-thumb">`;
-                } else {
-                    mediaThumb = `<div class="product-img-thumb"><i class="fas fa-font text-secondary"></i></div>`;
-                }
-                
-                return `<tr>
-                    <td>${mediaThumb}</td>
-                    <td><div class="fw-bold text-white">${slide.title || 'Untitled'}</div><small class="text-muted text-truncate d-inline-block" style="max-width: 150px;">${slide.caption || slide.description || ''}</small></td>
-                    <td><span class="badge bg-secondary">${slide.type || 'Media'}</span></td>
-                    <td class="text-end"><button class="btn btn-danger btn-sm" onclick="deleteSlideForever('${slide._id}')"><i class="fas fa-trash"></i> Drop</button></td>
-                </tr>`;
+                let mediaThumb = isVideo ? `<div class="product-img-thumb"><i class="fas fa-video text-info"></i></div>` : (rawUrl ? `<img src="${rawUrl}" class="product-img-thumb">` : `<div class="product-img-thumb"><i class="fas fa-font text-secondary"></i></div>`);
+                return `<tr><td>${mediaThumb}</td><td><div class="fw-bold text-white">${slide.title || 'Untitled'}</div><small class="text-muted text-truncate d-inline-block" style="max-width: 150px;">${slide.caption || slide.description || ''}</small></td><td><span class="badge bg-secondary">${slide.type || 'Media'}</span></td><td class="text-end"><button class="btn btn-danger btn-sm" onclick="requireSuperAdmin(() => deleteSlideForever('${slide._id}'))"><i class="fas fa-trash"></i> Drop</button></td></tr>`;
             }).join('');
         } catch (e) {}
     }
 
     async function submitNewSlide(e) {
         e.preventDefault();
-        const btn = document.getElementById('btnSubmitSlide');
-        const type = document.getElementById('slideMediaType').value;
-        const title = document.getElementById('slideTitle').value;
-        const caption = document.getElementById('slideCaption').value;
-        const ctaText = document.getElementById('slideCtaText').value;
-        const link = document.getElementById('slideCtaLink').value;
-        const fileInput = document.getElementById('slideMediaFile');
-
-        let base64Media = null;
-        if (type !== 'text') {
-            if (!fileInput.files || !fileInput.files[0]) {
-                Swal.fire({ icon: 'warning', title: 'Missing Media', text: 'Please select a file to upload.', background: '#0a0a0a', color: '#fff' });
-                return;
+        requireSuperAdmin(async () => {
+            const btn = document.getElementById('btnSubmitSlide');
+            const type = document.getElementById('slideMediaType').value;
+            const fileInput = document.getElementById('slideMediaFile');
+            let base64Media = null;
+            if (type !== 'text') {
+                if (!fileInput.files || !fileInput.files[0]) { Swal.fire({ icon: 'warning', title: 'Missing Media', text: 'Please select a file to upload.', background: '#0a0a0a', color: '#fff' }); return; }
+                Swal.fire({ title: 'Compressing Media...', didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
+                try { base64Media = await fileToBase64(fileInput.files[0]); } catch (err) { Swal.fire({ icon: 'error', title: 'File Error', text: 'Failed to read media file.', background: '#0a0a0a', color: '#fff' }); return; }
             }
-            Swal.fire({ title: 'Compressing Media...', didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
-            try { base64Media = await fileToBase64(fileInput.files[0]); } catch (err) { Swal.fire({ icon: 'error', title: 'File Error', text: 'Failed to read media file.', background: '#0a0a0a', color: '#fff' }); return; }
-        }
 
-        const payload = { title, caption, ctaText, link, type, mediaData: base64Media };
+            const payload = { title: document.getElementById('slideTitle').value, caption: document.getElementById('slideCaption').value, ctaText: document.getElementById('slideCtaText').value, link: document.getElementById('slideCtaLink').value, type, mediaData: base64Media };
+            btn.disabled = true; btn.innerText = "TRANSMITTING...";
+            Swal.fire({ title: 'Uploading to Cloudinary/DB...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
 
-        btn.disabled = true; btn.innerText = "TRANSMITTING...";
-        Swal.fire({ title: 'Uploading to Cloudinary/DB...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff' });
-
-        try {
-            const res = await fetch('/api/cms/slides', {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (res.ok && data.success !== false) {
-                Swal.fire({ icon: 'success', title: 'Slide Deployed', text: 'It is now live on the user index page.', background: '#0a0a0a', color: '#fff' });
-                document.getElementById('slideForm').reset(); document.getElementById('slideFileName').innerText = 'Drag & Drop Media Here'; document.getElementById('slideFileName').style.color = '#fff'; toggleSlideMediaInput(); fetchSlides();
-            } else { Swal.fire({ icon: 'error', title: 'Upload Failed', text: data.message || 'Server rejected the file.', background: '#0a0a0a', color: '#fff' }); }
-        } catch (err) { Swal.fire({ icon: 'error', title: 'Network Error', text: 'Transmission failed.', background: '#0a0a0a', color: '#fff' });
-        } finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-satellite-dish me-2"></i> PUBLISH SLIDE TO USERS'; }
+            try {
+                const res = await fetch('/api/cms/slides', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify(payload) });
+                const data = await res.json();
+                if (res.ok && data.success !== false) {
+                    Swal.fire({ icon: 'success', title: 'Slide Deployed', text: 'It is now live on the user index page.', background: '#0a0a0a', color: '#fff' });
+                    document.getElementById('slideForm').reset(); document.getElementById('slideFileName').innerText = 'Drag & Drop Media Here'; document.getElementById('slideFileName').style.color = '#fff'; toggleSlideMediaInput(); fetchSlides();
+                } else { Swal.fire({ icon: 'error', title: 'Upload Failed', text: data.message || 'Server rejected the file.', background: '#0a0a0a', color: '#fff' }); }
+            } catch (err) { Swal.fire({ icon: 'error', title: 'Network Error', text: 'Transmission failed.', background: '#0a0a0a', color: '#fff' }); } finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-satellite-dish me-2"></i> PUBLISH SLIDE TO USERS'; }
+        });
     }
 
     async function deleteSlideForever(id) {
@@ -1020,10 +1137,12 @@
     }
     
     async function sendPushNotification() {
-        const target = document.getElementById('notifyTarget').value; const title = document.getElementById('notifyTitle').value; const body = document.getElementById('notifyBody').value;
-        if(!title || !body) return Swal.fire('Error', 'Title and body required', 'error');
-        Swal.fire({title:'Broadcasting...', didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
-        try { const res = await fetch('/api/admin/notifications/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ targetEmail: target, title, message: body }) }); if((await res.json()).success) { Swal.fire('Sent', '', 'success'); fetchNotifications(); } } catch(e) { Swal.fire('Error', 'Broadcast failed', 'error'); }
+        requireSuperAdmin(async () => {
+            const target = document.getElementById('notifyTarget').value; const title = document.getElementById('notifyTitle').value; const body = document.getElementById('notifyBody').value;
+            if(!title || !body) return Swal.fire('Error', 'Title and body required', 'error');
+            Swal.fire({title:'Broadcasting...', didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
+            try { const res = await fetch('/api/admin/notifications/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ targetEmail: target, title, message: body }) }); if((await res.json()).success) { Swal.fire('Sent', '', 'success'); fetchNotifications(); } } catch(e) { Swal.fire('Error', 'Broadcast failed', 'error'); }
+        });
     }
 
     window.onload = () => { initStars(); syncAllBadges(); };
