@@ -64,7 +64,6 @@
         
         .product-img-thumb { width: 45px; height: 45px; border-radius: 8px; object-fit: cover; border: 1px solid #444; background: #000; display: flex; align-items: center; justify-content: center;}
 
-        /* Media Upload Wrapper */
         .file-upload-wrapper { border: 2px dashed #444; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; margin-bottom: 15px; background: rgba(0,0,0,0.4); }
         .file-upload-wrapper:hover { border-color: var(--gold); background: rgba(212,175,55,0.05); }
         .file-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
@@ -78,7 +77,7 @@
         <span class="site-part-1">NATER</span><span class="site-part-2">PAY</span>
     </div>
     <div class="header-actions">
-        <span class="badge bg-danger px-3 py-2 rounded-pill fw-bold"><i class="fas fa-satellite-dish me-1"></i> ROOT ADMIN</span>
+        <span id="adminRoleBadge" class="badge bg-secondary px-3 py-2 rounded-pill fw-bold"><i class="fas fa-user-shield me-1"></i> SECURE SESSION</span>
         <a href="dashboard.html" class="btn btn-outline-warning rounded-pill fw-bold">Exit</a>
     </div>
 </header>
@@ -88,6 +87,7 @@
     
     <div class="tab-nav">
         <button class="admin-tab active" onclick="showTab('overview')"><i class="fas fa-chart-pie me-2"></i>Overview</button>
+        <button class="admin-tab" onclick="showTab('tickets')">Tickets <span id="ticketsBadge" class="badge bg-primary badge-dynamic d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('deposits')">Deposits <span id="depositsBadge" class="badge bg-success badge-dynamic d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('withdrawals')">Payouts <span id="withdrawBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('kyc')">KYC <span id="kycBadge" class="badge bg-warning text-dark badge-dynamic d-none">0</span></button>
@@ -108,7 +108,23 @@
         </div>
     </div>
 
-    <!-- NEW: MANUAL DEPOSITS QUEUE -->
+    <!-- NEW: SUPPORT TICKETS DESK -->
+    <div id="tab-tickets" class="tab-content" style="display: none;">
+        <div class="admin-card">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <h5 class="text-gold fw-bold m-0"><i class="fas fa-headset me-2"></i> SUPPORT DESK</h5>
+                <button class="btn btn-sm btn-outline-light" onclick="fetchAdminTickets()"><i class="fas fa-sync-alt me-1"></i> Sync</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark align-middle">
+                    <thead><tr><th>TICKET ID & DATE</th><th>USER / EMAIL</th><th>SUBJECT & PRIORITY</th><th>STATUS</th><th class="text-end">ACTION</th></tr></thead>
+                    <tbody id="ticketsAdminTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading support tickets...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MANUAL DEPOSITS QUEUE -->
     <div id="tab-deposits" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -124,6 +140,7 @@
         </div>
     </div>
 
+    <!-- WITHDRAWALS QUEUE -->
     <div id="tab-withdrawals" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -165,7 +182,7 @@
         </div>
     </div>
 
-    <!-- KYC, ADVERTS, MARKETPLACE, SLIDES, FOUNDER, NOTIFICATIONS TABS CONTINUED -->
+    <!-- KYC, ADVERTS, MARKETPLACE, SLIDES, FOUNDER, NOTIFICATIONS -->
     <div id="tab-kyc" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="table-responsive">
@@ -323,10 +340,14 @@
         
         if(t === 'founder') loadCurrentFounderData();
         if(t === 'deposits') fetchManualDeposits();
+        if(t === 'tickets') fetchAdminTickets();
     }
 
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
     window.globalSystemUsers = [];
+    
+    // RBAC: ROLE BASED ACCESS CONTROL VARIABLE
+    let currentAdminRole = 'admin'; // Defaults to limited admin until proven otherwise
 
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
@@ -351,11 +372,20 @@
         return '<span class="status-pill bg-danger text-white mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-times-circle"></i> UNVERIFIED</span>';
     }
 
+    // RBAC HELPER FUNCTION (Checks if admin is allowed to touch money)
+    function requireSuperAdmin(actionCallback) {
+        if (currentAdminRole !== 'superadmin') {
+            Swal.fire({ icon: 'error', title: 'Access Denied', text: 'You do not have the required clearance to alter financial ledgers. Contact Root Administration.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d32f2f' });
+            return false;
+        }
+        actionCallback();
+    }
+
     async function syncAllBadges() {
         try {
             await loadAdminEcosystem(); 
             await Promise.all([
-                fetchWithdrawals(), fetchManualDeposits(), fetchKYC(), fetchAdverts(), fetchMarketplace(), fetchSlides() 
+                fetchWithdrawals(), fetchManualDeposits(), fetchKYC(), fetchAdverts(), fetchMarketplace(), fetchSlides(), fetchAdminTickets()
             ]);
         } catch (e) { console.log('Background Sync Delay'); }
     }
@@ -368,6 +398,21 @@
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
         try {
+            // First, fetch the admin's own profile to set permissions
+            const meRes = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${token}` } });
+            const meData = await meRes.json();
+            if (meData.success) {
+                currentAdminRole = (meData.role || 'admin').toLowerCase();
+                const badge = document.getElementById('adminRoleBadge');
+                if (currentAdminRole === 'superadmin') {
+                    badge.className = 'badge bg-danger px-3 py-2 rounded-pill fw-bold';
+                    badge.innerHTML = '<i class="fas fa-satellite-dish me-1"></i> ROOT ADMIN (FULL ACCESS)';
+                } else {
+                    badge.className = 'badge bg-secondary px-3 py-2 rounded-pill fw-bold';
+                    badge.innerHTML = '<i class="fas fa-user-shield me-1"></i> MODERATOR (RESTRICTED)';
+                }
+            }
+
             const statRes = await fetch('/api/admin/analytics', { headers: { 'Authorization': `Bearer ${token}` } });
             const stats = await statRes.json();
             if(stats.success) {
@@ -386,7 +431,12 @@
                         <td><div class="text-white">${u.email}</div><small class="text-muted">${u.phoneNumber}</small></td>
                         <td class="text-warning fw-bold fs-5">₦${parseNum(u.walletBalance).toLocaleString()}</td>
                         <td><span class="status-pill bg-dark border mb-1">${u.role.toUpperCase()}</span><br>${getUserKycBadge(u)}</td>
-                        <td class="text-end"><div class="action-btns"><button class="btn btn-success fw-bold" onclick="modifyUserBalance('${u._id}', 'credit', null, '${u.name}')" title="Add Money"><i class="fas fa-plus"></i></button><button class="btn btn-danger fw-bold" onclick="modifyUserBalance('${u._id}', 'debit', null, '${u.name}')" title="Deduct Money"><i class="fas fa-minus"></i></button></div></td>
+                        <td class="text-end">
+                            <div class="action-btns">
+                                <button class="btn btn-success fw-bold" onclick="requireSuperAdmin(() => modifyUserBalance('${u._id}', 'credit', null, '${u.name}'))" title="Add Money"><i class="fas fa-plus"></i></button>
+                                <button class="btn btn-danger fw-bold" onclick="requireSuperAdmin(() => modifyUserBalance('${u._id}', 'debit', null, '${u.name}'))" title="Deduct Money"><i class="fas fa-minus"></i></button>
+                            </div>
+                        </td>
                     </tr>
                 `).join('');
             }
@@ -403,13 +453,13 @@
                 let actionBtns = `<button class="btn btn-sm btn-info text-white rounded" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button>`;
                 
                 if (tx.status === 'processing' && tx.type === 'withdrawal') {
-                    actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="processWithdrawal('${tx._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-sm btn-danger rounded fw-bold ms-1" onclick="processWithdrawal('${tx._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>`;
+                    actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'approve'))" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-sm btn-danger rounded fw-bold ms-1" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'reject'))" title="Reject"><i class="fas fa-times"></i></button>`;
                 } else if (tx.status === 'processing' && tx.provider === 'internal' && tx.type === 'funding') {
-                    actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="processManualDeposit('${tx._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-sm btn-danger rounded fw-bold ms-1" onclick="processManualDeposit('${tx._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>`;
+                    actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="requireSuperAdmin(() => processManualDeposit('${tx._id}', 'approve'))" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-sm btn-danger rounded fw-bold ms-1" onclick="requireSuperAdmin(() => processManualDeposit('${tx._id}', 'reject'))" title="Reject"><i class="fas fa-times"></i></button>`;
                 } else if (tx.status === 'pending') {
-                    actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="forceVerifyTransaction('${tx._id}')" title="Force Success"><i class="fas fa-check"></i></button>`;
+                    actionBtns += `<button class="btn btn-sm btn-success rounded fw-bold ms-1" onclick="requireSuperAdmin(() => forceVerifyTransaction('${tx._id}'))" title="Force Success"><i class="fas fa-check"></i></button>`;
                 } else if (tx.status === 'failed') { 
-                    actionBtns += `<button class="btn btn-sm btn-gold rounded fw-bold ms-1" onclick="forceVerifyTransaction('${tx._id}')" title="Force Clear">Clear</button>`; 
+                    actionBtns += `<button class="btn btn-sm btn-gold rounded fw-bold ms-1" onclick="requireSuperAdmin(() => forceVerifyTransaction('${tx._id}'))" title="Force Clear">Clear</button>`; 
                 }
 
                 txHtml += `<tr><td><div class="fw-bold">${date}</div><small class="text-secondary">${tx.reference || tx.providerReference || tx._id}</small></td><td><span class="status-pill bg-secondary">${tx.type.replace('_', ' ')}</span><br><small class="text-muted text-uppercase">${tx.provider || 'System'}</small></td><td><div class="text-truncate text-white" style="max-width: 150px;">${tx.userEmail || 'Unknown'}</div></td><td class="fw-bold text-gold fs-5">₦${amt.toLocaleString()}</td><td><span class="status-pill ${tx.status==='success'?'bg-success':(tx.status==='failed'?'bg-danger':'bg-warning text-dark')}">${tx.status}</span></td><td class="text-end"><div class="action-btns justify-content-end">${actionBtns}</div></td></tr>`;
@@ -422,40 +472,19 @@
         try {
             const tx = JSON.parse(decodeURIComponent(encodedData));
             let extraHtml = '';
-            
-            // Withdrawal Extension
             if (tx.type === 'withdrawal') {
-                let bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
-                let bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account';
-                let bUser = tx.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
+                let bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank'; let bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account'; let bUser = tx.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
                 extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--gold);"><h6 class="text-gold mb-2 fw-bold"><i class="fas fa-university me-1"></i> Destination Bank Details</h6><p class="mb-1 text-white"><strong class="text-secondary">Bank:</strong> ${bName}</p><p class="mb-1 text-white"><strong class="text-secondary">Account No:</strong> <span class="text-warning fs-6 fw-bold" style="letter-spacing: 1px;">${bAcc}</span></p><p class="mb-0 text-white"><strong class="text-secondary">Account Name:</strong> ${bUser}</p></div>`;
             }
-
-            // Manual Funding Extension
             if (tx.type === 'funding' && tx.provider === 'internal') {
-                let narration = tx.metadata?.narration || 'Not Provided';
-                let receiptUrl = tx.metadata?.receiptUrl;
+                let narration = tx.metadata?.narration || 'Not Provided'; let receiptUrl = tx.metadata?.receiptUrl;
                 let receiptDisplay = receiptUrl ? `<div class="mt-3 text-center"><a href="${receiptUrl}" target="_blank"><img src="${receiptUrl}" style="max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid var(--gold); object-fit: contain;"></a><div class="small text-muted mt-1"><i class="fas fa-search-plus"></i> Click image to enlarge</div></div>` : `<div class="mt-2 p-2 bg-dark rounded text-center small text-muted"><i class="fas fa-times-circle"></i> No receipt uploaded</div>`;
                 extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--success);"><h6 class="text-success mb-2 fw-bold"><i class="fas fa-file-invoice-dollar me-1"></i> Manual Deposit Details</h6><p class="mb-1 text-white"><strong class="text-secondary">User Narration:</strong> ${narration}</p>${receiptDisplay}</div>`;
             }
-
-            // Rejection Metadata
             if (tx.status === 'failed' && tx.metadata?.rejectionReason) {
                 extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 1px solid var(--red);"><h6 class="text-danger mb-1 fw-bold"><i class="fas fa-exclamation-circle me-1"></i> Rejection Reason</h6><p class="mb-0 text-white small">${tx.metadata.rejectionReason}</p></div>`;
             }
-
-            Swal.fire({
-                title: 'Transaction Dossier',
-                html: `<div class="text-start mt-2" style="font-size: 0.9rem;">
-                        <p class="mb-1"><strong class="text-gold">Type/Provider:</strong> <span class="text-uppercase badge bg-secondary">${tx.type.replace('_', ' ')} / ${tx.provider || 'System'}</span></p>
-                        <p class="mb-1"><strong class="text-gold">Amount:</strong> <span class="text-warning fw-bold fs-5">₦${parseNum(tx.amount).toLocaleString()}</span></p>
-                        <p class="mb-1"><strong class="text-gold">Fee:</strong> <span class="text-danger fw-bold">₦${parseNum(tx.fee).toLocaleString()}</span></p>
-                        <p class="mb-1"><strong class="text-gold">Status:</strong> <span class="text-uppercase fw-bold ${tx.status==='success'?'text-success':(tx.status==='failed'?'text-danger':'text-warning')}">${tx.status}</span></p>
-                        ${extraHtml}
-                        <div class="p-2 mt-3 bg-dark rounded border border-secondary"><strong class="text-gold d-block mb-1">System Log:</strong><span class="text-white small">${tx.description || 'System Record'}</span></div>
-                    </div>`,
-                background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444'
-            });
+            Swal.fire({ title: 'Transaction Dossier', html: `<div class="text-start mt-2" style="font-size: 0.9rem;"><p class="mb-1"><strong class="text-gold">Type/Provider:</strong> <span class="text-uppercase badge bg-secondary">${tx.type.replace('_', ' ')} / ${tx.provider || 'System'}</span></p><p class="mb-1"><strong class="text-gold">Amount:</strong> <span class="text-warning fw-bold fs-5">₦${parseNum(tx.amount).toLocaleString()}</span></p><p class="mb-1"><strong class="text-gold">Fee:</strong> <span class="text-danger fw-bold">₦${parseNum(tx.fee).toLocaleString()}</span></p><p class="mb-1"><strong class="text-gold">Status:</strong> <span class="text-uppercase fw-bold ${tx.status==='success'?'text-success':(tx.status==='failed'?'text-danger':'text-warning')}">${tx.status}</span></p>${extraHtml}<div class="p-2 mt-3 bg-dark rounded border border-secondary"><strong class="text-gold d-block mb-1">System Log:</strong><span class="text-white small">${tx.description || 'System Record'}</span></div></div>`, background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close Record', confirmButtonColor: '#444' });
         } catch (e) {}
     }
 
@@ -476,7 +505,114 @@
     }
 
     // ==========================================
-    // NEW: MANUAL DEPOSITS QUEUE
+    // SUPPORT TICKETS DESK (NEW)
+    // ==========================================
+    async function fetchAdminTickets() {
+        const token = localStorage.getItem("naterpay_token");
+        if(!token) return;
+        try {
+            // Note: Replace with your actual Admin Tickets API route if different. Usually it's GET /api/admin/tickets or similar
+            const res = await fetch('/api/support/tickets', { headers: { 'Authorization': `Bearer ${token}` } }); 
+            const data = await res.json();
+            const tickets = data.tickets || [];
+            
+            const openTickets = tickets.filter(t => t.status === 'open' || t.status === 'in_progress');
+            const badge = document.getElementById('ticketsBadge');
+            if (openTickets.length > 0) { badge.innerText = openTickets.length; badge.classList.remove('d-none'); } else { badge.classList.add('d-none'); }
+
+            const tbody = document.getElementById('ticketsAdminTable');
+            if (tickets.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No support tickets found.</td></tr>'; return; }
+
+            tbody.innerHTML = tickets.map(t => {
+                const encodedT = encodeURIComponent(JSON.stringify(t));
+                const date = new Date(t.createdAt).toLocaleDateString();
+                const statusColor = t.status === 'resolved' ? 'success' : (t.status === 'open' ? 'warning text-dark' : 'secondary');
+                const priorityColor = t.priority === 'urgent' ? 'text-danger fw-bold' : 'text-info';
+                
+                return `<tr>
+                    <td><div class="fw-bold">${t.ticketId}</div><small class="text-secondary">${date}</small></td>
+                    <td><div class="text-white text-truncate" style="max-width:150px;">${t.user?.email || t.user || 'Unknown'}</div></td>
+                    <td><div class="fw-bold text-white text-truncate" style="max-width:200px;">${t.subject}</div><small class="${priorityColor} text-uppercase"><i class="fas fa-exclamation-circle me-1"></i>${t.priority} | ${t.category}</small></td>
+                    <td><span class="status-pill bg-${statusColor}">${t.status}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-warning text-dark fw-bold btn-sm rounded" onclick="openAdminTicketPanel('${t.ticketId}', '${encodedT}')"><i class="fas fa-reply me-1"></i> Respond</button>
+                    </td>
+                </tr>`;
+            }).join('');
+        } catch(e) {}
+    }
+
+    async function openAdminTicketPanel(ticketId, encodedData) {
+        const t = JSON.parse(decodeURIComponent(encodedData));
+        
+        // Build the chat history HTML
+        let chatHtml = `<div class="p-3 bg-black rounded border border-secondary mb-3"><strong class="text-gold d-block mb-1">Original Issue:</strong><span class="text-white small">${t.description}</span></div>`;
+        
+        if (t.messages && t.messages.length > 0) {
+            t.messages.forEach(msg => {
+                const isAdmin = msg.isInternal; // Assumes your DB marks admin replies
+                const align = isAdmin ? 'text-end' : 'text-start';
+                const bg = isAdmin ? 'border border-warning bg-dark' : 'bg-secondary';
+                const name = isAdmin ? '<i class="fas fa-user-shield text-warning me-1"></i> Admin' : '<i class="fas fa-user text-light me-1"></i> User';
+                chatHtml += `<div class="${align} mb-2"><div class="d-inline-block p-2 rounded ${bg} text-white" style="max-width: 85%; font-size: 0.85rem;"><strong class="d-block mb-1" style="font-size:0.75rem;">${name}</strong>${msg.message}</div></div>`;
+            });
+        }
+
+        const { value: replyMsg } = await Swal.fire({
+            title: `Ticket: ${t.ticketId}`,
+            html: `
+                <div style="max-height: 300px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px;" class="bg-black p-2 rounded border border-dark">
+                    ${chatHtml}
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <button id="btnResolveTicket" class="btn btn-sm btn-outline-success"><i class="fas fa-check me-1"></i> Mark Resolved</button>
+                    <button id="btnCloseTicket" class="btn btn-sm btn-outline-danger"><i class="fas fa-ban me-1"></i> Force Close</button>
+                </div>
+                <textarea id="adminReplyText" class="swal2-textarea bg-dark text-white w-100 m-0" rows="3" placeholder="Type your official response here..."></textarea>
+            `,
+            background: '#0a0a0a', color: '#fff',
+            showCancelButton: true, confirmButtonText: '<i class="fas fa-paper-plane me-1"></i> Send Reply', confirmButtonColor: '#d4af37',
+            didOpen: () => {
+                document.getElementById('btnResolveTicket').addEventListener('click', () => updateTicketStatus(ticketId, 'resolved'));
+                document.getElementById('btnCloseTicket').addEventListener('click', () => updateTicketStatus(ticketId, 'closed'));
+            },
+            preConfirm: () => {
+                const text = document.getElementById('adminReplyText').value;
+                if (!text) { Swal.showValidationMessage('Response cannot be empty'); return false; }
+                return text;
+            }
+        });
+
+        if (replyMsg) {
+            Swal.fire({title:'Sending Response...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            try {
+                // Ensure your backend supports this route: POST /api/support/tickets/:id/messages
+                const res = await fetch(`/api/support/tickets/${ticketId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                    body: JSON.stringify({ message: replyMsg, isInternal: true }) // isInternal marks it as admin
+                });
+                if(res.ok) { Swal.fire({icon: 'success', title: 'Sent!', background: '#0a0a0a', color: '#fff', timer: 1500}); fetchAdminTickets(); }
+            } catch(e) { Swal.fire('Error', 'Failed to send reply', 'error'); }
+        }
+    }
+
+    async function updateTicketStatus(ticketId, newStatus) {
+        Swal.fire({title:'Updating...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+        try {
+            // Note: You will need a backend route for this (e.g., PUT /api/support/tickets/:id/status)
+            const res = await fetch(`/api/support/tickets/${ticketId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if(res.ok) { Swal.fire({icon: 'success', title: 'Updated!', background: '#0a0a0a', color: '#fff', timer: 1500}); fetchAdminTickets(); }
+        } catch(e) {}
+    }
+
+
+    // ==========================================
+    // MANUAL DEPOSITS QUEUE
     // ==========================================
     async function fetchManualDeposits() {
         const token = localStorage.getItem("naterpay_token");
@@ -508,8 +644,8 @@
                         <td class="text-end">
                             <div class="action-btns justify-content-end">
                                 <button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Receipt & Data"><i class="fas fa-eye"></i></button>
-                                <button class="btn btn-success fw-bold" onclick="processManualDeposit('${tx._id}', 'approve')" title="Approve & Credit"><i class="fas fa-check"></i></button>
-                                <button class="btn btn-danger fw-bold" onclick="processManualDeposit('${tx._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>
+                                <button class="btn btn-success fw-bold" onclick="requireSuperAdmin(() => processManualDeposit('${tx._id}', 'approve'))" title="Approve & Credit"><i class="fas fa-check"></i></button>
+                                <button class="btn btn-danger fw-bold" onclick="requireSuperAdmin(() => processManualDeposit('${tx._id}', 'reject'))" title="Reject"><i class="fas fa-times"></i></button>
                             </div>
                         </td>
                     </tr>`;
@@ -576,7 +712,7 @@
                     const baseAmt = parseNum(tx.amount); const feeAmt = parseNum(tx.fee);
                     const kycBadgeHtml = getUserKycBadge(tx.user?._id || tx.user); 
                     
-                    return `<tr><td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td><td><div class="text-white">${tx.user?.name || 'Unknown'}</div><small class="text-muted d-block mb-1">${tx.user?.email || ''}</small>${kycBadgeHtml}</td><td><div class="text-warning fw-bold">${bName}</div><small class="text-white" style="letter-spacing:1px;">${bAcc}</small></td><td><div class="fw-bold text-gold fs-5">₦${baseAmt.toLocaleString()}</div><small class="text-danger">Fee: ₦${feeAmt.toLocaleString()}</small></td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="processWithdrawal('${tx._id}', 'approve')" title="Approve & Settle"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="processWithdrawal('${tx._id}', 'reject')" title="Reject & Refund"><i class="fas fa-times"></i></button></div></td></tr>`;
+                    return `<tr><td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td><td><div class="text-white">${tx.user?.name || 'Unknown'}</div><small class="text-muted d-block mb-1">${tx.user?.email || ''}</small>${kycBadgeHtml}</td><td><div class="text-warning fw-bold">${bName}</div><small class="text-white" style="letter-spacing:1px;">${bAcc}</small></td><td><div class="fw-bold text-gold fs-5">₦${baseAmt.toLocaleString()}</div><small class="text-danger">Fee: ₦${feeAmt.toLocaleString()}</small></td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'approve'))" title="Approve & Settle"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'reject'))" title="Reject & Refund"><i class="fas fa-times"></i></button></div></td></tr>`;
                 }).join('');
             } else { 
                 badge.classList.add('d-none'); 
@@ -895,6 +1031,3 @@
 </script>
 </body>
 </html>
-
-
-check I said manual deposit don't assume
