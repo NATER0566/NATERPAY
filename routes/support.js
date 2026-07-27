@@ -19,11 +19,26 @@ let AuditLog, Redis;
 try { AuditLog = require('../models/AuditLog'); } catch(e) {}
 try { Redis = require('ioredis'); } catch(e) {}
 
-// [3] CENTRALIZED ERROR HANDLING
+// [3] BULLETPROOF CENTRALIZED ERROR HANDLING (FIXED TO PREVENT UNHANDLED EXCEPTIONS)
 function handleError(reply, error, defaultMessage = 'System error occurred.') {
-    if (error.isJoi) return reply.status(400).send({ success: false, message: error.details[0].message });
-    logger.error(error.message, error);
-    reply.status(error.status || 400).send({ success: false, message: error.message || defaultMessage });
+    try {
+        if (error && error.isJoi) {
+            return reply.status(400).send({ success: false, message: error.details[0].message });
+        }
+        
+        const msg = (error && error.message) ? error.message : defaultMessage;
+        const stat = (error && error.status) ? error.status : 400;
+        
+        // Safely log the error without crashing Pino
+        if (logger && typeof logger.error === 'function') {
+            logger.error(msg, error || {});
+        }
+        
+        return reply.status(stat).send({ success: false, message: msg });
+    } catch (fatalErr) {
+        // Failsafe: If the error handler itself fails, send a 500 without crashing the server
+        return reply.status(500).send({ success: false, message: 'A critical backend execution error occurred.' });
+    }
 }
 
 // [4] TEXT SANITIZATION (Critical XSS Protection for Admin Dashboard)
@@ -43,7 +58,9 @@ setInterval(() => {
 }, 60000);
 
 async function checkRateLimit(request, action, limit = 10) {
-    const identifier = request.user ? request.user._id : request.ip;
+    // Safely resolve the user ID to prevent undefined crashes
+    const userId = request.user ? (request.user._id || request.user.id || 'unknown') : null;
+    const identifier = userId || request.ip || 'anonymous';
     const windowSeconds = 60;
 
     const executeFallback = () => {
@@ -74,18 +91,28 @@ async function checkRateLimit(request, action, limit = 10) {
 }
 
 /* =========================================================================
-   [6] IMMUTABLE AUDIT LOGGING ENGINE
+   [6] IMMUTABLE AUDIT LOGGING ENGINE (FIXED DATA TYPES TO PREVENT DB CRASH)
 ========================================================================= */
 async function createAuditLog(params) {
     if (!AuditLog) return;
     try {
-        await new AuditLog({
-            user: params.user, transactionId: null, transactionReference: params.reference,
-            amount: 0, type: 'support_action', previousBalance: '0', newBalance: '0', 
-            ipAddress: params.ipAddress, userAgent: params.userAgent,
-            status: 'success', source: 'Support API', details: { action: params.action }
-        }).save();
-    } catch(e) { logger.error('Audit Log Error', e); }
+        const logEntry = new AuditLog({
+            user: params.user || undefined, 
+            transactionReference: params.reference || 'SUPPORT_ACTION',
+            amount: 0, 
+            type: 'support_action', 
+            previousBalance: 0, // FIXED: Now sent as Number instead of String '0'
+            newBalance: 0,      // FIXED: Now sent as Number instead of String '0'
+            ipAddress: params.ipAddress || '0.0.0.0', 
+            userAgent: params.userAgent || 'System',
+            status: 'success', 
+            source: 'Support API', 
+            details: { action: params.action || 'Ticket Generated' }
+        });
+        await logEntry.save();
+    } catch(e) { 
+        if (logger) logger.error('Audit Log Schema Error', e); 
+    }
 }
 
 /* ============================================================================
@@ -93,17 +120,19 @@ async function createAuditLog(params) {
 ============================================================================ */
 async function getTickets(request, reply) {
     try {
-        if (!await checkRateLimit(request, 'fetch_tickets', 60)) throw { status: 429, message: 'Too many requests.' };
+        if (!await checkRateLimit(request, 'fetch_tickets', 60)) throw { status: 429, message: 'Too many requests. Please slow down.' };
 
-        // Failsafe execution linking to Schema Static Methods
+        const userId = request.user ? (request.user._id || request.user.id) : null;
+        if (!userId) throw { status: 401, message: 'Authentication identity missing.' };
+
         let tickets = [];
         if (typeof SupportTicket.findByUser === 'function') {
-            tickets = await SupportTicket.findByUser(request.user._id);
+            tickets = await SupportTicket.findByUser(userId);
         } else {
-            tickets = await SupportTicket.find({ user: request.user._id }).sort({ createdAt: -1 });
+            tickets = await SupportTicket.find({ user: userId }).sort({ createdAt: -1 });
         }
         
-        reply.send({
+        return reply.status(200).send({
             success: true,
             tickets: tickets.map(ticket => ({
                 _id: ticket._id,
@@ -116,7 +145,7 @@ async function getTickets(request, reply) {
                 resolvedAt: ticket.resolvedAt
             }))
         });
-    } catch (error) { handleError(reply, error, 'Failed to fetch support tickets'); }
+    } catch (error) { return handleError(reply, error, 'Failed to fetch support tickets'); }
 }
 
 /* ============================================================================
@@ -125,6 +154,9 @@ async function getTickets(request, reply) {
 async function createTicket(request, reply) {
     try {
         if (!await checkRateLimit(request, 'create_ticket', 5)) throw { status: 429, message: 'Too many tickets created recently. Please wait.' };
+
+        const userId = request.user ? (request.user._id || request.user.id) : null;
+        if (!userId) throw { status: 401, message: 'Authentication identity missing.' };
 
         const schema = Joi.object({
             ticketId: Joi.string().optional(),
@@ -140,8 +172,8 @@ async function createTicket(request, reply) {
         
         const finalTicketId = value.ticketId || ('TKT-' + Math.floor(10000000 + Math.random() * 90000000));
 
-        // FIX: Removed .toLowerCase() so "Funding", "VTU", etc. remain exactly as Mongoose expects them
-        const safeCategory = String(value.category || 'Other'); 
+        // Enforces lowercase strictly so "Funding" does not break strict Database Enums
+        const safeCategory = String(value.category || 'other').toLowerCase(); 
         const safePriority = String(value.priority || 'medium').toLowerCase();
 
         let safeRelatedTx = value.relatedTransaction;
@@ -154,7 +186,7 @@ async function createTicket(request, reply) {
 
         const ticket = new SupportTicket({
             ticketId: finalTicketId,
-            user: request.user._id,
+            user: userId,
             subject: sanitizeText(value.subject),
             category: sanitizeText(safeCategory),
             priority: safePriority,
@@ -166,19 +198,25 @@ async function createTicket(request, reply) {
         
         if (Notification && typeof Notification.create === 'function') {
             await Notification.create({
-                user: request.user._id, title: 'Support Ticket Created',
+                user: userId, title: 'Support Ticket Created',
                 message: `Your support ticket ${ticket.ticketId} has been created`, type: 'support', priority: 'medium'
-            }).catch(() => {});
+            }).catch(() => {}); // Fails silently to prevent unhandled rejections
         }
 
-        await createAuditLog({ user: request.user._id, reference: ticket.ticketId, action: 'Created Support Ticket', ipAddress: request.ip, userAgent: request.headers['user-agent'] });
+        await createAuditLog({ 
+            user: userId, 
+            reference: ticket.ticketId, 
+            action: 'Created Support Ticket', 
+            ipAddress: request.ip, 
+            userAgent: request.headers ? request.headers['user-agent'] : 'System' 
+        });
         
-        reply.status(201).send({
+        return reply.status(201).send({
             success: true,
             message: 'Support ticket created successfully',
             ticket: { _id: ticket._id, ticketId: ticket.ticketId }
         });
-    } catch (error) { handleError(reply, error, 'Failed to create support ticket'); }
+    } catch (error) { return handleError(reply, error, 'Failed to create support ticket'); }
 }
 
 /* ============================================================================
@@ -187,6 +225,9 @@ async function createTicket(request, reply) {
 async function getTicket(request, reply) {
     try {
         if (!await checkRateLimit(request, 'fetch_single_ticket', 60)) throw { status: 429, message: 'Too many requests.' };
+
+        const userId = request.user ? (request.user._id || request.user.id) : null;
+        if (!userId) throw { status: 401, message: 'Authentication identity missing.' };
 
         const { ticketId } = request.params;
         const safeTicketId = sanitizeText(ticketId);
@@ -201,11 +242,14 @@ async function getTicket(request, reply) {
         if (!ticket) throw { status: 404, message: 'Ticket not found' };
         
         const userRole = (request.user.role || 'user').toLowerCase();
-        if (ticket.user._id.toString() !== request.user._id.toString() && !['admin', 'superadmin'].includes(userRole)) {
-            throw { status: 403, message: 'Access denied' };
+        
+        // Safely ensure user owns the ticket OR is an admin
+        const ticketOwnerStr = ticket.user._id ? ticket.user._id.toString() : ticket.user.toString();
+        if (ticketOwnerStr !== userId.toString() && !['admin', 'superadmin'].includes(userRole)) {
+            throw { status: 403, message: 'Access denied. You do not own this ticket.' };
         }
         
-        reply.send({
+        return reply.status(200).send({
             success: true,
             ticket: {
                 _id: ticket._id,
@@ -231,15 +275,18 @@ async function getTicket(request, reply) {
                 }))
             }
         });
-    } catch (error) { handleError(reply, error, 'Failed to fetch ticket'); }
+    } catch (error) { return handleError(reply, error, 'Failed to fetch ticket details'); }
 }
 
 /* ============================================================================
-   4. ADD MESSAGE TO TICKET (XSS PROTECTED)
+   4. ADD MESSAGE TO TICKET
 ============================================================================ */
 async function addMessage(request, reply) {
     try {
         if (!await checkRateLimit(request, 'add_ticket_message', 15)) throw { status: 429, message: 'Too many messages sent. Please wait.' };
+
+        const userId = request.user ? (request.user._id || request.user.id) : null;
+        if (!userId) throw { status: 401, message: 'Authentication identity missing.' };
 
         const schema = Joi.object({
             message: Joi.string().required(),
@@ -263,22 +310,23 @@ async function addMessage(request, reply) {
         if (!ticket) throw { status: 404, message: 'Ticket not found' };
         
         const userRole = (request.user.role || 'user').toLowerCase();
-        if (ticket.user._id.toString() !== request.user._id.toString() && !['admin', 'superadmin'].includes(userRole)) {
-            throw { status: 403, message: 'Access denied' };
+        const ticketOwnerStr = ticket.user._id ? ticket.user._id.toString() : ticket.user.toString();
+        
+        if (ticketOwnerStr !== userId.toString() && !['admin', 'superadmin'].includes(userRole)) {
+            throw { status: 403, message: 'Access denied. You do not own this ticket.' };
         }
         
-        // Sanitize the message payload
         const safeMessage = sanitizeText(value.message);
 
         if (typeof ticket.addMessage === 'function') {
-            await ticket.addMessage(request.user._id, safeMessage, value.isInternal, value.attachments);
+            await ticket.addMessage(userId, safeMessage, value.isInternal, value.attachments);
         } else {
-            ticket.messages.push({ user: request.user._id, message: safeMessage, isInternal: value.isInternal, attachments: value.attachments });
+            ticket.messages.push({ user: userId, message: safeMessage, isInternal: value.isInternal, attachments: value.attachments });
             await ticket.save();
         }
         
         // Reopen ticket if a user replies to a resolved ticket
-        if (request.user._id.toString() === ticket.user._id.toString() && ticket.status === 'resolved') {
+        if (ticketOwnerStr === userId.toString() && ticket.status === 'resolved') {
             if (typeof ticket.reopen === 'function') {
                 await ticket.reopen();
             } else {
@@ -289,15 +337,21 @@ async function addMessage(request, reply) {
         
         if (Notification && typeof Notification.create === 'function') {
             await Notification.create({
-                user: ticket.user._id, title: 'New Message on Ticket',
+                user: ticketOwnerStr, title: 'New Message on Ticket',
                 message: `A new message has been added to ticket ${ticket.ticketId}`, type: 'support', priority: 'medium'
             }).catch(() => {});
         }
 
-        await createAuditLog({ user: request.user._id, reference: ticket.ticketId, action: 'Added Message to Ticket', ipAddress: request.ip, userAgent: request.headers['user-agent'] });
+        await createAuditLog({ 
+            user: userId, 
+            reference: ticket.ticketId, 
+            action: 'Added Message to Ticket', 
+            ipAddress: request.ip, 
+            userAgent: request.headers ? request.headers['user-agent'] : 'System' 
+        });
         
-        reply.send({ success: true, message: 'Message added successfully' });
-    } catch (error) { handleError(reply, error, 'Failed to add message'); }
+        return reply.status(200).send({ success: true, message: 'Message added successfully' });
+    } catch (error) { return handleError(reply, error, 'Failed to add message'); }
 }
 
 module.exports = {
