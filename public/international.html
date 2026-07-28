@@ -48,10 +48,9 @@
         .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; transition: 0.3s; }
         .input-group-custom:focus-within { border-color: var(--global-blue); box-shadow: 0 0 15px rgba(0, 212, 255, 0.2); }
         .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
-        .input-group-custom input, .input-group-custom select { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 700; outline: none; }
-        .input-group-custom select option { background: #111; color: white; font-size: 1rem; }
+        .input-group-custom input { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 700; outline: none; }
 
-        /* DYNAMIC GRID STYLING FOR NETWORKS */
+        /* DYNAMIC GRID STYLING FOR BOXES */
         .plan-card {
             background: #0a0a0a; border: 1.5px solid #333; border-radius: 12px;
             padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.3s;
@@ -65,9 +64,9 @@
             white-space: normal; word-wrap: break-word; overflow-wrap: break-word; 
         }
         
-        #plansGrid { max-height: 350px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; margin-top: 10px; }
-        #plansGrid::-webkit-scrollbar { width: 5px; }
-        #plansGrid::-webkit-scrollbar-thumb { background: var(--global-blue); border-radius: 10px; }
+        .scrollable-grid { max-height: 250px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; margin-top: 10px; }
+        .scrollable-grid::-webkit-scrollbar { width: 5px; }
+        .scrollable-grid::-webkit-scrollbar-thumb { background: var(--global-blue); border-radius: 10px; }
 
         .btn-pay {
             background: var(--global-blue); color: black; font-weight: 900; border-radius: 15px;
@@ -121,20 +120,21 @@
         
         <div class="loading-text" id="countriesLoader"><i class="fas fa-spinner fa-spin me-2"></i> Syncing Worldwide Countries...</div>
 
-        <!-- 1. Country Selection -->
-        <div class="input-group-custom">
-            <label>Select Destination Country</label>
-            <select id="countrySelect" onchange="fetchOperators()">
-                <option value="">Awaiting Global Sync...</option>
-            </select>
+        <!-- 1. Country Selection Grid (Replaced Dropdown) -->
+        <div class="input-group-custom" style="border-color: #222; background: transparent; padding: 0;">
+            <label style="padding-left: 5px;">Select Destination Country</label>
+            <div id="countriesGrid" class="row g-2 scrollable-grid">
+                <!-- Country boxes injected here -->
+            </div>
         </div>
+        <input type="hidden" id="selectedCountry">
 
         <div class="loading-text" id="operatorsLoader"><i class="fas fa-spinner fa-spin me-2"></i> Fetching Local Networks...</div>
 
         <!-- 2. Dynamic Grid for Operators/Networks -->
         <div class="input-group-custom" id="operatorsWrapper" style="display: none; border-color: #222; background: transparent; padding: 0;">
             <label style="padding-left: 5px;">Select Target Network</label>
-            <div id="plansGrid" class="row g-2 mt-2">
+            <div id="plansGrid" class="row g-2 scrollable-grid">
                 <!-- Network boxes injected here -->
             </div>
         </div>
@@ -203,7 +203,7 @@
     async function fetchCountries() {
         const token = localStorage.getItem("naterpay_token");
         const loader = document.getElementById('countriesLoader');
-        const select = document.getElementById('countrySelect');
+        const grid = document.getElementById('countriesGrid');
         
         loader.style.display = 'block';
 
@@ -212,23 +212,42 @@
             const data = await response.json();
             
             if (data.success && data.countries) {
-                select.innerHTML = '<option value="">-- Choose Target Country --</option>';
+                grid.innerHTML = '';
                 data.countries.forEach(country => {
-                    select.innerHTML += `<option value="${country.code}">${country.name}</option>`;
+                    grid.innerHTML += `
+                        <div class="col-6 col-md-4">
+                            <div class="plan-card country-card" onclick="selectCountry(this, '${country.code}')">
+                                <div class="plan-name" style="color: #fff;">${country.name}</div>
+                            </div>
+                        </div>
+                    `;
                 });
             } else {
-                select.innerHTML = '<option value="">Failed to sync countries</option>';
+                grid.innerHTML = '<div class="text-danger w-100 text-center fw-bold p-3">Failed to sync countries</div>';
             }
         } catch (error) {
-            select.innerHTML = '<option value="">Network connection lost</option>';
+            grid.innerHTML = '<div class="text-danger w-100 text-center fw-bold p-3">Network connection lost</div>';
         } finally {
             loader.style.display = 'none';
         }
     }
 
+    function selectCountry(cardElement, countryCode) {
+        document.querySelectorAll('.country-card').forEach(c => c.classList.remove('active'));
+        cardElement.classList.add('active');
+        document.getElementById('selectedCountry').value = countryCode;
+        
+        // Hide operator grid until fetched
+        document.getElementById('operatorsWrapper').style.display = 'none';
+        document.getElementById('selectedOperator').value = '';
+        document.getElementById('plansGrid').innerHTML = '';
+        
+        fetchOperators();
+    }
+
     async function fetchOperators() {
         const token = localStorage.getItem("naterpay_token");
-        const countryCode = document.getElementById('countrySelect').value;
+        const countryCode = document.getElementById('selectedCountry').value;
         const loader = document.getElementById('operatorsLoader');
         const grid = document.getElementById('plansGrid');
         const wrapper = document.getElementById('operatorsWrapper');
@@ -249,8 +268,8 @@
                 data.operators.forEach(operator => {
                     grid.innerHTML += `
                         <div class="col-6 col-md-4">
-                            <div class="plan-card" onclick="selectOperator(this, '${operator.operator_id}')">
-                                <img src="${operator.operator_image}" alt="${operator.name}" style="width:40px; height:40px; object-fit:contain; border-radius:50%; margin-bottom:8px; border: 1px solid #444;">
+                            <div class="plan-card operator-card" onclick="selectOperator(this, '${operator.operator_id}')">
+                                <img src="${operator.operator_image}" onerror="this.style.display='none'" alt="${operator.name}" style="width:40px; height:40px; object-fit:contain; border-radius:50%; margin-bottom:8px; border: 1px solid #444;">
                                 <div class="plan-name">${operator.name}</div>
                             </div>
                         </div>
@@ -268,13 +287,13 @@
     }
 
     function selectOperator(cardElement, operatorId) {
-        document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.operator-card').forEach(c => c.classList.remove('active'));
         cardElement.classList.add('active');
         document.getElementById('selectedOperator').value = operatorId;
     }
 
     async function processGlobalPayment() {
-        const country = document.getElementById('countrySelect').value;
+        const country = document.getElementById('selectedCountry').value;
         const operator = document.getElementById('selectedOperator').value;
         const phone = document.getElementById('targetPhone').value;
         const amount = document.getElementById('targetAmount').value;
@@ -299,7 +318,7 @@
             const res = await fetch('/api/vtu/foreign-airtime', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ phone: phone, operator: operator, amount: amount, pin: pin })
+                body: JSON.stringify({ phone: phone, operator: operator, country: country, amount: amount, pin: pin })
             });
             const data = await res.json();
             
@@ -308,8 +327,10 @@
                     document.getElementById('targetPhone').value = '';
                     document.getElementById('targetAmount').value = '';
                     document.getElementById('transactionPin').value = '';
+                    document.getElementById('selectedCountry').value = '';
                     document.getElementById('selectedOperator').value = '';
-                    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('active'));
+                    document.querySelectorAll('.country-card').forEach(c => c.classList.remove('active'));
+                    document.getElementById('operatorsWrapper').style.display = 'none';
                     loadBalance();
                 });
             } else {
