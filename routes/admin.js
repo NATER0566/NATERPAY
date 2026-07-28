@@ -223,7 +223,8 @@ async function getTransactions(request, reply) {
         if (value.type) query.type = sanitizeText(value.type);
         if (value.status) query.status = sanitizeText(value.status);
         
-        const transactions = await Transaction.find(query).populate('user', 'name email phoneNumber').sort({ createdAt: -1 }).skip((value.page - 1) * value.limit).limit(value.limit).lean();
+        // FIXED: Added kycLevel and role to populate query to fix "Unverified" display
+        const transactions = await Transaction.find(query).populate('user', 'name email phoneNumber kycLevel role').sort({ createdAt: -1 }).skip((value.page - 1) * value.limit).limit(value.limit).lean();
         const formattedTx = transactions.map(tx => ({ ...tx, userEmail: tx.user ? tx.user.email : 'Unknown User' }));
         const total = await Transaction.countDocuments(query);
         
@@ -254,8 +255,9 @@ async function getPendingWithdrawals(request, reply) {
     try {
         if (!await checkRateLimit(request, 'admin_withdrawals', 60)) throw { status: 429, message: 'Too many requests.' };
         
+        // FIXED: Added kycLevel and role to populate query to fix "Unverified" display
         const pendingWithdrawals = await Transaction.find({ type: 'withdrawal', status: 'processing' })
-            .populate('user', 'name email phoneNumber')
+            .populate('user', 'name email phoneNumber kycLevel role')
             .sort({ createdAt: -1 })
             .lean();
             
@@ -374,7 +376,8 @@ async function processWithdrawal(request, reply) {
 async function getPendingKYC(request, reply) {
     try {
         if (!await checkRateLimit(request, 'admin_get_kyc', 60)) throw { status: 429, message: 'Too many requests.' };
-        const pendingKYC = await KYC.find({ status: 'under_review' }).populate('user', 'name email phoneNumber').sort({ createdAt: 1 });
+        // FIXED: Added kycLevel and role to populate query to fix "Unverified" display
+        const pendingKYC = await KYC.find({ status: 'under_review' }).populate('user', 'name email phoneNumber kycLevel role').sort({ createdAt: 1 });
         reply.send({ success: true, kycRequests: pendingKYC });
     } catch (error) { handleError(reply, error, 'Failed to fetch pending KYC requests'); }
 }
@@ -497,7 +500,8 @@ async function deleteProduct(request, reply) {
 async function getPendingAds(request, reply) {
     try {
         if (!await checkRateLimit(request, 'admin_get_ads', 60)) throw { status: 429, message: 'Too many requests.' };
-        const ads = await Ad.find({}).populate('user', 'name email').sort({ status: -1, createdAt: -1 }); 
+        // FIXED: Added kycLevel and role to populate query
+        const ads = await Ad.find({}).populate('user', 'name email kycLevel role phoneNumber').sort({ status: -1, createdAt: -1 }); 
         reply.send({ success: true, ads });
     } catch (error) { handleError(reply, error, 'Failed to fetch adverts'); }
 }
@@ -797,15 +801,27 @@ async function getInvoices(request, reply) {
     try {
         if (!await checkRateLimit(request, 'admin_get_invoices', 60)) throw { status: 429, message: 'Too many requests.' };
         const Invoice = require('../models/Invoice');
+        const User = require('../models/User'); 
         
-        // [FIXED] Force MongoDB to attach the real user data instead of leaving it blank!
-        const invoices = await Invoice.find({})
-            .populate('user', 'name email kycLevel role phoneNumber')
-            .populate('merchantId', 'name email kycLevel role phoneNumber')
-            .sort({ createdAt: -1 })
-            .lean();
+        const rawInvoices = await Invoice.find({}).sort({ createdAt: -1 }).lean();
+        
+        const populatedInvoices = [];
+        for (let inv of rawInvoices) {
+            const targetId = inv.user || inv.userId || inv.merchantId || inv.merchant;
+            if (targetId) {
+                try {
+                    const owner = await User.findById(targetId).select('name email kycLevel role phoneNumber').lean();
+                    if (owner) {
+                        inv.resolvedUser = owner;
+                        // FIXED: Re-attaching directly to inv.user so frontend automatically maps to the Real Email & KYC!
+                        inv.user = owner; 
+                    }
+                } catch(err) {}
+            }
+            populatedInvoices.push(inv);
+        }
             
-        reply.send({ success: true, invoices });
+        reply.send({ success: true, invoices: populatedInvoices });
     } catch (error) { handleError(reply, error, 'Failed to fetch global invoices'); }
 }
 
