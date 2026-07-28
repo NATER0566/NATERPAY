@@ -167,8 +167,7 @@ async function processVTURequest(type, data) {
   if (type === 'airtime') {
       payload.serviceID = data.network; payload.phone = isSandbox ? '08011111111' : data.phone;
   } else if (type === 'data') { 
-      payload.serviceID = data.network; payload.variation_code = data.plan; payload.phone = isSandbox ? '08011111111' : data.phone; 
-      payload.billersCode = isSandbox ? (data.network === 'spectranet' ? '1212121212' : '08011111111') : data.phone;
+      payload.serviceID = data.network; payload.variation_code = data.plan; payload.phone = isSandbox ? '08011111111' : data.phone; payload.billersCode = isSandbox ? '08011111111' : data.phone;
   } else if (type === 'electricity') {
       payload.serviceID = (data.disco === 'port-harcourt-electric') ? 'portharcourt-electric' : data.disco;
       payload.variation_code = data.meterType; payload.phone = isSandbox ? '08011111111' : (data.phone || '08011111111');
@@ -191,6 +190,11 @@ async function processVTURequest(type, data) {
       payload.serviceID = data.provider; payload.phone = isSandbox ? '08011111111' : data.phone;
   } else if (type === 'sms') {
       payload.serviceID = data.provider || 'bulk-sms'; payload.phone = data.phone;
+  } else if (type === 'foreign-airtime') {
+      payload.serviceID = 'foreign-airtime';
+      payload.variation_code = data.operator; 
+      payload.phone = isSandbox ? '08011111111' : data.phone;
+      payload.billersCode = isSandbox ? '08011111111' : data.phone;
   }
 
   try {
@@ -667,6 +671,89 @@ async function buySms(request, reply) {
   } catch (error) { logger.error('SMS Error', error); reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
+async function getInternationalCountries(request, reply) {
+  try {
+    const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
+    const response = await axios.get(`${baseUrl}/get-international-airtime-countries`, { 
+        headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, 
+        timeout: 15000 
+    });
+    reply.send({ success: true, countries: response.data.content });
+  } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch countries' }); }
+}
+
+async function getInternationalOperators(request, reply) {
+  try {
+    const { code } = request.query;
+    const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
+    const response = await axios.get(`${baseUrl}/get-international-airtime-operators?code=${code}`, { 
+        headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, 
+        timeout: 15000 
+    });
+    reply.send({ success: true, operators: response.data.content });
+  } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch operators' }); }
+}
+
+async function buyForeignAirtime(request, reply) {
+  try {
+    const { phone, operator, amount, pin } = request.body;
+    if (!phone || !operator || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    const pinCheck = await validateTransactionPin(request.user._id, pin);
+    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
+    
+    const payableAmount = sanitizeAmount(applyEnterpriseDiscount(parseFloat(amount), 'airtime', request.user.role));
+
+    // STEP 1: ATOMIC DEBIT
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    let transaction;
+    try {
+        const wallet = await Wallet.findOneAndUpdate(
+            { user: request.user._id, availableBalance: { $gte: payableAmount }, isFrozen: { $ne: true } },
+            { $inc: { availableBalance: -payableAmount, balance: -payableAmount } },
+            { session, new: true }
+        );
+        if (!wallet) throw new Error('Insufficient balance or wallet frozen');
+
+        transaction = new Transaction({
+            user: request.user._id, type: 'foreign-airtime', description: `Intl Airtime (${operator}) for ${phone}`,
+            amount: payableAmount, fee: 0, balanceBefore: String(sanitizeAmount(wallet.availableBalance) + payableAmount), balanceAfter: String(wallet.availableBalance),
+            status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+        });
+        await transaction.save({ session });
+        await session.commitTransaction();
+        session.endSession();
+    } catch(err) {
+        await session.abortTransaction(); session.endSession();
+        return reply.status(400).send({ success: false, message: err.message });
+    }
+
+    // STEP 2: EXTERNAL API CALL
+    try {
+      const providerResponse = await processVTURequest('foreign-airtime', { phone, operator, amount });
+      transaction.status = 'success'; transaction.providerReference = providerResponse.reference;
+      await transaction.save();
+      await createAuditLog({ user: request.user._id, transactionId: transaction._id, reference: transaction.reference, amount: payableAmount, type: 'foreign_airtime_purchase', previousBalance: transaction.balanceBefore, newBalance: transaction.balanceAfter, ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'success', source: 'VTU API' });
+      await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
+      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: transaction.balanceAfter });
+      reply.send({ success: true, message: 'International Airtime successful', transaction });
+    } catch (vtuError) {
+      // STEP 3: ATOMIC REFUND
+      const refundSession = await mongoose.startSession();
+      refundSession.startTransaction();
+      const refundedWallet = await Wallet.findOneAndUpdate({ user: request.user._id }, { $inc: { availableBalance: payableAmount, balance: payableAmount } }, { session: refundSession, new: true });
+      transaction.status = 'failed'; transaction.balanceAfter = String(refundedWallet.availableBalance);
+      await transaction.save({ session: refundSession });
+      await createAuditLog({ user: request.user._id, transactionId: transaction._id, reference: transaction.reference, amount: payableAmount, type: 'vtu_refund', previousBalance: String(sanitizeAmount(refundedWallet.availableBalance) - payableAmount), newBalance: String(refundedWallet.availableBalance), ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'failed', source: 'VTU API Error' }, refundSession);
+      await refundSession.commitTransaction(); refundSession.endSession();
+      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: String(refundedWallet.availableBalance) });
+      return reply.status(400).send({ success: false, message: vtuError.message });
+    }
+  } catch (error) { logger.error('Foreign Airtime Error', error); reply.status(500).send({ success: false, message: 'System error' }); }
+}
+
 module.exports = {
-  getRates, getVariations, buyAirtime, buyData, buyElectricity, buyCable, buyEducation, buyBetting, buyInsurance, buySms 
+  getRates, getVariations, buyAirtime, buyData, buyElectricity, buyCable, buyEducation, buyBetting, buyInsurance, buySms,
+  getInternationalCountries, getInternationalOperators, buyForeignAirtime 
 };
