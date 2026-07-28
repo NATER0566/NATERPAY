@@ -20,7 +20,7 @@ const transactionSchema = new mongoose.Schema({
       'loan_disbursement', 'loan_repayment', 'savings_deposit', 'savings_withdrawal',
       'escrow_deposit', 'escrow_release', 'virtual_card_fund', 'virtual_card_charge',
       'crypto_sell', 'giftcard_trade', 'airtime_to_cash', 'task_reward', 'spin_win',
-      'daily_reward', 'reseller_upgrade', 'merchant_payout', 'api_transaction', 'sms'
+      'daily_reward', 'reseller_upgrade', 'merchant_payout', 'api_transaction', 'sms', 'foreign-airtime'
     ]
   },
   
