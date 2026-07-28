@@ -192,7 +192,6 @@ async function processVTURequest(type, data) {
   } else if (type === 'sms') {
       payload.serviceID = data.provider || 'bulk-sms'; payload.phone = data.phone;
   } else if (type === 'foreign-airtime') {
-      // FIX: Changed product_type_id to 1 (Mobile Top Up / Airtime)
       payload.serviceID = 'foreign-airtime';
       payload.operator_id = data.operator; 
       payload.country_code = data.country;
@@ -201,7 +200,6 @@ async function processVTURequest(type, data) {
       payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.billersCode = isSandbox ? '08011111111' : data.phone;
       
-      // Auto-fetches the required variation_code in the background
       try {
           const varHeaders = { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY };
           const varRes = await axios.get(`${baseUrl}/service-variations?serviceID=foreign-airtime&operator_id=${data.operator}&product_type_id=1`, { headers: varHeaders });
@@ -209,6 +207,16 @@ async function processVTURequest(type, data) {
           if (variations.length > 0) payload.variation_code = variations[0].variation_code;
           else payload.variation_code = 'foreign-airtime';
       } catch(e) { payload.variation_code = 'foreign-airtime'; }
+  } else if (type === 'foreign-data') {
+      // NEW FIX: Exact VTpass requirements specifically for International Data
+      payload.serviceID = 'foreign-airtime'; // VTpass uses the exact same serviceID for both
+      payload.operator_id = data.operator; 
+      payload.country_code = data.country;
+      payload.product_type_id = '4'; // 4 is explicitly for Mobile Data
+      payload.email = data.email || 'user@naterpay.com';
+      payload.phone = isSandbox ? '08011111111' : data.phone;
+      payload.billersCode = isSandbox ? '08011111111' : data.phone;
+      payload.variation_code = data.plan; // Data explicitly requires passing the variation/plan code
   }
 
   try {
@@ -238,16 +246,26 @@ async function getRates(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch rates' }); }
 }
 
+// NEW FIX: Adjusted to seamlessly handle foreign variation requests without breaking local networks
 async function getVariations(request, reply) {
   try {
-    const { serviceID } = request.query;
-    if (variationsCache[serviceID] && (Date.now() - variationsCache[serviceID].timestamp < CACHE_TIME)) return reply.send({ success: true, variations: variationsCache[serviceID].data });
+    const { serviceID, operator_id, product_type_id } = request.query;
+    
+    let queryParams = `serviceID=${serviceID}`;
+    if (operator_id) queryParams += `&operator_id=${operator_id}`;
+    if (product_type_id) queryParams += `&product_type_id=${product_type_id}`;
+
+    const cacheKey = `${serviceID}_${operator_id || 'none'}_${product_type_id || 'none'}`;
+    
+    if (variationsCache[cacheKey] && (Date.now() - variationsCache[cacheKey].timestamp < CACHE_TIME)) {
+        return reply.send({ success: true, variations: variationsCache[cacheKey].data });
+    }
 
     const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
-    const response = await axios.get(`${baseUrl}/service-variations?serviceID=${serviceID}`, { headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, timeout: 15000 });
+    const response = await axios.get(`${baseUrl}/service-variations?${queryParams}`, { headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, timeout: 15000 });
     
     const fetchedVariations = response.data.content?.varations || response.data.content?.variations || [];
-    if (fetchedVariations.length > 0) variationsCache[serviceID] = { timestamp: Date.now(), data: fetchedVariations };
+    if (fetchedVariations.length > 0) variationsCache[cacheKey] = { timestamp: Date.now(), data: fetchedVariations };
     
     reply.send({ success: true, variations: fetchedVariations });
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch service plans' }); }
@@ -269,7 +287,7 @@ async function buyAirtime(request, reply) {
     let transaction;
     try {
         const wallet = await Wallet.findOneAndUpdate(
-            { user: request.user._id, availableBalance: { $gte: payableAmount }, isFrozen: { $ne: true } },
+            { user: request.user._id, availableBalance: { $gte: payableAmount }, isFrozen: {$ne: true } },
             { $inc: { availableBalance: -payableAmount, balance: -payableAmount } },
             { session, new: true }
         );
@@ -685,7 +703,6 @@ async function buySms(request, reply) {
   } catch (error) { logger.error('SMS Error', error); reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
-// FIX: Added the exact VTpass unwrapping logic directly to your provided code
 async function getInternationalCountries(request, reply) {
   try {
     const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
@@ -693,7 +710,6 @@ async function getInternationalCountries(request, reply) {
         headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, 
         timeout: 15000 
     });
-    // FIX: Extract countries array directly from VTpass payload
     const countryList = response.data.content?.countries || response.data.content || [];
     return reply.send({ success: true, countries: countryList });
   } catch (error) { 
@@ -701,17 +717,15 @@ async function getInternationalCountries(request, reply) {
   }
 }
 
-// FIX: Added the exact VTpass unwrapping logic directly to your provided code
 async function getInternationalOperators(request, reply) {
   try {
-    const { code } = request.query;
+    const { code, product_type } = request.query;
+    const pType = product_type || '1'; // Default to 1 (Airtime), allows 4 (Data)
     const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
-    // FIX: Changed product_type_id to 1 (Airtime) as requested
-    const response = await axios.get(`${baseUrl}/get-international-airtime-operators?code=${code}&product_type_id=1`, { 
+    const response = await axios.get(`${baseUrl}/get-international-airtime-operators?code=${code}&product_type_id=${pType}`, { 
         headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, 
         timeout: 15000 
     });
-    // FIX: Extract operators array directly from VTpass payload
     const opList = response.data.content?.operators || response.data.content || [];
     return reply.send({ success: true, operators: opList });
   } catch (error) { 
@@ -719,7 +733,6 @@ async function getInternationalOperators(request, reply) {
   }
 }
 
-// FIX: Passing the country and email required by VTpass
 async function buyForeignAirtime(request, reply) {
   try {
     const { phone, operator, country, amount, pin } = request.body;
@@ -779,7 +792,63 @@ async function buyForeignAirtime(request, reply) {
   } catch (error) { logger.error('Foreign Airtime Error', error); return reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
+async function buyForeignData(request, reply) {
+  try {
+    const { phone, operator, country, plan, amount, pin } = request.body;
+    if (!phone || !operator || !plan || !amount || !country) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    
+    const pinCheck = await validateTransactionPin(request.user._id, pin);
+    if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
+    
+    const payableAmount = sanitizeAmount(applyEnterpriseDiscount(parseFloat(amount), 'data', request.user.role));
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    let transaction;
+    try {
+        const wallet = await Wallet.findOneAndUpdate(
+            { user: request.user._id, availableBalance: { $gte: payableAmount }, isFrozen: { $ne: true } },
+            { $inc: { availableBalance: -payableAmount, balance: -payableAmount } },
+            { session, new: true }
+        );
+        if (!wallet) throw new Error('Insufficient balance or wallet frozen');
+
+        transaction = new Transaction({
+            user: request.user._id, type: 'foreign-data', description: `Intl Data (${operator}) for ${phone}`,
+            amount: payableAmount, fee: 0, balanceBefore: String(sanitizeAmount(wallet.availableBalance) + payableAmount), balanceAfter: String(wallet.availableBalance),
+            status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+        });
+        await transaction.save({ session });
+        await session.commitTransaction();
+        session.endSession();
+    } catch(err) {
+        await session.abortTransaction(); session.endSession();
+        return reply.status(400).send({ success: false, message: err.message });
+    }
+
+    try {
+      const providerResponse = await processVTURequest('foreign-data', { phone, operator, country, plan, amount, email: request.user.email });
+      transaction.status = 'success'; transaction.providerReference = providerResponse.reference;
+      await transaction.save();
+      await createAuditLog({ user: request.user._id, transactionId: transaction._id, reference: transaction.reference, amount: payableAmount, type: 'foreign_data_purchase', previousBalance: transaction.balanceBefore, newBalance: transaction.balanceAfter, ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'success', source: 'VTU API' });
+      await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
+      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: transaction.balanceAfter });
+      return reply.send({ success: true, message: 'International Data successful', transaction });
+    } catch (vtuError) {
+      const refundSession = await mongoose.startSession();
+      refundSession.startTransaction();
+      const refundedWallet = await Wallet.findOneAndUpdate({ user: request.user._id }, { $inc: { availableBalance: payableAmount, balance: payableAmount } }, { session: refundSession, new: true });
+      transaction.status = 'failed'; transaction.balanceAfter = String(refundedWallet.availableBalance);
+      await transaction.save({ session: refundSession });
+      await createAuditLog({ user: request.user._id, transactionId: transaction._id, reference: transaction.reference, amount: payableAmount, type: 'vtu_refund', previousBalance: String(sanitizeAmount(refundedWallet.availableBalance) - payableAmount), newBalance: String(refundedWallet.availableBalance), ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'failed', source: 'VTU API Error' }, refundSession);
+      await refundSession.commitTransaction(); refundSession.endSession();
+      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: String(refundedWallet.availableBalance) });
+      return reply.status(400).send({ success: false, message: vtuError.message });
+    }
+  } catch (error) { logger.error('Foreign Data Error', error); return reply.status(500).send({ success: false, message: 'System error' }); }
+}
+
 module.exports = {
   getRates, getVariations, buyAirtime, buyData, buyElectricity, buyCable, buyEducation, buyBetting, buyInsurance, buySms,
-  getInternationalCountries, getInternationalOperators, buyForeignAirtime 
+  getInternationalCountries, getInternationalOperators, buyForeignAirtime, buyForeignData
 };
