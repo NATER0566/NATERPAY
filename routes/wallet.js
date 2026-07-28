@@ -337,7 +337,6 @@ async function fundManualWallet(request, reply) {
 ========================================================================= */
 async function adminApproveManualFunding(request, reply) {
     try {
-        // FIXED: The Joi schema now securely allows the empty 'reason' variable sent by the frontend
         const schema = Joi.object({ 
             transactionId: Joi.string().required(),
             reason: Joi.string().allow('', null).optional()
@@ -346,7 +345,9 @@ async function adminApproveManualFunding(request, reply) {
         if (error) throw error;
 
         const adminUser = await User.findById(request.user._id);
-        if (!adminUser || (adminUser.role !== 'admin' && !adminUser.isAdmin)) throw { status: 403, message: 'Forbidden' };
+        if (!adminUser || (adminUser.role !== 'admin' && adminUser.role !== 'superadmin' && !adminUser.isAdmin)) {
+            throw { status: 403, message: 'Forbidden' };
+        }
 
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -401,7 +402,9 @@ async function adminRejectManualFunding(request, reply) {
         if (error) throw error;
 
         const adminUser = await User.findById(request.user._id);
-        if (!adminUser || (adminUser.role !== 'admin' && !adminUser.isAdmin)) throw { status: 403, message: 'Forbidden' };
+        if (!adminUser || (adminUser.role !== 'admin' && adminUser.role !== 'superadmin' && !adminUser.isAdmin)) {
+            throw { status: 403, message: 'Forbidden' };
+        }
 
         const rejectionReason = sanitizeText(value.reason) || 'Payment not found in company bank account.';
         const failedTx = await Transaction.findOneAndUpdate(
@@ -537,6 +540,7 @@ async function withdraw(request, reply) {
             
             const currentBalance = parseDecimal(updatedWallet.availableBalance);
 
+            // FIXED: Explicitly saves bankName, accountNumber, and accountName at the schema root so the Admin Panel reads them correctly without showing "Unknown"
             const transaction = new Transaction({ 
                 user: request.user._id, type: 'withdrawal', description: `Withdrawal to ${safeBankName} - ${maskedAccountNo}`, 
                 amount: withdrawAmount, fee: transferFee, totalDeduction: totalDeduction, 
@@ -544,8 +548,8 @@ async function withdraw(request, reply) {
                 balanceAfter: String(currentBalance), 
                 status: TX_STATUS.PROCESSING, provider: 'internal', providerReference: secureProviderRef, 
                 idempotencyKey: idempotencyKey, ipAddress: request.ip, userAgent: request.headers['user-agent'], 
-                bankName: safeBankName, accountNumber: maskedAccountNo, accountName: safeAccountName, 
-                metadata: { maskedAccountNo, encryptedData: encryptBankData(`${rawAccountNo}:${safeAccountName}`) } 
+                bankName: safeBankName, accountNumber: rawAccountNo, accountName: safeAccountName, 
+                metadata: { maskedAccountNo, bankName: safeBankName, accountNumber: rawAccountNo, accountName: safeAccountName, encryptedData: encryptBankData(`${rawAccountNo}:${safeAccountName}`) } 
             }); 
             await transaction.save({ session, validateBeforeSave: false }); 
             
