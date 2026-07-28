@@ -45,6 +45,29 @@ const sanitizeAmount = (amount) => {
 const sanitizeText = (str) => str ? String(str).replace(/[<>]/g, '').trim().substring(0, 500) : '';
 
 /* =========================================================================
+   [NEW FIX] BANK DATA DECRYPTION ENGINE
+========================================================================= */
+const ENCRYPTION_KEY = process.env.BANK_ENCRYPTION_KEY ? Buffer.from(process.env.BANK_ENCRYPTION_KEY, 'hex') : null;
+
+function decryptBankData(encryptedText) {
+    if (!encryptedText || !ENCRYPTION_KEY) return null;
+    try {
+        const parts = encryptedText.split(':');
+        if (parts.length !== 3) return null;
+        const iv = Buffer.from(parts[0], 'hex');
+        const encryptedTextStr = parts[1];
+        const authTag = Buffer.from(parts[2], 'hex');
+        const decipher = crypto.createDecipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
+        decipher.setAuthTag(authTag);
+        let decrypted = decipher.update(encryptedTextStr, 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
+        return decrypted; 
+    } catch (e) {
+        return null;
+    }
+}
+
+/* =========================================================================
    [6] REDIS RATE LIMITING ENGINE (Admin Abuse Protection)
 ========================================================================= */
 const redisClient = (Redis && process.env.REDIS_URL) ? new Redis(process.env.REDIS_URL) : null;
@@ -230,8 +253,31 @@ async function getAnalytics(request, reply) {
 async function getPendingWithdrawals(request, reply) {
     try {
         if (!await checkRateLimit(request, 'admin_withdrawals', 60)) throw { status: 429, message: 'Too many requests.' };
-        const pendingWithdrawals = await Transaction.find({ type: 'withdrawal', status: 'processing' }).populate('user', 'name email phoneNumber').sort({ createdAt: -1 });
-        reply.send({ success: true, pendingWithdrawals });
+        
+        // FIXED: Using .lean() so we can inject the decrypted account numbers into the object
+        const pendingWithdrawals = await Transaction.find({ type: 'withdrawal', status: 'processing' })
+            .populate('user', 'name email phoneNumber')
+            .sort({ createdAt: -1 })
+            .lean();
+            
+        const formattedWithdrawals = pendingWithdrawals.map(tx => {
+            // Unlocks the full account number if it was encrypted
+            if (tx.metadata && tx.metadata.encryptedData && ENCRYPTION_KEY) {
+                const decrypted = decryptBankData(tx.metadata.encryptedData);
+                if (decrypted) {
+                    const [rawAccount, rawName] = decrypted.split(':');
+                    tx.realAccountNumber = rawAccount;
+                    tx.realAccountName = rawName;
+                }
+            }
+            // Fallbacks to standard fields just in case
+            if (!tx.realAccountNumber) tx.realAccountNumber = tx.metadata?.bankAccount?.accountNumber || tx.accountNumber;
+            if (!tx.realAccountName) tx.realAccountName = tx.metadata?.bankAccount?.accountName || tx.accountName;
+            
+            return tx;
+        });
+
+        reply.send({ success: true, pendingWithdrawals: formattedWithdrawals });
     } catch (error) { handleError(reply, error, 'Failed to fetch pending withdrawals.'); }
 }
 
@@ -708,7 +754,22 @@ async function sendPushNotification(request, reply) {
     } catch (error) { handleError(reply, error, 'Failed to transmit notification'); }
 }
 
-async function getSupportTickets(request, reply) { reply.send({ success: true, tickets: [] }); }
+/* =========================================================================
+   [NEW FIX] ENTERPRISE TICKET AGGREGATOR
+========================================================================= */
+async function getSupportTickets(request, reply) {
+    try {
+        const SupportTicket = require('../models/SupportTicket');
+        const tickets = await SupportTicket.find({})
+            .populate('user', 'name email phoneNumber kycLevel role')
+            .sort({ createdAt: -1 });
+            
+        return reply.status(200).send({ success: true, tickets });
+    } catch (error) {
+        return reply.status(500).send({ success: false, message: 'Failed to fetch all tickets' });
+    }
+}
+
 async function assignTicket(request, reply) { reply.send({ success: true, message: 'Assigned' }); }
 async function resolveTicket(request, reply) { reply.send({ success: true, message: 'Resolved' }); }
 
