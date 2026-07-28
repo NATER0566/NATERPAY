@@ -695,7 +695,7 @@
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
         try {
-            const res = await fetch('/api/invoices', { headers: { 'Authorization': `Bearer ${token}` } });
+            const res = await fetch('/api/admin/invoices', { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
             const invoices = data.invoices || [];
 
@@ -1339,4 +1339,3 @@
 </body>
 </html>
 
-check this error in generation of invoice what causes it
