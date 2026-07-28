@@ -369,7 +369,7 @@
                 currentUserRole = (userData.userRole || 'user').toLowerCase();
                 const badge = document.getElementById('userTierBadge');
                 
-                if(currentUserRole === 'vip' || currentUserRole === 'admin') {
+                if(currentUserRole === 'vip' || currentUserRole === 'admin' || currentUserRole === 'superadmin') {
                     badge.innerHTML = '<i class="fas fa-crown"></i> VIP UNLIMITED';
                     badge.className = "tier-badge bg-warning text-dark fw-bold border-warning";
                 } else if(currentUserRole === 'reseller' || currentUserRole === 'agent') {
@@ -533,12 +533,12 @@
 
         if(items.length === 0) return Swal.fire({ icon:'error', title:'Empty Invoice', text:'Add at least one valid item.', background:'#111', color:'#fff' });
 
+        // THE FIX: paymentOptions object removed from payload to prevent backend validation error
         const payload = {
             customerName: cName, customerEmail: cEmail, currency, dueDate: due,
             taxRate: parseFloat(document.getElementById('invTax').value) || 0,
             discountRate: parseFloat(document.getElementById('invDiscount').value) || 0,
-            items: items,
-            paymentOptions: { paystack: true }
+            items: items
         };
 
         // === THE FIX: ALWAYS ATTACH BUSINESS INFO, ONLY LOCK LOGO/NOTES ===
