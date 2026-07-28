@@ -32,11 +32,24 @@ const sanitizeAmount = (amount) => {
 // [4] TEXT SANITIZATION (XSS Protection)
 const sanitizeText = (str) => str ? String(str).replace(/[<>]/g, '').trim().substring(0, 255) : '';
 
-// [5] CENTRALIZED ERROR HANDLING
+// [5] BULLETPROOF CENTRALIZED ERROR HANDLING
 function handleError(reply, error, defaultMessage = 'System error occurred.') {
-    if (error.isJoi) return reply.status(400).send({ success: false, message: error.details[0].message });
-    logger.error(error.message, error);
-    reply.status(error.status || 400).send({ success: false, message: error.message || defaultMessage });
+    try {
+        if (error && error.isJoi) {
+            return reply.status(400).send({ success: false, message: error.details[0].message });
+        }
+        
+        const msg = (error && error.message) ? error.message : defaultMessage;
+        const stat = (error && error.status) ? error.status : 400;
+        
+        if (logger && typeof logger.error === 'function') {
+            logger.error(msg, error || {});
+        }
+        
+        return reply.status(stat).send({ success: false, message: msg });
+    } catch (fatalErr) {
+        return reply.status(500).send({ success: false, message: 'A critical backend execution error occurred.' });
+    }
 }
 
 // [6] REDIS RATE LIMITING (Anti-Spam & Anti-Click Fraud)
@@ -51,8 +64,8 @@ setInterval(() => {
 }, 60000);
 
 async function checkRateLimit(request, action, limit = 10, customId = null) {
-    const ip = request.ip;
-    const identifier = customId || (request.user ? request.user._id : ip);
+    const userId = request.user ? (request.user._id || request.user.id || 'unknown') : null;
+    const identifier = customId || userId || request.ip || 'anonymous';
     const windowSeconds = 60;
 
     const executeFallback = () => {
@@ -82,18 +95,27 @@ async function checkRateLimit(request, action, limit = 10, customId = null) {
     } else { return executeFallback(); }
 }
 
-// [7] IMMUTABLE AUDIT LOGGING ENGINE
+// [7] IMMUTABLE AUDIT LOGGING ENGINE (FIXED DATA TYPES)
 async function createAuditLog(params, session = null) {
     if (!AuditLog) return;
     try {
         const log = new AuditLog({
-            user: params.user, transactionId: params.transactionId, transactionReference: params.reference,
-            amount: params.amount, type: params.type, previousBalance: String(params.previousBalance),
-            newBalance: String(params.newBalance), ipAddress: params.ipAddress, userAgent: params.userAgent,
-            status: params.status, source: params.source
+            user: params.user || undefined, 
+            transactionId: params.transactionId, 
+            transactionReference: params.reference || 'AD_ACTION',
+            amount: Number(params.amount || 0), 
+            type: params.type, 
+            previousBalance: Number(params.previousBalance || 0), // FIXED: Prevents DB string cast crash
+            newBalance: Number(params.newBalance || 0),           // FIXED: Prevents DB string cast crash
+            ipAddress: params.ipAddress || '0.0.0.0', 
+            userAgent: params.userAgent || 'System',
+            status: params.status || 'success', 
+            source: params.source || 'Ad Engine'
         });
         if (session) await log.save({ session }); else await log.save();
-    } catch(e) { logger.error('Audit Log Error', e); }
+    } catch(e) { 
+        if (logger) logger.error('Audit Log Error', e); 
+    }
 }
 
 // Initialize Cloudinary
