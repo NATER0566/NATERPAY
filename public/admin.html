@@ -383,7 +383,7 @@
     }
 
     // =========================================================================================
-    // THE FIX: GLOBAL USER RESOLUTION ENGINE (Extracts Full Identity from ANY object or ID string)
+    // GLOBAL USER RESOLUTION ENGINE
     // =========================================================================================
     function getUserKycBadge(userId) {
         if (!userId) return '<span class="status-pill bg-danger text-white mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-times-circle"></i> UNVERIFIED</span>';
@@ -455,7 +455,8 @@
             const meRes = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${token}` } });
             const meData = await meRes.json();
             if (meData.success) {
-                currentAdminRole = (meData.role || 'admin').toLowerCase();
+                // FIXED: Now correctly extracts userRole from dashboard-data
+                currentAdminRole = (meData.userRole || meData.role || 'admin').toLowerCase();
                 const badge = document.getElementById('adminRoleBadge');
                 if (currentAdminRole === 'superadmin') {
                     badge.className = 'badge bg-danger px-3 py-2 rounded-pill fw-bold';
@@ -503,7 +504,6 @@
                 const amt = parseNum(tx.amount);
                 const encodedTx = encodeURIComponent(JSON.stringify(tx));
                 
-                // Use Global Resolver
                 const uData = extractUserDetails(tx.user || tx.userId || tx.ownerId, tx.userEmail, tx.userName);
                 
                 let actionBtns = `<button class="btn btn-sm btn-info text-white rounded" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button>`;
@@ -529,11 +529,12 @@
             const tx = JSON.parse(decodeURIComponent(encodedData));
             let extraHtml = '';
             if (tx.type === 'withdrawal') {
-                let bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank'; 
-                // [NEW FIX] UNLOCKS FULL ACCOUNT NUMBER
-                let bAcc = tx.realAccountNumber || tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account'; 
-                let bUser = tx.realAccountName || tx.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
-                extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--gold);"><h6 class="text-gold mb-2 fw-bold"><i class="fas fa-university me-1"></i> Destination Bank Details</h6><p class="mb-1 text-white"><strong class="text-secondary">Bank:</strong> ${bName}</p><p class="mb-1 text-white"><strong class="text-secondary">Account No:</strong> <span class="text-warning fs-5 fw-bold" style="letter-spacing: 2px;">${bAcc}</span></p><p class="mb-0 text-white"><strong class="text-secondary">Account Name:</strong> ${bUser}</p></div>`;
+                let bName = tx.bankName || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.bankName) || 'Unknown Bank'; 
+                let bUser = tx.realAccountName || tx.accountName || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.accountName) || 'Unknown Name';
+                // FIXED: Prioritizes realAccountNumber, then metadata full number, before falling back to masked
+                let bAcc = tx.realAccountNumber || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.accountNumber) || tx.accountNumber || 'Unknown Account'; 
+                
+                extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--gold);"><h6 class="text-gold mb-2 fw-bold"><i class="fas fa-university me-1"></i> Destination Bank Details</h6><p class="mb-1 text-white"><strong class="text-secondary">Bank Name:</strong> ${bName}</p><p class="mb-1 text-white"><strong class="text-secondary">Account No:</strong> <span class="text-warning fs-5 fw-bold" style="letter-spacing: 2px;">${bAcc}</span></p><p class="mb-0 text-white"><strong class="text-secondary">Account Name:</strong> ${bUser}</p></div>`;
             }
             if (tx.type === 'funding' && tx.provider === 'internal') {
                 let narration = tx.metadata?.narration || 'Not Provided'; let receiptUrl = tx.metadata?.receiptUrl;
@@ -561,13 +562,12 @@
     }
 
     // ==========================================
-    // SUPPORT TICKETS DESK (ENTERPRISE FIXED)
+    // SUPPORT TICKETS DESK 
     // ==========================================
     async function fetchAdminTickets() {
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
         try {
-            // FIXED: Pointing to the ADMIN route to fetch ALL users' tickets
             const res = await fetch('/api/admin/support/tickets', { headers: { 'Authorization': `Bearer ${token}` } }); 
             const data = await res.json();
             const tickets = data.tickets || [];
@@ -585,7 +585,6 @@
                 const statusColor = t.status === 'resolved' ? 'success' : (t.status === 'open' ? 'warning text-dark' : 'secondary');
                 const priorityColor = t.priority === 'urgent' ? 'text-danger fw-bold' : 'text-info';
                 
-                // FIXED: Extracts full user identity using the global resolver
                 const uData = extractUserDetails(t.user);
 
                 return `<tr>
@@ -595,7 +594,6 @@
                     <td><span class="status-pill bg-${statusColor}">${t.status}</span></td>
                     <td class="text-end">
                         <div class="action-btns justify-content-end">
-                            <!-- FIXED: Changed to universal View Icon -->
                             <button class="btn btn-info text-white fw-bold" onclick="openAdminTicketPanel('${t.ticketId}', '${encodedT}')" title="View Details & Respond"><i class="fas fa-eye"></i></button>
                         </div>
                     </td>
@@ -608,7 +606,6 @@
         const t = JSON.parse(decodeURIComponent(encodedData));
         const uData = extractUserDetails(t.user);
         
-        // FIXED: Displays the User's KYC, Name, and Email at the top of the Dossier
         let chatHtml = `
         <div class="p-3 bg-dark rounded border border-secondary mb-3 text-start">
             <h6 class="text-gold border-bottom border-secondary pb-2 mb-2 fw-bold"><i class="fas fa-user-circle me-1"></i> Client Identity</h6>
@@ -676,7 +673,7 @@
     }
 
     // ==========================================
-    // INVOICES ENGINE (NEW)
+    // INVOICES ENGINE
     // ==========================================
     async function fetchAdminInvoices() {
         const token = localStorage.getItem("naterpay_token");
@@ -698,7 +695,6 @@
                 if(inv.status==='paid') badgeCls='success';
                 if(inv.status==='overdue') badgeCls='danger';
                 
-                // Invoice Owner (The Merchant)
                 const merchantData = extractUserDetails(inv.user || inv.merchantId, inv.businessDetails?.email, inv.businessDetails?.name);
                 
                 return `<tr>
@@ -763,9 +759,7 @@
         if (formValues) {
             Swal.fire({title:'Updating Ledger...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
             try { 
-                // Uses the specific merchant route for changing status, assuming admin has auth to use it
                 const res = await fetch(`/api/invoices/${inv._id}/mark-paid`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
-                // If you have a true general edit route: fetch(`/api/admin/invoices/${inv._id}`, ... )
                 Swal.fire({title: 'Updated!', icon: 'success', background: '#0a0a0a', color: '#fff'}); fetchAdminInvoices(); 
             } catch(e) { Swal.fire('Failed', 'Network Error', 'error'); }
         }
@@ -859,7 +853,7 @@
     }
 
     // ==========================================
-    // WITHDRAWALS
+    // WITHDRAWALS (FIXED)
     // ==========================================
     async function fetchWithdrawals() {
         const token = localStorage.getItem("naterpay_token");
@@ -876,13 +870,33 @@
                 badge.classList.remove('d-none');
                 tbody.innerHTML = pending.map(tx => {
                     const encodedTx = encodeURIComponent(JSON.stringify(tx));
-                    const bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
-                    // [NEW FIX] UNLOCKS FULL ACCOUNT NUMBER
-                    const bAcc = tx.realAccountNumber || tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account';
+                    
+                    // FIXED: Aggressive extraction to guarantee we get the Bank Name, Account Name, and Full Number
+                    const bName = tx.bankName || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.bankName) || 'Unknown Bank';
+                    const bUser = tx.realAccountName || tx.accountName || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.accountName) || 'Unknown Name';
+                    const bAcc = tx.realAccountNumber || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.accountNumber) || tx.accountNumber || 'Unknown Account';
+                    
                     const baseAmt = parseNum(tx.amount); const feeAmt = parseNum(tx.fee);
                     const uData = extractUserDetails(tx.user); 
                     
-                    return `<tr><td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td><td>${uData.html}</td><td><div class="text-warning fw-bold">${bName}</div><small class="text-white" style="letter-spacing:1px;">${bAcc}</small></td><td><div class="fw-bold text-gold fs-5">₦${baseAmt.toLocaleString()}</div><small class="text-danger">Fee: ₦${feeAmt.toLocaleString()}</small></td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'approve'))" title="Approve & Settle"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'reject'))" title="Reject & Refund"><i class="fas fa-times"></i></button></div></td></tr>`;
+                    // FIXED: Table now explicitly shows Bank Name, Account Name, and Full Account Number together
+                    return `<tr>
+                        <td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td>
+                        <td>${uData.html}</td>
+                        <td>
+                            <div class="text-warning fw-bold text-uppercase" style="font-size:0.85rem;">${bName}</div>
+                            <div class="text-white fw-bold" style="letter-spacing:1px; font-size:1.05rem;">${bAcc}</div>
+                            <small class="text-secondary fw-bold">${bUser}</small>
+                        </td>
+                        <td><div class="fw-bold text-gold fs-5">₦${baseAmt.toLocaleString()}</div><small class="text-danger">Fee: ₦${feeAmt.toLocaleString()}</small></td>
+                        <td class="text-end">
+                            <div class="action-btns justify-content-end">
+                                <button class="btn btn-info text-white fw-bold" onclick="viewTxDossier('${encodedTx}')" title="View Full Data"><i class="fas fa-eye"></i></button>
+                                <button class="btn btn-success fw-bold" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'approve'))" title="Approve & Settle"><i class="fas fa-check"></i></button>
+                                <button class="btn btn-danger fw-bold" onclick="requireSuperAdmin(() => processWithdrawal('${tx._id}', 'reject'))" title="Reject & Refund"><i class="fas fa-times"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
                 }).join('');
             } else { 
                 badge.classList.add('d-none'); 
