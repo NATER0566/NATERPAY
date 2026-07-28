@@ -529,8 +529,11 @@
             const tx = JSON.parse(decodeURIComponent(encodedData));
             let extraHtml = '';
             if (tx.type === 'withdrawal') {
-                let bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank'; let bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account'; let bUser = tx.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
-                extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--gold);"><h6 class="text-gold mb-2 fw-bold"><i class="fas fa-university me-1"></i> Destination Bank Details</h6><p class="mb-1 text-white"><strong class="text-secondary">Bank:</strong> ${bName}</p><p class="mb-1 text-white"><strong class="text-secondary">Account No:</strong> <span class="text-warning fs-6 fw-bold" style="letter-spacing: 1px;">${bAcc}</span></p><p class="mb-0 text-white"><strong class="text-secondary">Account Name:</strong> ${bUser}</p></div>`;
+                let bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank'; 
+                // [NEW FIX] UNLOCKS FULL ACCOUNT NUMBER
+                let bAcc = tx.realAccountNumber || tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account'; 
+                let bUser = tx.realAccountName || tx.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
+                extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--gold);"><h6 class="text-gold mb-2 fw-bold"><i class="fas fa-university me-1"></i> Destination Bank Details</h6><p class="mb-1 text-white"><strong class="text-secondary">Bank:</strong> ${bName}</p><p class="mb-1 text-white"><strong class="text-secondary">Account No:</strong> <span class="text-warning fs-5 fw-bold" style="letter-spacing: 2px;">${bAcc}</span></p><p class="mb-0 text-white"><strong class="text-secondary">Account Name:</strong> ${bUser}</p></div>`;
             }
             if (tx.type === 'funding' && tx.provider === 'internal') {
                 let narration = tx.metadata?.narration || 'Not Provided'; let receiptUrl = tx.metadata?.receiptUrl;
@@ -558,13 +561,14 @@
     }
 
     // ==========================================
-    // SUPPORT TICKETS DESK
+    // SUPPORT TICKETS DESK (ENTERPRISE FIXED)
     // ==========================================
     async function fetchAdminTickets() {
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
         try {
-            const res = await fetch('/api/support/tickets', { headers: { 'Authorization': `Bearer ${token}` } }); 
+            // FIXED: Pointing to the ADMIN route to fetch ALL users' tickets
+            const res = await fetch('/api/admin/support/tickets', { headers: { 'Authorization': `Bearer ${token}` } }); 
             const data = await res.json();
             const tickets = data.tickets || [];
             
@@ -581,7 +585,7 @@
                 const statusColor = t.status === 'resolved' ? 'success' : (t.status === 'open' ? 'warning text-dark' : 'secondary');
                 const priorityColor = t.priority === 'urgent' ? 'text-danger fw-bold' : 'text-info';
                 
-                // Use Global Resolver
+                // FIXED: Extracts full user identity using the global resolver
                 const uData = extractUserDetails(t.user);
 
                 return `<tr>
@@ -590,7 +594,10 @@
                     <td><div class="fw-bold text-white text-truncate" style="max-width:200px;">${t.subject}</div><small class="${priorityColor} text-uppercase"><i class="fas fa-exclamation-circle me-1"></i>${t.priority} | ${t.category}</small></td>
                     <td><span class="status-pill bg-${statusColor}">${t.status}</span></td>
                     <td class="text-end">
-                        <button class="btn btn-warning text-dark fw-bold btn-sm rounded" onclick="openAdminTicketPanel('${t.ticketId}', '${encodedT}')"><i class="fas fa-reply me-1"></i> Respond</button>
+                        <div class="action-btns justify-content-end">
+                            <!-- FIXED: Changed to universal View Icon -->
+                            <button class="btn btn-info text-white fw-bold" onclick="openAdminTicketPanel('${t.ticketId}', '${encodedT}')" title="View Details & Respond"><i class="fas fa-eye"></i></button>
+                        </div>
                     </td>
                 </tr>`;
             }).join('');
@@ -599,29 +606,40 @@
 
     async function openAdminTicketPanel(ticketId, encodedData) {
         const t = JSON.parse(decodeURIComponent(encodedData));
+        const uData = extractUserDetails(t.user);
         
-        let chatHtml = `<div class="p-3 bg-black rounded border border-secondary mb-3"><strong class="text-gold d-block mb-1">Original Issue:</strong><span class="text-white small">${t.description}</span></div>`;
+        // FIXED: Displays the User's KYC, Name, and Email at the top of the Dossier
+        let chatHtml = `
+        <div class="p-3 bg-dark rounded border border-secondary mb-3 text-start">
+            <h6 class="text-gold border-bottom border-secondary pb-2 mb-2 fw-bold"><i class="fas fa-user-circle me-1"></i> Client Identity</h6>
+            ${uData.html}
+        </div>
+        <div class="p-3 bg-black rounded border border-secondary mb-3 text-start">
+            <strong class="text-gold d-block mb-1">Original Issue:</strong>
+            <span class="text-white small" style="white-space: pre-wrap;">${t.description}</span>
+        </div>`;
+
         if (t.messages && t.messages.length > 0) {
             t.messages.forEach(msg => {
                 const isAdmin = msg.isInternal;
                 const align = isAdmin ? 'text-end' : 'text-start';
                 const bg = isAdmin ? 'border border-warning bg-dark' : 'bg-secondary';
                 const name = isAdmin ? '<i class="fas fa-user-shield text-warning me-1"></i> Admin' : '<i class="fas fa-user text-light me-1"></i> User';
-                chatHtml += `<div class="${align} mb-2"><div class="d-inline-block p-2 rounded ${bg} text-white" style="max-width: 85%; font-size: 0.85rem;"><strong class="d-block mb-1" style="font-size:0.75rem;">${name}</strong>${msg.message}</div></div>`;
+                chatHtml += `<div class="${align} mb-2"><div class="d-inline-block p-2 rounded ${bg} text-white text-start" style="max-width: 85%; font-size: 0.85rem;"><strong class="d-block mb-1" style="font-size:0.75rem;">${name}</strong>${msg.message}</div></div>`;
             });
         }
 
         const { value: replyMsg } = await Swal.fire({
             title: `Ticket: ${t.ticketId}`,
             html: `
-                <div style="max-height: 300px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px;" class="bg-black p-2 rounded border border-dark">${chatHtml}</div>
+                <div style="max-height: 350px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px;" class="bg-black p-2 rounded border border-dark">${chatHtml}</div>
                 <div class="d-flex justify-content-between mb-2">
                     <button id="btnResolveTicket" class="btn btn-sm btn-outline-success"><i class="fas fa-check me-1"></i> Mark Resolved</button>
                     <button id="btnCloseTicket" class="btn btn-sm btn-outline-danger"><i class="fas fa-ban me-1"></i> Force Close</button>
                 </div>
                 <textarea id="adminReplyText" class="swal2-textarea bg-dark text-white w-100 m-0" rows="3" placeholder="Type your official response here..."></textarea>
             `,
-            background: '#0a0a0a', color: '#fff',
+            background: '#0a0a0a', color: '#fff', width: '600px',
             showCancelButton: true, confirmButtonText: '<i class="fas fa-paper-plane me-1"></i> Send Reply', confirmButtonColor: '#d4af37',
             didOpen: () => {
                 document.getElementById('btnResolveTicket').addEventListener('click', () => updateTicketStatus(ticketId, 'resolved'));
@@ -859,7 +877,8 @@
                 tbody.innerHTML = pending.map(tx => {
                     const encodedTx = encodeURIComponent(JSON.stringify(tx));
                     const bName = tx.bankName || tx.metadata?.bankAccount?.bankName || 'Unknown Bank';
-                    const bAcc = tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account';
+                    // [NEW FIX] UNLOCKS FULL ACCOUNT NUMBER
+                    const bAcc = tx.realAccountNumber || tx.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account';
                     const baseAmt = parseNum(tx.amount); const feeAmt = parseNum(tx.fee);
                     const uData = extractUserDetails(tx.user); 
                     
