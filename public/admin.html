@@ -126,7 +126,7 @@
         </div>
     </div>
 
-    <!-- NEW: INVOICES -->
+    <!-- INVOICES -->
     <div id="tab-invoices" class="tab-content" style="display: none;">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -383,7 +383,7 @@
     }
 
     // =========================================================================================
-    // GLOBAL USER RESOLUTION ENGINE
+    // GLOBAL USER RESOLUTION ENGINE (FIXED NESTED OBJECT EXTRACTION)
     // =========================================================================================
     function getUserKycBadge(userId) {
         if (!userId) return '<span class="status-pill bg-danger text-white mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-times-circle"></i> UNVERIFIED</span>';
@@ -402,15 +402,16 @@
     function extractUserDetails(userObj, fallbackEmail = 'Unknown Email', fallbackName = 'Unknown User') {
         let id = null, name = fallbackName, email = fallbackEmail;
         
+        // FIXED: Properly extracts details if user is an object populated by backend
         if (userObj && typeof userObj === 'object') {
-            id = userObj._id || userObj.id;
-            name = userObj.name || name;
+            id = userObj._id || userObj.id || id;
+            name = userObj.name || userObj.firstName || name;
             email = userObj.email || email;
         } else if (typeof userObj === 'string') {
             id = userObj;
         }
 
-        // Cross-reference with global database
+        // Cross-reference with global database just in case
         if (id && window.globalSystemUsers) {
             const u = window.globalSystemUsers.find(x => x._id === id);
             if (u) {
@@ -419,7 +420,7 @@
             }
         }
         
-        const kycBadge = getUserKycBadge(id);
+        const kycBadge = getUserKycBadge(userObj || id);
         
         return {
             id, name, email,
@@ -455,7 +456,6 @@
             const meRes = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${token}` } });
             const meData = await meRes.json();
             if (meData.success) {
-                // FIXED: Now correctly extracts userRole from dashboard-data
                 currentAdminRole = (meData.userRole || meData.role || 'admin').toLowerCase();
                 const badge = document.getElementById('adminRoleBadge');
                 if (currentAdminRole === 'superadmin') {
@@ -529,10 +529,10 @@
             const tx = JSON.parse(decodeURIComponent(encodedData));
             let extraHtml = '';
             if (tx.type === 'withdrawal') {
-                let bName = tx.bankName || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.bankName) || 'Unknown Bank'; 
-                let bUser = tx.realAccountName || tx.accountName || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.accountName) || 'Unknown Name';
-                // FIXED: Prioritizes realAccountNumber, then metadata full number, before falling back to masked
-                let bAcc = tx.realAccountNumber || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.accountNumber) || tx.accountNumber || 'Unknown Account'; 
+                // FIXED: Bulletproof bank details extraction
+                let bName = tx.bankName || tx.metadata?.bankName || tx.metadata?.bankAccount?.bankName || 'Bank Name Not Saved'; 
+                let bUser = tx.realAccountName || tx.accountName || tx.metadata?.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
+                let bAcc = tx.realAccountNumber || tx.accountNumber || tx.metadata?.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account'; 
                 
                 extraHtml += `<div class="p-3 mt-3 mb-3 bg-black rounded" style="border: 2px solid var(--gold);"><h6 class="text-gold mb-2 fw-bold"><i class="fas fa-university me-1"></i> Destination Bank Details</h6><p class="mb-1 text-white"><strong class="text-secondary">Bank Name:</strong> ${bName}</p><p class="mb-1 text-white"><strong class="text-secondary">Account No:</strong> <span class="text-warning fs-5 fw-bold" style="letter-spacing: 2px;">${bAcc}</span></p><p class="mb-0 text-white"><strong class="text-secondary">Account Name:</strong> ${bUser}</p></div>`;
             }
@@ -661,10 +661,11 @@
         }
     }
 
+    // FIXED: Infinite spinning on Ticket Reject. Replaced with proper fetch path.
     async function updateTicketStatus(ticketId, newStatus) {
         Swal.fire({title:'Updating...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
         try {
-            const res = await fetch(`/api/support/tickets/${ticketId}/status`, {
+            const res = await fetch(`/api/admin/support/tickets/${ticketId}/resolve`, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
                 body: JSON.stringify({ status: newStatus })
             });
@@ -679,6 +680,7 @@
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
         try {
+            // FIXED: If your backend has no /api/admin/invoices route, this uses /api/invoices but clearly states if none are found.
             const res = await fetch('/api/invoices', { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
             const invoices = data.invoices || [];
@@ -872,9 +874,9 @@
                     const encodedTx = encodeURIComponent(JSON.stringify(tx));
                     
                     // FIXED: Aggressive extraction to guarantee we get the Bank Name, Account Name, and Full Number
-                    const bName = tx.bankName || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.bankName) || 'Unknown Bank';
-                    const bUser = tx.realAccountName || tx.accountName || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.accountName) || 'Unknown Name';
-                    const bAcc = tx.realAccountNumber || (tx.metadata && tx.metadata.bankAccount && tx.metadata.bankAccount.accountNumber) || tx.accountNumber || 'Unknown Account';
+                    const bName = tx.bankName || tx.metadata?.bankName || tx.metadata?.bankAccount?.bankName || 'Bank Name Not Saved';
+                    const bUser = tx.realAccountName || tx.accountName || tx.metadata?.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
+                    const bAcc = tx.realAccountNumber || tx.accountNumber || tx.metadata?.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account';
                     
                     const baseAmt = parseNum(tx.amount); const feeAmt = parseNum(tx.fee);
                     const uData = extractUserDetails(tx.user); 
@@ -905,17 +907,34 @@
         } catch(e) {}
     }
 
+    // FIXED: Withdrawal rejection payload now properly sends the required 'reason' body to the server
     async function processWithdrawal(txId, action) {
+        let bodyPayload = {};
         const actionWord = action === 'approve' ? 'Approve & Settle' : 'Reject & Refund';
-        if((await Swal.fire({title: `Confirm Action`, text: `Are you sure you want to ${actionWord} this withdrawal?`, showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
-            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-            try {
-                const res = await fetch(`/api/admin/withdrawals/${txId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
-                const data = await res.json();
-                if(data.success) { Swal.fire('Success', data.message || 'Operation successful', 'success'); syncAllBadges(); } 
-                else { Swal.fire('Failed', data.message || 'Operation failed', 'error'); }
-            } catch (err) { Swal.fire('Error', 'Server communication failed.', 'error'); }
+        
+        if (action === 'reject') {
+            const { value: inputReason } = await Swal.fire({
+                title: 'Reject Payout', input: 'text', inputLabel: 'Rejection Reason', inputPlaceholder: 'e.g. Invalid bank details',
+                background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonColor: '#d32f2f'
+            });
+            if (inputReason === undefined) return; 
+            bodyPayload = { reason: inputReason || 'Processed by Administrator' };
+        } else {
+            const confirm = await Swal.fire({title: `Confirm Action`, text: `Are you sure you want to ${actionWord} this withdrawal?`, showCancelButton: true, background: '#0a0a0a', color: '#fff', confirmButtonColor: '#00ff88'});
+            if (!confirm.isConfirmed) return;
         }
+
+        Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
+        try {
+            const res = await fetch(`/api/admin/withdrawals/${txId}/${action}`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                body: JSON.stringify(bodyPayload)
+            });
+            const data = await res.json();
+            if(data.success) { Swal.fire('Success', data.message || 'Operation successful', 'success'); syncAllBadges(); } 
+            else { Swal.fire('Failed', data.message || 'Operation failed', 'error'); }
+        } catch (err) { Swal.fire('Error', 'Server communication failed.', 'error'); }
     }
 
     // ==========================================
