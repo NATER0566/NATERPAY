@@ -25,11 +25,24 @@ const sanitizeAmount = (amount) => {
     return num;
 };
 
-// [4] CENTRALIZED ERROR HANDLING
+// [4] BULLETPROOF CENTRALIZED ERROR HANDLING
 function handleError(reply, error, defaultMessage = 'System error occurred.') {
-    if (error.isJoi) return reply.status(400).send({ success: false, message: error.details[0].message });
-    logger.error(error.message, error);
-    reply.status(error.status || 400).send({ success: false, message: error.message || defaultMessage });
+    try {
+        if (error && error.isJoi) {
+            return reply.status(400).send({ success: false, message: error.details[0].message });
+        }
+        
+        const msg = (error && error.message) ? error.message : defaultMessage;
+        const stat = (error && error.status) ? error.status : 400;
+        
+        if (logger && typeof logger.error === 'function') {
+            logger.error(msg, error || {});
+        }
+        
+        return reply.status(stat).send({ success: false, message: msg });
+    } catch (fatalErr) {
+        return reply.status(500).send({ success: false, message: 'A critical backend execution error occurred.' });
+    }
 }
 
 // [5] REDIS RATE LIMITING (Prevents spam-clicking)
@@ -44,13 +57,13 @@ setInterval(() => {
 }, 60000);
 
 async function checkRateLimit(request, action, limit = 5) {
-    const ip = request.ip;
-    const userId = request.user ? request.user._id : 'anon';
+    const userId = request.user ? (request.user._id || request.user.id || 'unknown') : null;
+    const identifier = userId || request.ip || 'anonymous';
     const windowSeconds = 60;
 
     const executeFallback = () => {
         const now = Date.now();
-        const userKey = `rate_${action}_user_${userId}`;
+        const userKey = `rate_${action}_user_${identifier}`;
         if (!fallbackRateLimits.has(userKey)) {
             fallbackRateLimits.set(userKey, { count: 1, resetTime: now + (windowSeconds * 1000) });
             return true;
@@ -67,7 +80,7 @@ async function checkRateLimit(request, action, limit = 5) {
 
     if (redisClient && redisClient.status === 'ready') {
         try {
-            const userKey = `rate:${action}:user:${userId}`;
+            const userKey = `rate:${action}:user:${identifier}`;
             const count = await redisClient.incr(userKey);
             if (count === 1) await redisClient.expire(userKey, windowSeconds);
             return count <= limit;
@@ -75,18 +88,27 @@ async function checkRateLimit(request, action, limit = 5) {
     } else { return executeFallback(); }
 }
 
-// [6] IMMUTABLE AUDIT LOGGING ENGINE
+// [6] IMMUTABLE AUDIT LOGGING ENGINE (FIXED DATA TYPES)
 async function createAuditLog(params, session = null) {
     if (!AuditLog) return;
     try {
         const log = new AuditLog({
-            user: params.user, transactionId: params.transactionId, transactionReference: params.reference,
-            amount: params.amount, type: params.type, previousBalance: String(params.previousBalance),
-            newBalance: String(params.newBalance), ipAddress: params.ipAddress, userAgent: params.userAgent,
-            status: params.status, source: params.source
+            user: params.user || undefined, 
+            transactionId: params.transactionId, 
+            transactionReference: params.reference || 'TASK_ACTION',
+            amount: Number(params.amount || 0), 
+            type: params.type, 
+            previousBalance: Number(params.previousBalance || 0), // FIXED: Casts to Number instead of String
+            newBalance: Number(params.newBalance || 0),           // FIXED: Casts to Number instead of String
+            ipAddress: params.ipAddress || '0.0.0.0', 
+            userAgent: params.userAgent || 'System',
+            status: params.status || 'success', 
+            source: params.source || 'Task Engine'
         });
         if (session) await log.save({ session }); else await log.save();
-    } catch(e) { logger.error('Audit Log Error', e); }
+    } catch(e) { 
+        if (logger) logger.error('Audit Log Error', e); 
+    }
 }
 
 /* ============================================================================
@@ -203,7 +225,6 @@ async function claimAd(request, reply) {
             }
 
             rewardAmount = sanitizeAmount(adData.rewardAmount || 5);
-            // XSS Protection on dynamic Ad Title insertion
             const safeAdTitle = adData.title ? String(adData.title).replace(/[<>]/g, '').trim().substring(0, 50) : 'Sponsored Link';
             adName = `Ad Reward: ${safeAdTitle}`;
         }
