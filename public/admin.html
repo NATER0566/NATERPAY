@@ -529,7 +529,6 @@
             const tx = JSON.parse(decodeURIComponent(encodedData));
             let extraHtml = '';
             if (tx.type === 'withdrawal') {
-                // FIXED: Bulletproof bank details extraction
                 let bName = tx.bankName || tx.metadata?.bankName || tx.metadata?.bankAccount?.bankName || 'Bank Name Not Saved'; 
                 let bUser = tx.realAccountName || tx.accountName || tx.metadata?.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
                 let bAcc = tx.realAccountNumber || tx.accountNumber || tx.metadata?.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account'; 
@@ -633,6 +632,8 @@
                 <div class="d-flex justify-content-between mb-2">
                     <button id="btnResolveTicket" class="btn btn-sm btn-outline-success"><i class="fas fa-check me-1"></i> Mark Resolved</button>
                     <button id="btnCloseTicket" class="btn btn-sm btn-outline-danger"><i class="fas fa-ban me-1"></i> Force Close</button>
+                    <!-- [FIXED] ADDED FORCE DELETE TICKET BUTTON -->
+                    <button id="btnDeleteTicket" class="btn btn-sm btn-outline-warning"><i class="fas fa-trash me-1"></i> Delete</button>
                 </div>
                 <textarea id="adminReplyText" class="swal2-textarea bg-dark text-white w-100 m-0" rows="3" placeholder="Type your official response here..."></textarea>
             `,
@@ -641,6 +642,7 @@
             didOpen: () => {
                 document.getElementById('btnResolveTicket').addEventListener('click', () => updateTicketStatus(ticketId, 'resolved'));
                 document.getElementById('btnCloseTicket').addEventListener('click', () => updateTicketStatus(ticketId, 'closed'));
+                document.getElementById('btnDeleteTicket').addEventListener('click', () => deleteTicket(ticketId));
             },
             preConfirm: () => {
                 const text = document.getElementById('adminReplyText').value;
@@ -661,16 +663,30 @@
         }
     }
 
-    // FIXED: Infinite spinning on Ticket Reject. Replaced with proper fetch path.
     async function updateTicketStatus(ticketId, newStatus) {
-        Swal.fire({title:'Updating...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+        Swal.fire({title:'Updating...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
         try {
             const res = await fetch(`/api/admin/support/tickets/${ticketId}/resolve`, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
                 body: JSON.stringify({ status: newStatus })
             });
-            if(res.ok) { Swal.fire({icon: 'success', title: 'Updated!', background: '#0a0a0a', color: '#fff', timer: 1500}); fetchAdminTickets(); }
-        } catch(e) {}
+            const data = await res.json();
+            if(data.success) { Swal.fire({icon: 'success', title: 'Updated!', background: '#0a0a0a', color: '#fff', timer: 1500}); fetchAdminTickets(); }
+            else { Swal.fire('Error', data.message || 'Update failed', 'error'); }
+        } catch(e) { Swal.fire('Error', 'Network Error', 'error'); }
+    }
+
+    // [FIXED] FUNCTION TO PERMANENTLY DELETE A TICKET
+    async function deleteTicket(ticketId) {
+        if((await Swal.fire({title:'Wipe Ticket?', text:'This will permanently delete the ticket from the database.', icon:'warning', showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
+            Swal.fire({title:'Deleting...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background:'#0a0a0a', color:'#fff'});
+            try {
+                const res = await fetch(`/api/admin/support/tickets/${ticketId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
+                const data = await res.json();
+                if(data.success) { Swal.fire('Deleted!', '', 'success'); fetchAdminTickets(); }
+                else { Swal.fire('Error', data.message || 'Could not delete', 'error'); }
+            } catch(e) { Swal.fire('Error', 'Network Error', 'error'); }
+        }
     }
 
     // ==========================================
@@ -680,7 +696,6 @@
         const token = localStorage.getItem("naterpay_token");
         if(!token) return;
         try {
-            // FIXED: If your backend has no /api/admin/invoices route, this uses /api/invoices but clearly states if none are found.
             const res = await fetch('/api/invoices', { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
             const invoices = data.invoices || [];
@@ -739,13 +754,23 @@
         });
     }
 
+    // [FIXED] ALLOWS FULL INVOICE EDITING INSTEAD OF JUST STATUS
     async function editAdminInvoice(encodedData) {
         const inv = JSON.parse(decodeURIComponent(encodedData));
         const { value: formValues } = await Swal.fire({ 
-            title: 'Override Invoice', 
+            title: 'Edit Invoice Details', 
             html: `
                 <div style="text-align: left;">
-                    <label class="high-vis-label mt-2">Force Status</label>
+                    <label class="high-vis-label mt-2">Customer Name</label>
+                    <input id="swal-inv-name" class="swal2-input bg-dark text-white w-100 m-0" value="${inv.customerName || ''}">
+                    
+                    <label class="high-vis-label mt-3">Customer Email</label>
+                    <input id="swal-inv-email" class="swal2-input bg-dark text-white w-100 m-0" value="${inv.customerEmail || ''}">
+                    
+                    <label class="high-vis-label mt-3">Grand Total (${inv.currency || '₦'})</label>
+                    <input id="swal-inv-total" type="number" class="swal2-input bg-dark text-white w-100 m-0" value="${inv.total || 0}">
+
+                    <label class="high-vis-label mt-3">Status</label>
                     <select id="swal-inv-status" class="swal2-input bg-dark text-white w-100 m-0">
                         <option value="draft" ${inv.status==='draft'?'selected':''}>Draft</option>
                         <option value="sent" ${inv.status==='sent'?'selected':''}>Sent</option>
@@ -754,15 +779,26 @@
                         <option value="cancelled" ${inv.status==='cancelled'?'selected':''}>Cancelled</option>
                     </select>
                 </div>`, 
-            background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Force Update', 
-            preConfirm: () => ({ status: document.getElementById('swal-inv-status').value }) 
+            background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Save Changes', 
+            preConfirm: () => ({ 
+                customerName: document.getElementById('swal-inv-name').value,
+                customerEmail: document.getElementById('swal-inv-email').value,
+                total: document.getElementById('swal-inv-total').value,
+                status: document.getElementById('swal-inv-status').value 
+            }) 
         });
         
         if (formValues) {
-            Swal.fire({title:'Updating Ledger...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
+            Swal.fire({title:'Updating Ledger...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
             try { 
-                const res = await fetch(`/api/invoices/${inv._id}/mark-paid`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
-                Swal.fire({title: 'Updated!', icon: 'success', background: '#0a0a0a', color: '#fff'}); fetchAdminInvoices(); 
+                const res = await fetch(`/api/admin/invoices/${inv._id}`, { 
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                    body: JSON.stringify(formValues)
+                }); 
+                const data = await res.json();
+                if(data.success) { Swal.fire({title: 'Updated!', icon: 'success', background: '#0a0a0a', color: '#fff'}); fetchAdminInvoices(); }
+                else { Swal.fire('Failed', data.message || 'Network Error', 'error'); }
             } catch(e) { Swal.fire('Failed', 'Network Error', 'error'); }
         }
     }
@@ -855,7 +891,7 @@
     }
 
     // ==========================================
-    // WITHDRAWALS (FIXED)
+    // WITHDRAWALS
     // ==========================================
     async function fetchWithdrawals() {
         const token = localStorage.getItem("naterpay_token");
@@ -872,16 +908,12 @@
                 badge.classList.remove('d-none');
                 tbody.innerHTML = pending.map(tx => {
                     const encodedTx = encodeURIComponent(JSON.stringify(tx));
-                    
-                    // FIXED: Aggressive extraction to guarantee we get the Bank Name, Account Name, and Full Number
                     const bName = tx.bankName || tx.metadata?.bankName || tx.metadata?.bankAccount?.bankName || 'Bank Name Not Saved';
                     const bUser = tx.realAccountName || tx.accountName || tx.metadata?.accountName || tx.metadata?.bankAccount?.accountName || 'Unknown Name';
                     const bAcc = tx.realAccountNumber || tx.accountNumber || tx.metadata?.accountNumber || tx.metadata?.bankAccount?.accountNumber || tx.metadata?.maskedAccountNo || 'Unknown Account';
-                    
                     const baseAmt = parseNum(tx.amount); const feeAmt = parseNum(tx.fee);
                     const uData = extractUserDetails(tx.user); 
                     
-                    // FIXED: Table now explicitly shows Bank Name, Account Name, and Full Account Number together
                     return `<tr>
                         <td><div class="fw-bold">${new Date(tx.createdAt).toLocaleDateString()}</div><small class="text-secondary">${tx._id}</small></td>
                         <td>${uData.html}</td>
@@ -907,7 +939,6 @@
         } catch(e) {}
     }
 
-    // FIXED: Withdrawal rejection payload now properly sends the required 'reason' body to the server
     async function processWithdrawal(txId, action) {
         let bodyPayload = {};
         const actionWord = action === 'approve' ? 'Approve & Settle' : 'Reject & Refund';
@@ -960,13 +991,53 @@
                     
                     const uData = extractUserDetails(k.user);
 
-                    return `<tr><td>${uData.html}</td><td><span class="status-pill bg-warning text-dark">TIER ${k.currentLevel || 1}</span></td><td>${summaryHtml}</td><td class="text-end"><div class="action-btns justify-content-end"><button class="btn btn-info text-white fw-bold" onclick="viewKycDossier('${encodedKyc}')" title="View Full Documents"><i class="fas fa-eye"></i></button><button class="btn btn-success fw-bold" onclick="processKYC('${k._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-danger fw-bold" onclick="processKYC('${k._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button></div></td></tr>`;
+                    return `<tr>
+                        <td>${uData.html}</td>
+                        <td><span class="status-pill bg-warning text-dark">TIER ${k.currentLevel || 1}</span></td>
+                        <td>${summaryHtml}</td>
+                        <td class="text-end">
+                            <div class="action-btns justify-content-end">
+                                <button class="btn btn-info text-white fw-bold" onclick="viewKycDossier('${encodedKyc}')" title="View Full Documents"><i class="fas fa-eye"></i></button>
+                                <button class="btn btn-success fw-bold" onclick="processKYC('${k._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button>
+                                <button class="btn btn-warning text-dark fw-bold" onclick="processKYC('${k._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>
+                                <!-- [FIXED] FORCE DELETE KYC RECORD BUTTON -->
+                                <button class="btn btn-outline-danger fw-bold" onclick="requireSuperAdmin(() => deleteKYC('${k._id}'))" title="Wipe Corrupted Data"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
                 }).join('');
             } else { 
                 badge.classList.add('d-none'); 
                 kycTable.innerHTML = '<tr><td colspan="4" class="text-center opacity-50 py-4">No pending KYC applications.</td></tr>'; 
             }
         } catch(e) {}
+    }
+
+    // [FIXED] ERROR CATCHING TO STOP INFINITE SPINNING
+    async function processKYC(kycId, action) {
+        const actionWord = action === 'approve' ? 'Approve' : 'Reject';
+        if((await Swal.fire({title:`Confirm ${actionWord}?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
+            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background:'#0a0a0a', color:'#fff'});
+            try { 
+                const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
+                const data = await res.json();
+                if (data.success) { Swal.fire('Success', '', 'success'); syncAllBadges(); } 
+                else { Swal.fire('Error', data.message || 'Process failed.', 'error'); }
+            } catch (err) { Swal.fire('Network Error', 'Could not reach server.', 'error'); }
+        }
+    }
+
+    // [FIXED] FUNCTION TO WIPE CORRUPTED KYC RECORDS
+    async function deleteKYC(kycId) {
+        if((await Swal.fire({title:'Wipe Record?', text:'This will force delete the stuck/corrupted KYC record.', icon:'warning', showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
+            Swal.fire({title:'Deleting...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background:'#0a0a0a', color:'#fff'});
+            try {
+                const res = await fetch(`/api/admin/kyc/${kycId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } });
+                const data = await res.json();
+                if (data.success) { Swal.fire('Deleted', 'Record has been wiped.', 'success'); syncAllBadges(); }
+                else { Swal.fire('Error', data.message || 'Deletion failed.', 'error'); }
+            } catch (err) { Swal.fire('Network Error', 'Could not reach server.', 'error'); }
+        }
     }
 
     function viewKycDossier(encodedData) {
@@ -1002,14 +1073,6 @@
         try { const res = await fetch(`/api/admin/kyc/${kycId}/verify`, { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); const data = await res.json(); if(data.success) { Swal.fire({title: 'Paystack Match', html: `<div style="text-align: left; font-size: 0.9rem;"><p><strong class="text-gold">System Name:</strong> ${data.systemName}</p><hr style="border-color: #444;"><p><strong>First Name:</strong> ${data.paystackDetails.firstName}</p><p><strong>Last Name:</strong> ${data.paystackDetails.lastName}</p><p><strong>Phone:</strong> ${data.paystackDetails.phone}</p></div>`, icon: 'info', background: '#0a0a0a', color: '#fff'}); } else Swal.fire('Error', data.message, 'error'); } catch(e) { Swal.fire('Error', 'Failed to reach server.', 'error'); }
     }
 
-    async function processKYC(kycId, action) {
-        const actionWord = action === 'approve' ? 'Approve' : 'Reject';
-        if((await Swal.fire({title:`Confirm ${actionWord}?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
-            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
-            try { const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); if ((await res.json()).success) { Swal.fire('Success', '', 'success'); syncAllBadges(); } } catch (err) {}
-        }
-    }
-
     // ==========================================
     // ADVERTS
     // ==========================================
@@ -1037,9 +1100,55 @@
                 
                 let mediaThumb = ad.adType === 'Video' ? `<div style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #444; display:flex; align-items:center; justify-content:center; background:#111; cursor:pointer;" onclick="viewAdDossier('${encodedAd}')"><i class="fas fa-video fa-2x text-info"></i></div>` : (ad.adType === 'Text' || ad.adType === 'PDF' ? `<div style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #444; display:flex; align-items:center; justify-content:center; background:#111; cursor:pointer;" onclick="viewAdDossier('${encodedAd}')"><i class="fas fa-file-alt fa-2x text-danger"></i></div>` : `<img src="${ad.mediaUrl || 'https://via.placeholder.com/60/111/d4af37?text=Ad'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #444; cursor: pointer;" onclick="viewAdDossier('${encodedAd}')">`);
                 
-                return `<tr><td>${mediaThumb}</td><td><div class="fw-bold text-white text-truncate" style="max-width: 200px;">${ad.title}</div><small class="text-gold d-block mb-1"><i class="fas fa-store"></i> ${ad.businessName}</small>${uData.html}<br><small class="text-muted mt-1 d-inline-block"><i class="fas fa-tag"></i> ${ad.adType || 'Ad'} | ${ad.category}</small></td><td><span class="badge bg-secondary text-uppercase">${ad.packageType || 'BASIC'}</span><br><small class="text-warning">₦${ad.packageCost || 0} / ${ad.maxRewardedViews || 0} Views</small></td><td><span class="status-pill bg-${statusColor}">${ad.status}</span></td><td class="text-end"><div class="action-btns"><button class="btn btn-info text-white" onclick="viewAdDossier('${encodedAd}')" title="View Details"><i class="fas fa-eye"></i></button>${ad.status === 'pending' ? `<button class="btn btn-success" onclick="processAd('${ad._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-warning text-dark fw-bold" onclick="processAd('${ad._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>` : `<button class="btn btn-outline-warning" onclick="processAd('${ad._id}', 'reject')" title="Revoke"><i class="fas fa-ban"></i></button>`}<button class="btn btn-danger" onclick="requireSuperAdmin(() => deleteAdForever('${ad._id}'))" title="Delete"><i class="fas fa-trash"></i></button></div></td></tr>`;
+                return `<tr><td>${mediaThumb}</td><td><div class="fw-bold text-white text-truncate" style="max-width: 200px;">${ad.title}</div><small class="text-gold d-block mb-1"><i class="fas fa-store"></i> ${ad.businessName}</small>${uData.html}<br><small class="text-muted mt-1 d-inline-block"><i class="fas fa-tag"></i> ${ad.adType || 'Ad'} | ${ad.category}</small></td><td><span class="badge bg-secondary text-uppercase">${ad.packageType || 'BASIC'}</span><br><small class="text-warning">₦${ad.packageCost || 0} / ${ad.maxRewardedViews || 0} Views</small></td><td><span class="status-pill bg-${statusColor}">${ad.status}</span></td><td class="text-end">
+                    <div class="action-btns">
+                        <button class="btn btn-info text-white" onclick="viewAdDossier('${encodedAd}')" title="View Details"><i class="fas fa-eye"></i></button>
+                        <!-- [FIXED] ADDED EDIT AD BUTTON -->
+                        <button class="btn btn-primary" onclick="requireSuperAdmin(() => editAd('${encodedAd}'))" title="Edit Properties"><i class="fas fa-edit"></i></button>
+                        ${ad.status === 'pending' ? `<button class="btn btn-success" onclick="processAd('${ad._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-warning text-dark fw-bold" onclick="processAd('${ad._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>` : `<button class="btn btn-outline-warning" onclick="processAd('${ad._id}', 'reject')" title="Revoke"><i class="fas fa-ban"></i></button>`}
+                        <button class="btn btn-danger" onclick="requireSuperAdmin(() => deleteAdForever('${ad._id}'))" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div></td></tr>`;
             }).join('');
         } catch (error) {}
+    }
+
+    // [FIXED] ALLOWS FULL AD EDITING
+    async function editAd(encodedData) {
+        const ad = JSON.parse(decodeURIComponent(encodedData));
+        const { value: formValues } = await Swal.fire({
+            title: 'Edit Campaign Details',
+            html: `
+                <div style="text-align: left;">
+                    <label class="high-vis-label mt-2">Headline / Title</label>
+                    <input id="swal-ad-title" class="swal2-input bg-dark text-white w-100 m-0" value="${ad.title || ''}">
+                    
+                    <label class="high-vis-label mt-3">Business / Entity Name</label>
+                    <input id="swal-ad-biz" class="swal2-input bg-dark text-white w-100 m-0" value="${ad.businessName || ''}">
+                    
+                    <label class="high-vis-label mt-3">Total Views Budget</label>
+                    <input id="swal-ad-views" type="number" class="swal2-input bg-dark text-white w-100 m-0" value="${ad.maxRewardedViews || 0}">
+                </div>`,
+            background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Save Changes',
+            preConfirm: () => ({
+                title: document.getElementById('swal-ad-title').value,
+                businessName: document.getElementById('swal-ad-biz').value,
+                maxRewardedViews: document.getElementById('swal-ad-views').value
+            })
+        });
+
+        if (formValues) {
+            Swal.fire({title:'Saving...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
+            try {
+                const res = await fetch(`/api/admin/ads/${ad._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                    body: JSON.stringify(formValues)
+                });
+                const data = await res.json();
+                if(data.success) { Swal.fire('Updated!', '', 'success'); fetchAdverts(); }
+                else { Swal.fire('Failed', data.message || 'Could not update', 'error'); }
+            } catch(e) { Swal.fire('Failed', 'Network Error', 'error'); }
+        }
     }
 
     function viewAdDossier(encodedData) {
@@ -1054,15 +1163,25 @@
 
     async function processAd(adId, action) {
         if((await Swal.fire({title: `Confirm Action?`, showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
-            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-            try { const res = await fetch(`/api/admin/ads/${adId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); if((await res.json()).success) { Swal.fire('Success', '', 'success'); syncAllBadges(); } } catch (err) {}
+            Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
+            try { 
+                const res = await fetch(`/api/admin/ads/${adId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
+                const data = await res.json();
+                if(data.success) { Swal.fire('Success', '', 'success'); syncAllBadges(); } 
+                else { Swal.fire('Error', data.message || 'Processing failed', 'error'); }
+            } catch (err) { Swal.fire('Error', 'Network error', 'error'); }
         }
     }
 
     async function deleteAdForever(adId) {
         if((await Swal.fire({title: 'Wipe Permanently?', icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff'})).isConfirmed) {
-            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-            try { const res = await fetch(`/api/admin/ads/${adId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); if((await res.json()).success) { Swal.fire('Erased', '', 'success'); fetchAdverts(); } } catch(e) {}
+            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
+            try { 
+                const res = await fetch(`/api/admin/ads/${adId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
+                const data = await res.json();
+                if(data.success) { Swal.fire('Erased', '', 'success'); fetchAdverts(); } 
+                else { Swal.fire('Error', data.message || 'Deletion failed', 'error'); }
+            } catch(e) { Swal.fire('Error', 'Network error', 'error'); }
         }
     }
 
@@ -1102,17 +1221,33 @@
     async function editProduct(encodedData) {
         const product = JSON.parse(decodeURIComponent(encodedData));
         const productId = product._id || product.linkId;
-        const { value: formValues } = await Swal.fire({ title: 'Edit Product details', html: `<div style="text-align: left;"><label class="high-vis-label mt-2">Title</label><input id="swal-title" class="swal2-input bg-dark text-white w-100 m-0" value="${product.title || ''}"><label class="high-vis-label mt-3">Price (₦)</label><input id="swal-price" type="number" class="swal2-input bg-dark text-white w-100 m-0" value="${product.amount || ''}" ${product.isFlexibleAmount ? 'disabled' : ''}><label class="high-vis-label mt-3">Category</label><input id="swal-category" class="swal2-input bg-dark text-white w-100 m-0" value="${product.category || ''}"><label class="high-vis-label mt-3">Description</label><textarea id="swal-desc" class="swal2-textarea bg-dark text-white w-100 m-0" rows="3">${product.description || ''}</textarea></div>`, background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Save Changes', preConfirm: () => ({ title: document.getElementById('swal-title').value, amount: document.getElementById('swal-price').value, category: document.getElementById('swal-category').value, description: document.getElementById('swal-desc').value }) });
+        const { value: formValues } = await Swal.fire({ 
+            title: 'Edit Product details', 
+            html: `<div style="text-align: left;"><label class="high-vis-label mt-2">Title</label><input id="swal-title" class="swal2-input bg-dark text-white w-100 m-0" value="${product.title || ''}"><label class="high-vis-label mt-3">Price (₦)</label><input id="swal-price" type="number" class="swal2-input bg-dark text-white w-100 m-0" value="${product.amount || ''}" ${product.isFlexibleAmount ? 'disabled' : ''}><label class="high-vis-label mt-3">Category</label><input id="swal-category" class="swal2-input bg-dark text-white w-100 m-0" value="${product.category || ''}"><label class="high-vis-label mt-3">Description</label><textarea id="swal-desc" class="swal2-textarea bg-dark text-white w-100 m-0" rows="3">${product.description || ''}</textarea></div>`, 
+            background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Save Changes', 
+            preConfirm: () => ({ title: document.getElementById('swal-title').value, amount: document.getElementById('swal-price').value, category: document.getElementById('swal-category').value, description: document.getElementById('swal-desc').value }) 
+        });
+        
         if (formValues) {
-            Swal.fire({title:'Saving Modifications...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-            try { const res = await fetch(`/api/admin/products/${productId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify(formValues) }); if(res.ok || (await res.json()).success) { await Swal.fire({title: 'Updated!', icon: 'success', background: '#0a0a0a', color: '#fff'}); fetchMarketplace(); } else Swal.fire('Failed', 'Update failed', 'error'); } catch(e) {}
+            Swal.fire({title:'Saving Modifications...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
+            try { 
+                const res = await fetch(`/api/admin/products/${productId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify(formValues) }); 
+                const data = await res.json();
+                if(data.success) { await Swal.fire({title: 'Updated!', icon: 'success', background: '#0a0a0a', color: '#fff'}); fetchMarketplace(); } 
+                else { Swal.fire('Failed', data.message || 'Update failed', 'error'); }
+            } catch(e) { Swal.fire('Error', 'Network Error', 'error'); }
         }
     }
 
     async function deleteProduct(productId) {
         if((await Swal.fire({ title: 'Wipe Product?', icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff' })).isConfirmed) {
-            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-            try { const res = await fetch(`/api/admin/products/${productId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); if(res.ok) { Swal.fire('Deleted!', '', 'success'); fetchMarketplace(); } } catch (e) {}
+            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
+            try { 
+                const res = await fetch(`/api/admin/products/${productId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
+                const data = await res.json();
+                if(data.success) { Swal.fire('Deleted!', '', 'success'); fetchMarketplace(); } 
+                else { Swal.fire('Error', data.message || 'Delete failed', 'error'); }
+            } catch (e) { Swal.fire('Error', 'Network Error', 'error'); }
         }
     }
 
@@ -1176,8 +1311,13 @@
 
     async function deleteSlideForever(id) {
         if((await Swal.fire({ title: 'Remove Slide?', icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff' })).isConfirmed) {
-            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-            try { const res = await fetch(`/api/cms/slides/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); if(res.ok) { Swal.fire('Dropped!', '', 'success'); fetchSlides(); } } catch (e) {}
+            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
+            try { 
+                const res = await fetch(`/api/cms/slides/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
+                const data = await res.json();
+                if(data.success) { Swal.fire('Dropped!', '', 'success'); fetchSlides(); } 
+                else { Swal.fire('Error', data.message || 'Failed to delete', 'error'); }
+            } catch (e) { Swal.fire('Error', 'Network Error', 'error'); }
         }
     }
 
