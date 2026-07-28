@@ -254,14 +254,12 @@ async function getPendingWithdrawals(request, reply) {
     try {
         if (!await checkRateLimit(request, 'admin_withdrawals', 60)) throw { status: 429, message: 'Too many requests.' };
         
-        // FIXED: Using .lean() so we can inject the decrypted account numbers into the object
         const pendingWithdrawals = await Transaction.find({ type: 'withdrawal', status: 'processing' })
             .populate('user', 'name email phoneNumber')
             .sort({ createdAt: -1 })
             .lean();
             
         const formattedWithdrawals = pendingWithdrawals.map(tx => {
-            // Unlocks the full account number if it was encrypted
             if (tx.metadata && tx.metadata.encryptedData && ENCRYPTION_KEY) {
                 const decrypted = decryptBankData(tx.metadata.encryptedData);
                 if (decrypted) {
@@ -270,7 +268,6 @@ async function getPendingWithdrawals(request, reply) {
                     tx.realAccountName = rawName;
                 }
             }
-            // Fallbacks to standard fields just in case
             if (!tx.realAccountNumber) tx.realAccountNumber = tx.metadata?.bankAccount?.accountNumber || tx.accountNumber;
             if (!tx.realAccountName) tx.realAccountName = tx.metadata?.bankAccount?.accountName || tx.accountName;
             
@@ -793,6 +790,25 @@ async function deleteKycRecord(request, reply) {
     } catch (e) { handleError(reply, e, 'Failed to delete KYC'); }
 }
 
+// ============================================================================
+// INVOICE MANAGEMENT (ADMIN)
+// ============================================================================
+async function getInvoices(request, reply) {
+    try {
+        if (!await checkRateLimit(request, 'admin_get_invoices', 60)) throw { status: 429, message: 'Too many requests.' };
+        const Invoice = require('../models/Invoice');
+        
+        // [FIXED] Force MongoDB to attach the real user data instead of leaving it blank!
+        const invoices = await Invoice.find({})
+            .populate('user', 'name email kycLevel role phoneNumber')
+            .populate('merchantId', 'name email kycLevel role phoneNumber')
+            .sort({ createdAt: -1 })
+            .lean();
+            
+        reply.send({ success: true, invoices });
+    } catch (error) { handleError(reply, error, 'Failed to fetch global invoices'); }
+}
+
 async function updateInvoice(request, reply) {
     try {
         const Invoice = require('../models/Invoice');
@@ -831,5 +847,6 @@ module.exports = {
   getPendingKYC, verifyRealWorldKYC, approveKYC, rejectKYC,
   updateProduct, deleteProduct,
   getPendingAds, approveAd, rejectAd, deleteAd,
-  deleteTicket, deleteKycRecord, updateInvoice, editAd
+  deleteTicket, deleteKycRecord, updateInvoice, editAd,
+  getInvoices
 };
