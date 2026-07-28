@@ -703,7 +703,7 @@
             if(data.success) {
                 document.getElementById('profileBadgeName').innerText = data.userFullName || "Verified Terminal Operator";
                 const userRole = (data.userRole || 'user').toLowerCase();
-                const roleMultiplier = (userRole === 'vip' || userRole === 'admin') ? 0.35 : (userRole === 'reseller' || userRole === 'agent') ? 0.20 : 0.05;
+                const roleMultiplier = (userRole === 'vip' || userRole === 'admin' || userRole === 'superadmin') ? 0.35 : (userRole === 'reseller' || userRole === 'agent') ? 0.20 : 0.05;
                 const vtuTypes = Object.keys(platformCommissionRates);
                 
                 try {
@@ -748,10 +748,14 @@
                 const promoDesc = document.getElementById('promoDesc');
                 const promoBtn = document.getElementById('promoBtn');
 
-                if (userRole === 'admin' || userRole === 'vip') {
+                if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'vip') {
                     tierBadge.classList.remove('d-none');
                     tierBadge.className = "badge bg-warning text-dark fw-bolder px-3 py-2 rounded-pill";
-                    tierBadge.innerHTML = `<i class="fas fa-crown me-1"></i> ${userRole === 'admin' ? 'SYSTEM ADMIN' : 'VIP PARTNER'}`;
+                    let badgeText = 'VIP PARTNER';
+                    if (userRole === 'superadmin') badgeText = 'ROOT ADMIN';
+                    else if (userRole === 'admin') badgeText = 'SYSTEM ADMIN';
+                    
+                    tierBadge.innerHTML = `<i class="fas fa-crown me-1"></i> ${badgeText}`;
                     if(promoBanner) promoBanner.style.display = 'none';
                     
                 } else if (userRole === 'reseller' || userRole === 'agent') {
@@ -790,7 +794,7 @@
                     secPill.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Security Alert';
                 }
 
-                if (userRole === 'admin') {
+                if (userRole === 'admin' || userRole === 'superadmin') {
                     document.getElementById('adminMenuWrapper').style.display = 'block';
                     document.getElementById('adminDivider').style.display = 'block';
                 }
