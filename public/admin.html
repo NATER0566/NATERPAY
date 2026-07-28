@@ -383,7 +383,7 @@
     }
 
     // =========================================================================================
-    // GLOBAL USER RESOLUTION ENGINE (FIXED NESTED OBJECT EXTRACTION)
+    // GLOBAL USER RESOLUTION ENGINE 
     // =========================================================================================
     function getUserKycBadge(userId) {
         if (!userId) return '<span class="status-pill bg-danger text-white mt-1" style="font-size:0.6rem; padding: 4px 8px;"><i class="fas fa-times-circle"></i> UNVERIFIED</span>';
@@ -402,7 +402,6 @@
     function extractUserDetails(userObj, fallbackEmail = 'Unknown Email', fallbackName = 'Unknown User') {
         let id = null, name = fallbackName, email = fallbackEmail;
         
-        // FIXED: Properly extracts details if user is an object populated by backend
         if (userObj && typeof userObj === 'object') {
             id = userObj._id || userObj.id || id;
             name = userObj.name || userObj.firstName || name;
@@ -411,12 +410,12 @@
             id = userObj;
         }
 
-        // Cross-reference with global database just in case
         if (id && window.globalSystemUsers) {
             const u = window.globalSystemUsers.find(x => x._id === id);
             if (u) {
                 name = u.name || name;
                 email = u.email || email;
+                userObj = u; // FIXED: Forces the full user object to the badge function
             }
         }
         
@@ -439,8 +438,9 @@
     async function syncAllBadges() {
         try {
             await loadAdminEcosystem(); 
+            // FIXED: Added fetchAdminInvoices to the promise so globalSystemUsers is populated BEFORE invoices load
             await Promise.all([
-                fetchWithdrawals(), fetchManualDeposits(), fetchKYC(), fetchAdverts(), fetchMarketplace(), fetchSlides(), fetchAdminTickets()
+                fetchWithdrawals(), fetchManualDeposits(), fetchKYC(), fetchAdverts(), fetchMarketplace(), fetchSlides(), fetchAdminTickets(), fetchAdminInvoices()
             ]);
         } catch (e) {}
     }
@@ -475,7 +475,8 @@
                 document.getElementById('statVault').innerText = '₦' + parseNum(stats.summary?.totalVaultBalance).toLocaleString();
             }
 
-            const userRes = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
+            // FIXED: Changed limit from 50 to 500 so globalSystemUsers holds enough data to recognize verified users in invoices
+            const userRes = await fetch('/api/admin/users?limit=500', { headers: { 'Authorization': `Bearer ${token}` } });
             const usersData = await userRes.json();
             if(usersData.users) {
                 window.globalSystemUsers = usersData.users; 
@@ -632,7 +633,6 @@
                 <div class="d-flex justify-content-between mb-2">
                     <button id="btnResolveTicket" class="btn btn-sm btn-outline-success"><i class="fas fa-check me-1"></i> Mark Resolved</button>
                     <button id="btnCloseTicket" class="btn btn-sm btn-outline-danger"><i class="fas fa-ban me-1"></i> Force Close</button>
-                    <!-- [FIXED] ADDED FORCE DELETE TICKET BUTTON -->
                     <button id="btnDeleteTicket" class="btn btn-sm btn-outline-warning"><i class="fas fa-trash me-1"></i> Delete</button>
                 </div>
                 <textarea id="adminReplyText" class="swal2-textarea bg-dark text-white w-100 m-0" rows="3" placeholder="Type your official response here..."></textarea>
@@ -676,7 +676,6 @@
         } catch(e) { Swal.fire('Error', 'Network Error', 'error'); }
     }
 
-    // [FIXED] FUNCTION TO PERMANENTLY DELETE A TICKET
     async function deleteTicket(ticketId) {
         if((await Swal.fire({title:'Wipe Ticket?', text:'This will permanently delete the ticket from the database.', icon:'warning', showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
             Swal.fire({title:'Deleting...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background:'#0a0a0a', color:'#fff'});
@@ -712,7 +711,10 @@
                 if(inv.status==='paid') badgeCls='success';
                 if(inv.status==='overdue') badgeCls='danger';
                 
-                const merchantData = extractUserDetails(inv.user || inv.merchantId, inv.businessDetails?.email, inv.businessDetails?.name);
+                // FIXED: Enhanced fallback user resolution
+                const fallbackName = inv.businessDetails?.name || 'Invoice Creator';
+                const fallbackEmail = inv.businessDetails?.email || 'Unknown Email';
+                const merchantData = extractUserDetails(inv.user || inv.userId || inv.merchantId, fallbackEmail, fallbackName);
                 
                 return `<tr>
                     <td><div class="fw-bold"><i class="fas fa-hashtag me-1 text-gold"></i>${inv.invoiceId}</div><small class="text-secondary">${date}</small></td>
@@ -754,7 +756,6 @@
         });
     }
 
-    // [FIXED] ALLOWS FULL INVOICE EDITING INSTEAD OF JUST STATUS
     async function editAdminInvoice(encodedData) {
         const inv = JSON.parse(decodeURIComponent(encodedData));
         const { value: formValues } = await Swal.fire({ 
@@ -1000,7 +1001,6 @@
                                 <button class="btn btn-info text-white fw-bold" onclick="viewKycDossier('${encodedKyc}')" title="View Full Documents"><i class="fas fa-eye"></i></button>
                                 <button class="btn btn-success fw-bold" onclick="processKYC('${k._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button>
                                 <button class="btn btn-warning text-dark fw-bold" onclick="processKYC('${k._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>
-                                <!-- [FIXED] FORCE DELETE KYC RECORD BUTTON -->
                                 <button class="btn btn-outline-danger fw-bold" onclick="requireSuperAdmin(() => deleteKYC('${k._id}'))" title="Wipe Corrupted Data"><i class="fas fa-trash"></i></button>
                             </div>
                         </td>
@@ -1013,7 +1013,6 @@
         } catch(e) {}
     }
 
-    // [FIXED] ERROR CATCHING TO STOP INFINITE SPINNING
     async function processKYC(kycId, action) {
         const actionWord = action === 'approve' ? 'Approve' : 'Reject';
         if((await Swal.fire({title:`Confirm ${actionWord}?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
@@ -1027,7 +1026,6 @@
         }
     }
 
-    // [FIXED] FUNCTION TO WIPE CORRUPTED KYC RECORDS
     async function deleteKYC(kycId) {
         if((await Swal.fire({title:'Wipe Record?', text:'This will force delete the stuck/corrupted KYC record.', icon:'warning', showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
             Swal.fire({title:'Deleting...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background:'#0a0a0a', color:'#fff'});
@@ -1103,7 +1101,6 @@
                 return `<tr><td>${mediaThumb}</td><td><div class="fw-bold text-white text-truncate" style="max-width: 200px;">${ad.title}</div><small class="text-gold d-block mb-1"><i class="fas fa-store"></i> ${ad.businessName}</small>${uData.html}<br><small class="text-muted mt-1 d-inline-block"><i class="fas fa-tag"></i> ${ad.adType || 'Ad'} | ${ad.category}</small></td><td><span class="badge bg-secondary text-uppercase">${ad.packageType || 'BASIC'}</span><br><small class="text-warning">₦${ad.packageCost || 0} / ${ad.maxRewardedViews || 0} Views</small></td><td><span class="status-pill bg-${statusColor}">${ad.status}</span></td><td class="text-end">
                     <div class="action-btns">
                         <button class="btn btn-info text-white" onclick="viewAdDossier('${encodedAd}')" title="View Details"><i class="fas fa-eye"></i></button>
-                        <!-- [FIXED] ADDED EDIT AD BUTTON -->
                         <button class="btn btn-primary" onclick="requireSuperAdmin(() => editAd('${encodedAd}'))" title="Edit Properties"><i class="fas fa-edit"></i></button>
                         ${ad.status === 'pending' ? `<button class="btn btn-success" onclick="processAd('${ad._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button><button class="btn btn-warning text-dark fw-bold" onclick="processAd('${ad._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>` : `<button class="btn btn-outline-warning" onclick="processAd('${ad._id}', 'reject')" title="Revoke"><i class="fas fa-ban"></i></button>`}
                         <button class="btn btn-danger" onclick="requireSuperAdmin(() => deleteAdForever('${ad._id}'))" title="Delete"><i class="fas fa-trash"></i></button>
@@ -1112,7 +1109,6 @@
         } catch (error) {}
     }
 
-    // [FIXED] ALLOWS FULL AD EDITING
     async function editAd(encodedData) {
         const ad = JSON.parse(decodeURIComponent(encodedData));
         const { value: formValues } = await Swal.fire({
@@ -1342,3 +1338,5 @@
 </script>
 </body>
 </html>
+
+check this error in generation of invoice what causes it
