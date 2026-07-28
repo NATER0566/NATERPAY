@@ -48,8 +48,22 @@
         .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; transition: 0.3s; }
         .input-group-custom:focus-within { border-color: var(--smile-yellow); box-shadow: 0 0 15px rgba(250, 219, 0, 0.2); }
         .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
-        .input-group-custom input, .input-group-custom select { background: transparent; border: none; color: white; width: 100%; font-size: 1.2rem; font-weight: 700; outline: none; }
-        .input-group-custom select option { background: #111; color: white; }
+        .input-group-custom input { background: transparent; border: none; color: white; width: 100%; font-size: 1.2rem; font-weight: 700; outline: none; }
+
+        /* PLAN CARDS GRID (Replacing Dropdown) */
+        .plan-card {
+            background: #0a0a0a; border: 1.5px solid #333; border-radius: 12px;
+            padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.3s;
+            height: 100%; display: flex; flex-direction: column; justify-content: center;
+        }
+        .plan-card:hover { border-color: var(--smile-yellow); background: rgba(250, 219, 0, 0.05); }
+        .plan-card.active { border-color: var(--smile-yellow); background: rgba(250, 219, 0, 0.15); box-shadow: 0 0 15px rgba(250, 219, 0, 0.3); }
+        .plan-name { font-size: 0.75rem; font-weight: 700; color: #fff; margin-bottom: 5px; }
+        .plan-price { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--smile-yellow); font-weight: 900; }
+        
+        #plansGrid { max-height: 280px; overflow-y: auto; padding-right: 5px; margin-top: 10px; }
+        #plansGrid::-webkit-scrollbar { width: 5px; }
+        #plansGrid::-webkit-scrollbar-thumb { background: var(--smile-yellow); border-radius: 10px; }
 
         .btn-pay {
             background: var(--smile-yellow); color: black; font-weight: 900; border-radius: 15px;
@@ -107,12 +121,15 @@
         
         <div class="loading-plans" id="plansLoader"><i class="fas fa-spinner fa-spin me-2"></i> Syncing Smile Plans...</div>
 
-        <div class="input-group-custom">
-            <label>Select Internet Plan</label>
-            <select id="smilePlan" onchange="updateAmountDisplay()">
-                <option value="">Awaiting network sync...</option>
-            </select>
+        <!-- REPLACED DROPDOWN WITH DYNAMIC GRID -->
+        <div class="input-group-custom" id="plansWrapper" style="display: none; border-color: #222; background: transparent; padding: 0;">
+            <label style="padding-left: 5px;">Select Internet Plan</label>
+            <div id="plansGrid" class="row g-2">
+                <!-- Plan boxes will be injected here -->
+            </div>
         </div>
+
+        <input type="hidden" id="smilePlan"> <!-- Stores the selected plan code -->
 
         <div class="input-group-custom">
             <label>Amount to Pay (₦)</label>
@@ -171,47 +188,53 @@
     async function fetchSmilePlans() {
         const token = localStorage.getItem("naterpay_token");
         const loader = document.getElementById('plansLoader');
-        const select = document.getElementById('smilePlan');
+        const grid = document.getElementById('plansGrid');
+        const wrapper = document.getElementById('plansWrapper');
         
         loader.style.display = 'block';
-        select.innerHTML = '<option value="">Fetching live plans...</option>';
-        select.disabled = true;
+        wrapper.style.display = 'none';
 
         try {
-            // Because your VTU.js is fully dynamic, we simply request 'smile-direct'
             const response = await fetch('/api/vtu/variations?serviceID=smile-direct', { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await response.json();
             
             if (data.success && data.variations.length > 0) {
-                select.innerHTML = '<option value="">-- Choose a Smile Plan --</option>';
+                grid.innerHTML = '';
                 data.variations.forEach(plan => {
                     smilePlansData[plan.variation_code] = plan.variation_amount;
-                    select.innerHTML += `<option value="${plan.variation_code}">${plan.name}</option>`;
+                    const amtFormatted = Number(plan.variation_amount).toLocaleString(undefined, {minimumFractionDigits: 2});
+                    
+                    grid.innerHTML += `
+                        <div class="col-6 col-md-4">
+                            <div class="plan-card" onclick="selectPlan(this, '${plan.variation_code}', '${plan.variation_amount}')">
+                                <div class="plan-name">${plan.name}</div>
+                                <div class="plan-price">₦${amtFormatted}</div>
+                            </div>
+                        </div>
+                    `;
                 });
-                select.disabled = false;
+                wrapper.style.display = 'block';
             } else {
-                select.innerHTML = '<option value="">Smile Network currently offline</option>';
+                loader.innerHTML = '<span class="text-danger">Smile Network currently offline</span>';
             }
         } catch (error) {
-            select.innerHTML = '<option value="">Failed to sync network</option>';
+            loader.innerHTML = '<span class="text-danger">Failed to sync network</span>';
         } finally {
-            loader.style.display = 'none';
+            if(wrapper.style.display === 'block') loader.style.display = 'none';
         }
     }
 
-    function updateAmountDisplay() {
-        const code = document.getElementById('smilePlan').value;
-        const display = document.getElementById('smileAmountDisplay');
-        const actual = document.getElementById('smileAmountActual');
-
-        if (code && smilePlansData[code]) {
-            const amt = Number(smilePlansData[code]);
-            display.value = amt.toLocaleString(undefined, {minimumFractionDigits: 2});
-            actual.value = amt;
-        } else {
-            display.value = '';
-            actual.value = '';
-        }
+    // Function to handle clicking on a plan box
+    function selectPlan(cardElement, code, amount) {
+        // Remove active class from all cards
+        document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('active'));
+        // Add active class to clicked card
+        cardElement.classList.add('active');
+        
+        // Set the hidden input and display
+        document.getElementById('smilePlan').value = code;
+        document.getElementById('smileAmountDisplay').value = Number(amount).toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById('smileAmountActual').value = amount;
     }
 
     async function processSmilePayment() {
@@ -236,7 +259,6 @@
         });
         
         try {
-            // Your backend's dynamic nature allows it to route 'smile-direct' straight through the existing 'buyData' endpoint
             const res = await fetch('/api/vtu/data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
@@ -251,6 +273,7 @@
                     document.getElementById('smileAmountDisplay').value = '';
                     document.getElementById('smileAmountActual').value = '';
                     document.getElementById('transactionPin').value = '';
+                    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('active'));
                     loadBalance();
                 });
             } else {
