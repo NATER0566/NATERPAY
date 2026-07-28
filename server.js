@@ -40,27 +40,14 @@ const fastify = Fastify({
     bodyLimit: 15 * 1024 * 1024 
 });
 
-// [3] GLOBAL ERROR CATCHER (FIXED: Stops the black JSON screen and handles DB lags gracefully)
+// [3] GLOBAL ERROR CATCHER (Prevents Server Crashes & Stack Trace Leaks)
 fastify.setErrorHandler(function (error, request, reply) {
-    logger.error(`[CRITICAL] Path: ${request.url} | Error: ${error.message}`);
+    logger.error('Unhandled Server Exception', error);
     
-    if (error.name === 'MongoServerSelectionError' || error.name === 'MongooseError') {
-        return reply.status(503).send({
-            success: false,
-            message: 'Database sync in progress. Please wait a few seconds and try again.'
-        });
-    }
-
-    if (error.statusCode === 429) {
-        return reply.status(429).send({
-            success: false,
-            message: 'Too many requests. Please slow down.'
-        });
-    }
-    
+    // Ensure we never leak internal paths or logic to the frontend
     reply.status(500).send({ 
         success: false, 
-        message: 'A temporary network delay occurred. Please refresh the page.' 
+        message: 'An internal system error occurred. Our engineering team has been notified.' 
     });
 });
 
@@ -69,25 +56,15 @@ fastify.setErrorHandler(function (error, request, reply) {
 // ============================================================================
 async function connectDatabase() {
     try {
-        // FIXED: Added auto-reconnect listeners
-        mongoose.connection.on('disconnected', () => {
-            logger.warn('[SYSTEM] MongoDB disconnected! Attempting to auto-reconnect...');
-        });
-        mongoose.connection.on('reconnected', () => {
-            logger.info('[SYSTEM] MongoDB reconnected successfully.');
-        });
-
         await mongoose.connect(config.database.uri, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 30000, // FIXED: Increased from 5000 to prevent Atlas Free Tier crashes
-            socketTimeoutMS: 45000,          // FIXED: Keeps sockets alive longer
-            maxPoolSize: 100                 // FIXED: Allows more concurrent users
+            serverSelectionTimeoutMS: 5000 // Fail fast if DB is down
         });
         logger.info('[SYSTEM] Naterpay Database Ledger connected successfully.');
     } catch (error) {
         logger.error('[FATAL ERROR] MongoDB connection failed:', error);
-        process.exit(1); 
+        process.exit(1); // Cannot boot without DB
     }
 }
 
@@ -108,10 +85,11 @@ async function registerPlugins() {
         contentSecurityPolicy: false // Disabled to allow external images (Cloudinary) and scripts
     });
   
+    // [FIXED] ENTERPRISE RATE LIMIT: Cranked up to 5,000 req/min to stop the black error screens
     await fastify.register(require('@fastify/rate-limit'), {
-        max: config.rateLimit.max,
-        timeWindow: config.rateLimit.windowMs,
-        redis: redisClient, // Wire Fastify's base rate limiter into Redis
+        max: 5000, 
+        timeWindow: 60 * 1000, // 1 Minute
+        redis: redisClient, 
         skipOnError: true
     });
   
@@ -336,11 +314,7 @@ async function registerRoutes() {
     const statusRoutes = require('./routes/status');
     fastify.get('/api/system-status', statusRoutes.getSystemStatus);
 
-    // =========================================================================
-    // THE ULTIMATE FIX: THIS PREVENTS RENDER FROM KILLING YOUR SERVER
-    // =========================================================================
     fastify.get('/api/health', async (request, reply) => {
-        // FIXED: Decoupled from the database so Render gets a guaranteed 200 OK
         return reply.status(200).send({ 
             status: 'ok', 
             message: 'Engine running perfectly.', 
@@ -364,7 +338,6 @@ async function registerRoutes() {
         if (!config.featureFlags.airtimeCash) disabledFeatures.push('airtime-cash');
         
         for (const feature of disabledFeatures) {
-            // Precise matching to avoid accidental blockages
             if (path === `/${feature}.html` || path.startsWith(`/api/${feature}`)) {
                 return reply.status(404).send({ success: false, message: `The ${feature} feature is currently disabled for maintenance.` });
             }
@@ -373,7 +346,7 @@ async function registerRoutes() {
 }
 
 // ============================================================================
-// WEBSOCKET ENGINE (Hardened for DDoS Protection)
+// WEBSOCKET ENGINE
 // ============================================================================
 function setupSocketIO(server) {
     const io = socketIo(server, {
@@ -406,12 +379,12 @@ function setupSocketIO(server) {
     io.on('connection', (socket) => {
         socket.join(`user:${socket.userId}`);
         
-        // Rate limiting for incoming socket events
+        // [FIXED] ENTERPRISE WEBSOCKET LIMIT: Increased to prevent WebSocket admin disconnections
         let eventCount = 0;
-        const resetInterval = setInterval(() => { eventCount = 0; }, 10000); // Max events per 10s
+        const resetInterval = setInterval(() => { eventCount = 0; }, 10000); 
         
         socket.use((packet, next) => {
-            if (++eventCount > 50) return next(new Error('Rate limit exceeded'));
+            if (++eventCount > 500) return next(new Error('Rate limit exceeded'));
             next();
         });
 
@@ -430,10 +403,9 @@ function setupSocketIO(server) {
 }
 
 // ============================================================================
-// AUTOMATED CRON JOBS (Reconciliation, Analytics, Invoices)
+// AUTOMATED CRON JOBS
 // ============================================================================
 function startCronJobs() {
-    // [5] CRITICAL: Transaction Reconciliation Engine (Runs every 15 mins)
     cron.schedule('*/15 * * * *', async () => {
         try {
             const reconciliationService = require('./services/reconciliation');
@@ -445,7 +417,6 @@ function startCronJobs() {
         }
     });
 
-    // Wipe Expired Ads (Runs daily at Midnight)
     cron.schedule('0 0 * * *', async () => {
         try {
             const Ad = require('./models/Ad');
@@ -459,12 +430,10 @@ function startCronJobs() {
         }
     });
 
-    // Record Daily Analytics
     cron.schedule('0 0 * * *', async () => {
         try { const Analytics = require('./models/Analytics'); if(Analytics.recordDaily) await Analytics.recordDaily(); } catch (error) {}
     });
 
-    // Mark Overdue Invoices
     cron.schedule('0 9 * * *', async () => {
         try {
             const Invoice = require('./models/Invoice');
@@ -500,7 +469,6 @@ async function start() {
     }
 }
 
-// Prevent active financial transactions from dying if the server restarts
 async function gracefulShutdown() {
     logger.info('[SYSTEM] Received shutdown signal. Closing HTTP server and database gracefully...');
     try {
@@ -518,5 +486,4 @@ async function gracefulShutdown() {
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
-// Initialize the platform
 start();
