@@ -192,19 +192,19 @@ async function processVTURequest(type, data) {
   } else if (type === 'sms') {
       payload.serviceID = data.provider || 'bulk-sms'; payload.phone = data.phone;
   } else if (type === 'foreign-airtime') {
-      // FIX: Added the exact VTPass required payload format and fields
+      // FIX: Changed product_type_id to 1 (Mobile Top Up / Airtime)
       payload.serviceID = 'foreign-airtime';
       payload.operator_id = data.operator; 
       payload.country_code = data.country;
-      payload.product_type_id = '4'; // 4 stands for Airtime in VTpass
+      payload.product_type_id = '1'; 
       payload.email = data.email || 'user@naterpay.com';
       payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.billersCode = isSandbox ? '08011111111' : data.phone;
       
-      // Auto-fetches the required variation_code in the background so your frontend doesn't have to change
+      // Auto-fetches the required variation_code in the background
       try {
           const varHeaders = { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY };
-          const varRes = await axios.get(`${baseUrl}/service-variations?serviceID=foreign-airtime&operator_id=${data.operator}&product_type_id=4`, { headers: varHeaders });
+          const varRes = await axios.get(`${baseUrl}/service-variations?serviceID=foreign-airtime&operator_id=${data.operator}&product_type_id=1`, { headers: varHeaders });
           const variations = varRes.data.content?.varations || varRes.data.content?.variations || [];
           if (variations.length > 0) payload.variation_code = variations[0].variation_code;
           else payload.variation_code = 'foreign-airtime';
@@ -706,8 +706,8 @@ async function getInternationalOperators(request, reply) {
   try {
     const { code } = request.query;
     const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
-    // FIX: Adding product_type_id=4 for VTpass Airtime spec
-    const response = await axios.get(`${baseUrl}/get-international-airtime-operators?code=${code}&product_type_id=4`, { 
+    // FIX: Changed product_type_id to 1 (Airtime) as requested
+    const response = await axios.get(`${baseUrl}/get-international-airtime-operators?code=${code}&product_type_id=1`, { 
         headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, 
         timeout: 15000 
     });
