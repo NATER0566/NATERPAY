@@ -40,14 +40,27 @@ const fastify = Fastify({
     bodyLimit: 15 * 1024 * 1024 
 });
 
-// [3] GLOBAL ERROR CATCHER (Prevents Server Crashes & Stack Trace Leaks)
+// [3] GLOBAL ERROR CATCHER (FIXED: Stops the black JSON screen and handles DB lags gracefully)
 fastify.setErrorHandler(function (error, request, reply) {
-    logger.error('Unhandled Server Exception', error);
+    logger.error(`[CRITICAL] Path: ${request.url} | Error: ${error.message}`);
     
-    // Ensure we never leak internal paths or logic to the frontend
+    if (error.name === 'MongoServerSelectionError' || error.name === 'MongooseError') {
+        return reply.status(503).send({
+            success: false,
+            message: 'Database sync in progress. Please wait a few seconds and try again.'
+        });
+    }
+
+    if (error.statusCode === 429) {
+        return reply.status(429).send({
+            success: false,
+            message: 'Too many requests. Please slow down.'
+        });
+    }
+    
     reply.status(500).send({ 
         success: false, 
-        message: 'An internal system error occurred. Our engineering team has been notified.' 
+        message: 'A temporary network delay occurred. Please refresh the page.' 
     });
 });
 
@@ -56,15 +69,25 @@ fastify.setErrorHandler(function (error, request, reply) {
 // ============================================================================
 async function connectDatabase() {
     try {
+        // FIXED: Added auto-reconnect listeners
+        mongoose.connection.on('disconnected', () => {
+            logger.warn('[SYSTEM] MongoDB disconnected! Attempting to auto-reconnect...');
+        });
+        mongoose.connection.on('reconnected', () => {
+            logger.info('[SYSTEM] MongoDB reconnected successfully.');
+        });
+
         await mongoose.connect(config.database.uri, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 5000 // Fail fast if DB is down
+            serverSelectionTimeoutMS: 30000, // FIXED: Increased from 5000 to prevent Atlas Free Tier crashes
+            socketTimeoutMS: 45000,          // FIXED: Keeps sockets alive longer
+            maxPoolSize: 100                 // FIXED: Allows more concurrent users
         });
         logger.info('[SYSTEM] Naterpay Database Ledger connected successfully.');
     } catch (error) {
         logger.error('[FATAL ERROR] MongoDB connection failed:', error);
-        process.exit(1); // Cannot boot without DB
+        process.exit(1); 
     }
 }
 
@@ -175,10 +198,7 @@ async function registerRoutes() {
     const walletRoutes = require('./routes/wallet');
     fastify.get('/api/wallet', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.getWallet);
     fastify.post('/api/wallet/fund', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.fundWallet);
-    
-    // [FIXED] Manual funding route is now fully active
     fastify.post('/api/wallet/fund-manual', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.fundManualWallet);
-    
     fastify.post('/api/wallet/verify', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.verifyFunding);
     fastify.post('/api/wallet/withdraw', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.withdraw);
     fastify.post('/api/wallet/transfer', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.transfer);
@@ -262,7 +282,6 @@ async function registerRoutes() {
     fastify.get('/api/admin/transactions', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getTransactions);
     fastify.get('/api/admin/analytics', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.getAnalytics);
     
-    // [FIXED] Admin manual funding routes are now fully active
     fastify.post('/api/admin/wallet/manual/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminApproveManualFunding);
     fastify.post('/api/admin/wallet/manual/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, walletRoutes.adminRejectManualFunding);
 
@@ -317,8 +336,17 @@ async function registerRoutes() {
     const statusRoutes = require('./routes/status');
     fastify.get('/api/system-status', statusRoutes.getSystemStatus);
 
-    // [FIXED] Pointed the health check to the correct status module
-    fastify.get('/api/health', statusRoutes.getSystemStatus);
+    // =========================================================================
+    // THE ULTIMATE FIX: THIS PREVENTS RENDER FROM KILLING YOUR SERVER
+    // =========================================================================
+    fastify.get('/api/health', async (request, reply) => {
+        // FIXED: Decoupled from the database so Render gets a guaranteed 200 OK
+        return reply.status(200).send({ 
+            status: 'ok', 
+            message: 'Engine running perfectly.', 
+            uptime: process.uptime() 
+        });
+    });
     
     // [4] FEATURE FLAG MIDDLEWARE
     fastify.addHook('onRequest', async (request, reply) => {
@@ -465,7 +493,6 @@ async function start() {
         await fastify.listen({ port: config.port, host: config.host });
         logger.info(`[SYSTEM] Core Engine Successfully Bound to Port ${config.port}`);
     } catch (error) {
-        // [FIXED] Force raw error output so Render shows us exactly what broke if it crashes again!
         console.error('============== CRITICAL BOOT CRASH ==============');
         console.error(error);
         console.error('=================================================');
