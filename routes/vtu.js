@@ -167,11 +167,7 @@ async function processVTURequest(type, data) {
   if (type === 'airtime') {
       payload.serviceID = data.network; payload.phone = isSandbox ? '08011111111' : data.phone;
   } else if (type === 'data') { 
-      payload.serviceID = data.network; 
-      payload.variation_code = data.plan; 
-      payload.phone = isSandbox ? '08011111111' : data.phone; 
-      // ONLY applies the sandbox override if it's NOT spectranet
-      payload.billersCode = (isSandbox && data.network !== 'spectranet') ? '08011111111' : data.phone;
+      payload.serviceID = data.network; payload.variation_code = data.plan; payload.phone = isSandbox ? '08011111111' : data.phone; payload.billersCode = isSandbox ? '08011111111' : data.phone;
   } else if (type === 'electricity') {
       payload.serviceID = (data.disco === 'port-harcourt-electric') ? 'portharcourt-electric' : data.disco;
       payload.variation_code = data.meterType; payload.phone = isSandbox ? '08011111111' : (data.phone || '08011111111');
@@ -309,7 +305,7 @@ async function buyData(request, reply) {
     if (variations.length === 0) {
         const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
         const response = await axios.get(`${baseUrl}/service-variations?serviceID=${network}`, { headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, timeout: 15000 });
-        variations = response.data.content?.varations || response.data.content?.variations || [];
+        variations = response.data.content?.varations || response.data.content?.varations || [];
     }
     
     const selectedPlanData = variations.find(v => v.variation_code === plan);
