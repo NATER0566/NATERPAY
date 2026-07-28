@@ -167,7 +167,8 @@ async function processVTURequest(type, data) {
   if (type === 'airtime') {
       payload.serviceID = data.network; payload.phone = isSandbox ? '08011111111' : data.phone;
   } else if (type === 'data') { 
-      payload.serviceID = data.network; payload.variation_code = data.plan; payload.phone = isSandbox ? '08011111111' : data.phone; payload.billersCode = isSandbox ? '08011111111' : data.phone;
+      payload.serviceID = data.network; payload.variation_code = data.plan; payload.phone = isSandbox ? '08011111111' : data.phone; 
+      payload.billersCode = isSandbox ? (data.network === 'spectranet' ? '1212121212' : '08011111111') : data.phone;
   } else if (type === 'electricity') {
       payload.serviceID = (data.disco === 'port-harcourt-electric') ? 'portharcourt-electric' : data.disco;
       payload.variation_code = data.meterType; payload.phone = isSandbox ? '08011111111' : (data.phone || '08011111111');
@@ -678,8 +679,10 @@ async function getInternationalCountries(request, reply) {
         headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, 
         timeout: 15000 
     });
-    reply.send({ success: true, countries: response.data.content });
-  } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch countries' }); }
+    return reply.send({ success: true, countries: response.data.content });
+  } catch (error) { 
+    return reply.status(500).send({ success: false, message: 'Failed to fetch countries' }); 
+  }
 }
 
 async function getInternationalOperators(request, reply) {
@@ -690,8 +693,10 @@ async function getInternationalOperators(request, reply) {
         headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, 
         timeout: 15000 
     });
-    reply.send({ success: true, operators: response.data.content });
-  } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch operators' }); }
+    return reply.send({ success: true, operators: response.data.content });
+  } catch (error) { 
+    return reply.status(500).send({ success: false, message: 'Failed to fetch operators' }); 
+  }
 }
 
 async function buyForeignAirtime(request, reply) {
@@ -737,7 +742,7 @@ async function buyForeignAirtime(request, reply) {
       await createAuditLog({ user: request.user._id, transactionId: transaction._id, reference: transaction.reference, amount: payableAmount, type: 'foreign_airtime_purchase', previousBalance: transaction.balanceBefore, newBalance: transaction.balanceAfter, ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'success', source: 'VTU API' });
       await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: transaction.balanceAfter });
-      reply.send({ success: true, message: 'International Airtime successful', transaction });
+      return reply.send({ success: true, message: 'International Airtime successful', transaction });
     } catch (vtuError) {
       // STEP 3: ATOMIC REFUND
       const refundSession = await mongoose.startSession();
@@ -750,7 +755,7 @@ async function buyForeignAirtime(request, reply) {
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: String(refundedWallet.availableBalance) });
       return reply.status(400).send({ success: false, message: vtuError.message });
     }
-  } catch (error) { logger.error('Foreign Airtime Error', error); reply.status(500).send({ success: false, message: 'System error' }); }
+  } catch (error) { logger.error('Foreign Airtime Error', error); return reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
 module.exports = {
