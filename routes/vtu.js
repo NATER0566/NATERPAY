@@ -167,7 +167,8 @@ async function processVTURequest(type, data) {
   if (type === 'airtime') {
       payload.serviceID = data.network; payload.phone = isSandbox ? '08011111111' : data.phone;
   } else if (type === 'data') { 
-      payload.serviceID = data.network; payload.variation_code = data.plan; payload.phone = isSandbox ? '08011111111' : data.phone; payload.billersCode = isSandbox ? '08011111111' : data.phone;
+      payload.serviceID = data.network; payload.variation_code = data.plan; payload.phone = isSandbox ? '08011111111' : data.phone; 
+      payload.billersCode = isSandbox ? (data.network === 'spectranet' ? '1212121212' : '08011111111') : data.phone;
   } else if (type === 'electricity') {
       payload.serviceID = (data.disco === 'port-harcourt-electric') ? 'portharcourt-electric' : data.disco;
       payload.variation_code = data.meterType; payload.phone = isSandbox ? '08011111111' : (data.phone || '08011111111');
@@ -250,7 +251,7 @@ async function buyAirtime(request, reply) {
     let transaction;
     try {
         const wallet = await Wallet.findOneAndUpdate(
-            { user: request.user._id, availableBalance: { $gte: payableAmount }, isFrozen: {$ne: true } },
+            { user: request.user._id, availableBalance: { $gte: payableAmount }, isFrozen: { $ne: true } },
             { $inc: { availableBalance: -payableAmount, balance: -payableAmount } },
             { session, new: true }
         );
@@ -319,7 +320,7 @@ async function buyData(request, reply) {
     let transaction;
     try {
         const wallet = await Wallet.findOneAndUpdate(
-            { user: request.user._id, availableBalance: { $gte: payableAmount }, isFrozen: {$ne: true } },
+            { user: request.user._id, availableBalance: { $gte: payableAmount }, isFrozen: { $ne: true } },
             { $inc: { availableBalance: -payableAmount, balance: -payableAmount } },
             { session, new: true }
         );
