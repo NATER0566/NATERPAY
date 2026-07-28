@@ -192,10 +192,23 @@ async function processVTURequest(type, data) {
   } else if (type === 'sms') {
       payload.serviceID = data.provider || 'bulk-sms'; payload.phone = data.phone;
   } else if (type === 'foreign-airtime') {
+      // FIX: Added the exact VTPass required payload format and fields
       payload.serviceID = 'foreign-airtime';
-      payload.variation_code = data.operator; 
+      payload.operator_id = data.operator; 
+      payload.country_code = data.country;
+      payload.product_type_id = '4'; // 4 stands for Airtime in VTpass
+      payload.email = data.email || 'user@naterpay.com';
       payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.billersCode = isSandbox ? '08011111111' : data.phone;
+      
+      // Auto-fetches the required variation_code in the background so your frontend doesn't have to change
+      try {
+          const varHeaders = { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY };
+          const varRes = await axios.get(`${baseUrl}/service-variations?serviceID=foreign-airtime&operator_id=${data.operator}&product_type_id=4`, { headers: varHeaders });
+          const variations = varRes.data.content?.varations || varRes.data.content?.variations || [];
+          if (variations.length > 0) payload.variation_code = variations[0].variation_code;
+          else payload.variation_code = 'foreign-airtime';
+      } catch(e) { payload.variation_code = 'foreign-airtime'; }
   }
 
   try {
@@ -672,6 +685,7 @@ async function buySms(request, reply) {
   } catch (error) { logger.error('SMS Error', error); reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
+// FIX: Added the exact VTpass unwrapping logic directly to your provided code
 async function getInternationalCountries(request, reply) {
   try {
     const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
@@ -679,30 +693,37 @@ async function getInternationalCountries(request, reply) {
         headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, 
         timeout: 15000 
     });
-    return reply.send({ success: true, countries: response.data.content });
+    // FIX: Extract countries array directly from VTpass payload
+    const countryList = response.data.content?.countries || response.data.content || [];
+    return reply.send({ success: true, countries: countryList });
   } catch (error) { 
     return reply.status(500).send({ success: false, message: 'Failed to fetch countries' }); 
   }
 }
 
+// FIX: Added the exact VTpass unwrapping logic directly to your provided code
 async function getInternationalOperators(request, reply) {
   try {
     const { code } = request.query;
     const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
-    const response = await axios.get(`${baseUrl}/get-international-airtime-operators?code=${code}`, { 
+    // FIX: Adding product_type_id=4 for VTpass Airtime spec
+    const response = await axios.get(`${baseUrl}/get-international-airtime-operators?code=${code}&product_type_id=4`, { 
         headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, 
         timeout: 15000 
     });
-    return reply.send({ success: true, operators: response.data.content });
+    // FIX: Extract operators array directly from VTpass payload
+    const opList = response.data.content?.operators || response.data.content || [];
+    return reply.send({ success: true, operators: opList });
   } catch (error) { 
     return reply.status(500).send({ success: false, message: 'Failed to fetch operators' }); 
   }
 }
 
+// FIX: Passing the country and email required by VTpass
 async function buyForeignAirtime(request, reply) {
   try {
-    const { phone, operator, amount, pin } = request.body;
-    if (!phone || !operator || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    const { phone, operator, country, amount, pin } = request.body;
+    if (!phone || !operator || !amount || !country) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
     
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
@@ -736,7 +757,7 @@ async function buyForeignAirtime(request, reply) {
 
     // STEP 2: EXTERNAL API CALL
     try {
-      const providerResponse = await processVTURequest('foreign-airtime', { phone, operator, amount });
+      const providerResponse = await processVTURequest('foreign-airtime', { phone, operator, country, amount, email: request.user.email });
       transaction.status = 'success'; transaction.providerReference = providerResponse.reference;
       await transaction.save();
       await createAuditLog({ user: request.user._id, transactionId: transaction._id, reference: transaction.reference, amount: payableAmount, type: 'foreign_airtime_purchase', previousBalance: transaction.balanceBefore, newBalance: transaction.balanceAfter, ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'success', source: 'VTU API' });
