@@ -303,6 +303,12 @@ async function registerRoutes() {
     fastify.put('/api/admin/ads/:id/approve', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.approveAd);
     fastify.put('/api/admin/ads/:id/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.rejectAd);
     fastify.delete('/api/admin/ads/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.deleteAd);
+
+    // [FIX] MISSING DELETE & EDIT ROUTES FOR ADMIN PANEL
+    fastify.delete('/api/admin/support/tickets/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.deleteTicket);
+    fastify.delete('/api/admin/kyc/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.deleteKycRecord);
+    fastify.put('/api/admin/invoices/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.updateInvoice);
+    fastify.put('/api/admin/ads/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.editAd);
     
     // === CMS / HOMEPAGE / SLIDES / FOUNDER ROUTES ===
     const cmsRoutes = require('./routes/cms');
