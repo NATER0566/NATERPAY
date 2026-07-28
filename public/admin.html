@@ -88,7 +88,6 @@
     <div class="tab-nav">
         <button class="admin-tab active" onclick="showTab('overview')"><i class="fas fa-chart-pie me-2"></i>Overview</button>
         <button class="admin-tab" onclick="showTab('tickets')">Tickets <span id="ticketsBadge" class="badge bg-primary badge-dynamic d-none">0</span></button>
-        <button class="admin-tab" onclick="showTab('invoices')">Invoices</button>
         <button class="admin-tab" onclick="showTab('deposits')">Deposits <span id="depositsBadge" class="badge bg-success badge-dynamic d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('withdrawals')">Payouts <span id="withdrawBadge" class="badge bg-danger badge-dynamic d-none">0</span></button>
         <button class="admin-tab" onclick="showTab('kyc')">KYC <span id="kycBadge" class="badge bg-warning text-dark badge-dynamic d-none">0</span></button>
@@ -121,22 +120,6 @@
                 <table class="table table-dark align-middle">
                     <thead><tr><th>TICKET ID & DATE</th><th>USER IDENTITY (FULL)</th><th>SUBJECT & PRIORITY</th><th>STATUS</th><th class="text-end">ACTION</th></tr></thead>
                     <tbody id="ticketsAdminTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading support tickets...</td></tr></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- INVOICES -->
-    <div id="tab-invoices" class="tab-content" style="display: none;">
-        <div class="admin-card">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h5 class="text-gold fw-bold m-0"><i class="fas fa-file-invoice me-2"></i> GLOBAL INVOICE LEDGER</h5>
-                <button class="btn btn-sm btn-outline-light" onclick="fetchAdminInvoices()"><i class="fas fa-sync-alt me-1"></i> Sync Invoices</button>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-dark align-middle">
-                    <thead><tr><th>INV # & DATE</th><th>MERCHANT (CREATOR)</th><th>CUSTOMER TARGET</th><th>AMOUNT & STATUS</th><th class="text-end">ACTION</th></tr></thead>
-                    <tbody id="invoicesAdminTable"><tr><td colspan="5" class="text-center opacity-50 py-4">Loading invoices...</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -366,7 +349,6 @@
         if(t === 'founder') loadCurrentFounderData();
         if(t === 'deposits') fetchManualDeposits();
         if(t === 'tickets') fetchAdminTickets();
-        if(t === 'invoices') fetchAdminInvoices();
     }
 
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
@@ -438,9 +420,8 @@
     async function syncAllBadges() {
         try {
             await loadAdminEcosystem(); 
-            // FIXED: Added fetchAdminInvoices to the promise so globalSystemUsers is populated BEFORE invoices load
             await Promise.all([
-                fetchWithdrawals(), fetchManualDeposits(), fetchKYC(), fetchAdverts(), fetchMarketplace(), fetchSlides(), fetchAdminTickets(), fetchAdminInvoices()
+                fetchWithdrawals(), fetchManualDeposits(), fetchKYC(), fetchAdverts(), fetchMarketplace(), fetchSlides(), fetchAdminTickets()
             ]);
         } catch (e) {}
     }
@@ -475,7 +456,6 @@
                 document.getElementById('statVault').innerText = '₦' + parseNum(stats.summary?.totalVaultBalance).toLocaleString();
             }
 
-            // FIXED: Changed limit from 50 to 500 so globalSystemUsers holds enough data to recognize verified users in invoices
             const userRes = await fetch('/api/admin/users?limit=500', { headers: { 'Authorization': `Bearer ${token}` } });
             const usersData = await userRes.json();
             if(usersData.users) {
@@ -685,132 +665,6 @@
                 if(data.success) { Swal.fire('Deleted!', '', 'success'); fetchAdminTickets(); }
                 else { Swal.fire('Error', data.message || 'Could not delete', 'error'); }
             } catch(e) { Swal.fire('Error', 'Network Error', 'error'); }
-        }
-    }
-
-    // ==========================================
-    // INVOICES ENGINE
-    // ==========================================
-    async function fetchAdminInvoices() {
-        const token = localStorage.getItem("naterpay_token");
-        if(!token) return;
-        try {
-            const res = await fetch('/api/admin/invoices', { headers: { 'Authorization': `Bearer ${token}` } });
-            const data = await res.json();
-            const invoices = data.invoices || [];
-
-            const tbody = document.getElementById('invoicesAdminTable');
-            if (invoices.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center opacity-50 py-4">No global invoices found in ledger.</td></tr>'; return; }
-
-            tbody.innerHTML = invoices.map(inv => {
-                const encodedInv = encodeURIComponent(JSON.stringify(inv));
-                const date = new Date(inv.createdAt).toLocaleDateString();
-                
-                let badgeCls = 'secondary';
-                if(inv.status==='sent') badgeCls='info';
-                if(inv.status==='paid') badgeCls='success';
-                if(inv.status==='overdue') badgeCls='danger';
-                
-                // FIXED: Enhanced fallback user resolution
-                const fallbackName = inv.businessDetails?.name || 'Invoice Creator';
-                const fallbackEmail = inv.businessDetails?.email || 'Unknown Email';
-                const merchantData = extractUserDetails(inv.user || inv.userId || inv.merchantId, fallbackEmail, fallbackName);
-                
-                return `<tr>
-                    <td><div class="fw-bold"><i class="fas fa-hashtag me-1 text-gold"></i>${inv.invoiceId}</div><small class="text-secondary">${date}</small></td>
-                    <td>${merchantData.html}</td>
-                    <td><div class="fw-bold text-white text-truncate" style="max-width:200px;">${inv.customerName}</div><small class="text-muted d-block">${inv.customerEmail}</small></td>
-                    <td><div class="fw-bold text-gold fs-5">${inv.currency} ${Number(inv.total||0).toLocaleString()}</div><span class="status-pill bg-${badgeCls}">${inv.status}</span></td>
-                    <td class="text-end">
-                        <div class="action-btns">
-                            <button class="btn btn-info text-white" onclick="viewAdminInvoice('${encodedInv}')" title="View Full File"><i class="fas fa-eye"></i></button>
-                            <button class="btn btn-primary" onclick="requireSuperAdmin(() => editAdminInvoice('${encodedInv}'))" title="Edit Properties"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-danger" onclick="requireSuperAdmin(() => deleteAdminInvoice('${inv._id}'))" title="Delete"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </td>
-                </tr>`;
-            }).join('');
-        } catch(e) {}
-    }
-
-    function viewAdminInvoice(encodedData) {
-        const inv = JSON.parse(decodeURIComponent(encodedData));
-        const itemsHtml = (inv.items || []).map(i => `<div class="d-flex justify-content-between mb-1 pb-1 border-bottom border-secondary"><span class="text-white small">${i.description} (x${i.quantity})</span><span class="text-warning small">${inv.currency} ${Number(i.unitPrice||0).toLocaleString()}</span></div>`).join('');
-        
-        Swal.fire({
-            title: `Invoice ${inv.invoiceId}`,
-            html: `<div class="text-start mt-2" style="font-size: 0.9rem;">
-                <p class="mb-1"><strong class="text-gold">Status:</strong> <span class="text-uppercase fw-bold">${inv.status}</span></p>
-                <p class="mb-1"><strong class="text-gold">Target Customer:</strong> ${inv.customerName} (${inv.customerEmail})</p>
-                <p class="mb-3"><strong class="text-gold">Due Date:</strong> <span class="text-danger">${new Date(inv.dueDate).toLocaleDateString()}</span></p>
-                <div class="p-3 bg-dark rounded border border-secondary mb-3">
-                    <strong class="text-gold d-block mb-2">Line Items</strong>
-                    ${itemsHtml}
-                    <div class="d-flex justify-content-between mt-3 pt-2 border-top border-warning">
-                        <strong class="text-white">TOTAL:</strong>
-                        <strong class="text-gold fs-5">${inv.currency} ${Number(inv.total||0).toLocaleString()}</strong>
-                    </div>
-                </div>
-            </div>`,
-            background: '#0a0a0a', color: '#fff', confirmButtonText: 'Close', confirmButtonColor: '#444'
-        });
-    }
-
-    async function editAdminInvoice(encodedData) {
-        const inv = JSON.parse(decodeURIComponent(encodedData));
-        const { value: formValues } = await Swal.fire({ 
-            title: 'Edit Invoice Details', 
-            html: `
-                <div style="text-align: left;">
-                    <label class="high-vis-label mt-2">Customer Name</label>
-                    <input id="swal-inv-name" class="swal2-input bg-dark text-white w-100 m-0" value="${inv.customerName || ''}">
-                    
-                    <label class="high-vis-label mt-3">Customer Email</label>
-                    <input id="swal-inv-email" class="swal2-input bg-dark text-white w-100 m-0" value="${inv.customerEmail || ''}">
-                    
-                    <label class="high-vis-label mt-3">Grand Total (${inv.currency || '₦'})</label>
-                    <input id="swal-inv-total" type="number" class="swal2-input bg-dark text-white w-100 m-0" value="${inv.total || 0}">
-
-                    <label class="high-vis-label mt-3">Status</label>
-                    <select id="swal-inv-status" class="swal2-input bg-dark text-white w-100 m-0">
-                        <option value="draft" ${inv.status==='draft'?'selected':''}>Draft</option>
-                        <option value="sent" ${inv.status==='sent'?'selected':''}>Sent</option>
-                        <option value="paid" ${inv.status==='paid'?'selected':''}>Paid</option>
-                        <option value="overdue" ${inv.status==='overdue'?'selected':''}>Overdue</option>
-                        <option value="cancelled" ${inv.status==='cancelled'?'selected':''}>Cancelled</option>
-                    </select>
-                </div>`, 
-            background: '#0a0a0a', color: '#fff', showCancelButton: true, confirmButtonText: 'Save Changes', 
-            preConfirm: () => ({ 
-                customerName: document.getElementById('swal-inv-name').value,
-                customerEmail: document.getElementById('swal-inv-email').value,
-                total: document.getElementById('swal-inv-total').value,
-                status: document.getElementById('swal-inv-status').value 
-            }) 
-        });
-        
-        if (formValues) {
-            Swal.fire({title:'Updating Ledger...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
-            try { 
-                const res = await fetch(`/api/admin/invoices/${inv._id}`, { 
-                    method: 'PUT', 
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
-                    body: JSON.stringify(formValues)
-                }); 
-                const data = await res.json();
-                if(data.success) { Swal.fire({title: 'Updated!', icon: 'success', background: '#0a0a0a', color: '#fff'}); fetchAdminInvoices(); }
-                else { Swal.fire('Failed', data.message || 'Network Error', 'error'); }
-            } catch(e) { Swal.fire('Failed', 'Network Error', 'error'); }
-        }
-    }
-
-    async function deleteAdminInvoice(invId) {
-        if((await Swal.fire({ title: 'Wipe Invoice?', icon: 'warning', showCancelButton: true, background: '#0a0a0a', color: '#fff' })).isConfirmed) {
-            Swal.fire({title:'Purging...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-            try { 
-                const res = await fetch(`/api/invoices/${invId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
-                if(res.ok) { Swal.fire('Deleted!', '', 'success'); fetchAdminInvoices(); } 
-            } catch (e) {}
         }
     }
 
@@ -1338,4 +1192,3 @@
 </script>
 </body>
 </html>
-
