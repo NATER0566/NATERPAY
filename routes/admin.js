@@ -145,7 +145,7 @@ async function getUsers(request, reply) {
         const query = {};
         if (value.search) {
             const safeSearch = sanitizeText(value.search);
-            query.$or = [{ name: { $regex: safeSearch, $options: 'i' } }, { email: { $regex: safeSearch, $options: 'i' } }, { phoneNumber: { $regex: safeSearch, $options: 'i' } }];
+            query.$or = [{ name: { $regex: safeSearch,$options: 'i' } }, { email: { $regex: safeSearch,$options: 'i' } }, { phoneNumber: { $regex: safeSearch,$options: 'i' } }];
         }
         if (value.role) query.role = sanitizeText(value.role);
         if (value.status === 'active') query.isActive = true;
@@ -773,6 +773,56 @@ async function getSupportTickets(request, reply) {
 async function assignTicket(request, reply) { reply.send({ success: true, message: 'Assigned' }); }
 async function resolveTicket(request, reply) { reply.send({ success: true, message: 'Resolved' }); }
 
+/* =========================================================================
+   [NEW] FORCE DELETE & ADVANCED EDIT ENGINES
+========================================================================= */
+async function deleteTicket(request, reply) {
+    try {
+        if (!await checkRateLimit(request, 'admin_del_ticket', 30)) throw { status: 429, message: 'Too many requests.' };
+        const SupportTicket = require('../models/SupportTicket');
+        await SupportTicket.findOneAndDelete({ ticketId: sanitizeText(request.params.id) });
+        reply.send({ success: true, message: 'Ticket permanently wiped.' });
+    } catch (e) { handleError(reply, e, 'Failed to delete ticket'); }
+}
+
+async function deleteKycRecord(request, reply) {
+    try {
+        if (!await checkRateLimit(request, 'admin_del_kyc', 30)) throw { status: 429, message: 'Too many requests.' };
+        await KYC.findByIdAndDelete(sanitizeText(request.params.id));
+        reply.send({ success: true, message: 'Corrupted KYC record wiped.' });
+    } catch (e) { handleError(reply, e, 'Failed to delete KYC'); }
+}
+
+async function updateInvoice(request, reply) {
+    try {
+        const Invoice = require('../models/Invoice');
+        const inv = await Invoice.findById(sanitizeText(request.params.id));
+        if (!inv) throw new Error('Invoice not found');
+        
+        if (request.body.customerName) inv.customerName = sanitizeText(request.body.customerName);
+        if (request.body.customerEmail) inv.customerEmail = sanitizeText(request.body.customerEmail);
+        if (request.body.total !== undefined) inv.total = String(sanitizeAmount(request.body.total));
+        if (request.body.status) inv.status = sanitizeText(request.body.status);
+        
+        await inv.save();
+        reply.send({ success: true, message: 'Invoice updated' });
+    } catch (e) { handleError(reply, e, 'Failed to update invoice'); }
+}
+
+async function editAd(request, reply) {
+    try {
+        const ad = await Ad.findById(sanitizeText(request.params.id));
+        if (!ad) throw new Error('Ad not found');
+        
+        if (request.body.title) ad.title = sanitizeText(request.body.title);
+        if (request.body.businessName) ad.businessName = sanitizeText(request.body.businessName);
+        if (request.body.maxRewardedViews !== undefined) ad.maxRewardedViews = parseInt(request.body.maxRewardedViews, 10) || 0;
+        
+        await ad.save();
+        reply.send({ success: true, message: 'Ad updated' });
+    } catch (e) { handleError(reply, e, 'Failed to update ad'); }
+}
+
 module.exports = {
   getUsers, getUser, updateUser, getTransactions, getAnalytics, 
   getSupportTickets, assignTicket, resolveTicket,
@@ -780,5 +830,6 @@ module.exports = {
   getPendingWithdrawals, processWithdrawal, 
   getPendingKYC, verifyRealWorldKYC, approveKYC, rejectKYC,
   updateProduct, deleteProduct,
-  getPendingAds, approveAd, rejectAd, deleteAd
+  getPendingAds, approveAd, rejectAd, deleteAd,
+  deleteTicket, deleteKycRecord, updateInvoice, editAd
 };
