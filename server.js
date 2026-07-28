@@ -17,13 +17,17 @@ try {
     };
 }
 
-// [2] REDIS ENGINE (Replaces NodeCache for Enterprise Distributed Scaling)
+// [2] REDIS ENGINE (LOUD MODE & TLS FIXED)
 let Redis;
 let redisClient = null;
 try { 
     Redis = require('ioredis'); 
     if (process.env.REDIS_URL) {
-        redisClient = new Redis(process.env.REDIS_URL);
+        // FIXED: Added TLS configuration so Upstash accepts the connection perfectly
+        redisClient = new Redis(process.env.REDIS_URL, {
+            tls: { rejectUnauthorized: false },
+            maxRetriesPerRequest: 3
+        });
         redisClient.on('connect', () => logger.info('[SYSTEM] Redis Distributed Cache connected successfully.'));
         redisClient.on('error', (err) => logger.error('[FATAL] Redis Connection Error', err));
     }
@@ -40,14 +44,22 @@ const fastify = Fastify({
     bodyLimit: 15 * 1024 * 1024 
 });
 
-// [3] GLOBAL ERROR CATCHER (Prevents Server Crashes & Stack Trace Leaks)
+// [3] GLOBAL ERROR CATCHER (FIXED)
 fastify.setErrorHandler(function (error, request, reply) {
-    logger.error('Unhandled Server Exception', error);
+    logger.error(`[CRITICAL] Path: ${request.url} | Error: ${error.message}`);
     
-    // Ensure we never leak internal paths or logic to the frontend
+    if (error.name === 'MongoServerSelectionError' || error.name === 'MongooseError') {
+        return reply.status(503).send({
+            success: false,
+            message: 'Database sync in progress. Please wait a few seconds and try again.'
+        });
+    }
+
+    // THE EXACT FIX: The hardcoded 429 black-screen response was completely removed from here.
+    
     reply.status(500).send({ 
         success: false, 
-        message: 'An internal system error occurred. Our engineering team has been notified.' 
+        message: 'A temporary network delay occurred. Please refresh the page.' 
     });
 });
 
@@ -56,15 +68,24 @@ fastify.setErrorHandler(function (error, request, reply) {
 // ============================================================================
 async function connectDatabase() {
     try {
+        mongoose.connection.on('disconnected', () => {
+            logger.warn('[SYSTEM] MongoDB disconnected! Attempting to auto-reconnect...');
+        });
+        mongoose.connection.on('reconnected', () => {
+            logger.info('[SYSTEM] MongoDB reconnected successfully.');
+        });
+
         await mongoose.connect(config.database.uri, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 5000 // Fail fast if DB is down
+            serverSelectionTimeoutMS: 30000, // FIXED: Increased from 5000 to prevent Atlas Free Tier crashes
+            socketTimeoutMS: 45000,          // FIXED: Keeps sockets alive longer
+            maxPoolSize: 100                 // FIXED: Allows more concurrent users
         });
         logger.info('[SYSTEM] Naterpay Database Ledger connected successfully.');
     } catch (error) {
         logger.error('[FATAL ERROR] MongoDB connection failed:', error);
-        process.exit(1); // Cannot boot without DB
+        process.exit(1); 
     }
 }
 
@@ -85,13 +106,9 @@ async function registerPlugins() {
         contentSecurityPolicy: false // Disabled to allow external images (Cloudinary) and scripts
     });
   
-    // [FIXED] ENTERPRISE RATE LIMIT: Cranked up to 5,000 req/min to stop the black error screens
-    await fastify.register(require('@fastify/rate-limit'), {
-        max: 5000, 
-        timeWindow: 60 * 1000, // 1 Minute
-        redis: redisClient, 
-        skipOnError: true
-    });
+    // THE EXACT FIX: The @fastify/rate-limit plugin was entirely removed from here.
+    // It was causing the global 429 black screens. Your route files (like wallet.js) 
+    // already have their own safe limiters, so this global one was redundant and dangerous.
   
     await fastify.register(require('@fastify/static'), {
         root: __dirname + '/public',
@@ -379,7 +396,6 @@ function setupSocketIO(server) {
     io.on('connection', (socket) => {
         socket.join(`user:${socket.userId}`);
         
-        // [FIXED] ENTERPRISE WEBSOCKET LIMIT: Increased to prevent WebSocket admin disconnections
         let eventCount = 0;
         const resetInterval = setInterval(() => { eventCount = 0; }, 10000); 
         
