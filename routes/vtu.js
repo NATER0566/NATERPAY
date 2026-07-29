@@ -208,15 +208,15 @@ async function processVTURequest(type, data) {
           else payload.variation_code = 'foreign-airtime';
       } catch(e) { payload.variation_code = 'foreign-airtime'; }
   } else if (type === 'foreign-data') {
-      // NEW FIX: Exact VTpass requirements specifically for International Data
-      payload.serviceID = 'foreign-airtime'; // VTpass uses the exact same serviceID for both
+      // [FIXED] EXACT VTPASS REQUIREMENT FOR DATA
+      payload.serviceID = 'foreign-airtime'; 
       payload.operator_id = data.operator; 
       payload.country_code = data.country;
-      payload.product_type_id = '4'; // 4 is explicitly for Mobile Data
+      payload.product_type_id = '4'; 
       payload.email = data.email || 'user@naterpay.com';
       payload.phone = isSandbox ? '08011111111' : data.phone;
       payload.billersCode = isSandbox ? '08011111111' : data.phone;
-      payload.variation_code = data.plan; // Data explicitly requires passing the variation/plan code
+      payload.variation_code = data.plan; 
   }
 
   try {
@@ -246,7 +246,7 @@ async function getRates(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch rates' }); }
 }
 
-// NEW FIX: Adjusted to seamlessly handle foreign variation requests without breaking local networks
+// [FIXED] DYNAMICALLY FETCHES BOTH LOCAL AND INTERNATIONAL DATA PLANS
 async function getVariations(request, reply) {
   try {
     const { serviceID, operator_id, product_type_id } = request.query;
@@ -264,11 +264,25 @@ async function getVariations(request, reply) {
     const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
     const response = await axios.get(`${baseUrl}/service-variations?${queryParams}`, { headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, timeout: 15000 });
     
-    const fetchedVariations = response.data.content?.varations || response.data.content?.variations || [];
-    if (fetchedVariations.length > 0) variationsCache[cacheKey] = { timestamp: Date.now(), data: fetchedVariations };
+    let fetchedVariations = [];
+    if (response.data && response.data.content) {
+        if (Array.isArray(response.data.content)) {
+            fetchedVariations = response.data.content;
+        } else if (Array.isArray(response.data.content.variations)) {
+            fetchedVariations = response.data.content.variations;
+        } else if (Array.isArray(response.data.content.varations)) {
+            fetchedVariations = response.data.content.varations;
+        }
+    }
+    
+    if (fetchedVariations.length > 0) {
+        variationsCache[cacheKey] = { timestamp: Date.now(), data: fetchedVariations };
+    }
     
     reply.send({ success: true, variations: fetchedVariations });
-  } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch service plans' }); }
+  } catch (error) { 
+      reply.status(500).send({ success: false, message: 'Failed to fetch service plans' }); 
+  }
 }
 
 async function buyAirtime(request, reply) {
@@ -287,7 +301,7 @@ async function buyAirtime(request, reply) {
     let transaction;
     try {
         const wallet = await Wallet.findOneAndUpdate(
-            { user: request.user._id, availableBalance: { $gte: payableAmount }, isFrozen: {$ne: true } },
+            { user: request.user._id, availableBalance: { $gte: payableAmount }, isFrozen: { $ne: true } },
             { $inc: { availableBalance: -payableAmount, balance: -payableAmount } },
             { session, new: true }
         );
