@@ -399,15 +399,18 @@
         const btnBuy = document.getElementById('btnBuy');
         btnBuy.disabled = true;
 
+        const activePlanNameElement = document.querySelector('.plan-card.active .plan-name');
+        const planNameForLoading = activePlanNameElement ? activePlanNameElement.innerText : 'Data Package';
+
         try {
             // ENTERPRISE HOLOGRAPHIC LOADER
             Swal.fire({
-                title: 'Securing Protocol...',
+                title: 'Processing...',
                 html: `
                     <div class="swal-reflective-spinner">
                         <i class="fas fa-satellite-dish swal-inner-icon"></i>
                     </div>
-                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Encrypting payload & transmitting to network...</span>
+                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">NATER-PAY is processing...<br>NATER-PAY is processing your ${planNameForLoading}...</span>
                 `,
                 allowOutsideClick: false,
                 showConfirmButton: false,
