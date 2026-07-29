@@ -195,7 +195,6 @@
 
         .fee-badge-small { display: inline-block; background: rgba(255, 68, 68, 0.15); color: #ff4444; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-top: 4px; font-weight: bold; border: 1px solid rgba(255, 68, 68, 0.3); }
         
-        /* Footer Links Styles */
         .footer-links a { color: #aaa; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: color 0.3s ease; }
         .footer-links a:hover { color: var(--gold); }
         .footer-links-divider { color: #555; margin: 0 10px; }
@@ -220,17 +219,13 @@
             <a href="kyc.html" class="sidebar-menu-link text-warning"><i class="fas fa-id-badge main-icon"></i> Identity KYC</a>
             <a href="profile.html" class="sidebar-menu-link"><i class="fas fa-id-card main-icon"></i> Profile Terminal</a>
             <a href="merchant-dashboard.html" class="sidebar-menu-link"><i class="fas fa-store main-icon"></i> Merchant Hub</a>
-            <a href="pos.html" class="sidebar-menu-link"><i class="fas fa-cash-register main-icon"></i> POS Terminal Node</a>
             <a href="security.html" class="sidebar-menu-link"><i class="fas fa-lock main-icon"></i> Vault Security</a>
             <a href="support.html" class="sidebar-menu-link"><i class="fas fa-headset main-icon"></i> Support Tickets</a>
-            <a href="     international-data.html      " class="sidebar-menu-link"><i class="fas fa-code main-icon"></i> Developer APIs</a>
+            <a href="api.html" class="sidebar-menu-link"><i class="fas fa-code main-icon"></i> Developer APIs</a>
             
             <hr class="border-secondary border-opacity-25 my-2">
             <a href="about.html" class="sidebar-menu-link" style="opacity: 0.8;"><i class="fas fa-info-circle main-icon"></i> About Ecosystem</a>
-            
-            <!-- NEW: Link to Founder Page -->
             <a href="founder.html" class="sidebar-menu-link" style="opacity: 0.9; color: var(--gold);"><i class="fas fa-user-tie main-icon"></i> Executive Founder</a>
-            
             <a href="policy.html" class="sidebar-menu-link" style="opacity: 0.8;"><i class="fas fa-shield-alt main-icon"></i> Legal & Policy</a>
         </nav>
     </div>
@@ -280,11 +275,8 @@
                 <h5 class="identity-badge-title" id="profileBadgeName">Terminal Node Core</h5>
             </div>
             <div class="col-auto ms-auto d-flex flex-wrap gap-2 justify-content-end">
-                
                 <span class="badge bg-secondary text-light fw-bolder px-3 py-2 rounded-pill kyc-clickable-badge" id="kycStatusBadge" onclick="location.href='kyc.html'" style="font-size:0.65rem;" title="Click to verify Identity">SYNCING...</span>
-                
                 <span class="badge d-none" id="tierBadge" style="font-size:0.65rem;"></span>
-
                 <div class="security-guard-warning-pill bg-dark border-secondary text-secondary" id="securityStatusPill"><i class="fas fa-sync fa-spin"></i> Checking Vault...</div>
             </div>
         </div>
@@ -335,7 +327,10 @@
             <a href="airtime.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-phone main-icon"></i><span>Airtime Recharge</span></a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="power.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-bolt main-icon"></i><span>Power Utility</span></a>
+            <a href="power.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
+                <i class="fas fa-star star-badge"></i>
+                <i class="fas fa-bolt main-icon"></i><span>Power Utility</span>
+            </a>
         </div>
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="cable.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-satellite-dish main-icon"></i><span>TV Subscriptions</span></a>
@@ -345,54 +340,61 @@
         </div>
     </div>
 
+    <!-- NEW SECTION: INTERNET & GLOBAL -->
+    <h5 class="ecosystem-section-title"><i class="fas fa-globe"></i> Internet & Global</h5>
+    <div class="row g-2" id="gridGlobal">
+        <div class="col-6 col-md-3 service-wrapper-node">
+            <a href="best-value-data.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
+                <i class="fas fa-star star-badge"></i>
+                <i class="fas fa-fire main-icon" style="color: #ff4d4d;"></i><span>GLO Best Value</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 service-wrapper-node">
+            <a href="international-airtime.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
+                <i class="fas fa-star star-badge"></i>
+                <i class="fas fa-globe-africa main-icon text-info"></i><span>Global Airtime</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 service-wrapper-node">
+            <a href="spectranet.html" class="service-link" onclick="triggerLoad(this)">
+                <i class="fas fa-satellite main-icon text-danger"></i><span>Spectranet 4G</span>
+            </a>
+        </div>
+        <div class="col-6 col-md-3 service-wrapper-node">
+            <a href="smile.html" class="service-link" onclick="triggerLoad(this)">
+                <i class="fas fa-signal main-icon text-warning"></i><span>Smile Network</span>
+            </a>
+        </div>
+    </div>
+
     <h5 class="ecosystem-section-title"><i class="fas fa-store"></i> Merchant & Business</h5>
     <div class="row g-2" id="gridBusiness">
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('Hardware POS'); return false;">
-                <span class="position-absolute badge bg-dark border border-secondary text-warning" style="top:5px; right:5px; font-size:0.5rem; letter-spacing: 1px;">UPGRADING</span>
-                <i class="fas fa-cash-register main-icon text-secondary"></i><span class="text-secondary">Hardware POS</span>
-            </a>
-        </div>
+        <!-- Suspended Features Completely Removed -->
         
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('Bulk Messaging'); return false;">
-                <span class="position-absolute badge bg-dark border border-secondary text-warning" style="top:5px; right:5px; font-size:0.5rem; letter-spacing: 1px;">UPGRADING</span>
-                <i class="fas fa-paper-plane main-icon text-secondary"></i><span class="text-secondary">Bulk Messaging</span>
-            </a>
-        </div>
-        
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="#" class="service-link" style="opacity: 0.6; filter: grayscale(100%);" onclick="showComingSoon('Asset Insurance'); return false;">
-                <span class="position-absolute badge bg-dark border border-secondary text-warning" style="top:5px; right:5px; font-size:0.5rem; letter-spacing: 1px;">UPGRADING</span>
-                <i class="fas fa-shield-alt main-icon text-secondary"></i><span class="text-secondary">Asset Insurance</span>
-            </a>
-        </div>
-        
-        <div class="col-4 col-md-2 service-wrapper-node">
+        <div class="col-4 col-md-3 service-wrapper-node">
             <a href="merchant-dashboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-chart-line main-icon"></i><span>Biz Analytics</span></a>
         </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="reseller.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-network-wired main-icon"></i><span>Reseller Network</span></a>
+        <div class="col-4 col-md-3 service-wrapper-node">
+            <a href="reseller.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
+                <i class="fas fa-star star-badge"></i>
+                <i class="fas fa-network-wired main-icon"></i><span>Reseller Network</span>
+            </a>
         </div>
         
-        <div class="col-4 col-md-2 service-wrapper-node">
+        <div class="col-4 col-md-3 service-wrapper-node">
             <a href="payment-links.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
                 <i class="fas fa-box-open main-icon"></i><span>Sell Products</span>
             </a>
         </div>
         
-        <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="qr-pay.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-qrcode main-icon"></i><span>QR Payments</span></a>
-        </div>
-        <div class="col-4 col-md-2 service-wrapper-node">
+        <div class="col-4 col-md-3 service-wrapper-node">
             <a href="invoices.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-file-invoice-dollar main-icon"></i><span>Smart Invoicing</span></a>
         </div>
     </div>
 
     <h5 class="ecosystem-section-title"><i class="fas fa-rocket"></i> Rewards & Growth</h5>
     <div class="row g-2" id="gridGrowth">
-        <!-- RESTORED CASHBACK VAULT -->
         <div class="col-4 col-md-2 service-wrapper-node">
             <a href="cashback.html" class="service-link" onclick="triggerLoad(this)">
                 <i class="fas fa-piggy-bank main-icon"></i><span>Discounts Vault</span>
@@ -463,7 +465,6 @@
         <div class="footer-links mb-4">
             <a href="about.html">About Ecosystem</a>
             <span class="footer-links-divider">|</span>
-            <!-- NEW: Link to Founder Page -->
             <a href="founder.html" style="color: var(--gold);">Executive Founder</a>
             <span class="footer-links-divider">|</span>
             <a href="policy.html">Legal & Policy Terms</a>
@@ -472,22 +473,15 @@
         </div>
         
         <div class="d-flex justify-content-center gap-3 mb-4">
-            <!-- Facebook -->
             <a href="https://facebook.com/natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
                 <i class="fab fa-facebook-f fs-5"></i>
             </a>
-            
-            <!-- Instagram -->
             <a href="https://instagram.com/natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
                 <i class="fab fa-instagram fs-5"></i>
             </a>
-            
-            <!-- TikTok -->
             <a href="https://tiktok.com/@natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
                 <i class="fab fa-tiktok fs-5"></i>
             </a>
-            
-            <!-- YouTube -->
             <a href="https://youtube.com/@natergracecode" target="_blank" class="btn btn-dark border border-secondary rounded-circle" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s;" onmouseover="this.style.borderColor='var(--gold)'; this.style.color='var(--gold)';" onmouseout="this.style.borderColor='#6c757d'; this.style.color='white';">
                 <i class="fab fa-youtube fs-5"></i>
             </a>
@@ -504,15 +498,11 @@
     let socketConnectionLink = null;
     let unreadNotifications = [];
 
-    // Backend Commission Rates Sync (Must match backend logic)
     const platformCommissionRates = { 
         airtime: 0.03, data: 0.03, cable: 0.015, electricity: 0.015, 
         betting: 0.01, insurance: 0.015, sms: 0.01, education: 0 
     };
 
-    // ====================================================================
-    // AUTO-VERIFY PAYSTACK RETURN ON DASHBOARD
-    // ====================================================================
     async function verifyReturnedPayment(reference) {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
@@ -533,30 +523,17 @@
             });
             const data = await res.json();
 
-            // Clear the ugly URL params so the URL looks clean again
             window.history.replaceState({}, document.title, window.location.pathname);
 
             if (data.success) {
                 Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Your wallet has been credited.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
-                syncDashboardData(); // Refresh the balance
+                syncDashboardData(); 
             } else {
-                // Instantly fail cancelled transactions
                 Swal.fire({ icon: 'error', title: 'Payment Failed', text: data.message || 'Transaction was abandoned or failed.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             }
         } catch (error) {
             Swal.fire({ icon: 'warning', title: 'Pending Sync', text: 'Could not verify instantly. The system will auto-reconcile shortly.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
         }
-    }
-
-    function showComingSoon(serviceName) {
-        Swal.fire({
-            icon: 'info',
-            title: 'System Upgrade',
-            text: `${serviceName} is currently undergoing a scheduled infrastructure upgrade with our partners. It will be back online soon!`,
-            background: '#0a0a0a',
-            color: '#fff',
-            confirmButtonColor: '#FFD700'
-        });
     }
 
     function triggerLoad(element) {
@@ -806,7 +783,6 @@
                 document.getElementById('statTrans').innerText = `${data.totalLogs || 0} Logs`;
                 document.getElementById('statSpent').innerText = '₦' + Number(safeSpent).toLocaleString();
                 
-                // === THE FIX: CALCULATE TOTAL EARNINGS (REFERRALS + TASKS + DISCOUNTS) ===
                 let totalDiscountsEarned = 0;
                 let totalTaskRewards = 0; 
                 
@@ -814,7 +790,6 @@
                     data.recentTransactions.forEach(tx => {
                         const payableAmount = Number(tx.amount?.$numberDecimal || tx.amount || 0);
                         
-                        // 1. Calculate Discounts
                         if (vtuTypes.includes(tx.type) && tx.status === 'success') {
                             const baseRate = platformCommissionRates[tx.type] || 0;
                             if (baseRate > 0) {
@@ -826,7 +801,6 @@
                             }
                         }
                         
-                        // 2. Add Task Rewards
                         if (tx.type === 'task_reward' && tx.status === 'success') {
                             totalTaskRewards += payableAmount;
                         }
@@ -838,7 +812,6 @@
                 
                 document.getElementById('statRefs').innerText = `${data.referralCount || 0} Nodes`;
                 document.getElementById('statBonus').innerText = '₦' + grandTotalEarnings.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-                // =========================================================================
 
                 const tbody = document.getElementById('txBody');
                 tbody.innerHTML = '';
@@ -891,7 +864,6 @@
         checkPendingFunding();
         loadNotifications(); 
 
-        // DETECT PAYSTACK RETURN URL AND VERIFY
         const urlParams = new URLSearchParams(window.location.search);
         const paystackRef = urlParams.get('reference') || urlParams.get('trxref');
         if (paystackRef) {
