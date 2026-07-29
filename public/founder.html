@@ -3,142 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | The Founder</title>
+    <title>NATER-PAY | Chief Architect & Founder</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-    <!-- Google AdSense Main Script (Loaded once in head for performance & compliance) -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
-
 <style>
-    :root { --gold: #FFD700; --gold-dim: #d4af37; --bg: #030303; --card-bg: rgba(15, 15, 15, 0.9); }
-    body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
+    :root { 
+        --gold: #FFD700; 
+        --gold-dim: #d4af37; 
+        --bg: #030303; 
+        --card-bg: rgba(12, 12, 12, 0.65); 
+        --accent-red: #d32f2f;
+    }
+    body { 
+        background: var(--bg); 
+        background-image: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.08) 0%, transparent 60%);
+        color: white; 
+        font-family: 'Montserrat', sans-serif; 
+        margin: 0; 
+        min-height: 100vh; 
+        overflow-x: hidden; 
+    }
     
     #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
 
     header {
         position: sticky; top: 0; width: 100%; padding: 15px 5%;
-        background: rgba(0, 0, 0, 0.95); border-bottom: 2px solid var(--gold);
-        display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(10px);
+        background: rgba(0, 0, 0, 0.85); border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+        display: flex; justify-content: space-between; align-items: center; z-index: 1000; 
+        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 4px 30px rgba(0,0,0,0.8);
     }
 
     .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85; }
-    .site-part-1 { color: var(--gold); font-size: 1.5rem; text-shadow: 0 0 10px rgba(255, 215, 0, 0.4); } 
-    .site-part-2 { color: #d32f2f; font-size: 1rem; letter-spacing: 3px; }
+    .site-part-1 { color: var(--gold); font-size: 1.5rem; text-shadow: 0 0 15px rgba(255, 215, 0, 0.5); } 
+    .site-part-2 { color: var(--accent-red); font-size: 1rem; letter-spacing: 3px; }
 
-    .container { max-width: 1000px; margin: 50px auto; padding: 0 20px; }
+    .container { max-width: 1050px; margin: 60px auto; padding: 0 20px; position: relative; z-index: 2; }
     
+    /* ELITE PROFILE HEADER */
     .profile-header-card {
-        background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(5, 5, 5, 0.98) 100%);
-        border: 1px solid #333; border-radius: 25px; padding: 40px; margin-bottom: 30px;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.8); position: relative; overflow: hidden;
+        background: linear-gradient(145deg, rgba(20,20,20,0.8) 0%, rgba(5,5,5,0.95) 100%);
+        backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+        border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 30px; 
+        padding: 50px 30px; margin-bottom: 40px;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.9), inset 0 0 40px rgba(255, 215, 0, 0.05); 
+        position: relative; overflow: hidden;
         display: flex; flex-direction: column; align-items: center; text-align: center;
+        animation: fadeUp 1s ease-out forwards;
     }
 
     .profile-header-card::before {
-        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 5px;
-        background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+        background: linear-gradient(90deg, transparent, var(--gold), #fff, var(--gold), transparent);
+        box-shadow: 0 0 20px var(--gold);
     }
 
-    /* UPGRADED FOUNDER PHOTO DISPLAY */
+    /* GLORIOUS FOUNDER PHOTO RING */
     .founder-photo-wrapper {
-        width: 200px; height: 200px; border-radius: 50%; padding: 6px;
-        background: conic-gradient(from 0deg, var(--gold), #ff4d4d, var(--bg), var(--gold));
-        margin-bottom: 25px; box-shadow: 0 10px 40px rgba(255, 215, 0, 0.3);
-        position: relative; animation: spinBorder 10s linear infinite;
+        width: 220px; height: 220px; border-radius: 50%; padding: 8px;
+        background: conic-gradient(from 0deg, var(--gold), transparent 30%, var(--accent-red) 50%, transparent 70%, var(--gold));
+        margin-bottom: 30px; 
+        box-shadow: 0 0 50px rgba(255, 215, 0, 0.25), inset 0 0 20px rgba(255, 215, 0, 0.5);
+        position: relative; animation: spinBorder 12s linear infinite;
     }
     
-    @keyframes spinBorder {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
+    @keyframes spinBorder { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     .founder-photo-container {
         width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
-        animation: counterSpinBorder 10s linear infinite;
-        background: #111; border: 4px solid #000;
+        animation: counterSpinBorder 12s linear infinite;
+        background: #050505; border: 4px solid #000;
         display: flex; align-items: center; justify-content: center;
+        position: relative; z-index: 5;
     }
 
-    @keyframes counterSpinBorder {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(-360deg); }
-    }
+    @keyframes counterSpinBorder { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
     
     .founder-photo {
-        width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;
-        display: none; /* Hidden by default until an image is loaded */
+        width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+        display: none; 
     }
+    .founder-photo-container:hover .founder-photo { transform: scale(1.15); }
 
-    .founder-photo-container:hover .founder-photo {
-        transform: scale(1.1);
+    /* METALLIC GOLD TEXT */
+    .founder-name { 
+        font-family: 'Cinzel', serif; font-size: clamp(2.2rem, 6vw, 3.5rem); 
+        font-weight: 900; margin-bottom: 5px; 
+        background: linear-gradient(to right, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        text-shadow: 0px 10px 20px rgba(255, 215, 0, 0.15);
+        display: flex; align-items: center; justify-content: center; gap: 15px;
     }
-
-    .founder-name { font-family: 'Cinzel', serif; font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 900; color: #fff; margin-bottom: 5px; text-shadow: 0 4px 15px rgba(0,0,0,0.8); }
-    .founder-title { color: var(--gold); font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 15px; }
+    
+    .founder-title { 
+        color: #ddd; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; 
+        letter-spacing: 4px; margin-bottom: 25px; 
+        text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+    }
     
     .academic-badge {
-        background: rgba(255, 255, 255, 0.05); border: 1px solid #444; color: #ccc;
-        padding: 8px 20px; border-radius: 50px; font-size: 0.85rem; font-weight: 700;
-        display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px; text-align: center; line-height: 1.4;
+        background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3); color: var(--gold);
+        padding: 10px 25px; border-radius: 50px; font-size: 0.85rem; font-weight: 800;
+        display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px; 
+        text-transform: uppercase; letter-spacing: 1.5px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
     }
 
-    .social-grid { display: flex; gap: 15px; justify-content: center; margin-top: 20px; }
+    .social-grid { display: flex; gap: 20px; justify-content: center; margin-top: 15px; }
     .social-btn {
-        width: 45px; height: 45px; border-radius: 50%; background: #111; border: 1px solid #333;
-        color: #aaa; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
-        transition: 0.3s; text-decoration: none;
+        width: 50px; height: 50px; border-radius: 50%; background: rgba(0,0,0,0.6); 
+        border: 1px solid rgba(255,255,255,0.1); color: #aaa; 
+        display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-decoration: none;
+        backdrop-filter: blur(5px);
     }
-    .social-btn:hover { background: rgba(212, 175, 55, 0.1); color: var(--gold); border-color: var(--gold); transform: translateY(-3px); }
+    .social-btn:hover { 
+        background: var(--gold); color: #000; border-color: var(--gold); 
+        transform: translateY(-8px) scale(1.1); box-shadow: 0 10px 20px rgba(255, 215, 0, 0.4); 
+    }
 
+    /* GLASSMORPHISM INFO CARDS */
     .content-grid { display: grid; grid-template-columns: 1fr; gap: 30px; }
-    @media (min-width: 992px) { .content-grid { grid-template-columns: 2fr 1fr; } }
+    @media (min-width: 992px) { .content-grid { grid-template-columns: 1.8fr 1fr; } }
 
     .info-card {
-        background: var(--card-bg); border: 1px solid #222; border-radius: 20px;
-        padding: 35px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        background: var(--card-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+        border: 1px solid rgba(255, 255, 255, 0.05); border-top: 1px solid rgba(255, 215, 0, 0.2);
+        border-radius: 25px; padding: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+        transition: transform 0.4s ease, border-color 0.4s ease;
+        opacity: 0; animation: fadeUp 1s ease-out forwards;
     }
+    .info-card:hover { border-color: rgba(255, 215, 0, 0.4); transform: translateY(-5px); }
 
-    .section-title { font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; font-size: 1.3rem; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; display: flex; align-items: center; gap: 10px;}
+    .section-title { 
+        font-family: 'Cinzel', serif; color: var(--gold); font-weight: 900; font-size: 1.4rem; 
+        margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.08); 
+        padding-bottom: 15px; display: flex; align-items: center; gap: 12px;
+        text-shadow: 0 2px 10px rgba(255, 215, 0, 0.2);
+    }
     
-    .biography-text { color: #ccc; line-height: 1.8; font-size: 0.95rem; font-weight: 500; white-space: pre-wrap; }
+    .biography-text { 
+        color: #d1d1d1; line-height: 1.9; font-size: 1rem; font-weight: 500; 
+        white-space: pre-wrap; text-align: justify;
+    }
 
-    .tech-stack { display: flex; flex-wrap: wrap; gap: 10px; }
+    /* PREMIUM TECH ARSENAL */
+    .tech-stack { display: flex; flex-wrap: wrap; gap: 12px; }
     .tech-pill {
-        background: #111; border: 1px solid #333; color: #fff; padding: 8px 15px;
-        border-radius: 8px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 8px;
+        background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #fff; 
+        padding: 12px 20px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; 
+        display: flex; align-items: center; gap: 10px; transition: 0.3s;
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
     }
-    .tech-pill i { color: var(--gold); }
+    .tech-pill:hover {
+        background: rgba(255,215,0,0.05); border-color: var(--gold); color: var(--gold);
+        transform: translateY(-3px); box-shadow: 0 5px 15px rgba(255, 215, 0, 0.15);
+    }
+    .tech-pill i { font-size: 1.2rem; color: var(--gold); }
 
-    /* ================= ADS SECTION SAFE STYLES ================= */
-    .google-ad-wrapper {
-        background: rgba(15, 15, 15, 0.4);
-        border: 1px dashed #333;
-        border-radius: 15px;
-        padding: 10px;
-        margin: 10px auto 40px;
-        width: 100%;
-        text-align: center;
-        overflow: hidden;
+    /* CONTACT SECTION VIP STYLING */
+    .contact-link-block {
+        display: flex; align-items: center; gap: 15px; padding: 15px;
+        background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05);
+        border-radius: 15px; transition: 0.3s; margin-bottom: 15px;
     }
-    .ad-label {
-        display: block;
-        font-size: 0.6rem;
-        color: #666;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        margin-bottom: 5px;
-    }
-    /* =========================================================== */
+    .contact-link-block:hover { background: rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.3); }
+    .contact-link-block a { color: #fff; text-decoration: none; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px; }
 
-    footer { text-align: center; padding: 30px; border-top: 1px solid #222; margin-top: 50px; background: rgba(0,0,0,0.9); }
-    .footer-compliance-tag { color: #666; font-weight: 700; font-size: 0.8rem; letter-spacing: 2px; }
+    footer { text-align: center; padding: 40px; border-top: 1px solid #222; margin-top: 60px; background: rgba(0,0,0,0.95); position: relative; z-index: 10;}
+    .footer-compliance-tag { color: #888; font-weight: 800; font-size: 0.8rem; letter-spacing: 3px; text-shadow: 0 2px 4px #000; }
+
+    @keyframes fadeUp {
+        0% { opacity: 0; transform: translateY(30px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Animation delays for staggered loading */
+    #bioCard { animation-delay: 0.2s; }
+    #skillsCard { animation-delay: 0.4s; }
+    #missionCard { animation-delay: 0.6s; }
+    #contactCard { animation-delay: 0.8s; }
+
 </style>
-
 </head>
 <body>  
+
 <canvas id="starCanvas"></canvas>
 
 <header>
@@ -152,20 +203,20 @@
 <div class="container">  
     <div class="profile-header-card" id="profileHeader">
         <div class="text-center py-5 opacity-50" id="loadingState">
-            <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing Core Ledger...
+            <i class="fas fa-spinner fa-spin fa-2x mb-3 text-warning"></i><br>Syncing Core Architect Profile...
         </div>
 
         <div id="dynamicProfile" style="display: none; width: 100%; flex-direction: column; align-items: center;">
             
-            <!-- THE PREMIUM WRAPPER ALWAYS SHOWS -->
             <div class="founder-photo-wrapper" id="photoWrapper">
                 <div class="founder-photo-container">
-                    <!-- NO HARDCODED IMAGE. ONLY SHOWS IF DATABASE HAS A URL -->
                     <img src="" alt="Founder Profile" class="founder-photo" id="founderPhoto">
                 </div>
             </div>
             
-            <h1 class="founder-name" id="founderName" style="display: none;"></h1>
+            <h1 class="founder-name" id="founderName" style="display: none;">
+                <!-- Name injects here. Checkmark will be added via JS if profile loads -->
+            </h1>
             <div class="founder-title" id="founderTitle" style="display: none;"></div>
             
             <div class="academic-badge" id="founderAcademic" style="display: none;"></div>
@@ -179,60 +230,48 @@
         </div>
     </div>
 
-    <!-- ================= START: GOOGLE ADSENSE SECTION ================= -->
-    <div class="google-ad-wrapper">
-        <span class="ad-label">Advertisement</span>
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-4661775522120249"
-             data-ad-slot="2299229388"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-    </div>
-    <!-- ================= END: GOOGLE ADSENSE SECTION ================= -->
-
     <div class="content-grid" id="profileBody" style="display: none;">
         
         <div class="d-flex flex-column gap-4">
             <div class="info-card" id="bioCard" style="display: none;">
-                <h3 class="section-title"><i class="fas fa-book-open"></i> The Vision & Autobiography</h3>
+                <h3 class="section-title"><i class="fas fa-book-open"></i> The Vision & Legacy</h3>
                 <div class="biography-text" id="founderBio"></div>
             </div>
 
             <div class="info-card" id="missionCard" style="display: none;">
-                <h3 class="section-title"><i class="fas fa-bullseye"></i> Our Mission</h3>
+                <h3 class="section-title"><i class="fas fa-bullseye"></i> Executive Mission</h3>
                 <p class="biography-text m-0" id="founderMission"></p>
             </div>
         </div>
 
         <div class="d-flex flex-column gap-4">
+            <!-- GLORIOUS TECH STACK -->
             <div class="info-card" id="skillsCard" style="display: none;">
-                <h3 class="section-title"><i class="fas fa-laptop-code"></i> Technical Arsenal</h3>
+                <h3 class="section-title"><i class="fas fa-layer-group"></i> Technical Arsenal</h3>
                 <div class="tech-stack">
-                    <div class="tech-pill"><i class="fab fa-html5"></i> Advanced HTML/CSS</div>
-                    <div class="tech-pill"><i class="fab fa-js"></i> JavaScript / Node.js</div>
-                    <div class="tech-pill"><i class="fab fa-php"></i> Laravel / PHP</div>
-                    <div class="tech-pill"><i class="fas fa-database"></i> Database Architecture</div>
-                    <div class="tech-pill"><i class="fas fa-shield-alt"></i> FinTech Security</div>
-                    <div class="tech-pill" style="border-color: var(--gold);"><i class="fas fa-rocket"></i> Python • Artificial Intelligence • Continuous Learning</div>
+                    <div class="tech-pill"><i class="fab fa-laravel"></i> Laravel Framework</div>
+                    <div class="tech-pill"><i class="fab fa-php"></i> PHP Architecture</div>
+                    <div class="tech-pill"><i class="fab fa-python" style="color: #4B8BBE;"></i> Python Engineering</div>
+                    <div class="tech-pill"><i class="fab fa-js" style="color: #F7DF1E;"></i> JavaScript / Node</div>
+                    <div class="tech-pill"><i class="fas fa-chart-pie" style="color: #FF5722;"></i> Data Analytics</div>
+                    <div class="tech-pill"><i class="fas fa-link" style="color: #00bcd4;"></i> Blockchain Tech</div>
+                    <div class="tech-pill" style="border-color: rgba(255,215,0,0.5);"><i class="fas fa-brain" style="color: #e91e63;"></i> Artificial Intelligence</div>
+                    <div class="tech-pill"><i class="fab fa-html5" style="color: #E34F26;"></i> Advanced HTML/CSS</div>
                 </div>
             </div>
 
             <div class="info-card" id="contactCard" style="display: none;">
-                <h3 class="section-title"><i class="fas fa-envelope"></i> Contact the Founder</h3>
-                <p class="text-muted small fw-bold mb-3">For enterprise partnerships, API integrations, or direct inquiries.</p>
+                <h3 class="section-title"><i class="fas fa-envelope-open-text"></i> VIP Direct Line</h3>
+                <p class="text-muted small fw-bold mb-4">Reserved for enterprise partnerships, API integrations, and direct administrative inquiries.</p>
                 
-                <div class="d-flex align-items-center gap-3 mb-3" id="whatsappBlock" style="display: none !important;">
-                    <i class="fab fa-whatsapp fs-4 text-success"></i>
-                    <a href="#" id="founderWhatsappLink" class="text-white text-decoration-none fw-bold" target="_blank"><span id="founderWhatsappText"></span></a>
+                <div class="contact-link-block" id="whatsappBlock" style="display: none !important;">
+                    <i class="fab fa-whatsapp fs-3 text-success"></i>
+                    <a href="#" id="founderWhatsappLink" target="_blank"><span id="founderWhatsappText"></span></a>
                 </div>
                 
-                <div class="d-flex align-items-center gap-3" id="emailBlock" style="display: none !important;">
-                    <i class="fas fa-envelope fs-4 text-warning"></i>
-                    <a href="#" id="founderEmailLink" class="text-white text-decoration-none fw-bold"><span id="founderEmailText"></span></a>
+                <div class="contact-link-block" id="emailBlock" style="display: none !important;">
+                    <i class="fas fa-envelope fs-3 text-warning"></i>
+                    <a href="#" id="founderEmailLink"><span id="founderEmailText"></span></a>
                 </div>
             </div>
         </div>
@@ -241,7 +280,7 @@
 </div>  
 
 <footer>
-    <p class="footer-compliance-tag m-0">BUILT BY NATER GRACE CODE | NATER-PAY ENTERPRISE</p>
+    <p class="footer-compliance-tag m-0">ARCHITECTED BY NATER GRACE CODE | NATER-PAY ENTERPRISE</p>
 </footer>  
 
 <script>
@@ -269,16 +308,17 @@
             const data = await res.json();
             
             if (data.success && data.founder) {
-                // EXACT PHOTO FROM DATABASE. NO PLACEHOLDERS.
+                // PHOTO
                 if (data.founder.photoUrl && data.founder.photoUrl.trim() !== "") {
                     document.getElementById('founderPhoto').src = data.founder.photoUrl;
                     document.getElementById('founderPhoto').style.display = 'block';
                 }
 
-                // NAME
+                // NAME WITH VERIFIED BADGE
                 if (data.founder.name && data.founder.name.trim() !== "") {
-                    document.getElementById('founderName').innerText = data.founder.name;
-                    document.getElementById('founderName').style.display = 'block';
+                    const nameEl = document.getElementById('founderName');
+                    nameEl.innerHTML = `${data.founder.name} <i class="fas fa-check-circle" style="font-size: 1.5rem; color: #00d2ff; text-shadow: 0 0 10px rgba(0,210,255,0.5);"></i>`;
+                    nameEl.style.display = 'flex';
                 }
 
                 // TITLE
@@ -289,7 +329,7 @@
 
                 // ACADEMIC
                 if (data.founder.academic && data.founder.academic.trim() !== "") {
-                    document.getElementById('founderAcademic').innerHTML = `<i class="fas fa-university text-warning"></i> ${data.founder.academic}`;
+                    document.getElementById('founderAcademic').innerHTML = `<i class="fas fa-university text-warning" style="font-size: 1.1rem;"></i> ${data.founder.academic}`;
                     document.getElementById('founderAcademic').style.display = 'inline-flex';
                 }
 
