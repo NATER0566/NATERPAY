@@ -242,9 +242,13 @@
         
         const authToken = localStorage.getItem("naterpay_token");
         
+        // Retrieve the exact plan name that the user wants to buy to display dynamically
+        const activePlanNameElement = document.querySelector('.data-plan-card.active .plan-name');
+        const planNameForLoading = activePlanNameElement ? activePlanNameElement.innerText : 'Data Package';
+
         Swal.fire({ 
             title: 'Processing...', 
-            html: '<i class="fas fa-spinner fa-spin fa-3x" style="color: var(--glo-color);"></i><br><br><span style="color:#aaa;">Transmitting GLO SME Data Request...</span>', 
+            html: `<i class="fas fa-spinner fa-spin fa-3x" style="color: var(--glo-color);"></i><br><br><span style="color:#aaa;">NATER-PAY is processing...<br>NATER-PAY is processing your ${planNameForLoading}...</span>`, 
             showConfirmButton: false, allowOutsideClick: false, background: '#0a0a0a', color: '#fff' 
         });
         
