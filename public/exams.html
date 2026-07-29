@@ -407,15 +407,18 @@
         const btnBuy = document.getElementById('btnBuy');
         btnBuy.disabled = true;
 
+        const activePlanNameElement = document.querySelector('.provider-btn.active div');
+        const planNameForLoading = activePlanNameElement ? activePlanNameElement.innerText : 'Exam PIN';
+
         try {
-            // ENTERPRISE HOLOGRAPHIC LOADER
+            // ENTERPRISE HOLOGRAPHIC LOADER WITH DYNAMIC TEXT
             Swal.fire({
-                title: 'Securing Protocol...',
+                title: 'Processing...',
                 html: `
                     <div class="swal-reflective-spinner">
                         <i class="fas fa-satellite-dish swal-inner-icon"></i>
                     </div>
-                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Encrypting payload & generating PIN...</span>
+                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">NATER-PAY is processing...<br>NATER-PAY is processing your ${planNameForLoading}...</span>
                 `,
                 allowOutsideClick: false,
                 showConfirmButton: false,
