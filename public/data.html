@@ -92,6 +92,11 @@
         .plan-card .plan-price { font-size: 1.1rem; font-weight: 900; color: var(--gold); }
         .plan-card:hover, .plan-card.active { border-color: var(--gold); background: rgba(255, 215, 0, 0.15); }
         
+        /* SCROLLABLE GRID ADDED HERE */
+        .scrollable-grid { max-height: 280px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; margin-top: 10px; }
+        .scrollable-grid::-webkit-scrollbar { width: 5px; }
+        .scrollable-grid::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
+        
         .total-box {
             background: #1A1A1A; border-left: 5px solid var(--gold); padding: 15px 25px;
             border-radius: 0 15px 15px 0; margin-bottom: 25px;
@@ -193,7 +198,8 @@
         
         <label class="amount-label text-center mb-3">2. Select Data Plan</label>
         
-        <div class="row g-2 mb-4" id="planContainer">
+        <!-- SCROLLABLE GRID CLASS ADDED HERE -->
+        <div class="row g-2 mb-4 scrollable-grid" id="planContainer">
             <div class="col-12 text-center py-4">
                 <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--gold);"></i>
                 <p class="mt-2 text-muted" style="font-weight: 600;">NATER-PAY is syncing data plans...</p>
