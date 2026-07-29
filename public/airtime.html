@@ -12,10 +12,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/socket.io/socket.io.js"></script>
 
-
-
-    
-    
     <style>
         :root { 
             --gold: #FFD700; 
@@ -412,15 +408,17 @@
         const btnBuy = document.getElementById('btnBuy');
         btnBuy.disabled = true;
         
+        const networkName = selectedNetwork.toUpperCase();
+
         try {
             // ENTERPRISE HOLOGRAPHIC LOADER
             Swal.fire({
-                title: 'Securing Protocol...',
+                title: 'Processing...',
                 html: `
                     <div class="swal-reflective-spinner">
                         <i class="fas fa-satellite-dish swal-inner-icon"></i>
                     </div>
-                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Encrypting payload & transmitting to network...</span>
+                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">NATER-PAY is processing...<br>NATER-PAY is processing your ₦${amount.toLocaleString()} ${networkName} Airtime...</span>
                 `,
                 allowOutsideClick: false,
                 showConfirmButton: false,
