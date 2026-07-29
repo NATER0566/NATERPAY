@@ -272,9 +272,17 @@
         
         const authToken = localStorage.getItem("naterpay_token");
         
+        const activePlanNameElement = document.querySelector('.plan-card.active .plan-name');
+        const planNameForLoading = activePlanNameElement ? activePlanNameElement.innerText : 'Smile Package';
+        
         Swal.fire({ 
-            title: 'Authenticating...', 
-            html: `<div class="swal-reflective-spinner"><i class="fas fa-satellite-dish swal-inner-icon"></i></div><span style="color:#aaa; font-weight:600; font-size:0.85rem;">Routing request to Smile Network...</span>`, 
+            title: 'Processing...', 
+            html: `
+                <div class="swal-reflective-spinner">
+                    <i class="fas fa-satellite-dish swal-inner-icon"></i>
+                </div>
+                <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Processing your ${planNameForLoading}...</span>
+            `, 
             showConfirmButton: false, allowOutsideClick: false, background: '#0a0a0a', color: '#fff' 
         });
         
