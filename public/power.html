@@ -77,7 +77,7 @@
             margin-bottom: 10px;
         }
         
-        .input-group-custom input, .input-group-custom select {
+        .input-group-custom input {
             background: transparent; 
             border: none; 
             color: #FFFFFF; 
@@ -87,12 +87,26 @@
             outline: none;
             text-overflow: ellipsis; 
         }
-        
-        .input-group-custom select option {
-            background: #111;
-            color: #FFF;
-            font-size: 1rem;
+
+        /* GRID CARDS FOR SELECTION (Replaces Dropdown) */
+        .plan-card {
+            background: #1A1A1A; border: 2px solid #444; border-radius: 15px;
+            padding: 15px 10px; cursor: pointer; transition: 0.3s; height: 100%;
+            min-height: 105px; display: flex; flex-direction: column; justify-content: center; 
+            align-items: center; text-align: center; overflow: hidden;
         }
+        .plan-card i { font-size: 1.5rem; color: #555; margin-bottom: 10px; transition: 0.3s; }
+        .plan-card .plan-name { font-size: 0.85rem; font-weight: 800; color: #FFFFFF; line-height: 1.2; word-wrap: break-word; word-break: break-word; white-space: normal; width: 100%; margin-bottom: 5px; }
+        .plan-card .plan-price { font-size: 0.75rem; font-weight: 900; color: #888; transition: 0.3s; }
+        
+        .plan-card:hover { border-color: var(--gold); background: rgba(255, 215, 0, 0.1); }
+        .plan-card.active { border-color: var(--gold); background: rgba(255, 215, 0, 0.15); box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
+        .plan-card.active i { color: var(--gold); }
+        .plan-card.active .plan-price { color: var(--gold); }
+        
+        .scrollable-grid { max-height: 320px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; margin-bottom: 25px; }
+        .scrollable-grid::-webkit-scrollbar { width: 5px; }
+        .scrollable-grid::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
         
         .amount-input {
             background: #1A1A1A; 
@@ -208,36 +222,116 @@
     <h1 class="text-center mb-4" style="font-family: 'Cinzel'; font-weight: 900; color: var(--gold); font-size: 2.5rem;">ELECTRICITY</h1>
     
     <div class="power-card">
-        <div class="input-group-custom">
-            <label>ELECTRICITY COMPANY</label>
-            <select id="disco">
-                <option value="">-- SELECT COMPANY --</option>
-                <option value="ikeja-electric">Ikeja Electric (IKEDC)</option>
-                <option value="eko-electric">Eko Electric (EKEDC)</option>
-                <option value="abuja-electric">Abuja Electric (AEDC)</option>
-                <option value="kano-electric">Kano Electric (KEDCO)</option>
-                <option value="port-harcourt-electric">Port Harcourt Electric (PHEDC)</option>
-                <option value="jos-electric">Jos Electric (JEDC)</option>
-                <option value="ibadan-electric">Ibadan Electric (IBEDC)</option>
-                <option value="kaduna-electric">Kaduna Electric (KAEDCO)</option>
-                <option value="enugu-electric">Enugu Electric (EEDC)</option>
-                <option value="benin-electric">Benin Electric (BEDC)</option>
-                <option value="aba-electric">Aba Electric (ABEDC)</option>
-                <option value="yola-electric">Yola Electric (YEDC)</option>
-            </select>
-        </div>
         
+        <label class="amount-label text-center mb-3">1. SELECT ELECTRICITY COMPANY</label>
+        
+        <div class="row g-2 scrollable-grid">
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'ikeja-electric', 'Ikeja Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Ikeja Electric</div>
+                    <div class="plan-price">IKEDC</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'eko-electric', 'Eko Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Eko Electric</div>
+                    <div class="plan-price">EKEDC</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'abuja-electric', 'Abuja Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Abuja Electric</div>
+                    <div class="plan-price">AEDC</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'kano-electric', 'Kano Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Kano Electric</div>
+                    <div class="plan-price">KEDCO</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'port-harcourt-electric', 'Port Harcourt Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Port Harcourt</div>
+                    <div class="plan-price">PHEDC</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'jos-electric', 'Jos Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Jos Electric</div>
+                    <div class="plan-price">JEDC</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'ibadan-electric', 'Ibadan Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Ibadan Electric</div>
+                    <div class="plan-price">IBEDC</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'kaduna-electric', 'Kaduna Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Kaduna Electric</div>
+                    <div class="plan-price">KAEDCO</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'enugu-electric', 'Enugu Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Enugu Electric</div>
+                    <div class="plan-price">EEDC</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'benin-electric', 'Benin Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Benin Electric</div>
+                    <div class="plan-price">BEDC</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'aba-electric', 'Aba Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Aba Electric</div>
+                    <div class="plan-price">ABEDC</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="plan-card disco-card" onclick="selectDisco(this, 'yola-electric', 'Yola Electric')">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="plan-name">Yola Electric</div>
+                    <div class="plan-price">YEDC</div>
+                </div>
+            </div>
+        </div>
+
+        <label class="amount-label text-center mb-3">2. SELECT METER TYPE</label>
+        
+        <div class="row g-2 mb-4">
+            <div class="col-6">
+                <div class="plan-card meter-card active" onclick="selectMeterType(this, 'prepaid')">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <div class="plan-name" style="font-size: 1rem;">Prepaid Meter</div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="plan-card meter-card" onclick="selectMeterType(this, 'postpaid')">
+                    <i class="fas fa-file-invoice"></i>
+                    <div class="plan-name" style="font-size: 1rem;">Postpaid Meter</div>
+                </div>
+            </div>
+        </div>
+
         <div class="input-group-custom">
             <label>METER NUMBER</label>
             <input type="text" id="meterNumber" placeholder="Enter meter number...">
-        </div>
-        
-        <div class="input-group-custom">
-            <label>METER TYPE</label>
-            <select id="meterType">
-                <option value="prepaid">Prepaid Meter</option>
-                <option value="postpaid">Postpaid Meter</option>
-            </select>
         </div>
 
         <div class="input-group-custom">
@@ -271,6 +365,23 @@
 </div>
 
 <script>
+    let selectedDiscoCode = '';
+    let selectedDiscoName = '';
+    let selectedMeterType = 'prepaid'; // Defaults to prepaid
+
+    function selectDisco(element, code, name) {
+        document.querySelectorAll('.disco-card').forEach(card => card.classList.remove('active'));
+        element.classList.add('active');
+        selectedDiscoCode = code;
+        selectedDiscoName = name;
+    }
+
+    function selectMeterType(element, type) {
+        document.querySelectorAll('.meter-card').forEach(card => card.classList.remove('active'));
+        element.classList.add('active');
+        selectedMeterType = type;
+    }
+
     function initStars() {
         const canvas = document.getElementById('starCanvas');
         canvas.width = window.innerWidth;
@@ -315,19 +426,23 @@
     }
     
     async function buyElectricity() {
-        const disco = document.getElementById('disco').value;
+        const disco = selectedDiscoCode;
         const meterNumber = document.getElementById('meterNumber').value;
-        const meterType = document.getElementById('meterType').value;
+        const meterType = selectedMeterType;
         const amount = parseFloat(document.getElementById('powerAmount').value);
         const pin = document.getElementById('withdrawalPin').value;
         const phone = document.getElementById('customerPhone').value;
         
-        if (!disco || !meterNumber || !phone) {
+        if (!disco) {
+            Swal.fire({ icon: 'error', title: 'Missing Information', text: 'Please select an electricity company from the grid.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
+            return;
+        }
+
+        if (!meterNumber || !phone) {
             Swal.fire({ icon: 'error', title: 'Missing Information', text: 'Please fill in all the required details, including the phone number.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             return;
         }
         
-        // UPDATED VALIDATION FOR 1000 MINIMUM
         if (!amount || amount < 1000) {
             Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'As mandated by utility providers, the minimum electricity purchase is ₦1,000.', confirmButtonColor: '#FF3333', background: '#111111', color: '#FFFFFF' });
             return;
@@ -345,14 +460,14 @@
         btnBuy.disabled = true;
 
         try {
-            // ENTERPRISE HOLOGRAPHIC LOADER
+            // ENTERPRISE HOLOGRAPHIC LOADER WITH EXACT DYNAMIC TEXT
             Swal.fire({
-                title: 'Securing Protocol...',
+                title: 'Processing...',
                 html: `
                     <div class="swal-reflective-spinner">
                         <i class="fas fa-bolt swal-inner-icon"></i>
                     </div>
-                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Encrypting payload & generating Token...</span>
+                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">NATER-PAY is processing...<br>NATER-PAY is processing your ${selectedDiscoName} payment...</span>
                 `,
                 allowOutsideClick: false,
                 showConfirmButton: false,
@@ -362,7 +477,6 @@
             const res = await fetch('/api/vtu/electricity', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                // Added phone to the payload to comply with VTPass rules
                 body: JSON.stringify({ meterNumber, disco, amount, meterType, pin, phone })
             });
             
