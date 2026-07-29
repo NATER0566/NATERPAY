@@ -11,9 +11,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-
-
-    
     <style>
         :root { 
             --gold: #FFD700; 
@@ -93,6 +90,11 @@
         .plan-card .plan-name { font-size: 0.85rem; font-weight: 800; color: #FFFFFF; line-height: 1.2; word-wrap: break-word; word-break: break-word; white-space: normal; width: 100%; margin-bottom: 5px; }
         .plan-card .plan-price { font-size: 1.1rem; font-weight: 900; color: var(--gold); }
         .plan-card:hover, .plan-card.active { border-color: var(--gold); background: rgba(255, 215, 0, 0.15); }
+        
+        /* SCROLLABLE GRID ADDED HERE */
+        .scrollable-grid { max-height: 280px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; margin-top: 10px; }
+        .scrollable-grid::-webkit-scrollbar { width: 5px; }
+        .scrollable-grid::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
         
         .total-box {
             background: #1A1A1A; border-left: 5px solid var(--gold); padding: 15px 25px;
@@ -195,7 +197,8 @@
         
         <label class="amount-label text-center mb-3">2. Select Package</label>
         
-        <div class="row g-2 mb-4" id="planContainer">
+        <!-- SCROLLABLE GRID ADDED HERE -->
+        <div class="row g-2 mb-4 scrollable-grid" id="planContainer">
             <div class="col-12 text-center py-4">
                 <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--gold);"></i>
                 <p class="mt-2 text-muted" style="font-weight: 600;">NATER-PAY is syncing packages...</p>
@@ -366,15 +369,18 @@
         const btnBuy = document.getElementById('btnBuy');
         btnBuy.disabled = true;
 
+        const activePlanNameElement = document.querySelector('.plan-card.active .plan-name');
+        const planNameForLoading = activePlanNameElement ? activePlanNameElement.innerText : 'Cable Package';
+
         try {
-            // ENTERPRISE HOLOGRAPHIC LOADER
+            // ENTERPRISE HOLOGRAPHIC LOADER WITH DYNAMIC TEXT
             Swal.fire({
-                title: 'Securing Protocol...',
+                title: 'Processing...',
                 html: `
                     <div class="swal-reflective-spinner">
                         <i class="fas fa-satellite-dish swal-inner-icon"></i>
                     </div>
-                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">Encrypting payload & transmitting to network...</span>
+                    <span style="color:#aaa; font-weight:600; font-size:0.85rem;">NATER-PAY is processing...<br>NATER-PAY is processing your ${planNameForLoading}...</span>
                 `,
                 allowOutsideClick: false,
                 showConfirmButton: false,
