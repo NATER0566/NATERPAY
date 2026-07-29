@@ -189,8 +189,6 @@ async function processVTURequest(type, data) {
       payload.serviceID = data.provider; payload.phone = data.phone || '08000000000'; payload.billersCode = isSandbox ? '08011111111' : data.customerId;
   } else if (type === 'insurance') {
       payload.serviceID = data.provider; payload.phone = isSandbox ? '08011111111' : data.phone;
-  } else if (type === 'sms') {
-      payload.serviceID = data.provider || 'bulk-sms'; payload.phone = data.phone;
   } else if (type === 'foreign-airtime') {
       payload.serviceID = 'foreign-airtime';
       payload.operator_id = data.operator; 
@@ -667,16 +665,26 @@ async function buyInsurance(request, reply) {
   } catch (error) { logger.error('Insurance Error', error); reply.status(500).send({ success: false, message: 'System error' }); }
 }
 
+// =====================================================================
+// [NEW] DEDICATED VTPASS V2 MESSAGING API (DND FALLBACK)
+// =====================================================================
 async function buySms(request, reply) {
   try {
-    const { provider, phone, amount, pin } = request.body;
-    if (!phone || !amount) return reply.status(400).send({ success: false, message: 'Invalid inputs' });
+    const { sender, recipient, message, pin } = request.body;
+    if (!sender || !recipient || !message) {
+        return reply.status(400).send({ success: false, message: 'Sender ID, recipient, and message are required.' });
+    }
     
     const pinCheck = await validateTransactionPin(request.user._id, pin);
     if (!pinCheck.isValid) return reply.status(401).send({ success: false, message: pinCheck.message });
     
-    const payableAmount = sanitizeAmount(applyEnterpriseDiscount(parseFloat(amount), 'sms', request.user.role));
+    // CALCULATE COST: ₦5 per recipient per page (160 characters = 1 page) to prevent financial leaks
+    const recipientCount = recipient.split(',').filter(r => r.trim().length > 0).length;
+    const pages = Math.ceil(message.length / 160) || 1;
+    const exactAmount = recipientCount * pages * 5; // Base flat cost
+    const payableAmount = sanitizeAmount(applyEnterpriseDiscount(exactAmount, 'sms', request.user.role));
 
+    // STEP 1: ATOMIC WALLET DEBIT
     const session = await mongoose.startSession(); session.startTransaction();
     let transaction;
     try {
@@ -685,12 +693,12 @@ async function buySms(request, reply) {
             { $inc: { availableBalance: -payableAmount, balance: -payableAmount } },
             { session, new: true }
         );
-        if (!wallet) throw new Error('Insufficient balance or wallet frozen');
+        if (!wallet) throw new Error('Insufficient balance to send this bulk SMS.');
 
         transaction = new Transaction({
-            user: request.user._id, type: 'sms', description: `Bulk SMS units purchased`,
+            user: request.user._id, type: 'sms', description: `Bulk SMS (${pages} page/s) to ${recipientCount} recipient/s from ${sender}`,
             amount: payableAmount, fee: 0, balanceBefore: String(sanitizeAmount(wallet.availableBalance) + payableAmount), balanceAfter: String(wallet.availableBalance),
-            status: 'pending', provider: 'vtpass', reference: `VTU-${Date.now()}`
+            status: 'pending', provider: 'vtpass', reference: `SMS-${Date.now()}`
         });
         await transaction.save({ session });
         await session.commitTransaction(); session.endSession();
@@ -699,21 +707,55 @@ async function buySms(request, reply) {
         return reply.status(400).send({ success: false, message: err.message });
     }
 
+    // STEP 2: DEDICATED MESSAGING API CALL
     try {
-      const providerResponse = await processVTURequest('sms', { provider: provider || 'bulk-sms', phone, amount });
-      transaction.status = 'success'; transaction.providerReference = providerResponse.reference; await transaction.save();
-      await createAuditLog({ user: request.user._id, transactionId: transaction._id, reference: transaction.reference, amount: payableAmount, type: 'sms_purchase', previousBalance: transaction.balanceBefore, newBalance: transaction.balanceAfter, ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'success', source: 'VTU API' });
-      await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
-      if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: transaction.balanceAfter });
-      reply.send({ success: true, message: 'SMS units purchased successfully', transaction });
+      const token = process.env.VTPASS_MESSAGING_TOKEN;
+      const secret = process.env.VTPASS_MESSAGING_SECRET;
+      
+      if (!token || !secret) throw new Error("VTpass Messaging API Keys are missing in .env");
+
+      const messagingUrl = 'https://messaging.vtpass.com/v2/api/sms/dnd-fallback';
+      const headers = {
+        'X-Token': token,
+        'X-Secret': secret,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      };
+
+      const params = new URLSearchParams();
+      params.append('sender', sender);
+      params.append('recipient', recipient);
+      params.append('message', message);
+      params.append('responsetype', 'json');
+
+      const response = await axios.post(messagingUrl, params, { headers, timeout: 30000 });
+      const resData = response.data;
+
+      if (resData.responseCode === 'TG00' || resData.response === 'MESSAGE PROCESSED') {
+          transaction.status = 'success'; 
+          transaction.providerReference = resData.batchId || resData.messages?.[0]?.messageId || `BATCH-${Date.now()}`; 
+          await transaction.save();
+          
+          await createAuditLog({ user: request.user._id, transactionId: transaction._id, reference: transaction.reference, amount: payableAmount, type: 'sms_purchase', previousBalance: transaction.balanceBefore, newBalance: transaction.balanceAfter, ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'success', source: 'VTU API' });
+          await registerSuccessfulSpend(request.user._id, payableAmount, request.server.io);
+          if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: transaction.balanceAfter });
+          
+          reply.send({ success: true, message: 'SMS units dispatched successfully', transaction });
+      } else {
+          throw new Error(resData.response || 'Provider Error: Failed to dispatch SMS');
+      }
     } catch (vtuError) {
+      // STEP 3: ATOMIC REFUND ON MESSAGING FAILURE
+      const errorMsg = vtuError.response?.data?.response || vtuError.message || 'Failed to dispatch SMS';
+      
       const refundSession = await mongoose.startSession(); refundSession.startTransaction();
       const refundedWallet = await Wallet.findOneAndUpdate({ user: request.user._id }, { $inc: { availableBalance: payableAmount, balance: payableAmount } }, { session: refundSession, new: true });
       transaction.status = 'failed'; transaction.balanceAfter = String(refundedWallet.availableBalance); await transaction.save({ session: refundSession });
+      
       await createAuditLog({ user: request.user._id, transactionId: transaction._id, reference: transaction.reference, amount: payableAmount, type: 'vtu_refund', previousBalance: String(sanitizeAmount(refundedWallet.availableBalance) - payableAmount), newBalance: String(refundedWallet.availableBalance), ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'failed', source: 'VTU API Error' }, refundSession);
       await refundSession.commitTransaction(); refundSession.endSession();
       if (request.server.io) request.server.io.to(`user:${request.user._id}`).emit('wallet:update', { balance: String(refundedWallet.availableBalance) });
-      return reply.status(400).send({ success: false, message: vtuError.message });
+      
+      return reply.status(400).send({ success: false, message: errorMsg });
     }
   } catch (error) { logger.error('SMS Error', error); reply.status(500).send({ success: false, message: 'System error' }); }
 }
