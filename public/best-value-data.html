@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATER-PAY | GLO SME Data</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <style>
+        :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #030303; --card-bg: rgba(15, 15, 15, 0.95); --best-value: #00d2ff; --glo-color: #009933; }
+        body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
+        
+        #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
+
+        header {
+            position: sticky; top: 0; width: 100%; padding: 15px 5%;
+            background: rgba(0, 0, 0, 0.95); border-bottom: 2px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000; backdrop-filter: blur(10px);
+        }
+
+        .brand-text { font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display: flex; flex-direction: column; align-items: flex-start; line-height: 0.85;}
+        .site-part-1 { color: var(--gold); font-size: 1.6rem; text-shadow: 0 0 10px var(--gold-glow); } 
+        .site-part-2 { color: #d32f2f; font-size: 1.1rem; letter-spacing: 3px; }
+
+        .container { max-width: 700px; margin: 40px auto; padding: 0 20px; }
+        
+        .header-title { font-family: 'Cinzel', serif; color: var(--glo-color); font-weight: 900; text-align: center; margin-bottom: 30px; font-size: 2.2rem; text-shadow: 0 0 15px rgba(0, 153, 51, 0.4); }
+
+        .balance-display {
+            background: linear-gradient(145deg, #111 0%, #1a1a1a 100%); border: 2px solid var(--gold);
+            border-radius: 20px; padding: 25px; text-align: center; margin-bottom: 30px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 0 15px var(--gold-glow);
+        }
+        .balance-amount { font-family: 'Cinzel'; font-size: 2.5rem; color: var(--gold); font-weight: 900; text-shadow: 0 0 10px var(--gold-glow); margin-top: 5px; }
+
+        .vtu-card {
+            background: var(--card-bg); border: 1px solid #333; border-radius: 25px;
+            padding: 40px 30px; margin-bottom: 30px; backdrop-filter: blur(15px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6); position: relative; overflow: hidden;
+        }
+        .vtu-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--glo-color), transparent); }
+
+        .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; transition: 0.3s; }
+        .input-group-custom:focus-within { border-color: var(--glo-color); box-shadow: 0 0 15px rgba(0, 153, 51, 0.2); }
+        .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+        .input-group-custom input { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 700; outline: none; }
+
+        /* DYNAMIC PLAN GRID */
+        .plan-card {
+            background: #0a0a0a; border: 1.5px solid #333; border-radius: 12px;
+            padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.3s;
+            height: 100%; min-height: 90px; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; overflow: hidden;
+        }
+        .plan-card:hover { border-color: var(--glo-color); background: rgba(0, 153, 51, 0.05); }
+        .plan-card.active { border-color: var(--gold); background: rgba(255, 215, 0, 0.1); box-shadow: 0 0 15px var(--gold-glow); }
+        .plan-name { font-size: 0.85rem; font-weight: 800; color: #fff; width: 100%; word-wrap: break-word; }
+        .plan-price { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--glo-color); font-weight: 900; margin-top: 8px; }
+        
+        .scrollable-grid { max-height: 280px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; margin-top: 10px; }
+        .scrollable-grid::-webkit-scrollbar { width: 5px; }
+        .scrollable-grid::-webkit-scrollbar-thumb { background: var(--glo-color); border-radius: 10px; }
+
+        .btn-pay {
+            background: var(--glo-color); color: white; font-weight: 900; border-radius: 15px;
+            padding: 20px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s;
+        }
+        .btn-pay:hover { background: white; color: var(--glo-color); transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255,255,255,0.2); }
+        
+        .loading-text { text-align: center; color: var(--gold); font-weight: 700; font-size: 0.9rem; margin-top: -10px; margin-bottom: 20px; display: none; }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<header>
+    <div class="brand-text">
+        <span class="site-part-1">NATER</span>
+        <span class="site-part-2">PAY</span>
+    </div>
+    <a href="dashboard.html" class="btn btn-outline-warning rounded-pill px-4 fw-bold"><i class="fas fa-arrow-left me-2"></i> Dashboard</a>
+</header>
+
+<div class="container">
+    <div class="text-center">
+        <h1 class="header-title"><i class="fas fa-globe me-2"></i> GLO SME DATA</h1>
+        <p class="text-muted small fw-bold mb-4" style="letter-spacing: 1px;">EXCLUSIVE HIGH-VALUE BUNDLES</p>
+    </div>
+    
+    <div class="balance-display">
+        <small class="text-secondary fw-bold" style="letter-spacing: 2px;">SECURE WALLET BALANCE</small>
+        <div class="balance-amount" id="walletBalance">₦0.00</div>
+    </div>
+    
+    <div class="vtu-card">
+        
+        <!-- VTpass only separates GLO SME, so we automatically set the network to glo-sme-data -->
+        <input type="hidden" id="selectedNetwork" value="glo-sme-data">
+
+        <!-- Dynamic Plan Loader -->
+        <div class="loading-text" id="plansLoader"><i class="fas fa-spinner fa-spin me-2"></i> Fetching GLO SME Packages...</div>
+
+        <div class="input-group-custom" id="plansWrapper" style="display: none; border-color: #222; background: transparent; padding: 0;">
+            <label style="padding-left: 5px;">Select GLO SME Package</label>
+            <div id="plansGrid" class="row g-2 scrollable-grid">
+                <!-- Data Plans will be injected here automatically -->
+            </div>
+        </div>
+        <input type="hidden" id="selectedPlan"> 
+
+        <!-- Phone & Amount Details -->
+        <div class="input-group-custom mt-3">
+            <label>Recipient Phone Number</label>
+            <input type="tel" id="targetPhone" placeholder="0805 000 0000" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        </div>
+
+        <div class="input-group-custom">
+            <label>Package Price (₦)</label>
+            <input type="text" id="targetAmountDisplay" placeholder="0.00" readonly style="color: var(--glo-color);">
+            <input type="hidden" id="targetAmount">
+        </div>
+
+        <div class="input-group-custom mt-4 border-warning">
+            <label><i class="fas fa-lock me-1"></i> AUTHORIZATION PIN</label>
+            <input type="password" id="transactionPin" placeholder="Enter 4-digit PIN" maxlength="4" style="letter-spacing: 10px; font-size: 1.5rem; text-align: center;">
+        </div>
+        
+        <button class="btn-pay" onclick="processDataPayment()">
+            <i class="fas fa-paper-plane me-2"></i> DISBURSE GLO DATA
+        </button>
+    </div>
+</div>
+
+<script>
+    let socket = null;
+
+    function initStars() {
+        const c = document.getElementById('starCanvas');
+        c.width = window.innerWidth; c.height = window.innerHeight;
+        const ctx = c.getContext('2d');
+        const stars = [];
+        for(let i = 0; i < 100; i++) stars.push({ x: Math.random() * c.width, y: Math.random() * c.height, s: Math.random() * 2 + 1, v: Math.random() * 0.5 + 0.1, o: Math.random() });
+        function animate() {
+            ctx.clearRect(0, 0, c.width, c.height);
+            stars.forEach(s => { ctx.globalAlpha = s.o; ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); ctx.fill(); s.y += s.v; if(s.y > c.height) s.y = -5; });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+    
+    async function loadBalance() {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) { window.location.href = '/index.html'; return; }
+        try {
+            const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
+            const data = await res.json();
+            if (data.success) {
+                const safeBal = data.balance?.$numberDecimal || data.balance || 0;
+                document.getElementById('walletBalance').innerText = '₦' + Number(safeBal).toLocaleString(undefined, {minimumFractionDigits:2});
+            }
+        } catch (e) {}
+    }
+
+    async function fetchGloSmePlans() {
+        const token = localStorage.getItem("naterpay_token");
+        const loader = document.getElementById('plansLoader');
+        const grid = document.getElementById('plansGrid');
+        const wrapper = document.getElementById('plansWrapper');
+        
+        grid.innerHTML = '';
+        wrapper.style.display = 'none';
+        loader.style.display = 'block';
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        try {
+            // Fetch directly from the glo-sme-data endpoint
+            const response = await fetch(`/api/vtu/variations?serviceID=glo-sme-data`, { 
+                headers: { 'Authorization': `Bearer ${token}` },
+                signal: controller.signal 
+            });
+            clearTimeout(timeoutId);
+            
+            const data = await response.json();
+            
+            if (data.success && Array.isArray(data.variations) && data.variations.length > 0) {
+                grid.innerHTML = '';
+                data.variations.forEach(plan => {
+                    const amtFormatted = Number(plan.variation_amount).toLocaleString(undefined, {minimumFractionDigits: 2});
+                    grid.innerHTML += `
+                        <div class="col-6 col-md-4">
+                            <div class="plan-card data-plan-card" onclick="selectPlan(this, '${plan.variation_code}', '${plan.variation_amount}')">
+                                <div class="plan-name">${plan.name}</div>
+                                <div class="plan-price">₦${amtFormatted}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                wrapper.style.display = 'block';
+            } else {
+                Swal.fire({ icon: 'info', title: 'No Packages', text: 'GLO SME packages are currently unavailable in the test environment.', background: '#111', color: '#fff' });
+            }
+        } catch (error) {
+            clearTimeout(timeoutId);
+            Swal.fire({ icon: 'error', title: 'Sync Error', text: 'Failed to securely fetch GLO SME bundles from the provider.', background: '#111', color: '#fff' });
+        } finally {
+            loader.style.display = 'none';
+        }
+    }
+
+    function selectPlan(cardElement, planCode, amount) {
+        document.querySelectorAll('.data-plan-card').forEach(c => c.classList.remove('active'));
+        cardElement.classList.add('active');
+        document.getElementById('selectedPlan').value = planCode;
+        document.getElementById('targetAmount').value = amount;
+        document.getElementById('targetAmountDisplay').value = Number(amount).toLocaleString(undefined, {minimumFractionDigits: 2});
+    }
+
+    async function processDataPayment() {
+        const network = document.getElementById('selectedNetwork').value;
+        const plan = document.getElementById('selectedPlan').value;
+        const phone = document.getElementById('targetPhone').value;
+        const amount = document.getElementById('targetAmount').value;
+        const pin = document.getElementById('transactionPin').value;
+        
+        if (!plan || !phone || !amount) {
+            return Swal.fire({ icon: 'warning', title: 'Incomplete', text: 'Please complete all fields and select a GLO SME package.', background: '#111', color: '#fff' });
+        }
+        if (phone.length < 10) {
+            return Swal.fire({ icon: 'warning', title: 'Invalid Phone', text: 'Please enter a valid phone number.', background: '#111', color: '#fff' });
+        }
+        if (pin.length !== 4) {
+            return Swal.fire({ icon: 'warning', title: 'Security Pin', text: 'Enter your 4-digit transaction PIN.', background: '#111', color: '#fff' });
+        }
+        
+        const authToken = localStorage.getItem("naterpay_token");
+        
+        Swal.fire({ 
+            title: 'Processing...', 
+            html: '<i class="fas fa-spinner fa-spin fa-3x" style="color: var(--glo-color);"></i><br><br><span style="color:#aaa;">Transmitting GLO SME Data Request...</span>', 
+            showConfirmButton: false, allowOutsideClick: false, background: '#0a0a0a', color: '#fff' 
+        });
+        
+        try {
+            // Uses your standard vtu.js buyData route seamlessly
+            const res = await fetch('/api/vtu/data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ phone: phone, network: network, plan: plan, amount: amount, pin: pin })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Data Delivered!', text: `Successfully credited ${phone} with GLO SME Data.`, confirmButtonColor: '#009933', background: '#111', color: '#fff' }).then(() => {
+                    document.getElementById('targetPhone').value = '';
+                    document.getElementById('targetAmount').value = '';
+                    document.getElementById('targetAmountDisplay').value = '';
+                    document.getElementById('transactionPin').value = '';
+                    document.getElementById('selectedPlan').value = '';
+                    document.querySelectorAll('.data-plan-card').forEach(c => c.classList.remove('active'));
+                    loadBalance();
+                });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Transaction Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            }
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Unable to securely contact VTU gateway.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+        }
+    }
+    
+    window.onload = () => { 
+        initStars(); 
+        loadBalance(); 
+        fetchGloSmePlans(); // Automatically fetches GLO SME plans on page load
+        
+        try {
+            socket = io(window.location.origin, { query: { token: localStorage.getItem("naterpay_token") } });
+            socket.on('wallet:update', (data) => {
+                const bal = data.balance?.$numberDecimal || data.balance;
+                document.getElementById('walletBalance').innerText = '₦' + Number(bal).toLocaleString(undefined, {minimumFractionDigits: 2});
+            });
+        } catch(e) {}
+    };
+    window.onresize = initStars;
+</script>
+</body>
+</html>
