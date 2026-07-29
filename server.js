@@ -215,10 +215,11 @@ async function registerRoutes() {
     fastify.get('/api/vtu/rates', vtuRoutes.getRates);
     fastify.get('/api/vtu/variations', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getVariations);
     
-    // [FIX] MISSING CONNECTIONS FOR GLOBAL AIRTIME
+    // [FIX] CONNECTIONS FOR GLOBAL AIRTIME & DATA
     fastify.get('/api/vtu/international/countries', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getInternationalCountries);
     fastify.get('/api/vtu/international/operators', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getInternationalOperators);
     fastify.post('/api/vtu/foreign-airtime', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyForeignAirtime);
+    fastify.post('/api/vtu/foreign-data', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyForeignData);
     
     const transactionRoutes = require('./routes/transaction');
     fastify.get('/api/transactions', { preHandler: require('./middleware/auth').authenticate }, transactionRoutes.getTransactions);
