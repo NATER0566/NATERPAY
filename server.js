@@ -340,6 +340,10 @@ async function registerRoutes() {
     fastify.get('/api/api/balance', { preHandler: apiRoutes.authenticateApiKey }, apiRoutes.apiGetBalance);
     fastify.post('/api/api/transactions', { preHandler: apiRoutes.authenticateApiKey }, apiRoutes.apiCreateTransaction);
 
+    // === NATERPAY AI SYSTEM ===
+    const aiRoutes = require('./routes/ai');
+    fastify.post('/api/ai/chat', { preHandler: require('./middleware/auth').authenticate }, aiRoutes.chatWithAI);
+
     const statusRoutes = require('./routes/status');
     fastify.get('/api/system-status', statusRoutes.getSystemStatus);
 
