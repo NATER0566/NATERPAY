@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Global Data</title>
+    <title>NATER-PAY | Best Value Data</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -12,7 +12,7 @@
     <script src="/socket.io/socket.io.js"></script>
     
     <style>
-        :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #030303; --card-bg: rgba(15, 15, 15, 0.95); --global-data: #00E676; }
+        :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #030303; --card-bg: rgba(15, 15, 15, 0.95); --best-value: #00d2ff; }
         body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
@@ -29,7 +29,7 @@
 
         .container { max-width: 700px; margin: 40px auto; padding: 0 20px; }
         
-        .header-title { font-family: 'Cinzel', serif; color: var(--global-data); font-weight: 900; text-align: center; margin-bottom: 30px; font-size: 2.2rem; text-shadow: 0 0 15px rgba(0, 230, 118, 0.4); }
+        .header-title { font-family: 'Cinzel', serif; color: var(--best-value); font-weight: 900; text-align: center; margin-bottom: 30px; font-size: 2.2rem; text-shadow: 0 0 15px rgba(0, 210, 255, 0.4); }
 
         .balance-display {
             background: linear-gradient(145deg, #111 0%, #1a1a1a 100%); border: 2px solid var(--gold);
@@ -43,56 +43,46 @@
             padding: 40px 30px; margin-bottom: 30px; backdrop-filter: blur(15px);
             box-shadow: 0 15px 40px rgba(0,0,0,0.6); position: relative; overflow: hidden;
         }
-        .vtu-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--global-data), transparent); }
+        .vtu-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--best-value), transparent); }
 
         .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; transition: 0.3s; }
-        .input-group-custom:focus-within { border-color: var(--global-data); box-shadow: 0 0 15px rgba(0, 230, 118, 0.2); }
+        .input-group-custom:focus-within { border-color: var(--best-value); box-shadow: 0 0 15px rgba(0, 210, 255, 0.2); }
         .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
         .input-group-custom input { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 700; outline: none; }
 
-        /* DYNAMIC GRID STYLING FOR BOXES */
+        /* NETWORK CARD STYLING FOR BEST VALUE */
+        .network-card {
+            background: #0a0a0a; border: 2px solid #333; border-radius: 12px;
+            padding: 15px 5px; text-align: center; cursor: pointer; transition: 0.3s;
+            font-weight: 900; font-size: 0.9rem; color: white; letter-spacing: 1px; text-transform: uppercase;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;
+        }
+        .network-card:hover { transform: translateY(-3px); border-color: var(--best-value); }
+        .network-card.active { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); background: rgba(255, 215, 0, 0.05); }
+        
+        /* DYNAMIC PLAN GRID */
         .plan-card {
             background: #0a0a0a; border: 1.5px solid #333; border-radius: 12px;
             padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.3s;
             height: 100%; min-height: 90px; display: flex; flex-direction: column; 
             justify-content: center; align-items: center; overflow: hidden;
         }
-        .plan-card:hover { border-color: var(--global-data); background: rgba(0, 230, 118, 0.05); }
-        .plan-card.active { border-color: var(--global-data); background: rgba(0, 230, 118, 0.15); box-shadow: 0 0 15px rgba(0, 230, 118, 0.3); }
-        .plan-name { 
-            font-size: 0.85rem; font-weight: 800; color: var(--global-data); width: 100%; 
-            white-space: normal; word-wrap: break-word; overflow-wrap: break-word; 
-        }
-        .plan-price { font-family: 'Cinzel', serif; font-size: 1rem; color: #fff; font-weight: 900; margin-top: 8px; word-break: break-word; }
+        .plan-card:hover { border-color: var(--best-value); background: rgba(0, 210, 255, 0.05); }
+        .plan-card.active { border-color: var(--gold); background: rgba(255, 215, 0, 0.1); box-shadow: 0 0 15px var(--gold-glow); }
+        .plan-name { font-size: 0.85rem; font-weight: 800; color: #fff; width: 100%; word-wrap: break-word; }
+        .plan-price { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--best-value); font-weight: 900; margin-top: 8px; }
         
-        .scrollable-grid { max-height: 250px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; margin-top: 10px; }
+        .scrollable-grid { max-height: 280px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; margin-top: 10px; }
         .scrollable-grid::-webkit-scrollbar { width: 5px; }
-        .scrollable-grid::-webkit-scrollbar-thumb { background: var(--global-data); border-radius: 10px; }
+        .scrollable-grid::-webkit-scrollbar-thumb { background: var(--best-value); border-radius: 10px; }
 
         .btn-pay {
-            background: var(--global-data); color: black; font-weight: 900; border-radius: 15px;
+            background: var(--best-value); color: black; font-weight: 900; border-radius: 15px;
             padding: 20px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s;
         }
         .btn-pay:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255,255,255,0.2); }
         
         .loading-text { text-align: center; color: var(--gold); font-weight: 700; font-size: 0.9rem; margin-top: -10px; margin-bottom: 20px; display: none; }
-
-        /* SWEETALERT REFRACTIVE LOADER */
-        .swal-reflective-spinner {
-            position: relative; width: 100px; height: 100px; margin: 20px auto; border-radius: 50%;
-            background: conic-gradient(from 0deg, rgba(0, 230, 118, 0.1) 0%, rgba(255,255,255,0.9) 15%, var(--global-data) 30%, rgba(0, 230, 118, 0.2) 50%, #00994d 70%, rgba(255,255,255,0.7) 85%, rgba(0, 230, 118, 0.1) 100%);
-            animation: spinSwalReflect 2s linear infinite; box-shadow: 0 0 35px rgba(0, 230, 118, 0.35);
-        }
-        .swal-reflective-spinner::before {
-            content: ''; position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px;
-            background: radial-gradient(circle at 30% 30%, #1a1a1a 0%, #0d0d0d 100%); border-radius: 50%; border: 1px solid rgba(0, 230, 118, 0.15); z-index: 1;
-        }
-        .swal-inner-icon {
-            position: absolute; z-index: 2; top: 50%; left: 50%; font-size: 2.2rem; color: var(--global-data);
-            text-shadow: 0 0 15px var(--global-data), 0 0 30px rgba(255,255,255,0.4); animation: counterSpinSwal 2s linear infinite;
-        }
-        @keyframes spinSwalReflect { 100% { transform: rotate(360deg); } }
-        @keyframes counterSpinSwal { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
     </style>
 </head>
 <body>
@@ -109,7 +99,8 @@
 
 <div class="container">
     <div class="text-center">
-        <h1 class="header-title"><i class="fas fa-wifi me-2"></i> GLOBAL DATA</h1>
+        <h1 class="header-title"><i class="fas fa-gem me-2"></i> BEST VALUE DATA</h1>
+        <p class="text-muted small fw-bold mb-4" style="letter-spacing: 1px;">SME & CORPORATE GIFTING BUNDLES</p>
     </div>
     
     <div class="balance-display">
@@ -119,48 +110,58 @@
     
     <div class="vtu-card">
         
-        <div class="loading-text" id="countriesLoader"><i class="fas fa-spinner fa-spin me-2"></i> Syncing Worldwide Countries...</div>
-
-        <!-- 1. Country Selection Grid -->
+        <!-- 1. Select Best Value Network -->
         <div class="input-group-custom" style="border-color: #222; background: transparent; padding: 0;">
-            <label style="padding-left: 5px;">Select Destination Country</label>
-            <div id="countriesGrid" class="row g-2 scrollable-grid">
-                <!-- Country boxes injected here -->
+            <label style="padding-left: 5px;">Select Special Data Network</label>
+            <div class="row g-2 mt-2">
+                <div class="col-6 col-md-3">
+                    <!-- Pointing directly to VTpass glo-sme-data channel -->
+                    <div class="network-card" onclick="selectNetwork(this, 'glo-sme-data')">
+                        <span style="color: #009933;">GLO</span><br><small style="font-size: 0.7rem; color: #aaa;">Best Value</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <!-- Pointing directly to VTpass mtn-sme channel -->
+                    <div class="network-card" onclick="selectNetwork(this, 'mtn-sme')">
+                        <span style="color: #ffcc00;">MTN</span><br><small style="font-size: 0.7rem; color: #aaa;">SME Data</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <!-- Pointing directly to VTpass airtel-cg channel -->
+                    <div class="network-card" onclick="selectNetwork(this, 'airtel-cg')">
+                        <span style="color: #ff0000;">AIRTEL</span><br><small style="font-size: 0.7rem; color: #aaa;">Corp Gifting</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <!-- Pointing directly to VTpass 9mobile-sme channel -->
+                    <div class="network-card" onclick="selectNetwork(this, 'etisalat-sme-data')">
+                        <span style="color: #006600;">9MOBILE</span><br><small style="font-size: 0.7rem; color: #aaa;">SME Data</small>
+                    </div>
+                </div>
             </div>
         </div>
-        <input type="hidden" id="selectedCountry">
+        <input type="hidden" id="selectedNetwork">
 
-        <div class="loading-text" id="operatorsLoader"><i class="fas fa-spinner fa-spin me-2"></i> Fetching Data Networks...</div>
+        <!-- 2. Dynamic Plan Loader -->
+        <div class="loading-text" id="plansLoader"><i class="fas fa-spinner fa-spin me-2"></i> Syncing Best Value Packages...</div>
 
-        <!-- 2. Dynamic Grid for Operators -->
-        <div class="input-group-custom" id="operatorsWrapper" style="display: none; border-color: #222; background: transparent; padding: 0;">
-            <label style="padding-left: 5px;">Select Target Network</label>
-            <div id="operatorsGrid" class="row g-2 scrollable-grid">
-                <!-- Network boxes injected here -->
-            </div>
-        </div>
-        <input type="hidden" id="selectedOperator"> 
-
-        <div class="loading-text" id="plansLoader"><i class="fas fa-spinner fa-spin me-2"></i> Syncing Global Data Plans...</div>
-
-        <!-- 3. Dynamic Grid for Data Plans -->
         <div class="input-group-custom" id="plansWrapper" style="display: none; border-color: #222; background: transparent; padding: 0;">
-            <label style="padding-left: 5px;">Select Internet Package</label>
+            <label style="padding-left: 5px;">Select High-Value Package</label>
             <div id="plansGrid" class="row g-2 scrollable-grid">
-                <!-- Plan boxes injected here -->
+                <!-- Data Plans will be injected here automatically -->
             </div>
         </div>
         <input type="hidden" id="selectedPlan"> 
 
-        <!-- 4. Phone & Amount -->
-        <div class="input-group-custom">
-            <label>International Phone Number</label>
-            <input type="tel" id="targetPhone" placeholder="e.g. +2338000000000" oninput="this.value = this.value.replace(/[^0-9+]/g, '')">
+        <!-- 3. Phone & Amount Details -->
+        <div class="input-group-custom mt-3">
+            <label>Recipient Phone Number</label>
+            <input type="tel" id="targetPhone" placeholder="0800 000 0000" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
         </div>
 
         <div class="input-group-custom">
             <label>Package Price (₦)</label>
-            <input type="text" id="targetAmountDisplay" placeholder="0.00" readonly style="color: var(--global-data);">
+            <input type="text" id="targetAmountDisplay" placeholder="0.00" readonly style="color: var(--best-value);">
             <input type="hidden" id="targetAmount">
         </div>
 
@@ -169,14 +170,9 @@
             <input type="password" id="transactionPin" placeholder="Enter 4-digit PIN" maxlength="4" style="letter-spacing: 10px; font-size: 1.5rem; text-align: center;">
         </div>
         
-        <button class="btn-pay" onclick="processGlobalDataPayment()">
-            <i class="fas fa-satellite-dish me-2"></i> TRANSMIT DATA
+        <button class="btn-pay" onclick="processDataPayment()">
+            <i class="fas fa-gem me-2"></i> DISBURSE DATA
         </button>
-    </div>
-    
-    <div class="text-center text-muted small fw-bold mb-5">
-        <p class="mb-1"><i class="fas fa-shield-alt"></i> End-to-End Encrypted via VTPass</p>
-        <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
 
@@ -200,7 +196,6 @@
     async function loadBalance() {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) { window.location.href = '/index.html'; return; }
-        
         try {
             const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
@@ -211,162 +206,46 @@
         } catch (e) {}
     }
 
-    async function fetchCountries() {
-        const token = localStorage.getItem("naterpay_token");
-        const loader = document.getElementById('countriesLoader');
-        const grid = document.getElementById('countriesGrid');
-        
-        loader.style.display = 'block';
-
-        // Add timeout to prevent infinite freezing
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-        try {
-            const response = await fetch('/api/vtu/international/countries', { 
-                headers: { 'Authorization': `Bearer ${token}` },
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            
-            const data = await response.json();
-            
-            // Bulletproof check to ensure data.countries is an array
-            if (data.success && Array.isArray(data.countries) && data.countries.length > 0) {
-                grid.innerHTML = '';
-                data.countries.forEach(country => {
-                    grid.innerHTML += `
-                        <div class="col-6 col-md-4">
-                            <div class="plan-card country-card" onclick="selectCountry(this, '${country.code}')">
-                                <div class="plan-name" style="color: #fff;">${country.name}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-            } else {
-                grid.innerHTML = '<div class="text-warning w-100 text-center fw-bold p-3">No countries found right now.</div>';
-            }
-        } catch (error) {
-            clearTimeout(timeoutId);
-            grid.innerHTML = `<div class="text-danger w-100 text-center fw-bold p-3">${error.name === 'AbortError' ? 'Connection timed out' : 'Network connection error'}</div>`;
-        } finally {
-            loader.style.display = 'none';
-        }
-    }
-
-    function selectCountry(cardElement, countryCode) {
-        document.querySelectorAll('.country-card').forEach(c => c.classList.remove('active'));
+    function selectNetwork(cardElement, networkId) {
+        document.querySelectorAll('.network-card').forEach(c => c.classList.remove('active'));
         cardElement.classList.add('active');
-        document.getElementById('selectedCountry').value = countryCode;
-        
-        // Hide subsequent grids
-        document.getElementById('operatorsWrapper').style.display = 'none';
-        document.getElementById('plansWrapper').style.display = 'none';
-        document.getElementById('selectedOperator').value = '';
-        document.getElementById('selectedPlan').value = '';
-        document.getElementById('targetAmount').value = '';
-        document.getElementById('targetAmountDisplay').value = '';
-        
-        fetchOperators();
-    }
-
-    async function fetchOperators() {
-        const token = localStorage.getItem("naterpay_token");
-        const countryCode = document.getElementById('selectedCountry').value;
-        const loader = document.getElementById('operatorsLoader');
-        const grid = document.getElementById('operatorsGrid');
-        const wrapper = document.getElementById('operatorsWrapper');
-        
-        if (!countryCode) return;
-
-        grid.innerHTML = '';
-        wrapper.style.display = 'none';
-        loader.style.display = 'block';
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-        try {
-            const response = await fetch(`/api/vtu/international/operators?code=${countryCode}&product_type=4`, { 
-                headers: { 'Authorization': `Bearer ${token}` },
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            
-            const data = await response.json();
-            
-            if (data.success && Array.isArray(data.operators) && data.operators.length > 0) {
-                grid.innerHTML = '';
-                data.operators.forEach(operator => {
-                    grid.innerHTML += `
-                        <div class="col-6 col-md-4">
-                            <div class="plan-card operator-card" onclick="selectOperator(this, '${operator.operator_id}')">
-                                <img src="${operator.operator_image}" onerror="this.style.display='none'" alt="${operator.name}" style="width:40px; height:40px; object-fit:contain; border-radius:50%; margin-bottom:8px; border: 1px solid #444;">
-                                <div class="plan-name">${operator.name}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-                wrapper.style.display = 'block';
-            } else {
-                Swal.fire({ icon: 'info', title: 'No Networks', text: 'There are no networks offering data packages in this country right now.', background: '#111', color: '#fff' });
-            }
-        } catch (error) {
-            clearTimeout(timeoutId);
-            let errMsg = 'Failed to fetch networks from the server.';
-            if (error.name === 'AbortError') errMsg = 'Connection timed out while fetching networks.';
-            Swal.fire({ icon: 'error', title: 'Error', text: errMsg, background: '#111', color: '#fff' });
-        } finally {
-            loader.style.display = 'none';
-        }
-    }
-
-    function selectOperator(cardElement, operatorId) {
-        document.querySelectorAll('.operator-card').forEach(c => c.classList.remove('active'));
-        cardElement.classList.add('active');
-        document.getElementById('selectedOperator').value = operatorId;
+        document.getElementById('selectedNetwork').value = networkId;
         
         document.getElementById('plansWrapper').style.display = 'none';
         document.getElementById('selectedPlan').value = '';
         document.getElementById('targetAmount').value = '';
         document.getElementById('targetAmountDisplay').value = '';
 
-        fetchPlans(operatorId);
+        fetchPlans(networkId);
     }
 
-    async function fetchPlans(operatorId) {
+    async function fetchPlans(serviceID) {
         const token = localStorage.getItem("naterpay_token");
         const loader = document.getElementById('plansLoader');
         const grid = document.getElementById('plansGrid');
         const wrapper = document.getElementById('plansWrapper');
         
-        if (!operatorId) return;
+        if (!serviceID) return;
 
-        // Reset grid before loading
         grid.innerHTML = '';
         wrapper.style.display = 'none';
         loader.style.display = 'block';
 
-        // 15 Second forced timeout so it NEVER freezes
+        // 15 Second forced timeout to guarantee it never freezes
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         try {
-            const response = await fetch(`/api/vtu/variations?serviceID=foreign-airtime&operator_id=${operatorId}&product_type_id=4`, { 
+            // Uses your bulletproof vtu.js backend function
+            const response = await fetch(`/api/vtu/variations?serviceID=${serviceID}`, { 
                 headers: { 'Authorization': `Bearer ${token}` },
                 signal: controller.signal 
             });
-            
             clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(`Server returned status: ${response.status}`);
-            }
-
+            
             const data = await response.json();
             
-            // BULLETPROOF CRASH PREVENTION: Must be true, must exist, must be an array, must not be empty
-            if (data.success && data.variations && Array.isArray(data.variations) && data.variations.length > 0) {
+            if (data.success && Array.isArray(data.variations) && data.variations.length > 0) {
                 grid.innerHTML = '';
                 data.variations.forEach(plan => {
                     const amtFormatted = Number(plan.variation_amount).toLocaleString(undefined, {minimumFractionDigits: 2});
@@ -381,19 +260,12 @@
                 });
                 wrapper.style.display = 'block';
             } else {
-                // If it succeeds but the list is empty, show a polite popup and stop spinning
-                Swal.fire({ icon: 'info', title: 'No Packages Available', text: 'This specific network does not have data plans available in the test environment.', background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'info', title: 'No Best Value Packages', text: 'This network currently has no special packages available in the test environment.', background: '#111', color: '#fff' });
             }
         } catch (error) {
             clearTimeout(timeoutId);
-            // If it crashes or times out, show the exact error and stop spinning
-            let errorMsg = 'Failed to sync data packages due to a server error.';
-            if (error.name === 'AbortError') {
-                errorMsg = 'Request timed out. The provider is taking too long to respond.';
-            }
-            Swal.fire({ icon: 'error', title: 'Sync Error', text: errorMsg, background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Sync Error', text: 'Failed to securely fetch Best Value bundles from the provider.', background: '#111', color: '#fff' });
         } finally {
-            // GUARANTEED to hide the loader no matter what happens
             loader.style.display = 'none';
         }
     }
@@ -406,64 +278,61 @@
         document.getElementById('targetAmountDisplay').value = Number(amount).toLocaleString(undefined, {minimumFractionDigits: 2});
     }
 
-    async function processGlobalDataPayment() {
-        const country = document.getElementById('selectedCountry').value;
-        const operator = document.getElementById('selectedOperator').value;
+    async function processDataPayment() {
+        const network = document.getElementById('selectedNetwork').value;
         const plan = document.getElementById('selectedPlan').value;
         const phone = document.getElementById('targetPhone').value;
         const amount = document.getElementById('targetAmount').value;
         const pin = document.getElementById('transactionPin').value;
         
-        if (!country || !operator || !plan || !phone || !amount) {
-            return Swal.fire({ icon: 'warning', title: 'Incomplete', text: 'Please complete all fields and select a data package.', background: '#111', color: '#fff', confirmButtonColor: '#d32f2f' });
+        if (!network || !plan || !phone || !amount) {
+            return Swal.fire({ icon: 'warning', title: 'Incomplete', text: 'Please complete all fields and select a Best Value package.', background: '#111', color: '#fff' });
+        }
+        if (phone.length < 10) {
+            return Swal.fire({ icon: 'warning', title: 'Invalid Phone', text: 'Please enter a valid phone number.', background: '#111', color: '#fff' });
         }
         if (pin.length !== 4) {
-            return Swal.fire({ icon: 'warning', title: 'Security Pin', text: 'Enter your 4-digit transaction PIN.', background: '#111', color: '#fff', confirmButtonColor: '#d32f2f' });
+            return Swal.fire({ icon: 'warning', title: 'Security Pin', text: 'Enter your 4-digit transaction PIN.', background: '#111', color: '#fff' });
         }
         
         const authToken = localStorage.getItem("naterpay_token");
         
         Swal.fire({ 
             title: 'Processing...', 
-            html: `<div class="swal-reflective-spinner"><i class="fas fa-wifi swal-inner-icon"></i></div><span style="color:#aaa; font-weight:600; font-size:0.85rem;">NATER-PAY is processing your International Data...</span>`, 
+            html: '<i class="fas fa-spinner fa-spin fa-3x" style="color: var(--best-value);"></i><br><br><span style="color:#aaa;">Transmitting Best Value Data Request...</span>', 
             showConfirmButton: false, allowOutsideClick: false, background: '#0a0a0a', color: '#fff' 
         });
         
         try {
-            const res = await fetch('/api/vtu/foreign-data', {
+            // Re-uses your standard /api/vtu/data endpoint perfectly!
+            const res = await fetch('/api/vtu/data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ phone: phone, operator: operator, country: country, plan: plan, amount: amount, pin: pin })
+                body: JSON.stringify({ phone: phone, network: network, plan: plan, amount: amount, pin: pin })
             });
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Transmission Successful!', text: `Data package delivered globally to ${phone}.`, confirmButtonColor: '#00E676', background: '#111', color: '#fff' }).then(() => {
+                Swal.fire({ icon: 'success', title: 'Data Delivered!', text: `Successfully credited ${phone} with Best Value Data.`, confirmButtonColor: '#00d2ff', background: '#111', color: '#fff' }).then(() => {
                     document.getElementById('targetPhone').value = '';
                     document.getElementById('targetAmount').value = '';
                     document.getElementById('targetAmountDisplay').value = '';
                     document.getElementById('transactionPin').value = '';
-                    document.getElementById('selectedCountry').value = '';
-                    document.getElementById('selectedOperator').value = '';
                     document.getElementById('selectedPlan').value = '';
-                    document.querySelectorAll('.country-card').forEach(c => c.classList.remove('active'));
-                    document.getElementById('operatorsWrapper').style.display = 'none';
-                    document.getElementById('plansWrapper').style.display = 'none';
+                    document.querySelectorAll('.data-plan-card').forEach(c => c.classList.remove('active'));
                     loadBalance();
                 });
             } else {
                 Swal.fire({ icon: 'error', title: 'Transaction Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Unable to securely contact global gateway.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Unable to securely contact VTU gateway.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
         }
     }
     
     window.onload = () => { 
         initStars(); 
         loadBalance(); 
-        fetchCountries();
-        
         try {
             socket = io(window.location.origin, { query: { token: localStorage.getItem("naterpay_token") } });
             socket.on('wallet:update', (data) => {
