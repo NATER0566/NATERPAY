@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Best Value Data</title>
+    <title>NATER-PAY | GLO SME Data</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -12,7 +12,7 @@
     <script src="/socket.io/socket.io.js"></script>
     
     <style>
-        :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #030303; --card-bg: rgba(15, 15, 15, 0.95); --best-value: #00d2ff; }
+        :root { --gold: #FFD700; --gold-glow: rgba(255, 215, 0, 0.4); --bg: #030303; --card-bg: rgba(15, 15, 15, 0.95); --best-value: #00d2ff; --glo-color: #009933; }
         body { background: var(--bg); color: white; font-family: 'Montserrat', sans-serif; margin: 0; min-height: 100vh; overflow-x: hidden; }
         
         #starCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; pointer-events: none; }
@@ -29,7 +29,7 @@
 
         .container { max-width: 700px; margin: 40px auto; padding: 0 20px; }
         
-        .header-title { font-family: 'Cinzel', serif; color: var(--best-value); font-weight: 900; text-align: center; margin-bottom: 30px; font-size: 2.2rem; text-shadow: 0 0 15px rgba(0, 210, 255, 0.4); }
+        .header-title { font-family: 'Cinzel', serif; color: var(--glo-color); font-weight: 900; text-align: center; margin-bottom: 30px; font-size: 2.2rem; text-shadow: 0 0 15px rgba(0, 153, 51, 0.4); }
 
         .balance-display {
             background: linear-gradient(145deg, #111 0%, #1a1a1a 100%); border: 2px solid var(--gold);
@@ -43,23 +43,13 @@
             padding: 40px 30px; margin-bottom: 30px; backdrop-filter: blur(15px);
             box-shadow: 0 15px 40px rgba(0,0,0,0.6); position: relative; overflow: hidden;
         }
-        .vtu-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--best-value), transparent); }
+        .vtu-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--glo-color), transparent); }
 
         .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; transition: 0.3s; }
-        .input-group-custom:focus-within { border-color: var(--best-value); box-shadow: 0 0 15px rgba(0, 210, 255, 0.2); }
+        .input-group-custom:focus-within { border-color: var(--glo-color); box-shadow: 0 0 15px rgba(0, 153, 51, 0.2); }
         .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
         .input-group-custom input { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 700; outline: none; }
 
-        /* NETWORK CARD STYLING FOR BEST VALUE */
-        .network-card {
-            background: #0a0a0a; border: 2px solid #333; border-radius: 12px;
-            padding: 15px 5px; text-align: center; cursor: pointer; transition: 0.3s;
-            font-weight: 900; font-size: 0.9rem; color: white; letter-spacing: 1px; text-transform: uppercase;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;
-        }
-        .network-card:hover { transform: translateY(-3px); border-color: var(--best-value); }
-        .network-card.active { border-color: var(--gold); box-shadow: 0 0 20px var(--gold-glow); background: rgba(255, 215, 0, 0.05); }
-        
         /* DYNAMIC PLAN GRID */
         .plan-card {
             background: #0a0a0a; border: 1.5px solid #333; border-radius: 12px;
@@ -67,20 +57,20 @@
             height: 100%; min-height: 90px; display: flex; flex-direction: column; 
             justify-content: center; align-items: center; overflow: hidden;
         }
-        .plan-card:hover { border-color: var(--best-value); background: rgba(0, 210, 255, 0.05); }
+        .plan-card:hover { border-color: var(--glo-color); background: rgba(0, 153, 51, 0.05); }
         .plan-card.active { border-color: var(--gold); background: rgba(255, 215, 0, 0.1); box-shadow: 0 0 15px var(--gold-glow); }
         .plan-name { font-size: 0.85rem; font-weight: 800; color: #fff; width: 100%; word-wrap: break-word; }
-        .plan-price { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--best-value); font-weight: 900; margin-top: 8px; }
+        .plan-price { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--glo-color); font-weight: 900; margin-top: 8px; }
         
         .scrollable-grid { max-height: 280px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; margin-top: 10px; }
         .scrollable-grid::-webkit-scrollbar { width: 5px; }
-        .scrollable-grid::-webkit-scrollbar-thumb { background: var(--best-value); border-radius: 10px; }
+        .scrollable-grid::-webkit-scrollbar-thumb { background: var(--glo-color); border-radius: 10px; }
 
         .btn-pay {
-            background: var(--best-value); color: black; font-weight: 900; border-radius: 15px;
+            background: var(--glo-color); color: white; font-weight: 900; border-radius: 15px;
             padding: 20px; width: 100%; border: none; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; transition: 0.3s;
         }
-        .btn-pay:hover { background: white; transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255,255,255,0.2); }
+        .btn-pay:hover { background: white; color: var(--glo-color); transform: translateY(-3px); box-shadow: 0 10px 25px rgba(255,255,255,0.2); }
         
         .loading-text { text-align: center; color: var(--gold); font-weight: 700; font-size: 0.9rem; margin-top: -10px; margin-bottom: 20px; display: none; }
     </style>
@@ -99,8 +89,8 @@
 
 <div class="container">
     <div class="text-center">
-        <h1 class="header-title"><i class="fas fa-gem me-2"></i> BEST VALUE DATA</h1>
-        <p class="text-muted small fw-bold mb-4" style="letter-spacing: 1px;">SME & CORPORATE GIFTING BUNDLES</p>
+        <h1 class="header-title"><i class="fas fa-globe me-2"></i> GLO SME DATA</h1>
+        <p class="text-muted small fw-bold mb-4" style="letter-spacing: 1px;">EXCLUSIVE HIGH-VALUE BUNDLES</p>
     </div>
     
     <div class="balance-display">
@@ -110,58 +100,29 @@
     
     <div class="vtu-card">
         
-        <!-- 1. Select Best Value Network -->
-        <div class="input-group-custom" style="border-color: #222; background: transparent; padding: 0;">
-            <label style="padding-left: 5px;">Select Special Data Network</label>
-            <div class="row g-2 mt-2">
-                <div class="col-6 col-md-3">
-                    <!-- Pointing directly to VTpass glo-sme-data channel -->
-                    <div class="network-card" onclick="selectNetwork(this, 'glo-sme-data')">
-                        <span style="color: #009933;">GLO</span><br><small style="font-size: 0.7rem; color: #aaa;">Best Value</small>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <!-- Pointing directly to VTpass mtn-sme channel -->
-                    <div class="network-card" onclick="selectNetwork(this, 'mtn-sme')">
-                        <span style="color: #ffcc00;">MTN</span><br><small style="font-size: 0.7rem; color: #aaa;">SME Data</small>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <!-- Pointing directly to VTpass airtel-cg channel -->
-                    <div class="network-card" onclick="selectNetwork(this, 'airtel-cg')">
-                        <span style="color: #ff0000;">AIRTEL</span><br><small style="font-size: 0.7rem; color: #aaa;">Corp Gifting</small>
-                    </div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <!-- Pointing directly to VTpass 9mobile-sme channel -->
-                    <div class="network-card" onclick="selectNetwork(this, 'etisalat-sme-data')">
-                        <span style="color: #006600;">9MOBILE</span><br><small style="font-size: 0.7rem; color: #aaa;">SME Data</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <input type="hidden" id="selectedNetwork">
+        <!-- VTpass only separates GLO SME, so we automatically set the network to glo-sme-data -->
+        <input type="hidden" id="selectedNetwork" value="glo-sme-data">
 
-        <!-- 2. Dynamic Plan Loader -->
-        <div class="loading-text" id="plansLoader"><i class="fas fa-spinner fa-spin me-2"></i> Syncing Best Value Packages...</div>
+        <!-- Dynamic Plan Loader -->
+        <div class="loading-text" id="plansLoader"><i class="fas fa-spinner fa-spin me-2"></i> Fetching GLO SME Packages...</div>
 
         <div class="input-group-custom" id="plansWrapper" style="display: none; border-color: #222; background: transparent; padding: 0;">
-            <label style="padding-left: 5px;">Select High-Value Package</label>
+            <label style="padding-left: 5px;">Select GLO SME Package</label>
             <div id="plansGrid" class="row g-2 scrollable-grid">
                 <!-- Data Plans will be injected here automatically -->
             </div>
         </div>
         <input type="hidden" id="selectedPlan"> 
 
-        <!-- 3. Phone & Amount Details -->
+        <!-- Phone & Amount Details -->
         <div class="input-group-custom mt-3">
             <label>Recipient Phone Number</label>
-            <input type="tel" id="targetPhone" placeholder="0800 000 0000" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <input type="tel" id="targetPhone" placeholder="0805 000 0000" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
         </div>
 
         <div class="input-group-custom">
             <label>Package Price (₦)</label>
-            <input type="text" id="targetAmountDisplay" placeholder="0.00" readonly style="color: var(--best-value);">
+            <input type="text" id="targetAmountDisplay" placeholder="0.00" readonly style="color: var(--glo-color);">
             <input type="hidden" id="targetAmount">
         </div>
 
@@ -171,7 +132,7 @@
         </div>
         
         <button class="btn-pay" onclick="processDataPayment()">
-            <i class="fas fa-gem me-2"></i> DISBURSE DATA
+            <i class="fas fa-paper-plane me-2"></i> DISBURSE GLO DATA
         </button>
     </div>
 </div>
@@ -206,38 +167,22 @@
         } catch (e) {}
     }
 
-    function selectNetwork(cardElement, networkId) {
-        document.querySelectorAll('.network-card').forEach(c => c.classList.remove('active'));
-        cardElement.classList.add('active');
-        document.getElementById('selectedNetwork').value = networkId;
-        
-        document.getElementById('plansWrapper').style.display = 'none';
-        document.getElementById('selectedPlan').value = '';
-        document.getElementById('targetAmount').value = '';
-        document.getElementById('targetAmountDisplay').value = '';
-
-        fetchPlans(networkId);
-    }
-
-    async function fetchPlans(serviceID) {
+    async function fetchGloSmePlans() {
         const token = localStorage.getItem("naterpay_token");
         const loader = document.getElementById('plansLoader');
         const grid = document.getElementById('plansGrid');
         const wrapper = document.getElementById('plansWrapper');
         
-        if (!serviceID) return;
-
         grid.innerHTML = '';
         wrapper.style.display = 'none';
         loader.style.display = 'block';
 
-        // 15 Second forced timeout to guarantee it never freezes
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         try {
-            // Uses your bulletproof vtu.js backend function
-            const response = await fetch(`/api/vtu/variations?serviceID=${serviceID}`, { 
+            // Fetch directly from the glo-sme-data endpoint
+            const response = await fetch(`/api/vtu/variations?serviceID=glo-sme-data`, { 
                 headers: { 'Authorization': `Bearer ${token}` },
                 signal: controller.signal 
             });
@@ -260,11 +205,11 @@
                 });
                 wrapper.style.display = 'block';
             } else {
-                Swal.fire({ icon: 'info', title: 'No Best Value Packages', text: 'This network currently has no special packages available in the test environment.', background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'info', title: 'No Packages', text: 'GLO SME packages are currently unavailable in the test environment.', background: '#111', color: '#fff' });
             }
         } catch (error) {
             clearTimeout(timeoutId);
-            Swal.fire({ icon: 'error', title: 'Sync Error', text: 'Failed to securely fetch Best Value bundles from the provider.', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Sync Error', text: 'Failed to securely fetch GLO SME bundles from the provider.', background: '#111', color: '#fff' });
         } finally {
             loader.style.display = 'none';
         }
@@ -285,8 +230,8 @@
         const amount = document.getElementById('targetAmount').value;
         const pin = document.getElementById('transactionPin').value;
         
-        if (!network || !plan || !phone || !amount) {
-            return Swal.fire({ icon: 'warning', title: 'Incomplete', text: 'Please complete all fields and select a Best Value package.', background: '#111', color: '#fff' });
+        if (!plan || !phone || !amount) {
+            return Swal.fire({ icon: 'warning', title: 'Incomplete', text: 'Please complete all fields and select a GLO SME package.', background: '#111', color: '#fff' });
         }
         if (phone.length < 10) {
             return Swal.fire({ icon: 'warning', title: 'Invalid Phone', text: 'Please enter a valid phone number.', background: '#111', color: '#fff' });
@@ -299,12 +244,12 @@
         
         Swal.fire({ 
             title: 'Processing...', 
-            html: '<i class="fas fa-spinner fa-spin fa-3x" style="color: var(--best-value);"></i><br><br><span style="color:#aaa;">Transmitting Best Value Data Request...</span>', 
+            html: '<i class="fas fa-spinner fa-spin fa-3x" style="color: var(--glo-color);"></i><br><br><span style="color:#aaa;">Transmitting GLO SME Data Request...</span>', 
             showConfirmButton: false, allowOutsideClick: false, background: '#0a0a0a', color: '#fff' 
         });
         
         try {
-            // Re-uses your standard /api/vtu/data endpoint perfectly!
+            // Uses your standard vtu.js buyData route seamlessly
             const res = await fetch('/api/vtu/data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
@@ -313,7 +258,7 @@
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Data Delivered!', text: `Successfully credited ${phone} with Best Value Data.`, confirmButtonColor: '#00d2ff', background: '#111', color: '#fff' }).then(() => {
+                Swal.fire({ icon: 'success', title: 'Data Delivered!', text: `Successfully credited ${phone} with GLO SME Data.`, confirmButtonColor: '#009933', background: '#111', color: '#fff' }).then(() => {
                     document.getElementById('targetPhone').value = '';
                     document.getElementById('targetAmount').value = '';
                     document.getElementById('targetAmountDisplay').value = '';
@@ -333,6 +278,8 @@
     window.onload = () => { 
         initStars(); 
         loadBalance(); 
+        fetchGloSmePlans(); // Automatically fetches GLO SME plans on page load
+        
         try {
             socket = io(window.location.origin, { query: { token: localStorage.getItem("naterpay_token") } });
             socket.on('wallet:update', (data) => {
