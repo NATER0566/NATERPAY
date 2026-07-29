@@ -51,16 +51,20 @@
         .input-group-custom input, .input-group-custom textarea { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 700; outline: none; resize: none; }
         .input-group-custom input::placeholder, .input-group-custom textarea::placeholder { color: #555; font-size: 0.95rem; }
 
+        /* FIXED RESPONSIVE COST ESTIMATOR */
         .cost-estimator {
             background: rgba(0, 229, 255, 0.05); border: 1px dashed var(--sms-color); border-radius: 15px;
-            padding: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 10px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; gap: 5px;
         }
-        .cost-stat { text-align: center; }
-        .cost-stat span { display: block; font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
-        .cost-stat strong { font-size: 1.1rem; color: #fff; }
-        .cost-total { text-align: right; }
-        .cost-total span { display: block; font-size: 0.7rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
-        .cost-total strong { font-family: 'Cinzel', serif; font-size: 1.4rem; color: var(--sms-color); text-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
+        .cost-stat { text-align: center; flex: 1; }
+        .cost-stat span, .cost-total span { display: block; font-size: 0.65rem; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; line-height: 1.2; }
+        .cost-stat strong { font-size: 0.95rem; color: #fff; }
+        
+        .cost-center { border-left: 1px solid #333; border-right: 1px solid #333; padding: 0 5px; }
+        
+        .cost-total { text-align: center; flex: 1; }
+        .cost-total span { color: var(--gold); }
+        .cost-total strong { font-family: 'Cinzel', serif; font-size: 1.2rem; color: var(--sms-color); text-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
 
         .btn-pay {
             background: var(--sms-color); color: black; font-weight: 900; border-radius: 15px;
@@ -113,9 +117,9 @@
         <div class="cost-estimator">
             <div class="cost-stat">
                 <span>Characters</span>
-                <strong id="charCount">0 (1 Page)</strong>
+                <strong id="charCount">0 (1)</strong>
             </div>
-            <div class="cost-stat" style="border-left: 1px solid #333; border-right: 1px solid #333; padding: 0 15px;">
+            <div class="cost-stat cost-center">
                 <span>Recipients</span>
                 <strong id="recCount">0</strong>
             </div>
@@ -187,7 +191,7 @@
         // Cost is ₦5 per page, per recipient
         const estimatedCost = recipientCount * pages * 5;
 
-        document.getElementById('charCount').innerText = `${charCount} (${pages} Page${pages > 1 ? 's' : ''})`;
+        document.getElementById('charCount').innerText = `${charCount} (${pages})`;
         document.getElementById('recCount').innerText = `${recipientCount}`;
         document.getElementById('estCost').innerText = `₦${estimatedCost.toLocaleString()}`;
     }
