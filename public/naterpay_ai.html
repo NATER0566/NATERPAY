@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <!-- Markdown & Syntax Highlighting for AI Responses -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -101,11 +102,11 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         .hero-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 2.2rem; color: #fff; margin-bottom: 5px; }
-        .hero-subtitle { color: #aaa; font-weight: 600; font-size: 1rem; margin-bottom: 30px; letter-spacing: 1px; }
+        .hero-subtitle { color: #aaa; font-weight: 600; font-size: 1.1rem; margin-bottom: 30px; letter-spacing: 0.5px; }
 
         /* --- QUICK ACTIONS & PROMPTS --- */
         .quick-actions-grid {
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-bottom: 30px; width: 100%;
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-bottom: 35px; width: 100%;
         }
         .action-card {
             background: rgba(20, 20, 20, 0.6); border: 1px solid rgba(255, 255, 255, 0.1);
@@ -114,7 +115,7 @@
             display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 1px;
         }
         .action-card i { color: var(--gold); font-size: 1.1rem; }
-        .action-card:hover { background: rgba(255, 215, 0, 0.1); border-color: var(--gold); color: var(--gold); transform: translateY(-3px); }
+        .action-card:hover { background: rgba(255, 215, 0, 0.1); border-color: var(--gold); color: var(--gold); transform: translateY(-3px); box-shadow: 0 5px 15px rgba(255,215,0,0.1); }
 
         .suggested-prompts {
             display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 800px;
@@ -124,7 +125,7 @@
             padding: 8px 16px; border-radius: 50px; font-size: 0.8rem; font-weight: 600;
             cursor: pointer; transition: 0.3s;
         }
-        .prompt-pill:hover { background: var(--gold); color: #000; }
+        .prompt-pill:hover { background: var(--gold); color: #000; box-shadow: 0 0 10px rgba(255,215,0,0.3); }
 
         /* --- CHAT BUBBLES --- */
         .msg-wrapper { display: flex; flex-direction: column; width: 100%; animation: slideIn 0.3s ease-out; }
@@ -155,8 +156,19 @@
         .msg-bubble table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.85rem; }
         .msg-bubble th, .msg-bubble td { border: 1px solid rgba(255,255,255,0.1); padding: 8px; text-align: left; }
         .msg-bubble th { background: rgba(255,215,0,0.1); color: var(--gold); }
-        .msg-bubble pre { background: #000; padding: 10px; border-radius: 8px; border: 1px solid #333; overflow-x: auto; }
+        
+        /* CODE BLOCK & COPY BUTTON STYLING */
+        .msg-bubble pre { 
+            background: #0d0d0d; padding: 40px 15px 15px; border-radius: 8px; 
+            border: 1px solid #333; overflow-x: auto; position: relative; margin-top: 15px;
+        }
         .msg-bubble code { font-family: monospace; font-size: 0.85rem; color: #00ff88; }
+        .copy-btn {
+            position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.1); 
+            border: 1px solid rgba(255,255,255,0.2); color: #ccc; border-radius: 5px; 
+            padding: 4px 10px; font-size: 0.7rem; font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        .copy-btn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
         
         @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -229,7 +241,7 @@
     
     <div class="chat-history" id="chatBox">
         
-        <!-- INITIAL HERO SCREEN -->
+        <!-- INITIAL HERO SCREEN (Per SPS Specifications) -->
         <div class="welcome-hero" id="heroScreen">
             
             <div class="ai-orb-container">
@@ -239,25 +251,33 @@
             </div>
             
             <h1 class="hero-title">NATERPAY AI</h1>
-            <p class="hero-subtitle">Your Intelligent Financial Assistant.<br>Neural Core Online & Ready.</p>
+            <p class="hero-subtitle">"Hello, I'm NATERPAY AI.<br>How can I help you today?"</p>
             
+            <!-- QUICK ACTION BUTTONS -->
             <div class="quick-actions-grid">
-                <div class="action-card" onclick="sendSuggested('Check my ledger wallet balance')"><i class="fas fa-wallet"></i> Wallet</div>
-                <div class="action-card" onclick="sendSuggested('Check my recent transactions')"><i class="fas fa-history"></i> Logs</div>
-                <div class="action-card" onclick="sendSuggested('I want to buy Airtime')"><i class="fas fa-phone"></i> VTpass Top-Up</div>
-                <div class="action-card" onclick="sendSuggested('How do I verify my KYC identity?')"><i class="fas fa-id-badge"></i> KYC</div>
-                <div class="action-card" onclick="sendSuggested('How do referrals and commissions work?')"><i class="fas fa-users"></i> Network</div>
-                <div class="action-card" onclick="sendSuggested('Show me the Developer API documentation')"><i class="fas fa-code"></i> APIs</div>
+                <div class="action-card" onclick="sendSuggested('Check my Wallet details')"><i class="fas fa-wallet"></i> Wallet</div>
+                <div class="action-card" onclick="sendSuggested('Show my Recent Transactions')"><i class="fas fa-history"></i> Transactions</div>
+                <div class="action-card" onclick="sendSuggested('I want to pay Bills')"><i class="fas fa-file-invoice-dollar"></i> Bills</div>
+                <div class="action-card" onclick="sendSuggested('I need Support')"><i class="fas fa-headset"></i> Support</div>
+                <div class="action-card" onclick="sendSuggested('How do I secure my account?')"><i class="fas fa-shield-alt"></i> Security</div>
+                <div class="action-card" onclick="sendSuggested('How do Referrals work?')"><i class="fas fa-users"></i> Referral</div>
+                <div class="action-card" onclick="sendSuggested('Show API Documentation')"><i class="fas fa-code"></i> Developer</div>
             </div>
-
-            <p style="font-size: 0.75rem; color: #666; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px;">Ask Anything</p>
             
+            <p style="font-size: 0.75rem; color: #666; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px;">Example Questions</p>
+            
+            <!-- SUGGESTED PROMPTS -->
             <div class="suggested-prompts">
-                <button class="prompt-pill" onclick="sendSuggested('Buy MTN SME Data')">Buy MTN SME Data</button>
-                <button class="prompt-pill" onclick="sendSuggested('Pay IKEDC Electricity Bill')">Pay Electricity</button>
-                <button class="prompt-pill" onclick="sendSuggested('Buy WAEC Result Checker PIN')">Buy WAEC PIN</button>
-                <button class="prompt-pill" onclick="sendSuggested('Buy International Airtime')">Int'l Airtime</button>
-                <button class="prompt-pill" onclick="sendSuggested('My last transaction failed, why?')">Why did my transaction fail?</button>
+                <button class="prompt-pill" onclick="sendSuggested('How do I buy airtime?')">How do I buy airtime?</button>
+                <button class="prompt-pill" onclick="sendSuggested('How do I fund my wallet?')">How do I fund my wallet?</button>
+                <button class="prompt-pill" onclick="sendSuggested('Why did my transaction fail?')">Why did my transaction fail?</button>
+                <button class="prompt-pill" onclick="sendSuggested('Buy MTN Data')">Buy MTN Data</button>
+                <button class="prompt-pill" onclick="sendSuggested('Pay Electricity')">Pay Electricity</button>
+                <button class="prompt-pill" onclick="sendSuggested('Buy WAEC PIN')">Buy WAEC PIN</button>
+                <button class="prompt-pill" onclick="sendSuggested('Buy JAMB PIN')">Buy JAMB PIN</button>
+                <button class="prompt-pill" onclick="sendSuggested('How do referrals work?')">How do referrals work?</button>
+                <button class="prompt-pill" onclick="sendSuggested('How do I verify KYC?')">How do I verify KYC?</button>
+                <button class="prompt-pill" onclick="sendSuggested('Show API Documentation')">Show API Documentation</button>
             </div>
         </div>
 
@@ -306,9 +326,7 @@
         }
         animate();
     }
-    window.onload = initStars;
-    window.onresize = initStars;
-
+    
     // --- MARKDOWN CONFIGURATION ---
     marked.setOptions({
         highlight: function(code, lang) {
@@ -319,7 +337,7 @@
         gfm: true
     });
 
-    // --- CHAT LOGIC ---
+    // --- CHAT LOGIC & HISTORY ---
     const chatBox = document.getElementById('chatBox');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -327,6 +345,31 @@
     const heroScreen = document.getElementById('heroScreen');
     
     let isFirstMessage = true;
+
+    // Load Conversation History
+    async function loadChatHistory() {
+        const token = localStorage.getItem("naterpay_token") || "";
+        if (!token) return;
+
+        try {
+            // Note: Ensure your backend has a GET route at /api/ai/history returning an array of messages
+            const res = await fetch('/api/ai/history', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            
+            if (data.success && data.history && data.history.length > 0) {
+                heroScreen.style.display = 'none';
+                isFirstMessage = false;
+                
+                data.history.forEach(chat => {
+                    appendMessage(chat.role === 'user' ? 'user' : 'ai', chat.message);
+                });
+            }
+        } catch (error) {
+            console.log("No chat history found or network error.");
+        }
+    }
 
     function autoResize(textarea) {
         textarea.style.height = 'auto';
@@ -351,6 +394,27 @@
         sendMessage();
     }
 
+    function addCopyButtons() {
+        document.querySelectorAll('pre').forEach((block) => {
+            // Check if button already exists
+            if (block.querySelector('.copy-btn')) return;
+
+            const button = document.createElement('button');
+            button.innerText = 'Copy';
+            button.className = 'copy-btn';
+
+            button.addEventListener('click', () => {
+                const code = block.querySelector('code').innerText;
+                navigator.clipboard.writeText(code).then(() => {
+                    button.innerText = 'Copied!';
+                    setTimeout(() => { button.innerText = 'Copy'; }, 2000);
+                });
+            });
+
+            block.appendChild(button);
+        });
+    }
+
     function appendMessage(role, content) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `msg-wrapper ${role}`;
@@ -371,6 +435,10 @@
         
         // Insert right before typing indicator
         chatBox.insertBefore(msgDiv, typingIndicator);
+        
+        // Append Copy buttons to any generated code blocks
+        if(role === 'ai') addCopyButtons();
+
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
@@ -378,28 +446,23 @@
         const message = userInput.value.trim();
         if (!message) return;
 
-        // Hide Hero on first interaction
         if (isFirstMessage) {
             heroScreen.style.display = 'none';
             isFirstMessage = false;
         }
 
-        // 1. Add User Message to UI
         appendMessage('user', message);
         
-        // 2. Reset Input
         userInput.value = '';
         autoResize(userInput);
         sendBtn.disabled = true;
         
-        // 3. Show Typing Indicator
         typingIndicator.style.display = 'flex';
         chatBox.scrollTop = chatBox.scrollHeight;
 
         try {
             const token = localStorage.getItem("naterpay_token") || "";
             
-            // 4. API CALL TO BACKEND (This route will be created in your Node.js server)
             const response = await fetch('/api/ai/chat', {
                 method: 'POST',
                 headers: { 
@@ -411,11 +474,9 @@
 
             const data = await response.json();
             
-            // 5. Hide Typing Indicator
             typingIndicator.style.display = 'none';
 
             if (data.success && data.reply) {
-                // 6. Append AI Response
                 appendMessage('ai', data.reply);
             } else {
                 appendMessage('ai', "⚠️ *System Protocol Error:* I am currently unable to reach the neural core. Please try again in a moment.");
@@ -426,6 +487,13 @@
             appendMessage('ai', "📡 *Connection Lost:* Unable to establish a secure link with the NATERPAY server.");
         }
     }
+
+    // Initialize environment
+    window.onload = () => {
+        initStars();
+        loadChatHistory();
+    };
+    window.onresize = initStars;
 </script>
 
 </body>
