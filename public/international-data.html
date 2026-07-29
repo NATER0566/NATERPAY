@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | SMSClone (Bulk SMS)</title>
+    <title>NATER-PAY | Bulk SMS Portal</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -31,13 +31,6 @@
         
         .header-title { font-family: 'Cinzel', serif; color: var(--sms-color); font-weight: 900; text-align: center; margin-bottom: 20px; font-size: 2.2rem; text-shadow: 0 0 15px rgba(0, 229, 255, 0.4); }
 
-        .balance-display {
-            background: linear-gradient(145deg, #111 0%, #1a1a1a 100%); border: 2px solid var(--gold);
-            border-radius: 20px; padding: 25px; text-align: center; margin-bottom: 30px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 0 15px var(--gold-glow);
-        }
-        .balance-amount { font-family: 'Cinzel'; font-size: 2.5rem; color: var(--gold); font-weight: 900; text-shadow: 0 0 10px var(--gold-glow); margin-top: 5px; }
-
         .vtu-card {
             background: var(--card-bg); border: 1px solid #333; border-radius: 25px;
             padding: 40px 30px; margin-bottom: 30px; backdrop-filter: blur(15px);
@@ -45,20 +38,11 @@
         }
         .vtu-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--sms-color), transparent); }
 
-        .provider-badge {
-            background: rgba(0, 229, 255, 0.1); border: 1.5px solid var(--sms-color); border-radius: 12px;
-            padding: 15px; text-align: center; margin-bottom: 25px; display: flex; align-items: center; justify-content: center; gap: 15px;
-        }
-        .provider-badge i { font-size: 2rem; color: var(--sms-color); }
-        .provider-text { text-align: left; }
-        .provider-text h4 { margin: 0; font-weight: 900; font-size: 1.1rem; color: #fff; letter-spacing: 1px; }
-        .provider-text p { margin: 0; font-size: 0.8rem; color: #aaa; font-weight: 600; }
-
         .input-group-custom { background: #111; border: 1.5px solid #333; border-radius: 15px; padding: 15px 20px; margin-bottom: 20px; transition: 0.3s; }
         .input-group-custom:focus-within { border-color: var(--sms-color); box-shadow: 0 0 15px rgba(0, 229, 255, 0.2); }
         .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
-        .input-group-custom input { background: transparent; border: none; color: white; width: 100%; font-size: 1.2rem; font-weight: 700; outline: none; }
-        .input-group-custom input::placeholder { color: #555; font-size: 1rem; }
+        .input-group-custom input, .input-group-custom textarea { background: transparent; border: none; color: white; width: 100%; font-size: 1.1rem; font-weight: 700; outline: none; resize: none; }
+        .input-group-custom input::placeholder, .input-group-custom textarea::placeholder { color: #555; font-size: 0.95rem; }
 
         .btn-pay {
             background: var(--sms-color); color: black; font-weight: 900; border-radius: 15px;
@@ -81,33 +65,24 @@
 
 <div class="container">
     <div class="text-center">
-        <h1 class="header-title"><i class="fas fa-envelope-open-text me-2"></i> SMSCLONE</h1>
-        <p class="text-muted small fw-bold mb-4" style="letter-spacing: 1px;">FUND YOUR BULK SMS WALLET</p>
-    </div>
-    
-    <div class="balance-display">
-        <small class="text-secondary fw-bold" style="letter-spacing: 2px;">SECURE WALLET BALANCE</small>
-        <div class="balance-amount" id="walletBalance">₦0.00</div>
+        <h1 class="header-title"><i class="fas fa-paper-plane me-2"></i> BULK SMS DISPATCH</h1>
+        <p class="text-muted small fw-bold mb-4" style="letter-spacing: 1px;">POWERED BY VTPASS MESSAGING API V2</p>
     </div>
     
     <div class="vtu-card">
-        
-        <div class="provider-badge">
-            <i class="fas fa-comment-sms"></i>
-            <div class="provider-text">
-                <h4>SMSCLONE NETWORK</h4>
-                <p>Deliver to MTN, GLO, Airtel & 9Mobile</p>
-            </div>
+        <div class="input-group-custom">
+            <label>Sender ID / Name</label>
+            <input type="text" id="smsSender" placeholder="e.g. NATERPAY" maxlength="11">
         </div>
 
         <div class="input-group-custom">
-            <label>Registered Phone Number</label>
-            <input type="tel" id="targetPhone" placeholder="Enter SMSClone account number" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <label>Recipient Phone Numbers (Comma Separated)</label>
+            <input type="text" id="smsRecipient" placeholder="e.g. 08012345678,08098765432">
         </div>
 
         <div class="input-group-custom">
-            <label>Amount to Fund (₦)</label>
-            <input type="text" id="targetAmount" placeholder="e.g. 1000" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <label>Message Content</label>
+            <textarea id="smsMessage" rows="4" placeholder="Type your notification or marketing message here..."></textarea>
         </div>
 
         <div class="input-group-custom mt-4 border-warning">
@@ -115,20 +90,13 @@
             <input type="password" id="transactionPin" placeholder="Enter 4-digit PIN" maxlength="4" style="letter-spacing: 10px; font-size: 1.5rem; text-align: center;">
         </div>
         
-        <button class="btn-pay" onclick="processSMSPayment()">
-            <i class="fas fa-paper-plane me-2"></i> PURCHASE SMS UNITS
+        <button class="btn-pay" onclick="dispatchBulkSms()">
+            <i class="fas fa-satellite-dish me-2"></i> SEND MESSAGES
         </button>
-    </div>
-    
-    <div class="text-center text-muted small fw-bold mb-5">
-        <p class="mb-1"><i class="fas fa-shield-alt"></i> Official VTpass Integration</p>
-        <p>Secured by NATER-PAY Protocol v3.0</p>
     </div>
 </div>
 
 <script>
-    let socket = null;
-
     function initStars() {
         const c = document.getElementById('starCanvas');
         c.width = window.innerWidth; c.height = window.innerHeight;
@@ -142,34 +110,15 @@
         }
         animate();
     }
-    
-    async function loadBalance() {
-        const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) { window.location.href = '/index.html'; return; }
-        
-        try {
-            const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
-            const data = await res.json();
-            if (data.success) {
-                const safeBal = data.balance?.$numberDecimal || data.balance || 0;
-                document.getElementById('walletBalance').innerText = '₦' + Number(safeBal).toLocaleString(undefined, {minimumFractionDigits:2});
-            }
-        } catch (e) {}
-    }
 
-    async function processSMSPayment() {
-        const phone = document.getElementById('targetPhone').value;
-        const amount = document.getElementById('targetAmount').value;
-        const pin = document.getElementById('transactionPin').value;
+    async function dispatchBulkSms() {
+        const sender = document.getElementById('smsSender').value.trim();
+        const recipient = document.getElementById('smsRecipient').value.trim();
+        const message = document.getElementById('smsMessage').value.trim();
+        const pin = document.getElementById('transactionPin').value.trim();
         
-        if (!phone || !amount) {
-            return Swal.fire({ icon: 'warning', title: 'Incomplete', text: 'Please enter a phone number and funding amount.', background: '#111', color: '#fff' });
-        }
-        if (phone.length < 10) {
-            return Swal.fire({ icon: 'warning', title: 'Invalid Phone', text: 'Please enter a valid phone number.', background: '#111', color: '#fff' });
-        }
-        if (amount < 100) {
-            return Swal.fire({ icon: 'warning', title: 'Minimum Amount', text: 'The minimum SMS funding amount is ₦100.', background: '#111', color: '#fff' });
+        if (!sender || !recipient || !message) {
+            return Swal.fire({ icon: 'warning', title: 'Incomplete', text: 'Please fill out the sender ID, recipients, and message.', background: '#111', color: '#fff' });
         }
         if (pin.length !== 4) {
             return Swal.fire({ icon: 'warning', title: 'Security Pin', text: 'Enter your 4-digit transaction PIN.', background: '#111', color: '#fff' });
@@ -178,8 +127,8 @@
         const authToken = localStorage.getItem("naterpay_token");
         
         Swal.fire({ 
-            title: 'Processing...', 
-            html: '<i class="fas fa-spinner fa-spin fa-3x" style="color: var(--sms-color);"></i><br><br><span style="color:#aaa;">Purchasing SMS Units...</span>', 
+            title: 'Broadcasting...', 
+            html: '<i class="fas fa-spinner fa-spin fa-3x" style="color: var(--sms-color);"></i><br><br><span style="color:#aaa;">Sending SMS via Messaging Gateway...</span>', 
             showConfirmButton: false, allowOutsideClick: false, background: '#0a0a0a', color: '#fff' 
         });
         
@@ -187,38 +136,26 @@
             const res = await fetch('/api/vtu/sms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                // FIX: Send 'smsclone' instead of 'bulk-sms' so VTpass recognizes the product
-                body: JSON.stringify({ phone: phone, amount: amount, pin: pin, provider: 'smsclone' })
+                body: JSON.stringify({ sender, recipient, message, pin })
             });
             const data = await res.json();
             
             if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Units Delivered!', text: `Successfully funded ${phone} with ₦${amount} SMS Units.`, confirmButtonColor: '#00E5FF', background: '#111', color: '#fff' }).then(() => {
-                    document.getElementById('targetPhone').value = '';
-                    document.getElementById('targetAmount').value = '';
+                Swal.fire({ icon: 'success', title: 'Dispatch Successful!', text: 'Your bulk messages have been successfully queued and sent.', confirmButtonColor: '#00E5FF', background: '#111', color: '#fff' }).then(() => {
+                    document.getElementById('smsSender').value = '';
+                    document.getElementById('smsRecipient').value = '';
+                    document.getElementById('smsMessage').value = '';
                     document.getElementById('transactionPin').value = '';
-                    loadBalance();
                 });
             } else {
-                Swal.fire({ icon: 'error', title: 'Transaction Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'error', title: 'Dispatch Failed', text: data.message, confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Unable to securely contact VTU gateway.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Unable to connect to the messaging gateway.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' });
         }
     }
     
-    window.onload = () => { 
-        initStars(); 
-        loadBalance(); 
-        
-        try {
-            socket = io(window.location.origin, { query: { token: localStorage.getItem("naterpay_token") } });
-            socket.on('wallet:update', (data) => {
-                const bal = data.balance?.$numberDecimal || data.balance;
-                document.getElementById('walletBalance').innerText = '₦' + Number(bal).toLocaleString(undefined, {minimumFractionDigits: 2});
-            });
-        } catch(e) {}
-    };
+    window.onload = () => { initStars(); };
     window.onresize = initStars;
 </script>
 </body>
