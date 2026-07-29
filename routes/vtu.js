@@ -208,7 +208,6 @@ async function processVTURequest(type, data) {
           else payload.variation_code = 'foreign-airtime';
       } catch(e) { payload.variation_code = 'foreign-airtime'; }
   } else if (type === 'foreign-data') {
-      // [FIXED] EXACT VTPASS REQUIREMENT FOR DATA
       payload.serviceID = 'foreign-airtime'; 
       payload.operator_id = data.operator; 
       payload.country_code = data.country;
@@ -246,7 +245,7 @@ async function getRates(request, reply) {
   } catch (error) { reply.status(500).send({ success: false, message: 'Failed to fetch rates' }); }
 }
 
-// [FIXED] DYNAMICALLY FETCHES BOTH LOCAL AND INTERNATIONAL DATA PLANS
+// [FIXED] BULLETPROOF EXTRACTION TO PREVENT HANGING ON FOREIGN DATA PLANS
 async function getVariations(request, reply) {
   try {
     const { serviceID, operator_id, product_type_id } = request.query;
@@ -262,25 +261,27 @@ async function getVariations(request, reply) {
     }
 
     const baseUrl = process.env.VTPASS_URL || 'https://sandbox.vtpass.com/api';
-    const response = await axios.get(`${baseUrl}/service-variations?${queryParams}`, { headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, timeout: 15000 });
+    // Reduced timeout to 10 seconds so it fails fast instead of hanging forever
+    const response = await axios.get(`${baseUrl}/service-variations?${queryParams}`, { headers: { 'api-key': process.env.VTPASS_API_KEY, 'public-key': process.env.VTPASS_PUBLIC_KEY }, timeout: 10000 });
     
     let fetchedVariations = [];
-    if (response.data && response.data.content) {
-        if (Array.isArray(response.data.content)) {
-            fetchedVariations = response.data.content;
-        } else if (Array.isArray(response.data.content.variations)) {
-            fetchedVariations = response.data.content.variations;
-        } else if (Array.isArray(response.data.content.varations)) {
-            fetchedVariations = response.data.content.varations;
+    const content = response.data?.content;
+    
+    if (content) {
+        if (Array.isArray(content)) {
+            fetchedVariations = content;
+        } else if (content.variations && Array.isArray(content.variations)) {
+            fetchedVariations = content.variations;
+        } else if (content.varations && Array.isArray(content.varations)) {
+            fetchedVariations = content.varations;
         }
     }
     
-    if (fetchedVariations.length > 0) {
-        variationsCache[cacheKey] = { timestamp: Date.now(), data: fetchedVariations };
-    }
+    variationsCache[cacheKey] = { timestamp: Date.now(), data: fetchedVariations };
     
     reply.send({ success: true, variations: fetchedVariations });
   } catch (error) { 
+      if(logger) logger.error('Variation Fetching Error:', error.message);
       reply.status(500).send({ success: false, message: 'Failed to fetch service plans' }); 
   }
 }
