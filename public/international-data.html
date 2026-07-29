@@ -218,11 +218,21 @@
         
         loader.style.display = 'block';
 
+        // Add timeout to prevent infinite freezing
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
         try {
-            const response = await fetch('/api/vtu/international/countries', { headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await fetch('/api/vtu/international/countries', { 
+                headers: { 'Authorization': `Bearer ${token}` },
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
             const data = await response.json();
             
-            if (data.success && data.countries) {
+            // Bulletproof check to ensure data.countries is an array
+            if (data.success && Array.isArray(data.countries) && data.countries.length > 0) {
                 grid.innerHTML = '';
                 data.countries.forEach(country => {
                     grid.innerHTML += `
@@ -234,10 +244,11 @@
                     `;
                 });
             } else {
-                grid.innerHTML = '<div class="text-danger w-100 text-center fw-bold p-3">Failed to sync countries</div>';
+                grid.innerHTML = '<div class="text-warning w-100 text-center fw-bold p-3">No countries found right now.</div>';
             }
         } catch (error) {
-            grid.innerHTML = '<div class="text-danger w-100 text-center fw-bold p-3">Network connection lost</div>';
+            clearTimeout(timeoutId);
+            grid.innerHTML = `<div class="text-danger w-100 text-center fw-bold p-3">${error.name === 'AbortError' ? 'Connection timed out' : 'Network connection error'}</div>`;
         } finally {
             loader.style.display = 'none';
         }
@@ -268,14 +279,23 @@
         
         if (!countryCode) return;
 
+        grid.innerHTML = '';
+        wrapper.style.display = 'none';
         loader.style.display = 'block';
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
         try {
-            // Passing product_type=4 specifically to get Data operators
-            const response = await fetch(`/api/vtu/international/operators?code=${countryCode}&product_type=4`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await fetch(`/api/vtu/international/operators?code=${countryCode}&product_type=4`, { 
+                headers: { 'Authorization': `Bearer ${token}` },
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
             const data = await response.json();
             
-            if (data.success && data.operators.length > 0) {
+            if (data.success && Array.isArray(data.operators) && data.operators.length > 0) {
                 grid.innerHTML = '';
                 data.operators.forEach(operator => {
                     grid.innerHTML += `
@@ -289,10 +309,13 @@
                 });
                 wrapper.style.display = 'block';
             } else {
-                Swal.fire({ icon: 'error', title: 'No Data Operators', text: 'No networks found offering data in this country.', background: '#111', color: '#fff' });
+                Swal.fire({ icon: 'info', title: 'No Networks', text: 'There are no networks offering data packages in this country right now.', background: '#111', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch networks.', background: '#111', color: '#fff' });
+            clearTimeout(timeoutId);
+            let errMsg = 'Failed to fetch networks from the server.';
+            if (error.name === 'AbortError') errMsg = 'Connection timed out while fetching networks.';
+            Swal.fire({ icon: 'error', title: 'Error', text: errMsg, background: '#111', color: '#fff' });
         } finally {
             loader.style.display = 'none';
         }
@@ -319,14 +342,31 @@
         
         if (!operatorId) return;
 
+        // Reset grid before loading
+        grid.innerHTML = '';
+        wrapper.style.display = 'none';
         loader.style.display = 'block';
 
+        // 15 Second forced timeout so it NEVER freezes
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
         try {
-            // Using the new variation endpoint to fetch product_type_id=4 plans
-            const response = await fetch(`/api/vtu/variations?serviceID=foreign-airtime&operator_id=${operatorId}&product_type_id=4`, { headers: { 'Authorization': `Bearer ${token}` } });
+            const response = await fetch(`/api/vtu/variations?serviceID=foreign-airtime&operator_id=${operatorId}&product_type_id=4`, { 
+                headers: { 'Authorization': `Bearer ${token}` },
+                signal: controller.signal 
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`Server returned status: ${response.status}`);
+            }
+
             const data = await response.json();
             
-            if (data.success && data.variations.length > 0) {
+            // BULLETPROOF CRASH PREVENTION: Must be true, must exist, must be an array, must not be empty
+            if (data.success && data.variations && Array.isArray(data.variations) && data.variations.length > 0) {
                 grid.innerHTML = '';
                 data.variations.forEach(plan => {
                     const amtFormatted = Number(plan.variation_amount).toLocaleString(undefined, {minimumFractionDigits: 2});
@@ -341,11 +381,19 @@
                 });
                 wrapper.style.display = 'block';
             } else {
-                Swal.fire({ icon: 'error', title: 'No Packages', text: 'This network has no available data packages at the moment.', background: '#111', color: '#fff' });
+                // If it succeeds but the list is empty, show a polite popup and stop spinning
+                Swal.fire({ icon: 'info', title: 'No Packages Available', text: 'This specific network does not have data plans available in the test environment.', background: '#111', color: '#fff' });
             }
         } catch (error) {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to sync data packages.', background: '#111', color: '#fff' });
+            clearTimeout(timeoutId);
+            // If it crashes or times out, show the exact error and stop spinning
+            let errorMsg = 'Failed to sync data packages due to a server error.';
+            if (error.name === 'AbortError') {
+                errorMsg = 'Request timed out. The provider is taking too long to respond.';
+            }
+            Swal.fire({ icon: 'error', title: 'Sync Error', text: errorMsg, background: '#111', color: '#fff' });
         } finally {
+            // GUARANTEED to hide the loader no matter what happens
             loader.style.display = 'none';
         }
     }
