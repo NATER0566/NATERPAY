@@ -184,11 +184,11 @@
         });
         
         try {
-            // Directs perfectly to your backend buySms function
             const res = await fetch('/api/vtu/sms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ phone: phone, amount: amount, pin: pin, provider: 'bulk-sms' })
+                // FIX: Send 'smsclone' instead of 'bulk-sms' so VTpass recognizes the product
+                body: JSON.stringify({ phone: phone, amount: amount, pin: pin, provider: 'smsclone' })
             });
             const data = await res.json();
             
