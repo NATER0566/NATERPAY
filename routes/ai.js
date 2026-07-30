@@ -7,11 +7,6 @@ const User = require('../models/User');
 let AIChat;
 try { AIChat = require('../models/AIChat'); } catch (e) { console.warn("AIChat model not found. Chat history will not be saved."); }
 
-// Ensure SchemaType is available (Fallback for different SDK versions)
-const TYPE_OBJECT = SchemaType?.OBJECT || "OBJECT";
-const TYPE_STRING = SchemaType?.STRING || "STRING";
-const TYPE_NUMBER = SchemaType?.NUMBER || "NUMBER";
-
 // =====================================================================
 // NATERPAY AI OFFICIAL SYSTEM SPECIFICATION (SPS v1.0)
 // =====================================================================
@@ -46,45 +41,46 @@ SAFETY & GUARDRAILS:
 `;
 
 // =====================================================================
-// OFFICIAL FUNCTION CALLING LAYER (BULLETPROOF SCHEMA)
+// OFFICIAL FUNCTION CALLING LAYER (v0.21.0 COMPLIANT SCHEMA)
 // =====================================================================
+// Functions with no parameters must omit the 'parameters' key entirely
 const tools = [
   {
     functionDeclarations: [
-      { name: "checkWallet", description: "Fetch the user's current wallet and ledger balance.", parameters: { type: TYPE_OBJECT, properties: {} } },
-      { name: "getTransactions", description: "Fetch the user's recent transaction history.", parameters: { type: TYPE_OBJECT, properties: {} } },
+      { name: "checkWallet", description: "Fetch the user's current wallet and ledger balance." },
+      { name: "getTransactions", description: "Fetch the user's recent transaction history." },
       { 
         name: "getTransaction", 
         description: "Fetch a specific transaction by reference number to check status or explain a failure.",
-        parameters: { type: TYPE_OBJECT, properties: { reference: { type: TYPE_STRING } }, required: ["reference"] }
+        parameters: { type: SchemaType.OBJECT, properties: { reference: { type: SchemaType.STRING } }, required: ["reference"] }
       },
-      { name: "getProfile", description: "Fetch the user's profile details.", parameters: { type: TYPE_OBJECT, properties: {} } },
-      { name: "getKYC", description: "Fetch the user's current KYC status, tier, and submitted documents.", parameters: { type: TYPE_OBJECT, properties: {} } },
-      { name: "getReferrals", description: "Fetch the user's referral tree, downlines, and total commissions earned.", parameters: { type: TYPE_OBJECT, properties: {} } },
+      { name: "getProfile", description: "Fetch the user's profile details." },
+      { name: "getKYC", description: "Fetch the user's current KYC status, tier, and submitted documents." },
+      { name: "getReferrals", description: "Fetch the user's referral tree, downlines, and total commissions earned." },
       { 
         name: "buyAirtime", 
         description: "Initiate an airtime purchase request.",
-        parameters: { type: TYPE_OBJECT, properties: { network: { type: TYPE_STRING }, amount: { type: TYPE_NUMBER }, phone: { type: TYPE_STRING } }, required: ["network", "amount", "phone"] }
+        parameters: { type: SchemaType.OBJECT, properties: { network: { type: SchemaType.STRING }, amount: { type: SchemaType.NUMBER }, phone: { type: SchemaType.STRING } }, required: ["network", "amount", "phone"] }
       },
       { 
         name: "buyData", 
         description: "Initiate a data purchase request.",
-        parameters: { type: TYPE_OBJECT, properties: { network: { type: TYPE_STRING }, plan: { type: TYPE_STRING }, phone: { type: TYPE_STRING } }, required: ["network", "plan", "phone"] }
+        parameters: { type: SchemaType.OBJECT, properties: { network: { type: SchemaType.STRING }, plan: { type: SchemaType.STRING }, phone: { type: SchemaType.STRING } }, required: ["network", "plan", "phone"] }
       },
       { 
         name: "payElectricity", 
         description: "Initiate an electricity bill payment.",
-        parameters: { type: TYPE_OBJECT, properties: { disco: { type: TYPE_STRING }, meterNumber: { type: TYPE_STRING }, amount: { type: TYPE_NUMBER } }, required: ["disco", "meterNumber", "amount"] }
+        parameters: { type: SchemaType.OBJECT, properties: { disco: { type: SchemaType.STRING }, meterNumber: { type: SchemaType.STRING }, amount: { type: SchemaType.NUMBER } }, required: ["disco", "meterNumber", "amount"] }
       },
-      { name: "buyEducationPin", description: "Initiate a WAEC or JAMB PIN purchase.", parameters: { type: TYPE_OBJECT, properties: {} } },
-      { name: "buyCable", description: "Initiate a DSTV, GOtv, or Startimes subscription.", parameters: { type: TYPE_OBJECT, properties: {} } },
-      { name: "checkBeneficiary", description: "Validate a saved beneficiary.", parameters: { type: TYPE_OBJECT, properties: {} } },
+      { name: "buyEducationPin", description: "Initiate a WAEC or JAMB PIN purchase." },
+      { name: "buyCable", description: "Initiate a DSTV, GOtv, or Startimes subscription." },
+      { name: "checkBeneficiary", description: "Validate a saved beneficiary." },
       { 
         name: "lookupMeter", 
         description: "Verify an electricity meter number via VTpass API.",
-        parameters: { type: TYPE_OBJECT, properties: { disco: { type: TYPE_STRING }, meterNumber: { type: TYPE_STRING } }, required: ["disco", "meterNumber"] }
+        parameters: { type: SchemaType.OBJECT, properties: { disco: { type: SchemaType.STRING }, meterNumber: { type: SchemaType.STRING } }, required: ["disco", "meterNumber"] }
       },
-      { name: "lookupVariation", description: "Fetch available data/cable plans (variations) for a specific service.", parameters: { type: TYPE_OBJECT, properties: {} } }
+      { name: "lookupVariation", description: "Fetch available data/cable plans (variations) for a specific service." }
     ]
   }
 ];
@@ -113,38 +109,30 @@ async function chatWithAI(request, reply) {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-    // Save user's message
+    // Save user's prompt
     await saveChat(userId, 'user', message);
 
-    // [FIXED] Updated to the active, officially supported gemini-1.5-flash model
-    const liteEngine = genAI.getGenerativeModel({ 
+    // Use the official v0.21.0 model & config
+    const aiEngine = genAI.getGenerativeModel({ 
         model: "gemini-1.5-flash", 
+        systemInstruction: systemInstruction,
         tools: tools
     });
 
-    const liteChat = liteEngine.startChat({
-        history: [
-            { role: "user", parts: [{ text: systemInstruction }] },
-            { role: "model", parts: [{ text: "System Protocol Acknowledged. I am NATERPAY AI, fully operational and ready to assist." }] }
-        ]
-    });
-
-    const liteResult = await liteChat.sendMessage(message);
-    const liteResponse = liteResult.response;
+    const chat = aiEngine.startChat();
+    const result = await chat.sendMessage(message);
+    const response = result.response;
     
-    // Bulletproof function call extraction
-    let functionCalls = [];
-    if (typeof liteResponse.functionCalls === 'function') {
-        functionCalls = liteResponse.functionCalls() || [];
-    } else if (liteResponse.functionCalls) {
-        functionCalls = liteResponse.functionCalls;
-    }
+    // Extract Function Calls
+    let functionCalls = response.functionCalls ? (typeof response.functionCalls === 'function' ? response.functionCalls() : response.functionCalls) : [];
     
     if (functionCalls && functionCalls.length > 0) {
         const call = functionCalls[0]; 
         let dbData = {};
 
-        // Function Execution Layer
+        // -------------------------------------------------------------
+        // EXECUTE SYSTEM ACTION
+        // -------------------------------------------------------------
         switch(call.name) {
             case "checkWallet":
                 const wallet = await Wallet.findOne({ user: userId });
@@ -174,37 +162,32 @@ async function chatWithAI(request, reply) {
                 dbData = { 
                     action: call.name, 
                     status: "Action Prepared", 
-                    message: "Instruct the user to navigate to the respective dashboard service page to complete this transaction securely." 
+                    message: "Inform the user that AI cannot authorize direct deductions. Instruct them to navigate to the respective dashboard service page to complete the transaction securely with their PIN." 
                 };
                 break;
 
             default:
-                dbData = { status: "Acknowledged", message: "Function executed." };
+                dbData = { status: "Acknowledged", message: "Function executed successfully." };
         }
 
-        // [FIXED] Updated reasoning engine to the active 1.5-flash model
-        const proEngine = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash"
-        });
+        // -------------------------------------------------------------
+        // PASS DATA BACK TO AI FOR NATURAL LANGUAGE EXPLANATION
+        // -------------------------------------------------------------
+        const finalResult = await chat.sendMessage([{
+            functionResponse: {
+                name: call.name,
+                response: dbData
+            }
+        }]);
 
-        const proChat = proEngine.startChat({
-            history: [
-                { role: "user", parts: [{ text: systemInstruction + "\n\nPRO DIRECTIVE: Analyze the raw database data provided. Format it beautifully for the user." }] },
-                { role: "model", parts: [{ text: "Understood. Ready to format database payload." }] }
-            ]
-        });
-
-        const proPayload = `System executed '${call.name}'. Database Result: ${JSON.stringify(dbData)}. Format this perfectly for the user.`;
-
-        const finalResult = await proChat.sendMessage(proPayload);
-        const aiFinalText = typeof finalResult.response.text === 'function' ? finalResult.response.text() : "Processed successfully.";
-
+        const aiFinalText = typeof finalResult.response.text === 'function' ? finalResult.response.text() : finalResult.response.text;
         await saveChat(userId, 'model', aiFinalText, call.name);
+        
         return reply.send({ success: true, reply: aiFinalText });
     }
 
-    // Standard text response
-    const standardText = typeof liteResponse.text === 'function' ? liteResponse.text() : "I am processing your request.";
+    // Standard text response if no function was needed
+    const standardText = typeof response.text === 'function' ? response.text() : response.text;
     await saveChat(userId, 'model', standardText);
 
     return reply.send({ success: true, reply: standardText });
@@ -213,6 +196,7 @@ async function chatWithAI(request, reply) {
     console.error("NATERPAY AI Error:", error);
     const errorMsg = error.message || "Unknown API Error";
     
+    // Graceful error handling rendering back to the chat UI
     return reply.send({ 
         success: true, 
         reply: `⚠️ **Diagnostic Alert:** The neural core encountered a critical error.\n\n\`\`\`text\n${errorMsg}\n\`\`\`\n*If you are the developer, check the error code above to debug the Google API connection.*` 
