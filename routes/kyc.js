@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 const KYC = require('../models/KYC');
 const User = require('../models/User');
-const Joi = require('joi'); // [1] Strict Request Validation
+const Joi = require('joi'); 
 const cloudinary = require('cloudinary').v2;
-const axios = require('axios'); // ADDED: Required for Paystack API calls
+const axios = require('axios'); 
 
 // [2] STRUCTURED LOGGING ENGINE
 let logger;
@@ -27,12 +27,9 @@ function handleError(reply, error, defaultMessage = 'System error occurred.') {
     reply.status(error.status || 400).send({ success: false, message: error.message || defaultMessage });
 }
 
-// [4] TEXT SANITIZATION (XSS Protection for Addresses & IDs)
+// [4] TEXT SANITIZATION
 const sanitizeText = (str) => str ? String(str).replace(/[<>]/g, '').trim().substring(0, 255) : '';
 
-/* =========================================================================
-   [5] CLOUDINARY NETWORK RETRY ENGINE
-========================================================================= */
 async function withRetry(fn, retries = 3) {
     for (let i = 0; i < retries; i++) {
         try { return await fn(); } 
@@ -43,9 +40,6 @@ async function withRetry(fn, retries = 3) {
     }
 }
 
-/* =========================================================================
-   [6] REDIS / DISTRIBUTED RATE LIMITING ENGINE
-========================================================================= */
 const redisClient = (Redis && process.env.REDIS_URL) ? new Redis(process.env.REDIS_URL) : null;
 const fallbackRateLimits = new Map();
 
@@ -88,9 +82,6 @@ async function checkRateLimit(request, action, limit = 5) {
     } else { return executeFallback(); }
 }
 
-/* =========================================================================
-   GET CURRENT KYC STATUS
-========================================================================= */
 async function getKYC(request, reply) {
     try {
         if (!await checkRateLimit(request, 'get_kyc', 30)) throw { status: 429, message: 'Too many requests.' };
@@ -105,61 +96,56 @@ async function getKYC(request, reply) {
 }
 
 /* =========================================================================
-   SUBMIT LEVEL 1: BASIC IDENTITY INFO
+   SUBMIT LEVEL 1: EXACT PAYSTACK BANK ACCOUNT MATCHING ENGINE
 ========================================================================= */
 async function submitLevel1(request, reply) {
     try {
-        // [1] Strict Joi Validation (Prevents NoSQL Injection)
         const schema = Joi.object({
             bvn: Joi.string().pattern(/^\d{11}$/).allow('', null),
             nin: Joi.string().pattern(/^\d{11}$/).allow('', null),
-            firstName: Joi.string().allow('', null), // ADDED for Paystack Match
-            lastName: Joi.string().allow('', null)    // ADDED for Paystack Match
-        }).or('bvn', 'nin'); // Requires AT LEAST ONE
+            firstName: Joi.string().allow('', null), 
+            lastName: Joi.string().allow('', null),
+            accountNumber: Joi.string().pattern(/^\d{10}$/).allow('', null), // REQUIRED FOR PAYSTACK
+            bankCode: Joi.string().allow('', null) // REQUIRED FOR PAYSTACK
+        }).or('bvn', 'nin'); 
         
         const { error, value } = schema.validate(request.body);
         if (error) throw error;
 
-        // [6] Extremely strict rate limit to prevent BVN brute-forcing
         if (!await checkRateLimit(request, 'submit_kyc_l1', 3)) throw new Error('Too many verification attempts. Please wait 60 seconds.');
 
-        const { bvn, nin, firstName, lastName } = value;
+        const { bvn, nin, firstName, lastName, accountNumber, bankCode } = value;
 
-        // ANTI-DUPLICATION ENGINE
         const orConditions = [];
         if (bvn) orConditions.push({ 'level1.bvn': bvn });
         if (nin) orConditions.push({ 'level1.nin': nin });
 
         const duplicateCheck = await KYC.findOne({ $or: orConditions, user: { $ne: request.user._id } });
         if (duplicateCheck) {
-            throw { status: 403, message: 'SECURITY ALERT: This BVN or NIN is already linked to an existing NATERPAY account.' };
+            throw { status: 403, message: 'SECURITY ALERT: This BVN or NIN is already linked to an existing account.' };
         }
 
         let kyc = await KYC.findOne({ user: request.user._id });
         if (!kyc) kyc = new KYC({ user: request.user._id });
 
-        // Spam Prevention Lock
         if (kyc.currentLevel === 1 && kyc.status === 'under_review') {
-            throw new Error('Your Tier 1 submission is already under review. Please wait for an administrator to process it.');
+            throw new Error('Your Tier 1 submission is already under review.');
         }
 
-        // =====================================================================
-        // NEW PAYSTACK IDENTITY VALIDATION ENGINE (CBN COMPLIANT)
-        // =====================================================================
         if (bvn) {
-            if (!firstName || !lastName) {
-                throw { status: 400, message: 'First Name and Last Name are required to verify your BVN via Paystack.' };
+            if (!firstName || !lastName || !accountNumber || !bankCode) {
+                throw { status: 400, message: 'First Name, Last Name, Account Number, and Bank are strictly required by Paystack for BVN verification.' };
             }
 
             const user = await User.findById(request.user._id);
             const paystackKey = process.env.PAYSTACK_SECRET_KEY;
             
-            if (!paystackKey) throw { status: 500, message: 'System configuration error: Missing verification keys.' };
+            if (!paystackKey) throw { status: 500, message: 'System error: Missing verification keys.' };
 
             const headers = { Authorization: `Bearer ${paystackKey}`, 'Content-Type': 'application/json' };
             let customerCode;
 
-            // Step 1: Create or Fetch Customer on Paystack
+            // Step 1: Initialize Customer
             try {
                 const createCustomerRes = await axios.post('https://api.paystack.co/customer', {
                     email: user.email,
@@ -167,68 +153,65 @@ async function submitLevel1(request, reply) {
                     last_name: lastName,
                     phone: user.phone || '08000000000'
                 }, { headers });
-                
                 customerCode = createCustomerRes.data.data.customer_code;
             } catch (err) {
                 if (err.response && err.response.data && err.response.data.code === 'duplicate_email') {
                     const getCustomerRes = await axios.get(`https://api.paystack.co/customer/${user.email}`, { headers });
                     customerCode = getCustomerRes.data.data.customer_code;
                 } else {
-                    throw { status: 500, message: 'Failed to initialize secure identity session with Paystack.' };
+                    throw { status: 500, message: 'Failed to communicate with Paystack.' };
                 }
             }
 
-            // Step 2: Validate the BVN
-            try {
-                const validateRes = await axios.post(`https://api.paystack.co/customer/${customerCode}/identification`, {
-                    country: 'NG',
-                    type: 'bvn',
-                    value: bvn,
-                    first_name: firstName,
-                    last_name: lastName
-                }, { headers });
+            // Step 2: Exact Paystack Bank Account Payload
+            if (customerCode) {
+                try {
+                    const validateRes = await axios.post(`https://api.paystack.co/customer/${customerCode}/identification`, {
+                        country: 'NG',
+                        type: 'bank_account', // STRICT REQUIREMENT FROM DOCS
+                        account_number: accountNumber,
+                        bvn: bvn,
+                        bank_code: bankCode,
+                        first_name: firstName,
+                        last_name: lastName
+                    }, { headers });
 
-                if (validateRes.data.status !== true) {
-                    throw new Error('Identity verification failed.');
+                    if (validateRes.data.status !== true) {
+                        throw new Error('Identity verification submission failed.');
+                    }
+                } catch (validationError) {
+                    const paystackMsg = validationError.response?.data?.message || validationError.message || 'Verification failed.';
+                    throw { status: 400, message: `Paystack Validation Failed: ${paystackMsg}` };
                 }
-            } catch (validationError) {
-                const paystackMsg = validationError.response?.data?.message || 'Identity verification failed.';
-                throw { status: 400, message: `Verification Failed: ${paystackMsg}. Please ensure your First Name and Last Name match your BVN exactly.` };
             }
         }
-        // =====================================================================
 
         kyc.currentLevel = 1; 
         await kyc.submitLevel1(bvn, nin);
 
-        // If BVN was used and successfully verified by Paystack, auto-approve it!
-        if (bvn) {
-            kyc.status = 'approved';
-            if (kyc.level1) kyc.level1.status = 'approved';
-            kyc.legalName = `${firstName} ${lastName}`;
-            await kyc.save();
+        // Since Paystack validation happens asynchronously, we place them in under_review immediately
+        kyc.status = 'under_review';
+        if (kyc.level1) kyc.level1.status = 'under_review';
+        if (firstName && lastName) kyc.legalName = `${firstName} ${lastName}`;
+        await kyc.save();
 
-            await User.findByIdAndUpdate(request.user._id, { kycLevel: 1, bvn: bvn });
+        await User.findByIdAndUpdate(request.user._id, { bvn: bvn });
 
-            return reply.send({ success: true, message: 'BVN Verified Successfully! You are now on KYC Level 1.' });
-        }
+        return reply.send({ success: true, message: 'Details submitted securely to Paystack! Your identity is currently being processed. You can proceed to the next step.' });
 
-        // If it was a NIN, fallback to manual approval
-        reply.send({ success: true, message: 'Details submitted! Awaiting global verification by an Administrator.' });
     } catch (error) { handleError(reply, error, 'Failed to process Tier 1 verification.'); }
 }
 
 /* =========================================================================
-   SUBMIT LEVEL 2: DOCUMENT UPLOADS (WITH CLOUDINARY INTERCEPTOR)
+   SUBMIT LEVEL 2: DOCUMENT UPLOADS
 ========================================================================= */
 async function submitLevel2(request, reply) {
     try {
-        // [1] Validation
         const schema = Joi.object({
             idType: Joi.string().required(),
             idNumber: Joi.string().required(),
-            idImage: Joi.string().required(),   // Expected Base64 or URL
-            selfieImage: Joi.string().required() // Expected Base64 or URL
+            idImage: Joi.string().required(),   
+            selfieImage: Joi.string().required() 
         });
         
         const { error, value } = schema.validate(request.body);
@@ -247,8 +230,6 @@ async function submitLevel2(request, reply) {
             throw new Error('Your Tier 2 documents are already under review.');
         }
 
-        // [5] CLOUDINARY SECURE UPLOAD INTERCEPTOR (PREVENTS DATABASE BLOAT)
-        // If the frontend sent heavy Base64 strings, we upload them to Cloudinary FIRST
         let secureIdUrl = value.idImage;
         let secureSelfieUrl = value.selfieImage;
 
@@ -266,7 +247,6 @@ async function submitLevel2(request, reply) {
         const safeIdNumber = sanitizeText(value.idNumber);
 
         kyc.currentLevel = 2;
-        // Notice we pass the SECURE URLs to the model, NEVER the raw Base64 data
         await kyc.submitLevel2(safeIdType, safeIdNumber, secureIdUrl, secureSelfieUrl);
 
         reply.send({ success: true, message: 'Documents submitted successfully! Please wait for manual admin review.' });
@@ -300,7 +280,6 @@ async function submitLevel3(request, reply) {
             throw new Error('Your Tier 3 address is already under review.');
         }
 
-        // [4] Sanitization
         const safeAddress = sanitizeText(value.address);
         const safeCity = sanitizeText(value.city);
         const safeState = sanitizeText(value.state);
