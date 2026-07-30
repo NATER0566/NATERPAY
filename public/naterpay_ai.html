@@ -210,7 +210,10 @@
             display: flex; align-items: center; justify-content: center;
         }
         .action-btn:hover { color: var(--gold); background: rgba(255,215,0,0.1); }
+        .action-btn.listening { color: #ff3333; animation: pulseRed 1s infinite; }
         
+        @keyframes pulseRed { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+
         .send-btn {
             background: var(--gold); color: #000; border: none; width: 45px; height: 45px;
             border-radius: 50%; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
@@ -241,19 +244,16 @@
     
     <div class="chat-history" id="chatBox">
         
-        <!-- INITIAL HERO SCREEN (Per SPS Specifications) -->
+        <!-- INITIAL HERO SCREEN -->
         <div class="welcome-hero" id="heroScreen">
-            
             <div class="ai-orb-container">
                 <div class="orbit-ring ring-1"></div>
                 <div class="orbit-ring ring-2"></div>
                 <div class="ai-orb"></div>
             </div>
-            
             <h1 class="hero-title">NATERPAY AI</h1>
-            <p class="hero-subtitle">"Hello, I'm NATERPAY AI.<br>How can I help you today?"</p>
+            <p class="hero-subtitle">"Your Intelligent Financial Assistant."</p>
             
-            <!-- QUICK ACTION BUTTONS -->
             <div class="quick-actions-grid">
                 <div class="action-card" onclick="sendSuggested('Check my Wallet details')"><i class="fas fa-wallet"></i> Wallet</div>
                 <div class="action-card" onclick="sendSuggested('Show my Recent Transactions')"><i class="fas fa-history"></i> Transactions</div>
@@ -261,27 +261,17 @@
                 <div class="action-card" onclick="sendSuggested('I need Support')"><i class="fas fa-headset"></i> Support</div>
                 <div class="action-card" onclick="sendSuggested('How do I secure my account?')"><i class="fas fa-shield-alt"></i> Security</div>
                 <div class="action-card" onclick="sendSuggested('How do Referrals work?')"><i class="fas fa-users"></i> Referral</div>
-                <div class="action-card" onclick="sendSuggested('Show API Documentation')"><i class="fas fa-code"></i> Developer</div>
             </div>
             
             <p style="font-size: 0.75rem; color: #666; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px;">Example Questions</p>
-            
-            <!-- SUGGESTED PROMPTS -->
             <div class="suggested-prompts">
                 <button class="prompt-pill" onclick="sendSuggested('How do I buy airtime?')">How do I buy airtime?</button>
                 <button class="prompt-pill" onclick="sendSuggested('How do I fund my wallet?')">How do I fund my wallet?</button>
                 <button class="prompt-pill" onclick="sendSuggested('Why did my transaction fail?')">Why did my transaction fail?</button>
                 <button class="prompt-pill" onclick="sendSuggested('Buy MTN Data')">Buy MTN Data</button>
                 <button class="prompt-pill" onclick="sendSuggested('Pay Electricity')">Pay Electricity</button>
-                <button class="prompt-pill" onclick="sendSuggested('Buy WAEC PIN')">Buy WAEC PIN</button>
-                <button class="prompt-pill" onclick="sendSuggested('Buy JAMB PIN')">Buy JAMB PIN</button>
-                <button class="prompt-pill" onclick="sendSuggested('How do referrals work?')">How do referrals work?</button>
-                <button class="prompt-pill" onclick="sendSuggested('How do I verify KYC?')">How do I verify KYC?</button>
-                <button class="prompt-pill" onclick="sendSuggested('Show API Documentation')">Show API Documentation</button>
             </div>
         </div>
-
-        <!-- Chat messages will be injected here dynamically -->
 
         <!-- Typing Indicator -->
         <div class="typing-indicator" id="typingIndicator">
@@ -294,19 +284,18 @@
     <!-- INPUT AREA -->
     <div class="input-area">
         <div class="input-wrapper">
-            <button class="action-btn" title="Future Feature: Voice Search"><i class="fas fa-microphone"></i></button>
+            <button class="action-btn" id="micBtn" onclick="startDictation()" title="Tap to Speak"><i class="fas fa-microphone"></i></button>
             
             <textarea id="userInput" class="chat-input" placeholder="Message NATERPAY AI..." rows="1" oninput="autoResize(this)" onkeydown="handleEnter(event)"></textarea>
             
             <button class="send-btn" id="sendBtn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
-    <div class="footer-disclaimer">NATERPAY AI can make mistakes. Always verify transaction statuses and account numbers before processing.</div>
+    <div class="footer-disclaimer">NATERPAY AI acts on live system data but can make interpretation errors. Always verify transaction statuses manually.</div>
 
 </div>
 
 <script>
-    // --- BACKGROUND ANIMATION ---
     function initStars() {
         const canvas = document.getElementById("starCanvas");
         canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -327,7 +316,6 @@
         animate();
     }
     
-    // --- MARKDOWN CONFIGURATION ---
     marked.setOptions({
         highlight: function(code, lang) {
             const language = highlight.getLanguage(lang) ? lang : 'plaintext';
@@ -337,22 +325,20 @@
         gfm: true
     });
 
-    // --- CHAT LOGIC & HISTORY ---
     const chatBox = document.getElementById('chatBox');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
     const typingIndicator = document.getElementById('typingIndicator');
     const heroScreen = document.getElementById('heroScreen');
+    const micBtn = document.getElementById('micBtn');
     
     let isFirstMessage = true;
 
-    // Load Conversation History
     async function loadChatHistory() {
         const token = localStorage.getItem("naterpay_token") || "";
         if (!token) return;
 
         try {
-            // Note: Ensure your backend has a GET route at /api/ai/history returning an array of messages
             const res = await fetch('/api/ai/history', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -365,9 +351,55 @@
                 data.history.forEach(chat => {
                     appendMessage(chat.role === 'user' ? 'user' : 'ai', chat.message);
                 });
+            } else {
+                // Trigger auto-greeting for new chat
+                setTimeout(() => {
+                    heroScreen.style.display = 'none';
+                    isFirstMessage = false;
+                    appendMessage('ai', "Welcome to NATERPAY AI, how can I help you today?");
+                }, 800);
             }
         } catch (error) {
-            console.log("No chat history found or network error.");
+            // Fallback auto-greeting if history fetch fails
+            setTimeout(() => {
+                heroScreen.style.display = 'none';
+                isFirstMessage = false;
+                appendMessage('ai', "Welcome to NATERPAY AI, how can I help you today?");
+            }, 800);
+        }
+    }
+
+    // --- VOICE RECOGNITION LOGIC ---
+    function startDictation() {
+        if (window.hasOwnProperty('webkitSpeechRecognition') || window.hasOwnProperty('SpeechRecognition')) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = "en-US";
+
+            micBtn.classList.add('listening');
+
+            recognition.start();
+
+            recognition.onresult = function(e) {
+                userInput.value = e.results[0][0].transcript;
+                autoResize(userInput);
+                micBtn.classList.remove('listening');
+                
+                // Automatically send message after voice input
+                setTimeout(() => {
+                    if(!sendBtn.disabled) sendMessage();
+                }, 500);
+            };
+
+            recognition.onerror = function(e) {
+                recognition.stop();
+                micBtn.classList.remove('listening');
+            };
+        } else {
+            Swal.fire({ icon: 'warning', title: 'Not Supported', text: 'Voice recognition is not supported or permitted in this browser.', background: '#111', color: '#fff' });
         }
     }
 
@@ -396,7 +428,6 @@
 
     function addCopyButtons() {
         document.querySelectorAll('pre').forEach((block) => {
-            // Check if button already exists
             if (block.querySelector('.copy-btn')) return;
 
             const button = document.createElement('button');
@@ -424,21 +455,14 @@
             iconHtml = `<div class="msg-avatar"><i class="fas fa-user"></i></div>`;
         } else {
             iconHtml = `<div class="msg-avatar"><i class="fas fa-robot"></i></div>`;
-            // Parse markdown for AI responses
             content = marked.parse(content);
         }
 
-        msgDiv.innerHTML = `
-            ${iconHtml}
-            <div class="msg-bubble">${content}</div>
-        `;
+        msgDiv.innerHTML = `${iconHtml}<div class="msg-bubble">${content}</div>`;
         
-        // Insert right before typing indicator
         chatBox.insertBefore(msgDiv, typingIndicator);
         
-        // Append Copy buttons to any generated code blocks
         if(role === 'ai') addCopyButtons();
-
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
@@ -479,16 +503,15 @@
             if (data.success && data.reply) {
                 appendMessage('ai', data.reply);
             } else {
-                appendMessage('ai', "⚠️ *System Protocol Error:* I am currently unable to reach the neural core. Please try again in a moment.");
+                appendMessage('ai', "⚠️ *System Protocol Error:* I am currently unable to process that. Please try again.");
             }
 
         } catch (error) {
             typingIndicator.style.display = 'none';
-            appendMessage('ai', "📡 *Connection Lost:* Unable to establish a secure link with the NATERPAY server.");
+            appendMessage('ai', "📡 *Connection Lost:* Unable to establish a secure link with the NATERPAY server. Please check your internet connection.");
         }
     }
 
-    // Initialize environment
     window.onload = () => {
         initStars();
         loadChatHistory();
