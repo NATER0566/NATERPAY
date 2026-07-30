@@ -3,6 +3,7 @@ const KYC = require('../models/KYC');
 const User = require('../models/User');
 const Joi = require('joi'); // [1] Strict Request Validation
 const cloudinary = require('cloudinary').v2;
+const axios = require('axios'); // ADDED: Required for Paystack API calls
 
 // [2] STRUCTURED LOGGING ENGINE
 let logger;
@@ -111,7 +112,9 @@ async function submitLevel1(request, reply) {
         // [1] Strict Joi Validation (Prevents NoSQL Injection)
         const schema = Joi.object({
             bvn: Joi.string().pattern(/^\d{11}$/).allow('', null),
-            nin: Joi.string().pattern(/^\d{11}$/).allow('', null)
+            nin: Joi.string().pattern(/^\d{11}$/).allow('', null),
+            firstName: Joi.string().allow('', null), // ADDED for Paystack Match
+            lastName: Joi.string().allow('', null)    // ADDED for Paystack Match
         }).or('bvn', 'nin'); // Requires AT LEAST ONE
         
         const { error, value } = schema.validate(request.body);
@@ -120,7 +123,7 @@ async function submitLevel1(request, reply) {
         // [6] Extremely strict rate limit to prevent BVN brute-forcing
         if (!await checkRateLimit(request, 'submit_kyc_l1', 3)) throw new Error('Too many verification attempts. Please wait 60 seconds.');
 
-        const { bvn, nin } = value;
+        const { bvn, nin, firstName, lastName } = value;
 
         // ANTI-DUPLICATION ENGINE
         const orConditions = [];
@@ -140,9 +143,77 @@ async function submitLevel1(request, reply) {
             throw new Error('Your Tier 1 submission is already under review. Please wait for an administrator to process it.');
         }
 
+        // =====================================================================
+        // NEW PAYSTACK IDENTITY VALIDATION ENGINE (CBN COMPLIANT)
+        // =====================================================================
+        if (bvn) {
+            if (!firstName || !lastName) {
+                throw { status: 400, message: 'First Name and Last Name are required to verify your BVN via Paystack.' };
+            }
+
+            const user = await User.findById(request.user._id);
+            const paystackKey = process.env.PAYSTACK_SECRET_KEY;
+            
+            if (!paystackKey) throw { status: 500, message: 'System configuration error: Missing verification keys.' };
+
+            const headers = { Authorization: `Bearer ${paystackKey}`, 'Content-Type': 'application/json' };
+            let customerCode;
+
+            // Step 1: Create or Fetch Customer on Paystack
+            try {
+                const createCustomerRes = await axios.post('https://api.paystack.co/customer', {
+                    email: user.email,
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone: user.phone || '08000000000'
+                }, { headers });
+                
+                customerCode = createCustomerRes.data.data.customer_code;
+            } catch (err) {
+                if (err.response && err.response.data && err.response.data.code === 'duplicate_email') {
+                    const getCustomerRes = await axios.get(`https://api.paystack.co/customer/${user.email}`, { headers });
+                    customerCode = getCustomerRes.data.data.customer_code;
+                } else {
+                    throw { status: 500, message: 'Failed to initialize secure identity session with Paystack.' };
+                }
+            }
+
+            // Step 2: Validate the BVN
+            try {
+                const validateRes = await axios.post(`https://api.paystack.co/customer/${customerCode}/identification`, {
+                    country: 'NG',
+                    type: 'bvn',
+                    value: bvn,
+                    first_name: firstName,
+                    last_name: lastName
+                }, { headers });
+
+                if (validateRes.data.status !== true) {
+                    throw new Error('Identity verification failed.');
+                }
+            } catch (validationError) {
+                const paystackMsg = validationError.response?.data?.message || 'Identity verification failed.';
+                throw { status: 400, message: `Verification Failed: ${paystackMsg}. Please ensure your First Name and Last Name match your BVN exactly.` };
+            }
+        }
+        // =====================================================================
+
         kyc.currentLevel = 1; 
         await kyc.submitLevel1(bvn, nin);
 
+        // If BVN was used and successfully verified by Paystack, auto-approve it!
+        if (bvn) {
+            kyc.status = 'approved';
+            if (kyc.level1) kyc.level1.status = 'approved';
+            kyc.legalName = `${firstName} ${lastName}`;
+            await kyc.save();
+
+            await User.findByIdAndUpdate(request.user._id, { kycLevel: 1, bvn: bvn });
+
+            return reply.send({ success: true, message: 'BVN Verified Successfully! You are now on KYC Level 1.' });
+        }
+
+        // If it was a NIN, fallback to manual approval
         reply.send({ success: true, message: 'Details submitted! Awaiting global verification by an Administrator.' });
     } catch (error) { handleError(reply, error, 'Failed to process Tier 1 verification.'); }
 }
