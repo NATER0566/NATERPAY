@@ -116,13 +116,12 @@ async function chatWithAI(request, reply) {
     // Save user's message
     await saveChat(userId, 'user', message);
 
-    // [FIXED] Switched to the ultra-stable "gemini-pro" model to bypass 404 version errors
+    // [FIXED] Updated to the active, officially supported gemini-1.5-flash model
     const liteEngine = genAI.getGenerativeModel({ 
-        model: "gemini-pro", 
+        model: "gemini-1.5-flash", 
         tools: tools
     });
 
-    // [FIXED] Injecting personality directly into chat history to bypass strict systemInstruction rules
     const liteChat = liteEngine.startChat({
         history: [
             { role: "user", parts: [{ text: systemInstruction }] },
@@ -183,8 +182,9 @@ async function chatWithAI(request, reply) {
                 dbData = { status: "Acknowledged", message: "Function executed." };
         }
 
+        // [FIXED] Updated reasoning engine to the active 1.5-flash model
         const proEngine = genAI.getGenerativeModel({ 
-            model: "gemini-pro"
+            model: "gemini-1.5-flash"
         });
 
         const proChat = proEngine.startChat({
