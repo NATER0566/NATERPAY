@@ -63,6 +63,9 @@
         
         .btn-submit { background: var(--gold); color: black; font-weight: 900; border-radius: 12px; padding: 15px; width: 100%; border: none; font-size: 1rem; letter-spacing: 1px; transition: 0.3s; margin-top: 10px; }
         .btn-submit:hover { background: white; transform: translateY(-2px); }
+
+        /* Spinner container logic */
+        .swal2-html-container { overflow: hidden !important; }
     </style>
 </head>
 <body>
@@ -105,56 +108,17 @@
         <p class="text-muted small mb-4">Required for basic wallet funding and VTU purchases.</p>
         
         <div id="tier1Form">
-            <!-- NAMES -->
             <div class="row">
                 <div class="col-6">
                     <div class="input-group-custom">
-                        <label>FIRST NAME (As on BVN)</label>
+                        <label>FIRST NAME</label>
                         <input type="text" id="firstNameInput" placeholder="Legal First Name">
                     </div>
                 </div>
                 <div class="col-6">
                     <div class="input-group-custom">
-                        <label>LAST NAME (As on BVN)</label>
+                        <label>LAST NAME</label>
                         <input type="text" id="lastNameInput" placeholder="Legal Last Name">
-                    </div>
-                </div>
-            </div>
-
-            <!-- ACCOUNT BINDING (PAYSTACK DOC REQUIREMENT) -->
-            <div class="row">
-                <div class="col-6">
-                    <div class="input-group-custom">
-                        <label>ACCOUNT NUMBER</label>
-                        <input type="text" id="accountNumberInput" placeholder="10-Digit Account" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="input-group-custom">
-                        <label>BANK (Linked to BVN)</label>
-                        <select id="bankCodeInput">
-                            <option value="">Select Bank...</option>
-                            <option value="044">Access Bank</option>
-                            <option value="050">Ecobank</option>
-                            <option value="214">FCMB</option>
-                            <option value="070">Fidelity Bank</option>
-                            <option value="011">First Bank of Nigeria</option>
-                            <option value="058">Guaranty Trust Bank (GTB)</option>
-                            <option value="030">Heritage Bank</option>
-                            <option value="082">Keystone Bank</option>
-                            <option value="50211">Kuda Bank</option>
-                            <option value="100004">OPay</option>
-                            <option value="100033">PalmPay</option>
-                            <option value="076">Polaris Bank</option>
-                            <option value="121">Providus Bank</option>
-                            <option value="221">Stanbic IBTC Bank</option>
-                            <option value="232">Sterling Bank</option>
-                            <option value="033">United Bank for Africa (UBA)</option>
-                            <option value="032">Union Bank of Nigeria</option>
-                            <option value="215">Unity Bank</option>
-                            <option value="035">Wema Bank</option>
-                            <option value="057">Zenith Bank</option>
-                        </select>
                     </div>
                 </div>
             </div>
@@ -167,7 +131,7 @@
                 <label>NATIONAL IDENTITY NUMBER (NIN)</label>
                 <input type="text" id="ninInput" placeholder="Enter exactly 11-digit NIN (Optional if BVN provided)" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
             </div>
-            <button class="btn-submit" onclick="submitTier1()"><i class="fas fa-check-circle me-2"></i> SUBMIT FOR VERIFICATION</button>
+            <button class="btn-submit" onclick="submitTier1()"><i class="fas fa-check-circle me-2"></i> SECURE & SUBMIT</button>
         </div>
     </div>
 
@@ -178,18 +142,39 @@
         <p class="text-muted small mb-4">Unlocks bank withdrawals and peer-to-peer transfers.</p>
         
         <div id="tier2Form">
-            <div class="input-group-custom">
-                <label>DOCUMENT TYPE</label>
-                <select id="idType">
-                    <option value="national_id">National ID Card</option>
-                    <option value="voters_card">Voter's Card</option>
-                    <option value="drivers_license">Driver's License</option>
-                    <option value="international_passport">International Passport</option>
-                </select>
+            <div class="row">
+                <div class="col-12 col-md-6">
+                    <div class="input-group-custom">
+                        <label>DOCUMENT TYPE</label>
+                        <select id="idType">
+                            <option value="national_id">National ID Card (NIN)</option>
+                            <option value="voters_card">Voter's Card (INEC)</option>
+                            <option value="drivers_license">Driver's License</option>
+                            <option value="international_passport">International Passport</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="input-group-custom">
+                        <label>DOCUMENT NUMBER</label>
+                        <input type="text" id="idNumber" placeholder="Enter ID Number">
+                    </div>
+                </div>
             </div>
-            <div class="input-group-custom">
-                <label>DOCUMENT NUMBER</label>
-                <input type="text" id="idNumber" placeholder="Enter Document ID Number">
+
+            <div class="row">
+                <div class="col-6">
+                    <div class="input-group-custom">
+                        <label>DATE OF BIRTH</label>
+                        <input type="date" id="dobInput" required>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="input-group-custom">
+                        <label>EXPIRY DATE</label>
+                        <input type="date" id="expiryInput">
+                    </div>
+                </div>
             </div>
             
             <div class="file-upload-wrapper">
@@ -235,6 +220,15 @@
                     </div>
                 </div>
             </div>
+
+            <!-- NEW ADDRESS DOCUMENT UPLOAD -->
+            <div class="file-upload-wrapper">
+                <input type="file" id="addressImage" accept="image/jpeg, image/png, application/pdf" onchange="updateFileName(this, 'addressFileName')">
+                <i class="fas fa-file-invoice fa-2x mb-2 text-info"></i>
+                <div class="fw-bold" id="addressFileName">Upload Utility Bill / Bank Statement</div>
+                <small class="text-muted">Must show your name and address (JPG, PNG, PDF)</small>
+            </div>
+
             <button class="btn-submit" onclick="submitTier3()"><i class="fas fa-home me-2"></i> VERIFY TIER 3</button>
         </div>
     </div>
@@ -304,15 +298,13 @@
 
                 [t0, t1, t2, t3].forEach(t => t.className = 'tier-card locked');
 
-                // BASE TIER LOGIC (EMAIL)
                 if (!isEmailVerifiedNow) {
                     t0.className = 'tier-card active'; b0.className = 'tier-badge badge-active'; b0.innerText = 'ACTION REQUIRED';
-                    return; // Stop here, they MUST verify email first
+                    return; 
                 } else {
                     t0.className = 'tier-card completed'; b0.className = 'tier-badge badge-completed'; b0.innerText = 'COMPLETED'; f0.style.display = 'none';
                 }
 
-                // TIER 1 LOGIC
                 if (kycLevel === 0 || !status) {
                     t1.className = 'tier-card active'; b1.className = 'tier-badge badge-active'; b1.innerText = 'ACTION REQUIRED';
                 } 
@@ -327,7 +319,6 @@
                         t2.className = 'tier-card active'; b2.className = 'tier-badge badge-active'; b2.innerText = 'ACTION REQUIRED';
                     }
                 }
-                // TIER 2 LOGIC
                 else if (kycLevel === 2) {
                     t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
                     if (status === 'under_review') {
@@ -339,7 +330,6 @@
                         t3.className = 'tier-card active'; b3.className = 'tier-badge badge-active'; b3.innerText = 'ACTION REQUIRED';
                     }
                 }
-                // TIER 3 LOGIC
                 else if (kycLevel === 3) {
                     t1.className = 'tier-card completed'; b1.className = 'tier-badge badge-completed'; b1.innerText = 'COMPLETED'; f1.style.display = 'none';
                     t2.className = 'tier-card completed'; b2.className = 'tier-badge badge-completed'; b2.innerText = 'COMPLETED'; f2.style.display = 'none';
@@ -359,7 +349,7 @@
         const authToken = localStorage.getItem("naterpay_token");
         const email = document.getElementById('baseEmailInput').value;
 
-        Swal.fire({ title: 'Sending OTP...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+        showSmartSpinner('Connecting...', 'Generating secure OTP protocol...');
 
         try {
             const res = await fetch('/api/auth/resend-verification', {
@@ -370,6 +360,7 @@
             const data = await res.json();
 
             if (data.success) {
+                Swal.close();
                 const { value: otp } = await Swal.fire({
                     title: 'Enter Verification Code',
                     text: `A 6-digit code was sent to ${email}.`,
@@ -397,7 +388,7 @@
 
     async function submitKycEmailOTP(email, otp) {
         const authToken = localStorage.getItem("naterpay_token");
-        Swal.fire({ title: 'Verifying...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+        showSmartSpinner('Verifying...', 'Validating secure credentials...');
 
         try {
             const res = await fetch('/api/auth/verify-email', {
@@ -418,7 +409,6 @@
                 document.getElementById('tier1Badge').innerText = 'ACTION REQUIRED';
 
                 Swal.fire({ icon: 'success', title: 'Base Tier Unlocked!', text: 'Your email is secured. You can now proceed to Tier 1.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
-                
             } else {
                 Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message || 'Invalid or expired OTP.', background: '#111', color: '#fff' });
             }
@@ -427,12 +417,9 @@
         }
     }
 
-    // UPDATED TIER 1 SUBMISSION LOGIC
     async function submitTier1() {
         const firstName = document.getElementById('firstNameInput').value.trim();
         const lastName = document.getElementById('lastNameInput').value.trim();
-        const accountNumber = document.getElementById('accountNumberInput').value.trim();
-        const bankCode = document.getElementById('bankCodeInput').value;
         const bvn = document.getElementById('bvnInput').value.trim();
         const nin = document.getElementById('ninInput').value.trim();
 
@@ -441,34 +428,33 @@
             return; 
         }
 
-        if (bvn) {
-            if (!firstName || !lastName || !accountNumber || !bankCode) {
-                Swal.fire({ icon: 'error', title: 'Incomplete Bank Details', text: 'Paystack requires your exact First Name, Last Name, Account Number, and Bank to verify your BVN.', background: '#111', color: '#fff' });
-                return;
-            }
-            if (accountNumber.length !== 10) {
-                Swal.fire({ icon: 'error', title: 'Invalid Account Number', text: 'Your account number must be exactly 10 digits.', background: '#111', color: '#fff' });
-                return;
-            }
+        if (bvn && (!firstName || !lastName)) {
+            Swal.fire({ icon: 'error', title: 'Incomplete Details', text: 'First Name and Last Name are required.', background: '#111', color: '#fff' });
+            return;
         }
 
-        executeApiCall('/api/kyc/level1', { bvn, nin, firstName, lastName, accountNumber, bankCode }, 'Submitting details securely to Paystack...');
+        executeApiCall('/api/kyc/level1', { bvn, nin, firstName, lastName }, 'Encrypting...', 'Capturing record for Admin Review...');
     }
 
     async function submitTier2() {
         const idType = document.getElementById('idType').value;
         const idNumber = document.getElementById('idNumber').value;
+        const dob = document.getElementById('dobInput').value;
+        const expiryDate = document.getElementById('expiryInput').value;
         const idFile = document.getElementById('idImage').files[0];
         const selfieFile = document.getElementById('selfieImage').files[0];
 
-        if (!idNumber || !idFile || !selfieFile) { Swal.fire({ icon: 'error', title: 'Incomplete', text: 'Please provide Document Number, ID Image, and Selfie.', background: '#111', color: '#fff' }); return; }
+        if (!idNumber || !dob || !idFile || !selfieFile) { 
+            Swal.fire({ icon: 'error', title: 'Incomplete', text: 'Please complete all required fields and upload both images.', background: '#111', color: '#fff' }); 
+            return; 
+        }
 
-        Swal.fire({ title: 'Encrypting Images...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+        showSmartSpinner('Compressing Media...', 'Preparing secure upload link...');
 
         try {
             const idImageBase64 = await fileToBase64(idFile);
             const selfieImageBase64 = await fileToBase64(selfieFile);
-            executeApiCall('/api/kyc/level2', { idType, idNumber, idImage: idImageBase64, selfieImage: selfieImageBase64 }, 'Uploading for Admin Review...');
+            executeApiCall('/api/kyc/level2', { idType, idNumber, dob, expiryDate, idImage: idImageBase64, selfieImage: selfieImageBase64 }, 'Uploading Docs...', 'Transmitting encrypted documents for Admin Review...');
         } catch (e) { Swal.fire({ icon: 'error', title: 'File Error', text: 'Failed to process images.', background: '#111', color: '#fff' }); }
     }
 
@@ -476,14 +462,36 @@
         const address = document.getElementById('addressInput').value;
         const city = document.getElementById('cityInput').value;
         const state = document.getElementById('stateInput').value;
+        const addressFile = document.getElementById('addressImage').files[0];
 
-        if (!address || !city || !state) { Swal.fire({ icon: 'error', title: 'Incomplete', text: 'Please fill out your full address details.', background: '#111', color: '#fff' }); return; }
-        executeApiCall('/api/kyc/level3', { address, city, state }, 'Submitting Address...');
+        if (!address || !city || !state || !addressFile) { 
+            Swal.fire({ icon: 'error', title: 'Incomplete', text: 'Please fill out your full address and upload a proof of address document.', background: '#111', color: '#fff' }); 
+            return; 
+        }
+
+        showSmartSpinner('Compressing Media...', 'Preparing utility document...');
+
+        try {
+            const addressImageBase64 = await fileToBase64(addressFile);
+            executeApiCall('/api/kyc/level3', { address, city, state, addressImage: addressImageBase64 }, 'Finalizing Verification...', 'Transmitting address profile to Admin Server...');
+        } catch (e) { Swal.fire({ icon: 'error', title: 'File Error', text: 'Failed to process address document.', background: '#111', color: '#fff' }); }
     }
 
-    async function executeApiCall(endpoint, payload, loadingText) {
+    // THE SMART SPINNER ENGINE
+    function showSmartSpinner(title, subtext) {
+        Swal.fire({
+            title: title,
+            html: `<i class="fas fa-spinner fa-spin fa-3x mb-3" style="color: var(--gold); margin-top: 15px;"></i><br><span style="color:#aaa; font-weight: 600;">${subtext}</span>`,
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            background: '#0a0a0a',
+            color: '#fff'
+        });
+    }
+
+    async function executeApiCall(endpoint, payload, spinnerTitle, spinnerText) {
         const authToken = localStorage.getItem("naterpay_token");
-        Swal.fire({ title: loadingText, allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+        showSmartSpinner(spinnerTitle, spinnerText);
 
         try {
             const res = await fetch(endpoint, {
@@ -494,13 +502,19 @@
 
             const data = await res.json();
             if (res.ok && data.success) {
-                Swal.fire({ icon: 'success', title: 'Verification Submitted', text: data.message || 'Details submitted successfully.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
-                .then(() => checkKYCStatus()); 
+                Swal.fire({ 
+                    icon: 'success', 
+                    title: 'Transmission Success', 
+                    text: 'Your record has been securely captured. The administrative team will review and approve your submission shortly.', 
+                    confirmButtonColor: '#009933', 
+                    background: '#111', 
+                    color: '#fff' 
+                }).then(() => checkKYCStatus()); 
             } else {
                 Swal.fire({ icon: 'error', title: 'Validation Failed', text: data.message, background: '#111', color: '#fff' });
             }
         } catch (e) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Connection failed.', background: '#111', color: '#fff' });
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Connection to vault failed.', background: '#111', color: '#fff' });
         }
     }
 
