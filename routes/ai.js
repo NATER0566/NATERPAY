@@ -2,9 +2,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
-
-// Initialize Gemini API
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const AIChat = require('../models/AIChat'); // Required to save chat history
 
 // =====================================================================
 // NATERPAY AI OFFICIAL SYSTEM SPECIFICATION (SPS v1.0)
@@ -40,7 +38,7 @@ SAFETY & GUARDRAILS:
 `;
 
 // =====================================================================
-// OFFICIAL FUNCTION CALLING LAYER (14 SPECIFIED FUNCTIONS)
+// OFFICIAL FUNCTION CALLING LAYER
 // =====================================================================
 const tools = [
   {
@@ -84,25 +82,6 @@ const tools = [
 ];
 
 // =====================================================================
-// DUAL-ENGINE ARCHITECTURE SETUP
-// =====================================================================
-
-// ENGINE 1: FLASH-LITE (Frontline Router & Action Executor)
-// Extremely fast, handles simple chat and decides which function to trigger.
-const liteEngine = genAI.getGenerativeModel({ 
-    model: "gemini-2.5-flash-lite",
-    systemInstruction: systemInstruction,
-    tools: tools
-});
-
-// ENGINE 2: FLASH (The Heavy Lifter)
-// Triggered for Error Explanations, Developer Assistance, and deep reasoning.
-const proEngine = genAI.getGenerativeModel({ 
-    model: "gemini-2.5-flash",
-    systemInstruction: systemInstruction + "\n\nPRO DIRECTIVE: Your task right now is to analyze the raw system/database data provided to you. If there is a failed transaction, EXPLAIN the specific reason, cause, and solution clearly as an Error Explainer. Format beautifully with Markdown."
-});
-
-// =====================================================================
 // NATERPAY AI CHAT ROUTE
 // =====================================================================
 async function chatWithAI(request, reply) {
@@ -111,23 +90,33 @@ async function chatWithAI(request, reply) {
     const userId = request.user._id; 
     
     if (!message) return reply.status(400).send({ success: false, message: 'Message is required.' });
-    if (!process.env.GEMINI_API_KEY) return reply.status(500).send({ success: false, message: 'AI Core Offline.' });
+    if (!process.env.GEMINI_API_KEY) return reply.status(500).send({ success: false, message: 'AI Core Offline. API Key missing.' });
 
-    // Step 1: Route to Lite Engine
+    // [FIX 2] Moved initialization inside to guarantee .env is loaded
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+    // Save user's message to Database
+    await AIChat.create({ user: userId, role: 'user', message: message });
+
+    // [FIX 1] Changed to actual active model
+    const liteEngine = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash", 
+        systemInstruction: systemInstruction,
+        tools: tools
+    });
+
     const liteChat = liteEngine.startChat();
     const liteResult = await liteChat.sendMessage(message);
     const liteResponse = liteResult.response;
     
-    // Step 2: Check for Function Calling (SPS Layer)
-    const functionCalls = liteResponse.functionCalls();
+    // Check for Function Calling (SPS Layer)
+    const functionCalls = liteResponse.functionCalls ? liteResponse.functionCalls() : [];
     
     if (functionCalls && functionCalls.length > 0) {
         const call = functionCalls[0]; 
         let dbData = {};
 
-        // -------------------------------------------------------------
-        // FUNCTION CALLING LAYER EXECUTION
-        // -------------------------------------------------------------
+        // Function Execution Layer
         switch(call.name) {
             case "checkWallet":
                 const wallet = await Wallet.findOne({ user: userId });
@@ -145,13 +134,8 @@ async function chatWithAI(request, reply) {
                 break;
 
             case "getProfile":
-                const user = await User.findById(userId).select('fullName email phone role isVerified');
+                const user = await User.findById(userId).select('name email phone role isVerified');
                 dbData = { profile: user };
-                break;
-
-            case "getReferrals":
-                dbData = { message: "Referral fetching triggered. Data synced from network tree." };
-                // Add actual referral DB query here when needed
                 break;
 
             case "buyAirtime":
@@ -162,35 +146,43 @@ async function chatWithAI(request, reply) {
                 dbData = { 
                     action: call.name, 
                     status: "Action Prepared", 
-                    message: "AI cannot authorize direct fund deduction. Instruct the user to navigate to the respective dashboard page to complete this transaction with their Security PIN." 
+                    message: "AI cannot authorize direct fund deduction. Instruct the user to navigate to the respective dashboard page to complete this transaction." 
                 };
                 break;
 
-            case "lookupMeter":
-                dbData = { status: "Lookup initiated", message: `Checking meter ${call.args.meterNumber} for ${call.args.disco}.` };
-                // Call VTpass meter verification logic here
-                break;
-
             default:
-                dbData = { error: "Function recognized but execution logic is pending implementation." };
+                dbData = { error: "Function recognized but specific execution logic is pending implementation." };
         }
 
-        // Step 3: Pass raw data to PRO Engine for deep reasoning and explanation
+        // Deep Reasoning Engine
+        const proEngine = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-pro", // Changed to actual Pro model
+            systemInstruction: systemInstruction + "\n\nPRO DIRECTIVE: Your task right now is to analyze the raw system/database data provided to you. If there is a failed transaction, EXPLAIN the specific reason, cause, and solution clearly as an Error Explainer. Format beautifully with Markdown."
+        });
+
         const proChat = proEngine.startChat({
             history: [{ role: "user", parts: [{ text: message }] }]
         });
 
         const proPayload = `System Context: The user asked a question and the system executed the '${call.name}' function. 
         Here is the raw database/system result: ${JSON.stringify(dbData)}. 
-        Please format this information perfectly for the user according to your NATERPAY AI personality. If it is an error or a failed transaction, act as the Error Explainer.`;
+        Please format this information perfectly for the user according to your NATERPAY AI personality.`;
 
-        const finalResult = await proChat.sendMessage([{ text: proPayload }]);
+        // [FIX 3] Safely passing payload as a plain string
+        const finalResult = await proChat.sendMessage(proPayload);
+        const aiFinalText = finalResult.response.text();
 
-        return reply.send({ success: true, reply: finalResult.response.text() });
+        // Save AI response to Database
+        await AIChat.create({ user: userId, role: 'model', message: aiFinalText, actionTaken: call.name });
+
+        return reply.send({ success: true, reply: aiFinalText });
     }
 
-    // Step 4: No functions needed? Fast response from Lite Engine.
-    return reply.send({ success: true, reply: liteResponse.text() });
+    // No functions needed? Send standard text response.
+    const standardText = liteResponse.text();
+    await AIChat.create({ user: userId, role: 'model', message: standardText });
+
+    return reply.send({ success: true, reply: standardText });
 
   } catch (error) {
     console.error("NATERPAY AI Error:", error);
