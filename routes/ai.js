@@ -7,7 +7,7 @@ const User = require('../models/User');
 let AIChat;
 try { AIChat = require('../models/AIChat'); } catch (e) { console.warn("AIChat model not found. Chat history will not be saved."); }
 
-// Ensure SchemaType is available (Fallback for different SDK versions)
+// Ensure SchemaType is available
 const TYPE_OBJECT = SchemaType?.OBJECT || "OBJECT";
 const TYPE_STRING = SchemaType?.STRING || "STRING";
 const TYPE_NUMBER = SchemaType?.NUMBER || "NUMBER";
@@ -46,22 +46,26 @@ SAFETY & GUARDRAILS:
 `;
 
 // =====================================================================
-// OFFICIAL FUNCTION CALLING LAYER (BULLETPROOF SCHEMA)
+// OFFICIAL FUNCTION CALLING LAYER 
 // =====================================================================
-// [FIXED] Functions with NO parameters must completely omit the 'parameters' key
+// Functions with no parameters must completely omit the 'parameters' key
 const tools = [
   {
     functionDeclarations: [
       { name: "checkWallet", description: "Fetch the user's current wallet and ledger balance." },
       { name: "getTransactions", description: "Fetch the user's recent transaction history." },
+      { name: "getProfile", description: "Fetch the user's profile details." },
+      { name: "getKYC", description: "Fetch the user's current KYC status, tier, and submitted documents." },
+      { name: "getReferrals", description: "Fetch the user's referral tree, downlines, and total commissions earned." },
+      { name: "buyEducationPin", description: "Initiate a WAEC or JAMB PIN purchase." },
+      { name: "buyCable", description: "Initiate a DSTV, GOtv, or Startimes subscription." },
+      { name: "checkBeneficiary", description: "Validate a saved beneficiary." },
+      { name: "lookupVariation", description: "Fetch available data/cable plans (variations) for a specific service." },
       { 
         name: "getTransaction", 
         description: "Fetch a specific transaction by reference number to check status or explain a failure.",
         parameters: { type: TYPE_OBJECT, properties: { reference: { type: TYPE_STRING } }, required: ["reference"] }
       },
-      { name: "getProfile", description: "Fetch the user's profile details." },
-      { name: "getKYC", description: "Fetch the user's current KYC status, tier, and submitted documents." },
-      { name: "getReferrals", description: "Fetch the user's referral tree, downlines, and total commissions earned." },
       { 
         name: "buyAirtime", 
         description: "Initiate an airtime purchase request.",
@@ -77,15 +81,11 @@ const tools = [
         description: "Initiate an electricity bill payment.",
         parameters: { type: TYPE_OBJECT, properties: { disco: { type: TYPE_STRING }, meterNumber: { type: TYPE_STRING }, amount: { type: TYPE_NUMBER } }, required: ["disco", "meterNumber", "amount"] }
       },
-      { name: "buyEducationPin", description: "Initiate a WAEC or JAMB PIN purchase." },
-      { name: "buyCable", description: "Initiate a DSTV, GOtv, or Startimes subscription." },
-      { name: "checkBeneficiary", description: "Validate a saved beneficiary." },
       { 
         name: "lookupMeter", 
         description: "Verify an electricity meter number via VTpass API.",
         parameters: { type: TYPE_OBJECT, properties: { disco: { type: TYPE_STRING }, meterNumber: { type: TYPE_STRING } }, required: ["disco", "meterNumber"] }
-      },
-      { name: "lookupVariation", description: "Fetch available data/cable plans (variations) for a specific service." }
+      }
     ]
   }
 ];
@@ -99,7 +99,7 @@ async function saveChat(userId, role, message, actionTaken = null) {
 }
 
 // =====================================================================
-// NATERPAY AI CHAT ROUTE (WITH SMART AUTO-FALLBACK)
+// NATERPAY AI CHAT ROUTE
 // =====================================================================
 async function chatWithAI(request, reply) {
   try {
@@ -117,35 +117,16 @@ async function chatWithAI(request, reply) {
     // Save user's prompt
     await saveChat(userId, 'user', message);
 
-    // Inject Personality as History (Guarantees compatibility with older models that don't support systemInstruction)
-    const history = [
-        { role: "user", parts: [{ text: systemInstruction }] },
-        { role: "model", parts: [{ text: "System Protocol Acknowledged. I am NATERPAY AI, fully operational and ready to assist." }] }
-    ];
+    // Using the correct, active model based on official documentation
+    const aiEngine = genAI.getGenerativeModel({ 
+        model: "gemini-3.6-flash", 
+        systemInstruction: systemInstruction,
+        tools: tools
+    });
 
-    let chat, result, response;
-
-    // =====================================================================
-    // THE SMART FALLBACK ENGINE
-    // =====================================================================
-    try {
-        // Attempt 1: Try the absolute newest model
-        const aiEngine = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest", tools: tools });
-        chat = aiEngine.startChat({ history });
-        result = await chat.sendMessage(message);
-        response = result.response;
-    } catch (primaryError) {
-        // If Google throws a 404 Model Not Found because your key is restricted, seamlessly swap to the universal model
-        if (primaryError.message.includes('404') || primaryError.status === 404) {
-            console.warn("NATERPAY Alert: Key restricted from 1.5. Auto-falling back to Universal 1.0-pro model.");
-            const fallbackEngine = genAI.getGenerativeModel({ model: "gemini-1.0-pro", tools: tools });
-            chat = fallbackEngine.startChat({ history });
-            result = await chat.sendMessage(message);
-            response = result.response;
-        } else {
-            throw primaryError; // Throw actual code/syntax errors
-        }
-    }
+    const chat = aiEngine.startChat();
+    const result = await chat.sendMessage(message);
+    const response = result.response;
     
     // Extract Function Calls Safely
     let functionCalls = response.functionCalls ? (typeof response.functionCalls === 'function' ? response.functionCalls() : response.functionCalls) : [];
