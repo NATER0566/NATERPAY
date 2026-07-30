@@ -7,6 +7,11 @@ const User = require('../models/User');
 let AIChat;
 try { AIChat = require('../models/AIChat'); } catch (e) { console.warn("AIChat model not found. Chat history will not be saved."); }
 
+// Ensure SchemaType is available (Fallback for different SDK versions)
+const TYPE_OBJECT = SchemaType?.OBJECT || "OBJECT";
+const TYPE_STRING = SchemaType?.STRING || "STRING";
+const TYPE_NUMBER = SchemaType?.NUMBER || "NUMBER";
+
 // =====================================================================
 // NATERPAY AI OFFICIAL SYSTEM SPECIFICATION (SPS v1.0)
 // =====================================================================
@@ -41,9 +46,9 @@ SAFETY & GUARDRAILS:
 `;
 
 // =====================================================================
-// OFFICIAL FUNCTION CALLING LAYER (v0.21.0 COMPLIANT SCHEMA)
+// OFFICIAL FUNCTION CALLING LAYER (BULLETPROOF SCHEMA)
 // =====================================================================
-// Functions with no parameters must omit the 'parameters' key entirely
+// [FIXED] Functions with NO parameters must completely omit the 'parameters' key
 const tools = [
   {
     functionDeclarations: [
@@ -52,7 +57,7 @@ const tools = [
       { 
         name: "getTransaction", 
         description: "Fetch a specific transaction by reference number to check status or explain a failure.",
-        parameters: { type: SchemaType.OBJECT, properties: { reference: { type: SchemaType.STRING } }, required: ["reference"] }
+        parameters: { type: TYPE_OBJECT, properties: { reference: { type: TYPE_STRING } }, required: ["reference"] }
       },
       { name: "getProfile", description: "Fetch the user's profile details." },
       { name: "getKYC", description: "Fetch the user's current KYC status, tier, and submitted documents." },
@@ -60,17 +65,17 @@ const tools = [
       { 
         name: "buyAirtime", 
         description: "Initiate an airtime purchase request.",
-        parameters: { type: SchemaType.OBJECT, properties: { network: { type: SchemaType.STRING }, amount: { type: SchemaType.NUMBER }, phone: { type: SchemaType.STRING } }, required: ["network", "amount", "phone"] }
+        parameters: { type: TYPE_OBJECT, properties: { network: { type: TYPE_STRING }, amount: { type: TYPE_NUMBER }, phone: { type: TYPE_STRING } }, required: ["network", "amount", "phone"] }
       },
       { 
         name: "buyData", 
         description: "Initiate a data purchase request.",
-        parameters: { type: SchemaType.OBJECT, properties: { network: { type: SchemaType.STRING }, plan: { type: SchemaType.STRING }, phone: { type: SchemaType.STRING } }, required: ["network", "plan", "phone"] }
+        parameters: { type: TYPE_OBJECT, properties: { network: { type: TYPE_STRING }, plan: { type: TYPE_STRING }, phone: { type: TYPE_STRING } }, required: ["network", "plan", "phone"] }
       },
       { 
         name: "payElectricity", 
         description: "Initiate an electricity bill payment.",
-        parameters: { type: SchemaType.OBJECT, properties: { disco: { type: SchemaType.STRING }, meterNumber: { type: SchemaType.STRING }, amount: { type: SchemaType.NUMBER } }, required: ["disco", "meterNumber", "amount"] }
+        parameters: { type: TYPE_OBJECT, properties: { disco: { type: TYPE_STRING }, meterNumber: { type: TYPE_STRING }, amount: { type: TYPE_NUMBER } }, required: ["disco", "meterNumber", "amount"] }
       },
       { name: "buyEducationPin", description: "Initiate a WAEC or JAMB PIN purchase." },
       { name: "buyCable", description: "Initiate a DSTV, GOtv, or Startimes subscription." },
@@ -78,7 +83,7 @@ const tools = [
       { 
         name: "lookupMeter", 
         description: "Verify an electricity meter number via VTpass API.",
-        parameters: { type: SchemaType.OBJECT, properties: { disco: { type: SchemaType.STRING }, meterNumber: { type: SchemaType.STRING } }, required: ["disco", "meterNumber"] }
+        parameters: { type: TYPE_OBJECT, properties: { disco: { type: TYPE_STRING }, meterNumber: { type: TYPE_STRING } }, required: ["disco", "meterNumber"] }
       },
       { name: "lookupVariation", description: "Fetch available data/cable plans (variations) for a specific service." }
     ]
@@ -94,7 +99,7 @@ async function saveChat(userId, role, message, actionTaken = null) {
 }
 
 // =====================================================================
-// NATERPAY AI CHAT ROUTE
+// NATERPAY AI CHAT ROUTE (WITH SMART AUTO-FALLBACK)
 // =====================================================================
 async function chatWithAI(request, reply) {
   try {
@@ -112,18 +117,37 @@ async function chatWithAI(request, reply) {
     // Save user's prompt
     await saveChat(userId, 'user', message);
 
-    // Use the official v0.21.0 model & config
-    const aiEngine = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash", 
-        systemInstruction: systemInstruction,
-        tools: tools
-    });
+    // Inject Personality as History (Guarantees compatibility with older models that don't support systemInstruction)
+    const history = [
+        { role: "user", parts: [{ text: systemInstruction }] },
+        { role: "model", parts: [{ text: "System Protocol Acknowledged. I am NATERPAY AI, fully operational and ready to assist." }] }
+    ];
 
-    const chat = aiEngine.startChat();
-    const result = await chat.sendMessage(message);
-    const response = result.response;
+    let chat, result, response;
+
+    // =====================================================================
+    // THE SMART FALLBACK ENGINE
+    // =====================================================================
+    try {
+        // Attempt 1: Try the absolute newest model
+        const aiEngine = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest", tools: tools });
+        chat = aiEngine.startChat({ history });
+        result = await chat.sendMessage(message);
+        response = result.response;
+    } catch (primaryError) {
+        // If Google throws a 404 Model Not Found because your key is restricted, seamlessly swap to the universal model
+        if (primaryError.message.includes('404') || primaryError.status === 404) {
+            console.warn("NATERPAY Alert: Key restricted from 1.5. Auto-falling back to Universal 1.0-pro model.");
+            const fallbackEngine = genAI.getGenerativeModel({ model: "gemini-1.0-pro", tools: tools });
+            chat = fallbackEngine.startChat({ history });
+            result = await chat.sendMessage(message);
+            response = result.response;
+        } else {
+            throw primaryError; // Throw actual code/syntax errors
+        }
+    }
     
-    // Extract Function Calls
+    // Extract Function Calls Safely
     let functionCalls = response.functionCalls ? (typeof response.functionCalls === 'function' ? response.functionCalls() : response.functionCalls) : [];
     
     if (functionCalls && functionCalls.length > 0) {
