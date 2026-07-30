@@ -104,15 +104,31 @@
         <p class="text-muted small mb-4">Required for basic wallet funding and VTU purchases.</p>
         
         <div id="tier1Form">
+            <!-- NEW FIELDS ADDED FOR PAYSTACK BVN VALIDATION -->
+            <div class="row">
+                <div class="col-6">
+                    <div class="input-group-custom">
+                        <label>FIRST NAME (As on BVN)</label>
+                        <input type="text" id="firstNameInput" placeholder="Legal First Name">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="input-group-custom">
+                        <label>LAST NAME (As on BVN)</label>
+                        <input type="text" id="lastNameInput" placeholder="Legal Last Name">
+                    </div>
+                </div>
+            </div>
+            
             <div class="input-group-custom">
                 <label>BANK VERIFICATION NUMBER (BVN)</label>
                 <input type="text" id="bvnInput" placeholder="Enter exactly 11-digit BVN" maxlength="11">
             </div>
             <div class="input-group-custom">
                 <label>NATIONAL IDENTITY NUMBER (NIN)</label>
-                <input type="text" id="ninInput" placeholder="Enter exactly 11-digit NIN" maxlength="11">
+                <input type="text" id="ninInput" placeholder="Enter exactly 11-digit NIN (Optional if BVN provided)" maxlength="11">
             </div>
-            <button class="btn-submit" onclick="submitTier1()"><i class="fas fa-check-circle me-2"></i> SUBMIT FOR REVIEW</button>
+            <button class="btn-submit" onclick="submitTier1()"><i class="fas fa-check-circle me-2"></i> SUBMIT FOR VERIFICATION</button>
         </div>
     </div>
 
@@ -365,7 +381,6 @@
 
                 Swal.fire({ icon: 'success', title: 'Base Tier Unlocked!', text: 'Your email is secured. You can now proceed to Tier 1.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' });
                 
-                // checkKYCStatus() REMOVED so it doesn't fetch cached server data and snap back to locked.
             } else {
                 Swal.fire({ icon: 'error', title: 'Verification Failed', text: data.message || 'Invalid or expired OTP.', background: '#111', color: '#fff' });
             }
@@ -374,12 +389,24 @@
         }
     }
 
+    // UPDATED TIER 1 SUBMISSION LOGIC
     async function submitTier1() {
-        const bvn = document.getElementById('bvnInput').value;
-        const nin = document.getElementById('ninInput').value;
+        const firstName = document.getElementById('firstNameInput').value.trim();
+        const lastName = document.getElementById('lastNameInput').value.trim();
+        const bvn = document.getElementById('bvnInput').value.trim();
+        const nin = document.getElementById('ninInput').value.trim();
 
-        if (!bvn && !nin) { Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please provide either BVN or NIN.', background: '#111', color: '#fff' }); return; }
-        executeApiCall('/api/kyc/level1', { bvn, nin }, 'Uploading for Admin Verification...');
+        if (!bvn && !nin) { 
+            Swal.fire({ icon: 'error', title: 'Missing Info', text: 'Please provide either BVN or NIN.', background: '#111', color: '#fff' }); 
+            return; 
+        }
+
+        if (bvn && (!firstName || !lastName)) {
+            Swal.fire({ icon: 'error', title: 'Names Required', text: 'Paystack requires your exact First Name and Last Name to instantly verify your BVN.', background: '#111', color: '#fff' });
+            return;
+        }
+
+        executeApiCall('/api/kyc/level1', { bvn, nin, firstName, lastName }, 'Verifying Identity through Paystack...');
     }
 
     async function submitTier2() {
@@ -421,7 +448,7 @@
 
             const data = await res.json();
             if (res.ok && data.success) {
-                Swal.fire({ icon: 'success', title: 'Submitted', text: data.message || 'Details submitted successfully.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+                Swal.fire({ icon: 'success', title: 'Verification Success', text: data.message || 'Details submitted successfully.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
                 .then(() => checkKYCStatus()); 
             } else {
                 Swal.fire({ icon: 'error', title: 'Validation Failed', text: data.message, background: '#111', color: '#fff' });
