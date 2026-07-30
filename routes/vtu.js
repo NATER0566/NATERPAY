@@ -225,9 +225,15 @@ async function processVTURequest(type, data) {
       else if (response.data.Voucher && Array.isArray(response.data.Voucher) && response.data.Voucher.length > 0) extractedToken = `Voucher: ${response.data.Voucher[0]}`;
 
       return { reference: response.data.content?.transactions?.transactionId || response.data.content?.transactions?.transaction_id || `REF-${Date.now()}`, token: extractedToken, status: 'success', raw: response.data };
-    } else { throw new Error(`Provider Error: ${response.data.response_description || response.data.message}`); }
+    } else { 
+        // [FIXED] Aggressive exact extraction to prevent the "undefined" UI crash
+        const errorMsg = response.data.response_description || response.data.response || response.data.message || response.data.error || JSON.stringify(response.data);
+        throw new Error(`Provider Error: ${errorMsg}`); 
+    }
   } catch (error) {
-    throw new Error(error.response?.data?.response_description || error.response?.data?.message || error.message);
+    // [FIXED] Bulletproof fallback so network/server errors are properly displayed
+    const fallbackMsg = error.response?.data?.response_description || error.response?.data?.response || error.response?.data?.message || error.response?.data?.error || (error.response?.data ? JSON.stringify(error.response.data) : error.message);
+    throw new Error(fallbackMsg);
   }
 }
 
