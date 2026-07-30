@@ -183,11 +183,20 @@ async function chatWithAI(request, reply) {
 
   } catch (error) {
     console.error("NATERPAY AI Error:", error);
-    const errorMsg = error.message || "Unknown API Error";
+    const errorMsg = (error.message || "").toLowerCase();
     
+    // SAFE, BEAUTIFUL ERROR HANDLING FOR USERS
+    if (errorMsg.includes('429') || errorMsg.includes('quota')) {
+        return reply.send({ 
+            success: true, 
+            reply: `⏳ **System Busy:** I am currently assisting too many users at once. Please wait about 60 seconds and try your request again.` 
+        });
+    }
+    
+    // Generic fallback for any other crashes
     return reply.send({ 
         success: true, 
-        reply: `⚠️ **Diagnostic Alert:** The neural core encountered a critical error.\n\n\`\`\`text\n${errorMsg}\n\`\`\`\n*If you are the developer, check the error code above to debug the Google API connection.*` 
+        reply: `⚠️ **System Alert:** I encountered a temporary connection issue. Please try again in a moment.` 
     });
   }
 }
