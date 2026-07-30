@@ -3,7 +3,6 @@ const KYC = require('../models/KYC');
 const User = require('../models/User');
 const Joi = require('joi'); 
 const cloudinary = require('cloudinary').v2;
-const axios = require('axios'); 
 
 // [2] STRUCTURED LOGGING ENGINE
 let logger;
@@ -96,7 +95,7 @@ async function getKYC(request, reply) {
 }
 
 /* =========================================================================
-   SUBMIT LEVEL 1: EXACT PAYSTACK BANK ACCOUNT MATCHING ENGINE
+   SUBMIT LEVEL 1: MANUAL BACKEND LOGIC (PAYSTACK COMPLETELY REMOVED)
 ========================================================================= */
 async function submitLevel1(request, reply) {
     try {
@@ -104,9 +103,7 @@ async function submitLevel1(request, reply) {
             bvn: Joi.string().pattern(/^\d{11}$/).allow('', null),
             nin: Joi.string().pattern(/^\d{11}$/).allow('', null),
             firstName: Joi.string().allow('', null), 
-            lastName: Joi.string().allow('', null),
-            accountNumber: Joi.string().pattern(/^\d{10}$/).allow('', null), // REQUIRED FOR PAYSTACK
-            bankCode: Joi.string().allow('', null) // REQUIRED FOR PAYSTACK
+            lastName: Joi.string().allow('', null)
         }).or('bvn', 'nin'); 
         
         const { error, value } = schema.validate(request.body);
@@ -114,7 +111,7 @@ async function submitLevel1(request, reply) {
 
         if (!await checkRateLimit(request, 'submit_kyc_l1', 3)) throw new Error('Too many verification attempts. Please wait 60 seconds.');
 
-        const { bvn, nin, firstName, lastName, accountNumber, bankCode } = value;
+        const { bvn, nin, firstName, lastName } = value;
 
         const orConditions = [];
         if (bvn) orConditions.push({ 'level1.bvn': bvn });
@@ -132,64 +129,10 @@ async function submitLevel1(request, reply) {
             throw new Error('Your Tier 1 submission is already under review.');
         }
 
-        if (bvn) {
-            if (!firstName || !lastName || !accountNumber || !bankCode) {
-                throw { status: 400, message: 'First Name, Last Name, Account Number, and Bank are strictly required by Paystack for BVN verification.' };
-            }
-
-            const user = await User.findById(request.user._id);
-            const paystackKey = process.env.PAYSTACK_SECRET_KEY;
-            
-            if (!paystackKey) throw { status: 500, message: 'System error: Missing verification keys.' };
-
-            const headers = { Authorization: `Bearer ${paystackKey}`, 'Content-Type': 'application/json' };
-            let customerCode;
-
-            // Step 1: Initialize Customer
-            try {
-                const createCustomerRes = await axios.post('https://api.paystack.co/customer', {
-                    email: user.email,
-                    first_name: firstName,
-                    last_name: lastName,
-                    phone: user.phone || '08000000000'
-                }, { headers });
-                customerCode = createCustomerRes.data.data.customer_code;
-            } catch (err) {
-                if (err.response && err.response.data && err.response.data.code === 'duplicate_email') {
-                    const getCustomerRes = await axios.get(`https://api.paystack.co/customer/${user.email}`, { headers });
-                    customerCode = getCustomerRes.data.data.customer_code;
-                } else {
-                    throw { status: 500, message: 'Failed to communicate with Paystack.' };
-                }
-            }
-
-            // Step 2: Exact Paystack Bank Account Payload
-            if (customerCode) {
-                try {
-                    const validateRes = await axios.post(`https://api.paystack.co/customer/${customerCode}/identification`, {
-                        country: 'NG',
-                        type: 'bank_account', // STRICT REQUIREMENT FROM DOCS
-                        account_number: accountNumber,
-                        bvn: bvn,
-                        bank_code: bankCode,
-                        first_name: firstName,
-                        last_name: lastName
-                    }, { headers });
-
-                    if (validateRes.data.status !== true) {
-                        throw new Error('Identity verification submission failed.');
-                    }
-                } catch (validationError) {
-                    const paystackMsg = validationError.response?.data?.message || validationError.message || 'Verification failed.';
-                    throw { status: 400, message: `Paystack Validation Failed: ${paystackMsg}` };
-                }
-            }
-        }
-
         kyc.currentLevel = 1; 
         await kyc.submitLevel1(bvn, nin);
 
-        // Since Paystack validation happens asynchronously, we place them in under_review immediately
+        // Instantly mark as under review for Admin processing
         kyc.status = 'under_review';
         if (kyc.level1) kyc.level1.status = 'under_review';
         if (firstName && lastName) kyc.legalName = `${firstName} ${lastName}`;
@@ -197,19 +140,21 @@ async function submitLevel1(request, reply) {
 
         await User.findByIdAndUpdate(request.user._id, { bvn: bvn });
 
-        return reply.send({ success: true, message: 'Details submitted securely to Paystack! Your identity is currently being processed. You can proceed to the next step.' });
+        return reply.send({ success: true, message: 'Your record has been securely captured.' });
 
     } catch (error) { handleError(reply, error, 'Failed to process Tier 1 verification.'); }
 }
 
 /* =========================================================================
-   SUBMIT LEVEL 2: DOCUMENT UPLOADS
+   SUBMIT LEVEL 2: DOCUMENT UPLOADS (UPDATED WITH DOB & EXPIRY)
 ========================================================================= */
 async function submitLevel2(request, reply) {
     try {
         const schema = Joi.object({
             idType: Joi.string().required(),
             idNumber: Joi.string().required(),
+            dob: Joi.string().required(),         
+            expiryDate: Joi.string().allow('', null), 
             idImage: Joi.string().required(),   
             selfieImage: Joi.string().required() 
         });
@@ -245,23 +190,29 @@ async function submitLevel2(request, reply) {
 
         const safeIdType = sanitizeText(value.idType);
         const safeIdNumber = sanitizeText(value.idNumber);
+        
+        // Save new date fields securely
+        kyc.level2 = kyc.level2 || {};
+        kyc.level2.dob = sanitizeText(value.dob);
+        kyc.level2.expiryDate = sanitizeText(value.expiryDate);
 
         kyc.currentLevel = 2;
         await kyc.submitLevel2(safeIdType, safeIdNumber, secureIdUrl, secureSelfieUrl);
 
-        reply.send({ success: true, message: 'Documents submitted successfully! Please wait for manual admin review.' });
+        reply.send({ success: true, message: 'Your record has been securely captured.' });
     } catch (error) { handleError(reply, error, 'Failed to process document uploads.'); }
 }
 
 /* =========================================================================
-   SUBMIT LEVEL 3: ADDRESS PROOF
+   SUBMIT LEVEL 3: ADDRESS PROOF (UPDATED WITH DOCUMENT UPLOAD)
 ========================================================================= */
 async function submitLevel3(request, reply) {
     try {
         const schema = Joi.object({
             address: Joi.string().required(),
             city: Joi.string().required(),
-            state: Joi.string().required()
+            state: Joi.string().required(),
+            addressImage: Joi.string().required() 
         });
         
         const { error, value } = schema.validate(request.body);
@@ -280,14 +231,22 @@ async function submitLevel3(request, reply) {
             throw new Error('Your Tier 3 address is already under review.');
         }
 
+        let secureAddressUrl = value.addressImage;
+
+        // Supports both image files and PDF documents for utility bills
+        if (secureAddressUrl.startsWith('data:image') || secureAddressUrl.startsWith('data:application/pdf')) {
+            const addressUpload = await withRetry(() => cloudinary.uploader.upload(secureAddressUrl, { folder: 'naterpay_kyc', resource_type: 'auto', timeout: 15000 }));
+            secureAddressUrl = addressUpload.secure_url;
+        }
+
         const safeAddress = sanitizeText(value.address);
         const safeCity = sanitizeText(value.city);
         const safeState = sanitizeText(value.state);
 
         kyc.currentLevel = 3;
-        await kyc.submitLevel3(safeAddress, safeCity, safeState, null);
+        await kyc.submitLevel3(safeAddress, safeCity, safeState, secureAddressUrl);
 
-        reply.send({ success: true, message: 'Address submitted! Please wait for final admin approval.' });
+        reply.send({ success: true, message: 'Your record has been securely captured.' });
     } catch (error) { handleError(reply, error, 'Failed to process address verification.'); }
 }
 
