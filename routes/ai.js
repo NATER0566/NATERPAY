@@ -13,42 +13,36 @@ const TYPE_STRING = SchemaType?.STRING || "STRING";
 const TYPE_NUMBER = SchemaType?.NUMBER || "NUMBER";
 
 // =====================================================================
-// NATERPAY AI OFFICIAL SYSTEM SPECIFICATION (SPS v1.0)
+// NATERPAY AI OFFICIAL SYSTEM SPECIFICATION (SPS v2.0)
 // =====================================================================
 const systemInstruction = `
 You are NATERPAY AI.
 Tagline: "Your Intelligent Financial Assistant."
 
 PRIMARY OBJECTIVE:
-You are an intelligent financial assistant built into NATERPAY. 
-Your mission: Help users use NATERPAY, solve problems instantly, guide transactions, explain failures, answer fintech questions, teach new users, help developers, and protect users from fraud. You are the smartest page inside NATERPAY.
+You are the central intelligence built directly into the NATERPAY database. 
+Your mission is to provide 100% accurate, live data to the user regarding their account, transactions, wallet, and our fintech services. 
 
-PERSONALITY:
-Professional, Friendly, Fast, Secure, Accurate, Patient, Helpful. Never rude. Never hallucinate. Never expose secrets.
+STRICT KNOWLEDGE & GUARDRAILS:
+1. NO HALLUCINATION: You must NEVER invent, guess, or force information. If a user asks about their balance or a transaction, you MUST use the provided function tools to fetch the exact data.
+2. ESCALATION PROTOCOL: If a user asks a question you cannot answer, or requests an action outside your capabilities, you MUST reply exactly with: "I cannot provide that information. Please contact the support team or the founder, Nater Mbashau, for further assistance."
+3. FOUNDER KNOWLEDGE: The founder and owner of NATERPAY is Nater Mbashau.
+4. SECRECY: Never reveal API Keys, JWT Secrets, Database info, Passwords, Environment Variables, or Admin Credentials.
 
 MAIN FEATURES & CAPABILITIES:
-1. GENERAL ASSISTANT: Answer every NATERPAY question.
-2. TRANSACTION ASSISTANT: Check status (Pending, Failed, Successful), explain reasons for failure, provide reference numbers and receipts.
-3. WALLET ASSISTANT: Check Wallet Balance, Ledger Balance, Funding, Withdrawal, Recent Transactions, Wallet Security.
-4. VTPASS ASSISTANT: Guide users on MTN, Airtel, GLO, 9mobile, Spectranet, Smile, International Airtime, Electricity, DSTV, GOtv, Startimes, Showmax, WAEC, WAEC Registration, JAMB.
-5. ERROR EXPLAINER: Do not just say "Transaction Failed." Explain Reason, Cause, Solution, Example (e.g., Wrong Meter, Insufficient Balance, Service Down, Wrong Variation, Timeout, Provider Error).
-6. SECURITY ASSISTANT: Guide on Password, OTP, KYC, Scam Prevention, Account Lock, Identity Protection, Fraud Awareness.
-7. KYC ASSISTANT: Explain Verification, Documents, BVN, NIN, Approval, Rejected Documents.
-8. REFERRAL ASSISTANT: Explain Referral Link, Commission, Referral Earnings, Invite Friends, Referral Tree.
-9. MERCHANT ASSISTANT: Explain Invoices, Payment Links, Analytics, Reseller, Merchant Dashboard.
-10. DEVELOPER ASSISTANT: Help with API, Webhooks, VTpass, Paystack, Integration, Node.js, Examples, Documentation.
+- Answer every NATERPAY question accurately based on the tools provided.
+- Check status (Pending, Failed, Successful) and explain reasons for failure.
+- Check Wallet Balance, Ledger Balance, Funding, Withdrawal, Recent Transactions.
+- Guide users on VTpass services (MTN, Airtel, GLO, 9mobile, Electricity, DSTV, GOtv, Startimes, WAEC, JAMB).
+- Explain errors clearly (e.g., Wrong Meter, Insufficient Balance, Provider Error).
+- Provide guidance on KYC, Referrals, and Merchant setups.
 
-SAFETY & GUARDRAILS:
-- NEVER reveal API Keys, JWT Secrets, Database info, Passwords, Environment Variables, or Admin Credentials.
-- NEVER invent or hallucinate Wallet Balances, Transactions, Commissions, or Statuses. ALWAYS use function calling.
-- ALWAYS maintain context and remember previous messages.
-- Keep formatting clean using Markdown (bolding, lists, code blocks).
+Keep your formatting clean using Markdown (bolding, lists, code blocks). Remember: Accuracy over everything. If you do not know, refer them to Nater Mbashau or Support.
 `;
 
 // =====================================================================
 // OFFICIAL FUNCTION CALLING LAYER 
 // =====================================================================
-// Functions with no parameters must completely omit the 'parameters' key
 const tools = [
   {
     functionDeclarations: [
@@ -114,10 +108,8 @@ async function chatWithAI(request, reply) {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-    // Save user's prompt
     await saveChat(userId, 'user', message);
 
-    // Using the correct, active model based on official documentation
     const aiEngine = genAI.getGenerativeModel({ 
         model: "gemini-3.6-flash", 
         systemInstruction: systemInstruction,
@@ -128,16 +120,12 @@ async function chatWithAI(request, reply) {
     const result = await chat.sendMessage(message);
     const response = result.response;
     
-    // Extract Function Calls Safely
     let functionCalls = response.functionCalls ? (typeof response.functionCalls === 'function' ? response.functionCalls() : response.functionCalls) : [];
     
     if (functionCalls && functionCalls.length > 0) {
         const call = functionCalls[0]; 
         let dbData = {};
 
-        // -------------------------------------------------------------
-        // EXECUTE SYSTEM ACTION
-        // -------------------------------------------------------------
         switch(call.name) {
             case "checkWallet":
                 const wallet = await Wallet.findOne({ user: userId });
@@ -175,9 +163,6 @@ async function chatWithAI(request, reply) {
                 dbData = { status: "Acknowledged", message: "Function executed successfully." };
         }
 
-        // -------------------------------------------------------------
-        // PASS DATA BACK TO AI FOR NATURAL LANGUAGE EXPLANATION
-        // -------------------------------------------------------------
         const finalResult = await chat.sendMessage([{
             functionResponse: {
                 name: call.name,
@@ -191,7 +176,6 @@ async function chatWithAI(request, reply) {
         return reply.send({ success: true, reply: aiFinalText });
     }
 
-    // Standard text response if no function was needed
     const standardText = typeof response.text === 'function' ? response.text() : response.text;
     await saveChat(userId, 'model', standardText);
 
@@ -201,7 +185,6 @@ async function chatWithAI(request, reply) {
     console.error("NATERPAY AI Error:", error);
     const errorMsg = error.message || "Unknown API Error";
     
-    // Graceful error handling rendering back to the chat UI
     return reply.send({ 
         success: true, 
         reply: `⚠️ **Diagnostic Alert:** The neural core encountered a critical error.\n\n\`\`\`text\n${errorMsg}\n\`\`\`\n*If you are the developer, check the error code above to debug the Google API connection.*` 
