@@ -55,6 +55,7 @@
         .input-group-custom:focus-within { border-color: var(--gold); }
         .input-group-custom label { display: block; font-size: 0.75rem; color: var(--gold); font-weight: 800; letter-spacing: 1px; margin-bottom: 8px; }
         .input-group-custom input, .input-group-custom select { background: transparent; border: none; color: white; width: 100%; font-size: 1rem; outline: none; }
+        .input-group-custom select option { background: #111; color: white; }
         
         .file-upload-wrapper { border: 2px dashed #444; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; position: relative; margin-bottom: 15px; }
         .file-upload-wrapper:hover { border-color: var(--gold); background: rgba(212,175,55,0.05); }
@@ -104,7 +105,7 @@
         <p class="text-muted small mb-4">Required for basic wallet funding and VTU purchases.</p>
         
         <div id="tier1Form">
-            <!-- NEW FIELDS ADDED FOR PAYSTACK BVN VALIDATION -->
+            <!-- NAMES -->
             <div class="row">
                 <div class="col-6">
                     <div class="input-group-custom">
@@ -119,14 +120,52 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ACCOUNT BINDING (PAYSTACK DOC REQUIREMENT) -->
+            <div class="row">
+                <div class="col-6">
+                    <div class="input-group-custom">
+                        <label>ACCOUNT NUMBER</label>
+                        <input type="text" id="accountNumberInput" placeholder="10-Digit Account" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="input-group-custom">
+                        <label>BANK (Linked to BVN)</label>
+                        <select id="bankCodeInput">
+                            <option value="">Select Bank...</option>
+                            <option value="044">Access Bank</option>
+                            <option value="050">Ecobank</option>
+                            <option value="214">FCMB</option>
+                            <option value="070">Fidelity Bank</option>
+                            <option value="011">First Bank of Nigeria</option>
+                            <option value="058">Guaranty Trust Bank (GTB)</option>
+                            <option value="030">Heritage Bank</option>
+                            <option value="082">Keystone Bank</option>
+                            <option value="50211">Kuda Bank</option>
+                            <option value="100004">OPay</option>
+                            <option value="100033">PalmPay</option>
+                            <option value="076">Polaris Bank</option>
+                            <option value="121">Providus Bank</option>
+                            <option value="221">Stanbic IBTC Bank</option>
+                            <option value="232">Sterling Bank</option>
+                            <option value="033">United Bank for Africa (UBA)</option>
+                            <option value="032">Union Bank of Nigeria</option>
+                            <option value="215">Unity Bank</option>
+                            <option value="035">Wema Bank</option>
+                            <option value="057">Zenith Bank</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
             
             <div class="input-group-custom">
                 <label>BANK VERIFICATION NUMBER (BVN)</label>
-                <input type="text" id="bvnInput" placeholder="Enter exactly 11-digit BVN" maxlength="11">
+                <input type="text" id="bvnInput" placeholder="Enter exactly 11-digit BVN" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
             </div>
             <div class="input-group-custom">
                 <label>NATIONAL IDENTITY NUMBER (NIN)</label>
-                <input type="text" id="ninInput" placeholder="Enter exactly 11-digit NIN (Optional if BVN provided)" maxlength="11">
+                <input type="text" id="ninInput" placeholder="Enter exactly 11-digit NIN (Optional if BVN provided)" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
             </div>
             <button class="btn-submit" onclick="submitTier1()"><i class="fas fa-check-circle me-2"></i> SUBMIT FOR VERIFICATION</button>
         </div>
@@ -280,6 +319,7 @@
                 else if (kycLevel === 1) {
                     if (status === 'under_review') {
                         t1.className = 'tier-card'; b1.className = 'tier-badge badge-pending'; b1.innerText = 'REVIEW PENDING'; f1.style.display = 'none';
+                        t2.className = 'tier-card active'; b2.className = 'tier-badge badge-active'; b2.innerText = 'ACTION REQUIRED';
                     } else if (status === 'rejected') {
                         t1.className = 'tier-card active'; b1.className = 'tier-badge badge-rejected'; b1.innerText = 'REJECTED - TRY AGAIN';
                     } else if (status === 'approved') {
@@ -315,7 +355,6 @@
         } catch (e) { console.error('KYC Load Error:', e); }
     }
 
-    // BASE TIER EMAIL OTP LOGIC
     async function requestKycEmailOTP() {
         const authToken = localStorage.getItem("naterpay_token");
         const email = document.getElementById('baseEmailInput').value;
@@ -369,7 +408,6 @@
             const data = await res.json();
 
             if (data.success) {
-                // THE PERMANENT FIX: Instantly lock in the UI changes and do NOT re-fetch data.
                 document.getElementById('tier0Card').className = 'tier-card completed';
                 document.getElementById('tier0Badge').className = 'tier-badge badge-completed';
                 document.getElementById('tier0Badge').innerText = 'COMPLETED';
@@ -393,6 +431,8 @@
     async function submitTier1() {
         const firstName = document.getElementById('firstNameInput').value.trim();
         const lastName = document.getElementById('lastNameInput').value.trim();
+        const accountNumber = document.getElementById('accountNumberInput').value.trim();
+        const bankCode = document.getElementById('bankCodeInput').value;
         const bvn = document.getElementById('bvnInput').value.trim();
         const nin = document.getElementById('ninInput').value.trim();
 
@@ -401,12 +441,18 @@
             return; 
         }
 
-        if (bvn && (!firstName || !lastName)) {
-            Swal.fire({ icon: 'error', title: 'Names Required', text: 'Paystack requires your exact First Name and Last Name to instantly verify your BVN.', background: '#111', color: '#fff' });
-            return;
+        if (bvn) {
+            if (!firstName || !lastName || !accountNumber || !bankCode) {
+                Swal.fire({ icon: 'error', title: 'Incomplete Bank Details', text: 'Paystack requires your exact First Name, Last Name, Account Number, and Bank to verify your BVN.', background: '#111', color: '#fff' });
+                return;
+            }
+            if (accountNumber.length !== 10) {
+                Swal.fire({ icon: 'error', title: 'Invalid Account Number', text: 'Your account number must be exactly 10 digits.', background: '#111', color: '#fff' });
+                return;
+            }
         }
 
-        executeApiCall('/api/kyc/level1', { bvn, nin, firstName, lastName }, 'Verifying Identity through Paystack...');
+        executeApiCall('/api/kyc/level1', { bvn, nin, firstName, lastName, accountNumber, bankCode }, 'Submitting details securely to Paystack...');
     }
 
     async function submitTier2() {
@@ -448,7 +494,7 @@
 
             const data = await res.json();
             if (res.ok && data.success) {
-                Swal.fire({ icon: 'success', title: 'Verification Success', text: data.message || 'Details submitted successfully.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+                Swal.fire({ icon: 'success', title: 'Verification Submitted', text: data.message || 'Details submitted successfully.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
                 .then(() => checkKYCStatus()); 
             } else {
                 Swal.fire({ icon: 'error', title: 'Validation Failed', text: data.message, background: '#111', color: '#fff' });
