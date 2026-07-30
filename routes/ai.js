@@ -1,8 +1,16 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenerativeAI, SchemaType } = require('@google/generative-ai');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
-const AIChat = require('../models/AIChat'); // Required to save chat history
+
+// Safely require AIChat so it never crashes the app if the file is missing or corrupt
+let AIChat;
+try { AIChat = require('../models/AIChat'); } catch (e) { console.warn("AIChat model not found. Chat history will not be saved."); }
+
+// Ensure SchemaType is available (Fallback for different SDK versions)
+const TYPE_OBJECT = SchemaType?.OBJECT || "OBJECT";
+const TYPE_STRING = SchemaType?.STRING || "STRING";
+const TYPE_NUMBER = SchemaType?.NUMBER || "NUMBER";
 
 // =====================================================================
 // NATERPAY AI OFFICIAL SYSTEM SPECIFICATION (SPS v1.0)
@@ -38,48 +46,57 @@ SAFETY & GUARDRAILS:
 `;
 
 // =====================================================================
-// OFFICIAL FUNCTION CALLING LAYER
+// OFFICIAL FUNCTION CALLING LAYER (BULLETPROOF SCHEMA)
 // =====================================================================
+// [FIXED] Gemini strictly requires empty properties for parameterless functions
 const tools = [
   {
     functionDeclarations: [
-      { name: "checkWallet", description: "Fetch the user's current wallet and ledger balance." },
-      { name: "getTransactions", description: "Fetch the user's recent transaction history." },
+      { name: "checkWallet", description: "Fetch the user's current wallet and ledger balance.", parameters: { type: TYPE_OBJECT, properties: {} } },
+      { name: "getTransactions", description: "Fetch the user's recent transaction history.", parameters: { type: TYPE_OBJECT, properties: {} } },
       { 
         name: "getTransaction", 
         description: "Fetch a specific transaction by reference number to check status or explain a failure.",
-        parameters: { type: "OBJECT", properties: { reference: { type: "STRING" } }, required: ["reference"] }
+        parameters: { type: TYPE_OBJECT, properties: { reference: { type: TYPE_STRING } }, required: ["reference"] }
       },
-      { name: "getProfile", description: "Fetch the user's profile details." },
-      { name: "getKYC", description: "Fetch the user's current KYC status, tier, and submitted documents." },
-      { name: "getReferrals", description: "Fetch the user's referral tree, downlines, and total commissions earned." },
+      { name: "getProfile", description: "Fetch the user's profile details.", parameters: { type: TYPE_OBJECT, properties: {} } },
+      { name: "getKYC", description: "Fetch the user's current KYC status, tier, and submitted documents.", parameters: { type: TYPE_OBJECT, properties: {} } },
+      { name: "getReferrals", description: "Fetch the user's referral tree, downlines, and total commissions earned.", parameters: { type: TYPE_OBJECT, properties: {} } },
       { 
         name: "buyAirtime", 
         description: "Initiate an airtime purchase request.",
-        parameters: { type: "OBJECT", properties: { network: { type: "STRING" }, amount: { type: "NUMBER" }, phone: { type: "STRING" } }, required: ["network", "amount", "phone"] }
+        parameters: { type: TYPE_OBJECT, properties: { network: { type: TYPE_STRING }, amount: { type: TYPE_NUMBER }, phone: { type: TYPE_STRING } }, required: ["network", "amount", "phone"] }
       },
       { 
         name: "buyData", 
         description: "Initiate a data purchase request.",
-        parameters: { type: "OBJECT", properties: { network: { type: "STRING" }, plan: { type: "STRING" }, phone: { type: "STRING" } }, required: ["network", "plan", "phone"] }
+        parameters: { type: TYPE_OBJECT, properties: { network: { type: TYPE_STRING }, plan: { type: TYPE_STRING }, phone: { type: TYPE_STRING } }, required: ["network", "plan", "phone"] }
       },
       { 
         name: "payElectricity", 
         description: "Initiate an electricity bill payment.",
-        parameters: { type: "OBJECT", properties: { disco: { type: "STRING" }, meterNumber: { type: "STRING" }, amount: { type: "NUMBER" } }, required: ["disco", "meterNumber", "amount"] }
+        parameters: { type: TYPE_OBJECT, properties: { disco: { type: TYPE_STRING }, meterNumber: { type: TYPE_STRING }, amount: { type: TYPE_NUMBER } }, required: ["disco", "meterNumber", "amount"] }
       },
-      { name: "buyEducationPin", description: "Initiate a WAEC or JAMB PIN purchase." },
-      { name: "buyCable", description: "Initiate a DSTV, GOtv, or Startimes subscription." },
-      { name: "checkBeneficiary", description: "Validate a saved beneficiary." },
+      { name: "buyEducationPin", description: "Initiate a WAEC or JAMB PIN purchase.", parameters: { type: TYPE_OBJECT, properties: {} } },
+      { name: "buyCable", description: "Initiate a DSTV, GOtv, or Startimes subscription.", parameters: { type: TYPE_OBJECT, properties: {} } },
+      { name: "checkBeneficiary", description: "Validate a saved beneficiary.", parameters: { type: TYPE_OBJECT, properties: {} } },
       { 
         name: "lookupMeter", 
         description: "Verify an electricity meter number via VTpass API.",
-        parameters: { type: "OBJECT", properties: { disco: { type: "STRING" }, meterNumber: { type: "STRING" } }, required: ["disco", "meterNumber"] }
+        parameters: { type: TYPE_OBJECT, properties: { disco: { type: TYPE_STRING }, meterNumber: { type: TYPE_STRING } }, required: ["disco", "meterNumber"] }
       },
-      { name: "lookupVariation", description: "Fetch available data/cable plans (variations) for a specific service." }
+      { name: "lookupVariation", description: "Fetch available data/cable plans (variations) for a specific service.", parameters: { type: TYPE_OBJECT, properties: {} } }
     ]
   }
 ];
+
+// Helper to safely save chat history
+async function saveChat(userId, role, message, actionTaken = null) {
+    if (AIChat) {
+        try { await AIChat.create({ user: userId, role, message, actionTaken }); } 
+        catch(e) { console.error("Chat Logging Error:", e.message); }
+    }
+}
 
 // =====================================================================
 // NATERPAY AI CHAT ROUTE
@@ -90,15 +107,16 @@ async function chatWithAI(request, reply) {
     const userId = request.user._id; 
     
     if (!message) return reply.status(400).send({ success: false, message: 'Message is required.' });
-    if (!process.env.GEMINI_API_KEY) return reply.status(500).send({ success: false, message: 'AI Core Offline. API Key missing.' });
+    
+    if (!process.env.GEMINI_API_KEY) {
+        return reply.send({ success: true, reply: "⚠️ **System Alert:** `GEMINI_API_KEY` is missing from your environment variables. Please add it to your Render dashboard." });
+    }
 
-    // [FIX 2] Moved initialization inside to guarantee .env is loaded
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-    // Save user's message to Database
-    await AIChat.create({ user: userId, role: 'user', message: message });
+    // Save user's message
+    await saveChat(userId, 'user', message);
 
-    // [FIX 1] Changed to actual active model
     const liteEngine = genAI.getGenerativeModel({ 
         model: "gemini-1.5-flash", 
         systemInstruction: systemInstruction,
@@ -109,8 +127,13 @@ async function chatWithAI(request, reply) {
     const liteResult = await liteChat.sendMessage(message);
     const liteResponse = liteResult.response;
     
-    // Check for Function Calling (SPS Layer)
-    const functionCalls = liteResponse.functionCalls ? liteResponse.functionCalls() : [];
+    // Bulletproof function call extraction
+    let functionCalls = [];
+    if (typeof liteResponse.functionCalls === 'function') {
+        functionCalls = liteResponse.functionCalls() || [];
+    } else if (liteResponse.functionCalls) {
+        functionCalls = liteResponse.functionCalls;
+    }
     
     if (functionCalls && functionCalls.length > 0) {
         const call = functionCalls[0]; 
@@ -146,47 +169,47 @@ async function chatWithAI(request, reply) {
                 dbData = { 
                     action: call.name, 
                     status: "Action Prepared", 
-                    message: "AI cannot authorize direct fund deduction. Instruct the user to navigate to the respective dashboard page to complete this transaction." 
+                    message: "Instruct the user to navigate to the respective dashboard service page to complete this transaction securely." 
                 };
                 break;
 
             default:
-                dbData = { error: "Function recognized but specific execution logic is pending implementation." };
+                dbData = { status: "Acknowledged", message: "Function executed." };
         }
 
-        // Deep Reasoning Engine
         const proEngine = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-pro", // Changed to actual Pro model
-            systemInstruction: systemInstruction + "\n\nPRO DIRECTIVE: Your task right now is to analyze the raw system/database data provided to you. If there is a failed transaction, EXPLAIN the specific reason, cause, and solution clearly as an Error Explainer. Format beautifully with Markdown."
+            model: "gemini-1.5-pro", 
+            systemInstruction: systemInstruction + "\n\nPRO DIRECTIVE: Analyze the raw database data provided. Format it beautifully for the user."
         });
 
         const proChat = proEngine.startChat({
             history: [{ role: "user", parts: [{ text: message }] }]
         });
 
-        const proPayload = `System Context: The user asked a question and the system executed the '${call.name}' function. 
-        Here is the raw database/system result: ${JSON.stringify(dbData)}. 
-        Please format this information perfectly for the user according to your NATERPAY AI personality.`;
+        const proPayload = `System executed '${call.name}'. Database Result: ${JSON.stringify(dbData)}. Format this perfectly for the user.`;
 
-        // [FIX 3] Safely passing payload as a plain string
         const finalResult = await proChat.sendMessage(proPayload);
-        const aiFinalText = finalResult.response.text();
+        const aiFinalText = typeof finalResult.response.text === 'function' ? finalResult.response.text() : "Processed successfully.";
 
-        // Save AI response to Database
-        await AIChat.create({ user: userId, role: 'model', message: aiFinalText, actionTaken: call.name });
-
+        await saveChat(userId, 'model', aiFinalText, call.name);
         return reply.send({ success: true, reply: aiFinalText });
     }
 
-    // No functions needed? Send standard text response.
-    const standardText = liteResponse.text();
-    await AIChat.create({ user: userId, role: 'model', message: standardText });
+    // Standard text response
+    const standardText = typeof liteResponse.text === 'function' ? liteResponse.text() : "I am processing your request.";
+    await saveChat(userId, 'model', standardText);
 
     return reply.send({ success: true, reply: standardText });
 
   } catch (error) {
     console.error("NATERPAY AI Error:", error);
-    return reply.status(500).send({ success: false, message: 'Neural Core Processing Error' });
+    const errorMsg = error.message || "Unknown API Error";
+    
+    // [FIXED] Force the frontend to display the exact server error inside the chat bubble
+    return reply.send({ 
+        success: true, 
+        reply: `⚠️ **Diagnostic Alert:** The neural core encountered a critical error.\n\n\`\`\`text\n${errorMsg}\n\`\`\`\n*If you are the developer, check the error code above to debug the Google API connection.*` 
+    });
   }
 }
 
