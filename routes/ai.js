@@ -48,7 +48,6 @@ SAFETY & GUARDRAILS:
 // =====================================================================
 // OFFICIAL FUNCTION CALLING LAYER (BULLETPROOF SCHEMA)
 // =====================================================================
-// [FIXED] Gemini strictly requires empty properties for parameterless functions
 const tools = [
   {
     functionDeclarations: [
@@ -117,13 +116,20 @@ async function chatWithAI(request, reply) {
     // Save user's message
     await saveChat(userId, 'user', message);
 
+    // [FIXED] Switched to the ultra-stable "gemini-pro" model to bypass 404 version errors
     const liteEngine = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash", 
-        systemInstruction: systemInstruction,
+        model: "gemini-pro", 
         tools: tools
     });
 
-    const liteChat = liteEngine.startChat();
+    // [FIXED] Injecting personality directly into chat history to bypass strict systemInstruction rules
+    const liteChat = liteEngine.startChat({
+        history: [
+            { role: "user", parts: [{ text: systemInstruction }] },
+            { role: "model", parts: [{ text: "System Protocol Acknowledged. I am NATERPAY AI, fully operational and ready to assist." }] }
+        ]
+    });
+
     const liteResult = await liteChat.sendMessage(message);
     const liteResponse = liteResult.response;
     
@@ -178,12 +184,14 @@ async function chatWithAI(request, reply) {
         }
 
         const proEngine = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-pro", 
-            systemInstruction: systemInstruction + "\n\nPRO DIRECTIVE: Analyze the raw database data provided. Format it beautifully for the user."
+            model: "gemini-pro"
         });
 
         const proChat = proEngine.startChat({
-            history: [{ role: "user", parts: [{ text: message }] }]
+            history: [
+                { role: "user", parts: [{ text: systemInstruction + "\n\nPRO DIRECTIVE: Analyze the raw database data provided. Format it beautifully for the user." }] },
+                { role: "model", parts: [{ text: "Understood. Ready to format database payload." }] }
+            ]
         });
 
         const proPayload = `System executed '${call.name}'. Database Result: ${JSON.stringify(dbData)}. Format this perfectly for the user.`;
@@ -205,7 +213,6 @@ async function chatWithAI(request, reply) {
     console.error("NATERPAY AI Error:", error);
     const errorMsg = error.message || "Unknown API Error";
     
-    // [FIXED] Force the frontend to display the exact server error inside the chat bubble
     return reply.send({ 
         success: true, 
         reply: `⚠️ **Diagnostic Alert:** The neural core encountered a critical error.\n\n\`\`\`text\n${errorMsg}\n\`\`\`\n*If you are the developer, check the error code above to debug the Google API connection.*` 
