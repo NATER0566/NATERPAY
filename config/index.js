@@ -51,7 +51,9 @@ const envVarsSchema = Joi.object({
     VTPASS_API_KEY: Joi.string().optional(),
     VTPASS_SECRET_KEY: Joi.string().optional(),
     VTPASS_PUBLIC_KEY: Joi.string().optional(),
-    VTPASS_URL: Joi.string().uri().default('https://sandbox.vtpass.com/api'),
+    
+    // [FIXED] Removed .uri() strictness and added .trim() to bypass mobile copy-paste glitches
+    VTPASS_URL: Joi.string().trim().default('https://sandbox.vtpass.com/api'),
 
     REDIS_URL: Joi.string().optional().description('Redis connection string for rate limiting')
 }).unknown().required();
@@ -115,7 +117,6 @@ const config = {
         url: envVars.REDIS_URL
     },
 
-    // [FIXED] THIS IS THE MISSING BLOCK THAT WAS CRASHING SERVER.JS!
     rateLimit: {
         windowMs: parseInt(process.env.RATE_LIMIT_WINDOW) || 900000,
         max: parseInt(process.env.RATE_LIMIT_MAX) || 100
