@@ -852,6 +852,7 @@
                         <td>${summaryHtml}</td>
                         <td class="text-end">
                             <div class="action-btns justify-content-end">
+                                ${k.currentLevel === 1 ? `<button class="btn btn-primary fw-bold" onclick="verifyPaystackBVN('${k._id}')" title="Sync Status With Paystack"><i class="fas fa-sync"></i> Sync Paystack</button>` : ''}
                                 <button class="btn btn-info text-white fw-bold" onclick="viewKycDossier('${encodedKyc}')" title="View Full Documents"><i class="fas fa-eye"></i></button>
                                 <button class="btn btn-success fw-bold" onclick="processKYC('${k._id}', 'approve')" title="Approve"><i class="fas fa-check"></i></button>
                                 <button class="btn btn-warning text-dark fw-bold" onclick="processKYC('${k._id}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>
@@ -867,16 +868,27 @@
         } catch(e) {}
     }
 
-    async function processKYC(kycId, action) {
-        const actionWord = action === 'approve' ? 'Approve' : 'Reject';
-        if((await Swal.fire({title:`Confirm ${actionWord}?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'})).isConfirmed) {
+    async function processKYC(kycId, action, silent = false) {
+        if (!silent) {
+            const actionWord = action === 'approve' ? 'Approve' : 'Reject';
+            const confirm = await Swal.fire({title:`Confirm ${actionWord}?`, showCancelButton:true, background:'#0a0a0a', color:'#fff'});
+            if (!confirm.isConfirmed) return false;
             Swal.fire({title:'Processing...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background:'#0a0a0a', color:'#fff'});
-            try { 
-                const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
-                const data = await res.json();
-                if (data.success) { Swal.fire('Success', '', 'success'); syncAllBadges(); } 
-                else { Swal.fire('Error', data.message || 'Process failed.', 'error'); }
-            } catch (err) { Swal.fire('Network Error', 'Could not reach server.', 'error'); }
+        }
+        
+        try { 
+            const res = await fetch(`/api/admin/kyc/${kycId}/${action}`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
+            const data = await res.json();
+            if (data.success) { 
+                if (!silent) { Swal.fire('Success', '', 'success'); syncAllBadges(); }
+                return true;
+            } else { 
+                if (!silent) Swal.fire('Error', data.message || 'Process failed.', 'error'); 
+                return false;
+            }
+        } catch (err) { 
+            if (!silent) Swal.fire('Network Error', 'Could not reach server.', 'error'); 
+            return false;
         }
     }
 
@@ -921,8 +933,32 @@
     }
 
     async function verifyPaystackBVN(kycId) {
-        Swal.fire({title: 'Connecting...', didOpen:()=>Swal.showLoading(), background: '#0a0a0a', color: '#fff'});
-        try { const res = await fetch(`/api/admin/kyc/${kycId}/verify`, { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); const data = await res.json(); if(data.success) { Swal.fire({title: 'Paystack Match', html: `<div style="text-align: left; font-size: 0.9rem;"><p><strong class="text-gold">System Name:</strong> ${data.systemName}</p><hr style="border-color: #444;"><p><strong>First Name:</strong> ${data.paystackDetails.firstName}</p><p><strong>Last Name:</strong> ${data.paystackDetails.lastName}</p><p><strong>Phone:</strong> ${data.paystackDetails.phone}</p></div>`, icon: 'info', background: '#0a0a0a', color: '#fff'}); } else Swal.fire('Error', data.message, 'error'); } catch(e) { Swal.fire('Error', 'Failed to reach server.', 'error'); }
+        Swal.fire({title: 'Syncing with Paystack...', text: 'Checking if Paystack verified this customer...', didOpen:()=>Swal.showLoading(), allowOutsideClick: false, background: '#0a0a0a', color: '#fff'});
+        try { 
+            const res = await fetch(`/api/admin/kyc/${kycId}/verify`, { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
+            const data = await res.json(); 
+            
+            if (data.success) { 
+                const isApproved = await processKYC(kycId, 'approve', true);
+                if (isApproved) {
+                    Swal.fire({title: 'Verified & Approved!', text: 'Paystack confirmed identity. System has marked user as COMPLETED.', icon: 'success', background: '#0a0a0a', color: '#fff'});
+                    syncAllBadges();
+                }
+            } else {
+                const errorMessage = (data.message || '').toLowerCase();
+                if (errorMessage.includes('failed') || errorMessage.includes('rejected') || errorMessage.includes('incorrect')) {
+                    const isRejected = await processKYC(kycId, 'reject', true);
+                    if (isRejected) {
+                        Swal.fire({title: 'Paystack Rejected', text: `Paystack rejected the details. System has marked user as REJECTED.`, icon: 'error', background: '#0a0a0a', color: '#fff'});
+                        syncAllBadges();
+                    }
+                } else {
+                    Swal.fire({title: 'Still Pending', text: `Paystack is still processing this identity. (${data.message})`, icon: 'info', background: '#0a0a0a', color: '#fff'});
+                }
+            } 
+        } catch(e) { 
+            Swal.fire('Error', 'Failed to reach server. Please try again.', 'error'); 
+        }
     }
 
     // ==========================================
