@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+      const mongoose = require('mongoose');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
@@ -215,11 +215,8 @@ async function getWallet(request, reply) {
         // Check if the user already has a permanent virtual account
         if (!wallet.virtualAccount || !wallet.virtualAccount.accountNumber) {
             try {
-                // We need the user's details to create a personalized account
                 const user = await User.findById(request.user._id);
                 if (user && process.env.KORA_SECRET_KEY) {
-                    
-                    // Safely construct the user's name
                     const fullName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Naterpay User';
                     
                     const payload = {
@@ -233,12 +230,10 @@ async function getWallet(request, reply) {
                             email: user.email
                         },
                         kyc: {
-                            // Uses their real BVN if available (for production), otherwise falls back to test BVN
                             bvn: user.bvn || "22222222222" 
                         }
                     };
 
-                    // Silently call Korapay
                     const koraRes = await axios.post('https://api.korapay.com/merchant/api/v1/virtual-bank-account', payload, {
                         headers: {
                             'Authorization': `Bearer ${process.env.KORA_SECRET_KEY}`,
@@ -246,7 +241,6 @@ async function getWallet(request, reply) {
                         }
                     });
 
-                    // If successful, save it permanently to their wallet
                     if (koraRes.data && koraRes.data.status === true) {
                         wallet.virtualAccount = {
                             bankName: koraRes.data.data.bank_name,
@@ -258,7 +252,6 @@ async function getWallet(request, reply) {
                     }
                 }
             } catch (koraErr) {
-                // If Korapay fails, we just log it and move on so the wallet still loads for the user
                 logger.error('Korapay Auto-Generation Error', koraErr.response?.data || koraErr.message);
             }
         }
@@ -592,7 +585,6 @@ async function withdraw(request, reply) {
             
             const currentBalance = parseDecimal(updatedWallet.availableBalance);
 
-            // FIXED: Explicitly saves bankName, accountNumber, and accountName at the schema root so the Admin Panel reads them correctly without showing "Unknown"
             const transaction = new Transaction({ 
                 user: request.user._id, type: 'withdrawal', description: `Withdrawal to ${safeBankName} - ${maskedAccountNo}`, 
                 amount: withdrawAmount, fee: transferFee, totalDeduction: totalDeduction, 
@@ -886,7 +878,108 @@ async function handlePaystackWebhook(request, reply) {
 }
 
 /* =========================================================================
-   12. HEALTH CHECK
+   12. KORAPAY WEBHOOK (ENTERPRISE AUTO-BANK TRANSFER)
+========================================================================= */
+async function handleKorapayWebhook(request, reply) {
+    try {
+        // 1. Security: Verify Korapay Signature to prevent hackers from mocking deposits
+        const secret = process.env.KORA_SECRET_KEY;
+        if (secret) {
+            const signature = request.headers['x-korapay-signature'];
+            const expectedSignature = crypto.createHmac('sha256', secret).update(JSON.stringify(request.body)).digest('hex');
+            if (signature && signature !== expectedSignature) {
+                logger.warn('Korapay Webhook Signature Mismatch');
+                return reply.status(401).send({ success: false, message: 'Invalid Signature' });
+            }
+        }
+
+        // 2. Acknowledge receipt instantly to prevent Korapay from spamming retries
+        reply.code(200).send({ status: 'received' });
+
+        const event = request.body.event;
+        const data = request.body.data;
+
+        // Korapay fires 'charge.success' when a virtual account receives money
+        if (event === 'charge.success' && data.status === 'success') {
+            const email = data.customer?.email;
+            const reference = data.reference;
+            const amountPaid = parseFloat(data.amount);
+            const fee = parseFloat(data.fee || 0);
+            const netAmount = sanitizeAmount(amountPaid - fee);
+
+            if (!email || netAmount <= 0) return;
+
+            // 3. Find the user
+            const txUser = await User.findOne({ email: email });
+            if (!txUser) return;
+
+            // 4. Double-Credit Protection (Idempotency)
+            const existingTx = await Transaction.findOne({ providerReference: reference });
+            if (existingTx) return;
+
+            // 5. Atomic Database Transaction for absolute safety
+            const session = await mongoose.startSession();
+            session.startTransaction();
+            try {
+                const wallet = await Wallet.findOne({ user: txUser._id }).session(session);
+                if (!wallet) throw new Error("Wallet not found");
+
+                const currentBalance = parseDecimal(wallet.availableBalance);
+                
+                const updatedWallet = await Wallet.findOneAndUpdate(
+                    { user: txUser._id },
+                    { $inc: { availableBalance: netAmount, balance: netAmount } },
+                    { session, new: true }
+                );
+
+                const newBalance = parseDecimal(updatedWallet.availableBalance);
+
+                const newTx = new Transaction({
+                    user: txUser._id,
+                    type: 'funding',
+                    description: `Auto Bank Deposit (Net of ₦${fee} fee)`,
+                    amount: netAmount,
+                    fee: fee,
+                    balanceBefore: String(currentBalance),
+                    balanceAfter: String(newBalance),
+                    status: TX_STATUS.SUCCESS,
+                    provider: 'korapay',
+                    providerReference: reference,
+                    ipAddress: 'KORAPAY_WEBHOOK',
+                    userAgent: 'SYSTEM'
+                });
+
+                await newTx.save({ session, validateBeforeSave: false });
+
+                await createAuditLog({
+                    user: txUser._id, transactionId: newTx._id, reference: reference, amount: netAmount,
+                    type: 'funding', previousBalance: currentBalance, newBalance: newBalance,
+                    ipAddress: 'KORAPAY_WEBHOOK', status: TX_STATUS.SUCCESS, source: 'Korapay API'
+                }, session);
+
+                await sendSystemNotification(txUser._id, 'Bank Deposit Received', `Your wallet was automatically credited with ₦${netAmount.toLocaleString()} from your virtual account.`, 'funding', { server: request.server }, session);
+
+                await session.commitTransaction();
+                session.endSession();
+
+                // 6. Live Socket Emission (The Magic "Pop" on screen)
+                if (request.server && request.server.io) {
+                    request.server.io.to(`user:${txUser._id}`).emit('wallet:update', { balance: String(newBalance) });
+                    request.server.io.to(`user:${txUser._id}`).emit('notification', { title: 'Deposit Received', message: `₦${netAmount.toLocaleString()} arrived from your Bank.` });
+                }
+            } catch (dbError) {
+                await session.abortTransaction();
+                session.endSession();
+                logger.error('Korapay Webhook DB Error', dbError.message);
+            }
+        }
+    } catch (error) {
+        logger.error('Korapay Webhook System Error', error.message);
+    }
+}
+
+/* =========================================================================
+   13. HEALTH CHECK
 ========================================================================= */
 async function healthCheck(request, reply) {
     try {
@@ -899,5 +992,6 @@ async function healthCheck(request, reply) {
 module.exports = { 
     getWallet, fundWallet, verifyFunding, 
     fundManualWallet, adminApproveManualFunding, adminRejectManualFunding,
-    withdraw, transfer, setPin, resolveBankAccount, handlePaystackWebhook, healthCheck 
+    withdraw, transfer, setPin, resolveBankAccount, handlePaystackWebhook, handleKorapayWebhook, healthCheck 
 };
+          
