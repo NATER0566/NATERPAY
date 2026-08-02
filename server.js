@@ -505,8 +505,20 @@ async function start() {
 // Inside server.js, wherever your other routes are mounted:
 const koraTestRoute = require('./routes/koraTest');
 
-// Mount the test route
+// Mount the test rou
+// MUST be at the very top of server.js
+require('dotenv').config(); 
+
+const express = require('express');
+const app = express();
+
+// ... your other middlewares (express.json, etc.)
+
+// Mount the Korapay test route
+const koraTestRoute = require('./routes/koraTest');
 app.use('/api/kora', koraTestRoute);
+
+// ... rest of your server code
 
 //ksfgb
 async function gracefulShutdown() {
