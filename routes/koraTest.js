@@ -3,8 +3,8 @@ const express = require('express');
 const router = express.Router();
 
 router.post('/generate-test-account', async (req, res) => {
-    // ALWAYS use the Secret Key (sk_test_...) for server-to-server API calls
-    const KORA_SECRET_KEY = "sk_test_YOUR_SECRET_KEY_HERE"; 
+    // Pulling the secret key from Render's Environment Variables
+    const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY; 
     
     // Korapay Virtual Account Endpoint
     const url = "https://api.korapay.com/merchant/api/v1/virtual-bank-account";
@@ -23,7 +23,6 @@ router.post('/generate-test-account', async (req, res) => {
     };
 
     try {
-        // Using native fetch (Node 18+). If using older Node, swap this for axios.
         const response = await fetch(url, {
             method: 'POST',
             headers: {
