@@ -6,17 +6,19 @@ async function koraTestRoutes(fastify, options) {
 
         const testReference = `NATERPAY_TEST_${Date.now()}`;
 
-        // UPDATED PAYLOAD: BVN moved to the ROOT of the object
+        // PER KORAPAY DOCS: BVN must be inside a dedicated 'kyc' object
         const payload = {
             account_name: "Nater Mbashau",
             account_reference: testReference,
             permanent: true,
             bank_code: "000",
             currency: "NGN",
-            bvn: "22222222222", // <-- MOVED HERE! Standard 11-digit test BVN
             customer: {
                 name: "Nater Mbashau",
                 email: "testuser@naterpay.com"
+            },
+            kyc: {
+                bvn: "22222222222" // Standard 11-digit test BVN
             }
         };
 
