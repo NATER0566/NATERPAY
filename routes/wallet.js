@@ -205,12 +205,64 @@ async function verifyAndHandlePin(user, wallet, providedPin) {
 }
 
 /* =========================================================================
-   1. GET WALLET
+   1. GET WALLET (NOW WITH AUTO KORAPAY GENERATOR)
 ========================================================================= */
 async function getWallet(request, reply) {
     try {
-        const wallet = await Wallet.findOne({ user: request.user._id });
+        let wallet = await Wallet.findOne({ user: request.user._id });
         if (!wallet) throw new Error('Wallet not found');
+
+        // Check if the user already has a permanent virtual account
+        if (!wallet.virtualAccount || !wallet.virtualAccount.accountNumber) {
+            try {
+                // We need the user's details to create a personalized account
+                const user = await User.findById(request.user._id);
+                if (user && process.env.KORA_SECRET_KEY) {
+                    
+                    // Safely construct the user's name
+                    const fullName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Naterpay User';
+                    
+                    const payload = {
+                        account_name: `NATERPAY - ${fullName}`.substring(0, 50),
+                        account_reference: `NP_${user._id}_${Date.now()}`,
+                        permanent: true,
+                        bank_code: "000",
+                        currency: "NGN",
+                        customer: {
+                            name: fullName,
+                            email: user.email
+                        },
+                        kyc: {
+                            // Uses their real BVN if available (for production), otherwise falls back to test BVN
+                            bvn: user.bvn || "22222222222" 
+                        }
+                    };
+
+                    // Silently call Korapay
+                    const koraRes = await axios.post('https://api.korapay.com/merchant/api/v1/virtual-bank-account', payload, {
+                        headers: {
+                            'Authorization': `Bearer ${process.env.KORA_SECRET_KEY}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    // If successful, save it permanently to their wallet
+                    if (koraRes.data && koraRes.data.status === true) {
+                        wallet.virtualAccount = {
+                            bankName: koraRes.data.data.bank_name,
+                            accountNumber: koraRes.data.data.account_number,
+                            accountName: koraRes.data.data.account_name,
+                            accountReference: koraRes.data.data.account_reference
+                        };
+                        await wallet.save();
+                    }
+                }
+            } catch (koraErr) {
+                // If Korapay fails, we just log it and move on so the wallet still loads for the user
+                logger.error('Korapay Auto-Generation Error', koraErr.response?.data || koraErr.message);
+            }
+        }
+
         reply.send({ success: true, wallet });
     } catch (error) { handleError(reply, error, 'Failed to fetch wallet'); }
 }
