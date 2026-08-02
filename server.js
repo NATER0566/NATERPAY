@@ -500,7 +500,15 @@ async function start() {
         process.exit(1);
     }
 }
+//natwr koe 
 
+// Inside server.js, wherever your other routes are mounted:
+const koraTestRoute = require('./routes/koraTest');
+
+// Mount the test route
+app.use('/api/kora', koraTestRoute);
+
+//ksfgb
 async function gracefulShutdown() {
     logger.info('[SYSTEM] Received shutdown signal. Closing HTTP server and database gracefully...');
     try {
