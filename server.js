@@ -520,6 +520,10 @@ app.use('/api/kora', koraTestRoute);
 
 // ... rest of your server code
 
+// Register the Korapay test route plugin in Fastify
+fastify.register(require('./routes/koraTest'), { prefix: '/api/kora' });
+
+
 //ksfgb
 async function gracefulShutdown() {
     logger.info('[SYSTEM] Received shutdown signal. Closing HTTP server and database gracefully...');
