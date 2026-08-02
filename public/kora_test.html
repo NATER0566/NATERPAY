@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Korapay Node.js Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background-color: #1e1e1e; padding: 30px; border-radius: 10px; text-align: center; width: 100%; max-width: 400px; }
+        button { background-color: #00d084; color: #000; border: none; padding: 15px 20px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; margin-bottom: 20px; }
+        button:active { transform: scale(0.98); }
+        #result-box { background-color: #2a2a2a; padding: 15px; border-radius: 5px; text-align: left; display: none; word-wrap: break-word; }
+        .highlight { color: #00d084; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Korapay + Node.js Sandbox</h2>
+        <button id="generateBtn" onclick="testKorapay()">Generate Bank Account</button>
+        <div id="result-box"></div>
+    </div>
+
+    <script>
+        async function testKorapay() {
+            const btn = document.getElementById('generateBtn');
+            const resultBox = document.getElementById('result-box');
+            
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
+            try {
+                // Call our Express backend
+                const response = await fetch('/api/kora/generate-test-account', { method: 'POST' });
+                const data = await response.json();
+
+                btn.innerText = "Generate Another Account";
+                btn.disabled = false;
+                resultBox.style.display = "block";
+                
+                if (data.status === true) {
+                    resultBox.innerHTML = `
+                        <p style="color:#00d084; text-align:center;">✅ Success!</p>
+                        <hr>
+                        <p>Bank: <span class="highlight">${data.data.bank_name}</span></p>
+                        <p>Account Number: <span class="highlight">${data.data.account_number}</span></p>
+                        <p>Account Name: <span class="highlight">${data.data.account_name}</span></p>
+                    `;
+                } else {
+                    resultBox.innerHTML = `
+                        <p style="color:red;">❌ API Error</p>
+                        <p>${data.message}</p>
+                    `;
+                }
+            } catch (error) {
+                btn.innerText = "Generate Bank Account";
+                btn.disabled = false;
+                resultBox.style.display = "block";
+                resultBox.innerHTML = `<p style="color:red;">Error connecting to backend.</p>`;
+                console.error("Error:", error);
+            }
+        }
+    </script>
+</body>
+</html>
