@@ -1,22 +1,21 @@
 // routes/koraTest.js
 async function koraTestRoutes(fastify, options) {
     fastify.post('/generate-test-account', async (request, reply) => {
-        // Pull Secret Key from environment variables
         const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY; 
         const url = "https://api.korapay.com/merchant/api/v1/virtual-bank-account";
 
         const testReference = `NATERPAY_TEST_${Date.now()}`;
 
-        // UPDATED PAYLOAD: Added currency, bvn, and bank_code (Wema/Titan requirements)
+        // UPDATED PAYLOAD: Removed BVN, Added bank_code "000" (Auto-assign)
         const payload = {
             account_name: "Nater Mbashau",
             account_reference: testReference,
             permanent: true,
-            currency: "NGN", // Required field
+            bank_code: "000", // "000" tells Korapay to auto-pick the best available bank (like Wema or Titan)
+            currency: "NGN",
             customer: {
                 name: "Nater Mbashau",
-                email: "testuser@naterpay.com",
-                bvn: "22222222222" // Dummy BVN for sandbox testing
+                email: "testuser@naterpay.com"
             }
         };
 
@@ -35,10 +34,8 @@ async function koraTestRoutes(fastify, options) {
             if (response.ok && data.status === true) {
                 return reply.code(200).send(data);
             } else {
-                // If Korapay rejects it, extract the EXACT validation error so we can see it on screen
                 let exactError = data.message || "Unknown API Error";
                 
-                // Korapay usually puts missing field details inside a 'data' or 'error' object
                 if (data.error && typeof data.error === 'string') {
                     exactError = `${data.message}: ${data.error}`;
                 } else if (data.data) {
