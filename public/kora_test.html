@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Korapay Node.js Test</title>
+    <title>Korapay Node.js Test (Live)</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { background-color: #1e1e1e; padding: 30px; border-radius: 10px; text-align: center; width: 100%; max-width: 400px; }
@@ -15,7 +15,7 @@
 </head>
 <body>
     <div class="container">
-        <h2>Korapay + Node.js Sandbox</h2>
+        <h2>Korapay Render Sandbox</h2>
         <button id="generateBtn" onclick="testKorapay()">Generate Bank Account</button>
         <div id="result-box"></div>
     </div>
@@ -29,7 +29,7 @@
             btn.disabled = true;
 
             try {
-                // Call our Express backend
+                // The relative path automatically works on Render
                 const response = await fetch('/api/kora/generate-test-account', { method: 'POST' });
                 const data = await response.json();
 
