@@ -6,13 +6,14 @@ async function koraTestRoutes(fastify, options) {
 
         const testReference = `NATERPAY_TEST_${Date.now()}`;
 
-        // UPDATED PAYLOAD: Removed BVN, Added bank_code "000" (Auto-assign)
+        // UPDATED PAYLOAD: BVN moved to the ROOT of the object
         const payload = {
             account_name: "Nater Mbashau",
             account_reference: testReference,
             permanent: true,
-            bank_code: "000", // "000" tells Korapay to auto-pick the best available bank (like Wema or Titan)
+            bank_code: "000",
             currency: "NGN",
+            bvn: "22222222222", // <-- MOVED HERE! Standard 11-digit test BVN
             customer: {
                 name: "Nater Mbashau",
                 email: "testuser@naterpay.com"
