@@ -1,49 +1,48 @@
 // routes/koraTest.js
-const express = require('express');
-const router = express.Router();
+async function koraTestRoutes(fastify, options) {
+    fastify.post('/generate-test-account', async (request, reply) => {
+        // Pull Secret Key from environment variables
+        const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY; 
+        const url = "https://api.korapay.com/merchant/api/v1/virtual-bank-account";
 
-router.post('/generate-test-account', async (req, res) => {
-    // Pulling the secret key from Render's Environment Variables
-    const KORA_SECRET_KEY = process.env.KORA_SECRET_KEY; 
-    
-    // Korapay Virtual Account Endpoint
-    const url = "https://api.korapay.com/merchant/api/v1/virtual-bank-account";
+        const testReference = `NATERPAY_TEST_${Date.now()}`;
 
-    // Random reference string for testing
-    const testReference = `NATERPAY_TEST_${Date.now()}`;
+        const payload = {
+            account_name: "Nater Mbashau",
+            account_reference: testReference,
+            permanent: true,
+            customer: {
+                name: "Nater Mbashau",
+                email: "testuser@naterpay.com"
+            }
+        };
 
-    const payload = {
-        account_name: "Nater Mbashau",
-        account_reference: testReference,
-        permanent: true,
-        customer: {
-            name: "Nater Mbashau",
-            email: "testuser@naterpay.com"
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${KORA_SECRET_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                return reply.code(200).send(data);
+            } else {
+                return reply.code(response.status).send(data);
+            }
+        } catch (error) {
+            fastify.log.error("Korapay API Error:", error);
+            return reply.code(500).send({ 
+                status: false, 
+                message: "Internal Server Error", 
+                error: error.message 
+            });
         }
-    };
+    });
+}
 
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${KORA_SECRET_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-        
-        // Pass Korapay's exact response back to our frontend
-        if (response.ok) {
-            return res.status(200).json(data);
-        } else {
-            return res.status(response.status).json(data);
-        }
-    } catch (error) {
-        console.error("Korapay API Error:", error);
-        return res.status(500).json({ status: false, message: "Internal Server Error", error: error.message });
-    }
-});
-
-module.exports = router;
+module.exports = koraTestRoutes;
