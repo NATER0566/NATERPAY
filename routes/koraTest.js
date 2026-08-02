@@ -7,13 +7,16 @@ async function koraTestRoutes(fastify, options) {
 
         const testReference = `NATERPAY_TEST_${Date.now()}`;
 
+        // UPDATED PAYLOAD: Added currency, bvn, and bank_code (Wema/Titan requirements)
         const payload = {
             account_name: "Nater Mbashau",
             account_reference: testReference,
             permanent: true,
+            currency: "NGN", // Required field
             customer: {
                 name: "Nater Mbashau",
-                email: "testuser@naterpay.com"
+                email: "testuser@naterpay.com",
+                bvn: "22222222222" // Dummy BVN for sandbox testing
             }
         };
 
@@ -29,10 +32,23 @@ async function koraTestRoutes(fastify, options) {
 
             const data = await response.json();
 
-            if (response.ok) {
+            if (response.ok && data.status === true) {
                 return reply.code(200).send(data);
             } else {
-                return reply.code(response.status).send(data);
+                // If Korapay rejects it, extract the EXACT validation error so we can see it on screen
+                let exactError = data.message || "Unknown API Error";
+                
+                // Korapay usually puts missing field details inside a 'data' or 'error' object
+                if (data.error && typeof data.error === 'string') {
+                    exactError = `${data.message}: ${data.error}`;
+                } else if (data.data) {
+                    exactError = `${data.message}: ${JSON.stringify(data.data)}`;
+                }
+
+                return reply.code(response.status || 400).send({ 
+                    status: false, 
+                    message: exactError 
+                });
             }
         } catch (error) {
             fastify.log.error("Korapay API Error:", error);
