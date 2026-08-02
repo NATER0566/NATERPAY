@@ -344,6 +344,9 @@ async function registerRoutes() {
     const aiRoutes = require('./routes/ai');
     fastify.post('/api/ai/chat', { preHandler: require('./middleware/auth').authenticate }, aiRoutes.chatWithAI);
 
+    // === KORAPAY TEST ROUTE ===
+    fastify.register(require('./routes/koraTest'), { prefix: '/api/kora' });
+
     const statusRoutes = require('./routes/status');
     fastify.get('/api/system-status', statusRoutes.getSystemStatus);
 
@@ -500,31 +503,7 @@ async function start() {
         process.exit(1);
     }
 }
-//natwr koe 
 
-// Inside server.js, wherever your other routes are mounted:
-const koraTestRoute = require('./routes/koraTest');
-
-// Mount the test rou
-// MUST be at the very top of server.js
-require('dotenv').config(); 
-
-const express = require('express');
-const app = express();
-
-// ... your other middlewares (express.json, etc.)
-
-// Mount the Korapay test route
-const koraTestRoute = require('./routes/koraTest');
-app.use('/api/kora', koraTestRoute);
-
-// ... rest of your server code
-
-// Register the Korapay test route plugin in Fastify
-fastify.register(require('./routes/koraTest'), { prefix: '/api/kora' });
-
-
-//ksfgb
 async function gracefulShutdown() {
     logger.info('[SYSTEM] Received shutdown signal. Closing HTTP server and database gracefully...');
     try {
