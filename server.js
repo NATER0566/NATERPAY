@@ -344,9 +344,6 @@ async function registerRoutes() {
     const aiRoutes = require('./routes/ai');
     fastify.post('/api/ai/chat', { preHandler: require('./middleware/auth').authenticate }, aiRoutes.chatWithAI);
 
-    // === KORAPAY TEST ROUTE ===
-    fastify.register(require('./routes/koraTest'), { prefix: '/api/kora' });
-
     const statusRoutes = require('./routes/status');
     fastify.get('/api/system-status', statusRoutes.getSystemStatus);
 
