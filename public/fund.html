@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NATER-PAY | Secure Wallet Funding</title>
+    <title>NATER-PAY | Secure Funding Terminal</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
@@ -27,10 +27,8 @@
         .site-part-1 { color: var(--gold); font-size: 1.4rem; text-shadow: 0 0 10px var(--gold-glow); } 
         .site-part-2 { color: var(--red); font-size: 1rem; letter-spacing: 3px; }
 
-        /* FIXED: Reduced outer margins and padding on mobile */
         .container { max-width: 850px; margin: 25px auto; padding: 0 15px; }
         
-        /* FIXED: Dynamic padding so it doesn't crush the inner content on phones */
         .fund-card {
             background: var(--card-bg); border: 1px solid #333; border-radius: 20px;
             padding: clamp(20px, 4vw, 40px); margin-bottom: 30px; box-shadow: 0 15px 50px rgba(0,0,0,0.9);
@@ -38,83 +36,92 @@
         }
         .fund-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
 
-        .method-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 30px; }
-        @media (min-width: 576px) { .method-selector { gap: 15px; } }
+        /* UPGRADED 3-GRID METHOD SELECTOR */
+        .method-selector { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 30px; }
+        @media (min-width: 576px) { .method-selector { grid-template-columns: repeat(3, 1fr); gap: 15px; } }
         
         .method-card {
             background: rgba(0,0,0,0.6); border: 2px solid #222; border-radius: 15px;
             padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.3s;
             position: relative; overflow: hidden;
         }
-        @media (min-width: 576px) { .method-card { padding: 20px 15px; } }
         .method-card:hover { border-color: #555; background: rgba(255,255,255,0.02); }
         .method-card.active { border-color: var(--gold); background: rgba(212,175,55,0.05); box-shadow: 0 0 20px rgba(212,175,55,0.2); }
         .method-card.active::after { content: '\f058'; font-family: 'Font Awesome 5 Free'; font-weight: 900; position: absolute; top: 10px; right: 10px; color: var(--gold); font-size: 1.2rem; }
         .method-icon { font-size: clamp(1.5rem, 4vw, 2rem); margin-bottom: 10px; transition: 0.3s; }
+        .method-card.active .method-icon.auto { color: var(--gold); }
         .method-card.active .method-icon.paystack { color: #00bfff; }
         .method-card.active .method-icon.manual { color: var(--success); }
-        .method-title { font-weight: 800; font-size: clamp(0.8rem, 3vw, 0.95rem); color: #fff; margin-bottom: 5px; }
+        .method-title { font-weight: 800; font-size: clamp(0.75rem, 3vw, 0.95rem); color: #fff; margin-bottom: 5px; }
         .method-desc { font-size: clamp(0.6rem, 2vw, 0.7rem); color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* FIXED: Shrunk inner padding so text fits */
-        .bank-details-box {
-            display: none; background: #0a0a0a; border: 1px dashed var(--gold); border-radius: 15px;
-            padding: clamp(15px, 4vw, 25px); margin-bottom: 30px; text-align: center; position: relative;
+        /* PREMIUM DIGITAL BANK CARD (KORAPAY) */
+        .digital-bank-card {
+            background: linear-gradient(135deg, #111 0%, #1a1a1a 100%);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 20px; padding: 25px; margin-bottom: 25px;
+            position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            overflow: hidden;
         }
-        .bank-details-box.active { display: block; animation: fadeIn 0.4s ease-in-out; }
-        .bank-name { font-size: 0.85rem; color: #aaa; text-transform: uppercase; letter-spacing: 2px; font-weight: 800; margin-bottom: 5px; }
+        .digital-bank-card::after {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,215,0,0.05) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .card-chip { color: #d4af37; font-size: 2rem; margin-bottom: 20px; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .card-bank-name { color: #aaa; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; text-align: right; margin-top: -40px; margin-bottom: 20px; }
+        .card-number-wrapper { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .card-number { font-family: 'Space Mono', monospace; font-size: clamp(1.8rem, 6vw, 2.5rem); color: var(--gold); font-weight: 700; letter-spacing: 4px; text-shadow: 0 0 10px var(--gold-glow); }
+        .card-name-label { color: #666; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .card-name { color: #fff; font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
         
-        /* FIXED: Scalable account number and dynamic letter spacing to prevent breaking out of box */
-        .acc-number { font-family: 'Cinzel', monospace; font-size: clamp(1.6rem, 6vw, 2.2rem); color: var(--gold); font-weight: 900; letter-spacing: clamp(1px, 1vw, 4px); margin-bottom: 5px; text-shadow: 0 0 15px var(--gold-glow); word-break: break-all; }
-        .acc-name { font-size: clamp(0.9rem, 3vw, 1.1rem); color: #fff; font-weight: 800; margin-bottom: 15px; }
-        .btn-copy { background: #111; color: var(--gold); border: 1px solid var(--gold-dim); padding: 8px 15px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; white-space: nowrap; }
+        .pulse-badge {
+            display: inline-flex; align-items: center; background: rgba(0, 255, 136, 0.1);
+            color: var(--success); padding: 5px 12px; border-radius: 50px; font-size: 0.7rem; font-weight: 800;
+            border: 1px solid rgba(0, 255, 136, 0.3); letter-spacing: 1px; margin-bottom: 15px;
+        }
+        .pulse-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; margin-right: 8px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 255, 136, 0); } }
+
+        .fee-disclaimer {
+            background: rgba(211, 47, 47, 0.05); border-left: 3px solid var(--red);
+            padding: 12px 15px; border-radius: 0 8px 8px 0; font-size: 0.75rem; color: #aaa;
+            line-height: 1.5; margin-bottom: 10px;
+        }
+
+        .btn-copy { background: #111; color: var(--gold); border: 1px solid var(--gold-dim); padding: 8px 15px; border-radius: 50px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; cursor: pointer; }
         .btn-copy:hover { background: var(--gold); color: #000; }
         .copy-icon-inline { cursor: pointer; color: var(--gold-dim); transition: 0.3s; }
         .copy-icon-inline:hover { color: var(--gold); transform: scale(1.1); }
-        
-        /* FIXED: Shrunk padding and added line breaks so text flows naturally */
+
+        /* SECTIONS FOR DIFFERENT METHODS */
+        .funding-section { display: none; animation: fadeIn 0.4s ease-in-out; }
+        .funding-section.active { display: block; }
+
+        .bank-details-box {
+            background: #0a0a0a; border: 1px dashed var(--gold); border-radius: 15px;
+            padding: clamp(15px, 4vw, 25px); margin-bottom: 30px; text-align: center;
+        }
         .premium-alert {
             background: linear-gradient(90deg, rgba(211, 47, 47, 0.1) 0%, rgba(0,0,0,0) 100%);
             border-left: 4px solid var(--red); padding: clamp(10px, 3vw, 15px); margin-bottom: 20px;
-            border-radius: 0 10px 10px 0; text-align: left; font-size: clamp(0.75rem, 2.5vw, 0.8rem); color: #ddd; line-height: 1.5; word-wrap: break-word;
-        }
-        .processing-notice {
-            background: rgba(0, 255, 136, 0.05); border: 1px solid rgba(0, 255, 136, 0.2);
-            padding: clamp(10px, 3vw, 12px); border-radius: 10px; margin-bottom: 20px; font-size: clamp(0.75rem, 2.5vw, 0.8rem); color: #aaa; text-align: center;
+            border-radius: 0 10px 10px 0; text-align: left; font-size: clamp(0.75rem, 2.5vw, 0.8rem); color: #ddd; line-height: 1.5;
         }
 
+        /* INPUTS & CALCULATOR (For Paystack & Manual) */
         .amount-input {
             background: #0a0a0a; border: 2px solid rgba(212,175,55,0.3); border-radius: 15px;
             padding: 15px; font-size: clamp(1.8rem, 5vw, 3rem); color: white; font-weight: 700; text-align: center;
             width: 100%; outline: none; transition: 0.3s; font-family: 'Montserrat', sans-serif;
         }
         .amount-input:focus { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,175,55,0.3); }
-        .amount-input:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        .premium-input {
-            background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px;
-            color: #fff; width: 100%; font-size: 0.9rem; outline: none; transition: 0.3s; margin-bottom: 15px;
-        }
-        .premium-input:focus { border-color: var(--gold); }
-        .premium-input:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        .file-upload-wrapper { width: 100%; text-align: center; margin-bottom: 20px; }
-        .file-upload-label {
-            display: block; background: #1a1a1a; border: 1px dashed #444; border-radius: 10px;
-            padding: 20px; cursor: pointer; transition: 0.3s; color: #888; font-size: 0.9rem; font-weight: 600;
-        }
-        .file-upload-label:hover { border-color: var(--gold); color: var(--gold); background: rgba(212,175,55,0.05); }
-        .file-upload-label.disabled { pointer-events: none; opacity: 0.5; }
-        .file-name-display { color: var(--gold); font-size: 0.8rem; font-weight: 700; margin-top: 8px; word-break: break-word; }
-
+        
         .quick-amount-btn {
             background: #111; border: 1px solid #333; color: white;
             padding: 10px 15px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; transition: 0.3s; flex: 1; min-width: 70px;
         }
-        @media (min-width: 576px) { .quick-amount-btn { padding: 12px 20px; font-size: 1rem; min-width: 90px; } }
         .quick-amount-btn:hover:not(:disabled) { border-color: var(--gold); background: rgba(212,175,55,0.1); color: var(--gold); }
-        .quick-amount-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
+
         .live-calc-box { background: #080808; border: 1px solid #222; border-radius: 15px; padding: clamp(15px, 4vw, 25px); margin: 30px 0; }
         .calc-line { display: flex; justify-content: space-between; margin-bottom: 12px; font-weight: 600; color: #aaa; font-size: clamp(0.85rem, 3vw, 0.95rem); }
         .calc-line.fee span:last-child { color: var(--red); }
@@ -128,10 +135,11 @@
             transition: 0.3s; box-shadow: 0 10px 20px rgba(212,175,55,0.2);
         }
         .btn-fund:hover:not(:disabled) { background: white; transform: translateY(-3px); box-shadow: 0 15px 30px rgba(255,255,255,0.3); }
-        .btn-fund:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; }
 
-        #manualExtraFields { display: none; }
-        #manualExtraFields.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        .premium-input { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; color: #fff; width: 100%; font-size: 0.9rem; outline: none; margin-bottom: 15px; }
+        .premium-input:focus { border-color: var(--gold); }
+        .file-upload-label { display: block; background: #1a1a1a; border: 1px dashed #444; border-radius: 10px; padding: 20px; cursor: pointer; transition: 0.3s; color: #888; font-size: 0.9rem; font-weight: 600; text-align: center; }
+        .file-upload-label:hover { border-color: var(--gold); color: var(--gold); background: rgba(212,175,55,0.05); }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -157,79 +165,117 @@
     <div class="fund-card" id="mainFundContainer">
         
         <div class="method-selector">
-            <div class="method-card active" id="method-paystack" onclick="selectMethod('paystack')">
-                <i class="fas fa-bolt" style="position: absolute; top: 10px; left: 10px; color: var(--gold); font-size: 0.8rem;"></i>
-                <i class="fas fa-credit-card method-icon paystack" style="color: #444;"></i>
-                <div class="method-title">Instant Gateway</div>
-                <div class="method-desc">Cards & Bank</div>
+            <div class="method-card active" id="method-auto" onclick="switchTab('auto')">
+                <i class="fas fa-robot" style="position: absolute; top: 10px; left: 10px; color: var(--gold); font-size: 0.8rem;"></i>
+                <i class="fas fa-building method-icon auto"></i>
+                <div class="method-title">Auto Bank</div>
+                <div class="method-desc">Dedicated Account</div>
             </div>
-            <div class="method-card" id="method-manual" onclick="selectMethod('manual')">
+            <div class="method-card" id="method-paystack" onclick="switchTab('paystack')">
+                <i class="fas fa-bolt" style="position: absolute; top: 10px; left: 10px; color: #00bfff; font-size: 0.8rem;"></i>
+                <i class="fas fa-credit-card method-icon paystack"></i>
+                <div class="method-title">Instant Gateway</div>
+                <div class="method-desc">Cards & USSD</div>
+            </div>
+            <div class="method-card" id="method-manual" onclick="switchTab('manual')">
                 <i class="fas fa-clock" style="position: absolute; top: 10px; left: 10px; color: #888; font-size: 0.8rem;"></i>
-                <i class="fas fa-university method-icon manual" style="color: #444;"></i>
+                <i class="fas fa-university method-icon manual"></i>
                 <div class="method-title">Manual Transfer</div>
                 <div class="method-desc text-success">Zero Fees • Admin</div>
             </div>
         </div>
 
-        <div class="bank-details-box" id="bankDetailsBox">
-            <div class="premium-alert">
-                <strong><i class="fas fa-info-circle text-warning me-1"></i> SPEED VS COST NOTICE:</strong><br>
-                Manual transfers incur <strong>ZERO gateway fees</strong>, but wallet crediting may be delayed until an Admin physically verifies the deposit. If you require funds urgently, please switch to the <strong>Instant Gateway</strong>.
-            </div>
-
-            <div class="bank-name">
-                <span id="bankNameDisplay">Loading Bank...</span>
-                <i class="far fa-copy ms-2 copy-icon-inline" id="copyBankBtn" onclick=""></i>
-            </div>
-            <div class="acc-number">
-                <span id="companyAccountNoDisplay">...</span>
-                <i class="far fa-copy ms-2 copy-icon-inline fs-5" id="copyAccNoBtn1" onclick=""></i>
-            </div>
-            <div class="acc-name">
-                <span id="accountNameDisplay">...</span>
-                <i class="far fa-copy ms-2 copy-icon-inline" id="copyAccNameBtn" onclick=""></i>
-            </div>
-            <button class="btn-copy mt-2" id="copyAccNoBtn2" onclick=""><i class="far fa-copy me-1"></i> Copy Account Number</button>
-            <div class="mt-4 text-warning small fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> Transfer the exact Total Expected Charge shown below.</div>
-        </div>
-
-        <label class="small text-muted mb-2 d-block fw-bold text-center" style="letter-spacing: 2px;">ENTER AMOUNT (₦)</label>
-        <input type="number" id="fundAmount" class="amount-input mb-4" placeholder="0.00" min="100" oninput="updateCalculator()">
-        
-        <div class="d-flex gap-2 mb-4 flex-wrap justify-content-center">
-            <button class="quick-amount-btn" onclick="setAmount(1000)">₦1,000</button>
-            <button class="quick-amount-btn" onclick="setAmount(5000)">₦5,000</button>
-            <button class="quick-amount-btn" onclick="setAmount(10000)">₦10,000</button>
-            <button class="quick-amount-btn" onclick="setAmount(50000)">₦50,000</button>
-        </div>
-
-        <div id="manualExtraFields">
-            <div class="processing-notice">
-                <i class="fas fa-clock text-success me-1"></i> Processing usually takes <strong>5-30 minutes</strong> during business hours. High volumes may cause slight delays.
+        <!-- SECTION 1: KORAPAY AUTO BANK (NEW & PREMIUM) -->
+        <div id="section-auto" class="funding-section active">
+            <div class="text-center mb-3">
+                <div class="pulse-badge"><div class="pulse-dot"></div> ACTIVE & LISTENING 24/7</div>
             </div>
             
-            <input type="text" id="paymentReference" class="premium-input" placeholder="Sender Account Name / Narration (Optional)">
-            
-            <div class="file-upload-wrapper">
-                <label for="receiptUpload" class="file-upload-label" id="uploadLabel">
-                    <i class="fas fa-cloud-upload-alt fa-2x mb-2 d-block"></i>
-                    Click to Upload Payment Receipt (Optional Image/PDF)
-                </label>
-                <input type="file" id="receiptUpload" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none;">
-                <div class="file-name-display" id="fileNameDisplay"></div>
+            <div class="digital-bank-card">
+                <i class="fas fa-microchip card-chip"></i>
+                <div class="card-bank-name" id="vaBank">Generating Bank...</div>
+                
+                <div class="card-number-wrapper">
+                    <div class="card-number" id="vaNumber">---- ---- ----</div>
+                    <button class="btn-copy" id="vaCopyBtn" onclick="copyDetail(document.getElementById('vaNumber').innerText, 'Account Number')">
+                        <i class="far fa-copy"></i>
+                    </button>
+                </div>
+                
+                <div class="card-name-label">ACCOUNT NAME</div>
+                <div class="card-name" id="vaName">Authenticating...</div>
+            </div>
+
+            <div class="text-center text-muted small fw-bold mb-3">
+                <i class="fas fa-info-circle text-warning me-1"></i> Transfer any amount directly to this account via your banking app. Your NATER-PAY wallet will be credited automatically within seconds.
+            </div>
+
+            <div class="fee-disclaimer">
+                <strong><i class="fas fa-exclamation-triangle text-danger me-1"></i> NETWORK FEE NOTICE:</strong><br>
+                To provide you with this automated service, our banking provider deducts a standard network processing fee (flat rate or 1%) from the deposited amount before crediting your wallet. The exact fee is determined by the provider upon arrival.
             </div>
         </div>
 
-        <div class="live-calc-box">
-            <div class="calc-line"><span>Net Funding Amount:</span> <span id="calcPrincipal">₦0.00</span></div>
-            <div class="calc-line fee" id="feeLine"><span>Gateway Processing Fee:</span> <span id="calcFee">₦0.00</span></div>
-            <div class="text-muted mb-2" style="font-size: 0.7rem; text-align: right; margin-top: -8px;" id="feeInfoText">Applied directly by Paystack (1.5% + ₦100)</div>
-            <div class="calc-line total"><span>Total Expected Charge:</span> <span id="calcTotal">₦0.00</span></div>
+
+        <!-- SECTION 2 & 3: PAYSTACK & MANUAL INPUT CONTROLS -->
+        <div id="section-interactive" class="funding-section">
+            
+            <!-- Manual Transfer Warning & Bank Details -->
+            <div id="manualDetailsWrapper" style="display: none;">
+                <div class="bank-details-box">
+                    <div class="premium-alert">
+                        <strong><i class="fas fa-info-circle text-warning me-1"></i> SPEED VS COST NOTICE:</strong><br>
+                        Manual transfers incur <strong>ZERO gateway fees</strong>, but crediting is delayed until an Admin physically verifies the deposit. For instant funding, use Auto Bank or Instant Gateway.
+                    </div>
+                    <div class="card-name-label text-muted">COMPANY BANK NAME</div>
+                    <div class="card-name text-light mb-3" id="companyBankDisplay">Loading...</div>
+                    
+                    <div class="card-name-label text-muted">ACCOUNT NUMBER</div>
+                    <div class="card-number text-warning fs-3 mb-2" id="companyAccNoDisplay">...</div>
+                    
+                    <div class="card-name-label text-muted">ACCOUNT NAME</div>
+                    <div class="card-name text-light mb-4" id="companyAccNameDisplay">...</div>
+                    
+                    <button class="btn-copy w-100" onclick="copyDetail(document.getElementById('companyAccNoDisplay').innerText, 'Account Number')"><i class="far fa-copy me-1"></i> COPY COMPANY ACCOUNT</button>
+                </div>
+            </div>
+
+            <!-- Shared Amount Input -->
+            <label class="small text-muted mb-2 d-block fw-bold text-center" style="letter-spacing: 2px;">ENTER AMOUNT (₦)</label>
+            <input type="number" id="fundAmount" class="amount-input mb-4" placeholder="0.00" min="100" oninput="updateCalculator()">
+            
+            <div class="d-flex gap-2 mb-4 flex-wrap justify-content-center">
+                <button class="quick-amount-btn" onclick="setAmount(1000)">₦1,000</button>
+                <button class="quick-amount-btn" onclick="setAmount(5000)">₦5,000</button>
+                <button class="quick-amount-btn" onclick="setAmount(10000)">₦10,000</button>
+                <button class="quick-amount-btn" onclick="setAmount(50000)">₦50,000</button>
+            </div>
+
+            <!-- Manual Extra Fields (Upload/Narration) -->
+            <div id="manualExtraFields" style="display: none;">
+                <input type="text" id="paymentReference" class="premium-input" placeholder="Sender Account Name / Narration (Optional)">
+                <div class="file-upload-wrapper mb-4">
+                    <label for="receiptUpload" class="file-upload-label" id="uploadLabel">
+                        <i class="fas fa-cloud-upload-alt fa-2x mb-2 d-block"></i>
+                        Click to Upload Payment Receipt (Optional)
+                    </label>
+                    <input type="file" id="receiptUpload" accept="image/jpeg,image/png,image/webp,application/pdf" style="display:none;">
+                    <div class="file-name-display text-warning" id="fileNameDisplay"></div>
+                </div>
+            </div>
+
+            <!-- Live Calculator -->
+            <div class="live-calc-box">
+                <div class="calc-line"><span>Net Funding Amount:</span> <span id="calcPrincipal">₦0.00</span></div>
+                <div class="calc-line fee" id="feeLine"><span>Gateway Processing Fee:</span> <span id="calcFee">₦0.00</span></div>
+                <div class="text-muted mb-2" style="font-size: 0.7rem; text-align: right; margin-top: -8px;" id="feeInfoText">Applied directly by Paystack (1.5% + ₦100)</div>
+                <div class="calc-line total"><span>Total Expected Charge:</span> <span id="calcTotal">₦0.00</span></div>
+            </div>
+            
+            <button class="btn-fund" id="payBtn" onclick="processInteractiveFunding()">
+                <i class="fas fa-lock me-2"></i> PROCEED TO SECURE PAYMENT
+            </button>
         </div>
-        
-        <button class="btn-fund" id="payBtn" onclick="processFunding()">
-            <i class="fas fa-lock me-2"></i> PROCEED TO SECURE PAYMENT
-        </button>
     </div>
     
     <div class="text-center text-muted small fw-bold mb-5 pb-4">
@@ -239,41 +285,228 @@
 </div>
 
 <script>
-    let currentMethod = 'paystack';
+    let currentMethod = 'auto'; // Default to the new Korapay system
     let selectedReceiptFile = null; 
 
-    // THE BULLETPROOF UI UNLOCKER & PHYSICAL BACK-BUTTON DETECTOR
+    // Handle physical back button safety
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
             Swal.close();
-            toggleUIState(false);
-            
-            // If they hit the physical back button to escape Paystack, instantly verify and mark FAILED
             const pendingRef = localStorage.getItem('pending_funding_ref');
-            if (pendingRef) {
-                verifyReturnedPayment(pendingRef);
-            }
+            if (pendingRef) verifyReturnedPayment(pendingRef);
         }
     });
 
+    // Fetch User's Permanent Korapay Virtual Account
+    async function loadUserVirtualAccount() {
+        const token = localStorage.getItem("naterpay_token");
+        if (!token) return;
+        try {
+            const res = await fetch('/api/wallet', { headers: { 'Authorization': `Bearer ${token}` }});
+            const data = await res.json();
+            
+            if (data.success && data.wallet && data.wallet.virtualAccount && data.wallet.virtualAccount.accountNumber) {
+                const va = data.wallet.virtualAccount;
+                document.getElementById('vaBank').innerText = va.bankName;
+                document.getElementById('vaNumber').innerText = va.accountNumber;
+                document.getElementById('vaName').innerText = va.accountName;
+            } else {
+                document.getElementById('vaNumber').innerText = "GENERATION FAILED";
+                document.getElementById('vaName').innerText = "Please contact support or use another method.";
+            }
+        } catch (e) {
+            console.error("Failed to load virtual account.");
+            document.getElementById('vaNumber').innerText = "NETWORK ERROR";
+        }
+    }
+
+    // Fetch Admin Company Bank for Manual Transfers
     async function loadCompanyBankDetails() {
         try {
             const res = await fetch('/api/settings/company-bank');
             const data = await res.json();
-            
-            document.getElementById('bankNameDisplay').innerText = data.bankName;
-            document.getElementById('companyAccountNoDisplay').innerText = data.accountNumber;
-            document.getElementById('accountNameDisplay').innerText = data.accountName;
+            document.getElementById('companyBankDisplay').innerText = data.bankName;
+            document.getElementById('companyAccNoDisplay').innerText = data.accountNumber;
+            document.getElementById('companyAccNameDisplay').innerText = data.accountName;
+        } catch (e) { console.error("Failed to load company bank."); }
+    }
 
-            document.getElementById('copyBankBtn').setAttribute('onclick', `copyDetail('${data.bankName}', 'Bank Name')`);
-            document.getElementById('copyAccNoBtn1').setAttribute('onclick', `copyDetail('${data.accountNumber}', 'Account Number')`);
-            document.getElementById('copyAccNameBtn').setAttribute('onclick', `copyDetail('${data.accountName}', 'Account Name')`);
-            document.getElementById('copyAccNoBtn2').setAttribute('onclick', `copyDetail('${data.accountNumber}', 'Account Number')`);
-        } catch (e) {
-            console.error("Failed to load bank details dynamically.");
+    function switchTab(method) {
+        currentMethod = method;
+        
+        // Update styling of the 3 selector cards
+        document.querySelectorAll('.method-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`method-${method}`).classList.add('active');
+
+        // Toggle Main Sections
+        if (method === 'auto') {
+            document.getElementById('section-auto').classList.add('active');
+            document.getElementById('section-interactive').classList.remove('active');
+        } else {
+            document.getElementById('section-auto').classList.remove('active');
+            document.getElementById('section-interactive').classList.add('active');
+            
+            // Adjust Interactive Section based on Paystack vs Manual
+            if (method === 'manual') {
+                document.getElementById('manualDetailsWrapper').style.display = 'block';
+                document.getElementById('manualExtraFields').style.display = 'block';
+                document.getElementById('feeLine').classList.add('free');
+                document.getElementById('feeInfoText').innerText = "No gateway fees for manual transfers.";
+                document.getElementById('payBtn').innerHTML = `<i class="fas fa-check-double me-2"></i> I HAVE PAID EXACT AMOUNT`;
+                document.getElementById('payBtn').style.background = 'linear-gradient(90deg, #00ff88, #00cc6a)';
+                document.getElementById('payBtn').style.color = '#000';
+            } else {
+                document.getElementById('manualDetailsWrapper').style.display = 'none';
+                document.getElementById('manualExtraFields').style.display = 'none';
+                document.getElementById('feeLine').classList.remove('free');
+                document.getElementById('feeInfoText').innerText = "Applied directly by Paystack (1.5% + ₦100)";
+                document.getElementById('payBtn').innerHTML = `<i class="fas fa-lock me-2"></i> PROCEED TO SECURE PAYMENT`;
+                document.getElementById('payBtn').style.background = 'linear-gradient(90deg, var(--gold-dim), var(--gold))';
+                document.getElementById('payBtn').style.color = '#000';
+            }
+            updateCalculator();
         }
     }
 
+    // Interactive Math & File Handling
+    function calculateGatewayFee(amount) {
+        if (currentMethod === 'manual') return 0;
+        if (!amount || amount < 100) return 0;
+        let fee = amount < 2500 ? (amount * 0.015) / (1 - 0.015) : ((amount * 0.015) + 100) / (1 - 0.015);
+        return Math.ceil(fee > 2000 ? 2000 : fee); 
+    }
+
+    function updateCalculator() {
+        const amount = parseFloat(document.getElementById('fundAmount').value) || 0;
+        const fee = calculateGatewayFee(amount);
+        document.getElementById('calcPrincipal').innerText = '₦' + amount.toLocaleString(undefined, {minimumFractionDigits:2});
+        document.getElementById('calcFee').innerText = (fee === 0 && currentMethod === 'manual') ? 'FREE' : '₦' + fee.toLocaleString(undefined, {minimumFractionDigits:2});
+        document.getElementById('calcTotal').innerText = '₦' + (amount + fee).toLocaleString(undefined, {minimumFractionDigits:2});
+    }
+
+    function setAmount(amount) {
+        document.getElementById('fundAmount').value = amount;
+        updateCalculator();
+    }
+
+    document.getElementById('receiptUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            if(file.size > 5 * 1024 * 1024) {
+                this.value = '';
+                return Swal.fire({ icon: 'error', title: 'File Too Large', text: 'Receipt must be less than 5MB.', background: '#111', color: '#fff' });
+            }
+            document.getElementById('fileNameDisplay').innerText = `Attached: ${file.name}`;
+            document.getElementById('uploadLabel').style.color = "var(--success)";
+            document.getElementById('uploadLabel').style.borderColor = "var(--success)";
+            selectedReceiptFile = file;
+        }
+    });
+
+    function copyDetail(text, label) {
+        if(!text || text.includes('---')) return;
+        navigator.clipboard.writeText(text).then(() => Swal.fire({ icon: 'success', title: 'Copied!', text: `${label} copied.`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' }));
+    }
+
+    // Execution Logic
+    async function processInteractiveFunding() {
+        const amount = parseFloat(document.getElementById('fundAmount').value);
+        if (!amount || amount < 100) return Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'Minimum funding amount is ₦100', background: '#111', color: '#fff' });
+
+        if (currentMethod === 'manual') {
+            const narration = document.getElementById('paymentReference').value.trim();
+            const confirm = await Swal.fire({
+                title: 'Confirm Payment', html: `Have you successfully completed the bank transfer?`, icon: 'question',
+                showCancelButton: true, confirmButtonColor: '#00ff88', confirmButtonText: 'Yes, I Have Paid', background: '#111', color: '#fff'
+            });
+            if (confirm.isConfirmed) executeManualFunding(amount, narration);
+        } else if (currentMethod === 'paystack') {
+            executePaystackFunding(amount);
+        }
+    }
+
+    async function executeManualFunding(amount, narration) {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) return window.location.href = '/index.html';
+        
+        Swal.fire({ title: 'Logging Request...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
+
+        try {
+            const formData = new FormData();
+            formData.append('amount', amount);
+            formData.append('narration', narration);
+            if (selectedReceiptFile) formData.append('receipt', selectedReceiptFile);
+
+            const res = await fetch('/api/wallet/fund-manual', { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` }, body: formData });
+            const data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Request Submitted!', text: 'Our finance team will verify your transfer shortly.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+                .then(() => window.location.href = 'dashboard.html');
+            } else {
+                Swal.fire({ icon: 'error', title: 'Failed', text: data.message, background: '#111', color: '#fff' });
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Upload timed out. Please try again.', background: '#111', color: '#fff' });
+        }
+    }
+
+    async function executePaystackFunding(amount) {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) return window.location.href = '/index.html';
+
+        Swal.fire({ title: 'Securing Gateway...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
+
+        try {
+            const res = await fetch('/api/wallet/fund', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ amount, provider: 'paystack' }) 
+            });
+            const data = await res.json();
+
+            if (data.success && data.checkoutUrl) {
+                localStorage.setItem('pending_funding_ref', data.paymentReference);
+                Swal.close();
+                window.location.href = data.checkoutUrl;
+            } else {
+                Swal.fire({ icon: 'error', title: 'Gateway Error', text: data.message, background: '#111', color: '#fff' });
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Could not reach server. Check connection.', background: '#111', color: '#fff' });
+        }
+    }
+
+    async function verifyReturnedPayment(reference) {
+        const authToken = localStorage.getItem("naterpay_token");
+        if (!authToken) return;
+
+        localStorage.removeItem('pending_funding_ref');
+        Swal.fire({ title: 'Verifying Transaction...', html: 'Please wait while we sync with the banking gateway.', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: '#111', color: '#fff' });
+
+        try {
+            const res = await fetch('/api/wallet/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify({ reference })
+            });
+            const data = await res.json();
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Your wallet has been credited.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+                .then(() => window.location.href = 'dashboard.html');
+            } else {
+                Swal.fire({ icon: 'error', title: 'Payment Failed', text: data.message || 'Transaction was abandoned or failed.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' })
+                .then(() => window.location.href = 'dashboard.html');
+            }
+        } catch (error) {
+            Swal.fire({ icon: 'warning', title: 'Pending Sync', text: 'Could not verify instantly. The system will auto-reconcile shortly.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
+            .then(() => window.location.href = 'dashboard.html');
+        }
+    }
+
+    // Background Animation
     function initStars() {
         const c = document.getElementById('starCanvas');
         c.width = window.innerWidth; c.height = window.innerHeight;
@@ -296,220 +529,16 @@
         animate();
     }
 
-    function toggleUIState(isProcessing) {
-        document.getElementById('payBtn').disabled = isProcessing;
-        document.getElementById('fundAmount').disabled = isProcessing;
-        document.getElementById('paymentReference').disabled = isProcessing;
-        
-        document.querySelectorAll('.quick-amount-btn').forEach(b => b.disabled = isProcessing);
-        
-        const methodCards = document.querySelectorAll('.method-card');
-        methodCards.forEach(c => {
-            c.style.pointerEvents = isProcessing ? 'none' : 'auto';
-            c.style.opacity = isProcessing ? '0.6' : '1';
-        });
-
-        const uploadLabel = document.getElementById('uploadLabel');
-        if(isProcessing) uploadLabel.classList.add('disabled');
-        else uploadLabel.classList.remove('disabled');
-    }
-
-    document.getElementById('receiptUpload').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            if(file.size > 5 * 1024 * 1024) {
-                this.value = '';
-                return Swal.fire({ icon: 'error', title: 'File Too Large', text: 'Receipt must be less than 5MB.', background: '#111', color: '#fff' });
-            }
-            document.getElementById('fileNameDisplay').innerText = `Attached: ${file.name}`;
-            document.getElementById('uploadLabel').style.color = "var(--success)";
-            document.getElementById('uploadLabel').style.borderColor = "var(--success)";
-            selectedReceiptFile = file;
-        }
-    });
-
-    function selectMethod(method) {
-        if (document.getElementById('payBtn').disabled) return; 
-        currentMethod = method;
-        document.getElementById('method-paystack').classList.remove('active');
-        document.getElementById('method-manual').classList.remove('active');
-        document.getElementById(`method-${method}`).classList.add('active');
-
-        if (method === 'manual') {
-            document.getElementById('bankDetailsBox').classList.add('active');
-            document.getElementById('manualExtraFields').classList.add('active');
-            document.getElementById('feeLine').classList.add('free');
-            document.getElementById('feeInfoText').innerText = "No gateway fees for manual transfers.";
-            document.getElementById('payBtn').innerHTML = `<i class="fas fa-check-double me-2"></i> I HAVE PAID EXACT AMOUNT`;
-            document.getElementById('payBtn').style.background = 'linear-gradient(90deg, #00ff88, #00cc6a)';
-            document.getElementById('payBtn').style.color = '#000';
-        } else {
-            document.getElementById('bankDetailsBox').classList.remove('active');
-            document.getElementById('manualExtraFields').classList.remove('active');
-            document.getElementById('feeLine').classList.remove('free');
-            document.getElementById('feeInfoText').innerText = "Applied directly by Paystack (1.5% + ₦100)";
-            document.getElementById('payBtn').innerHTML = `<i class="fas fa-lock me-2"></i> PROCEED TO SECURE PAYMENT`;
-            document.getElementById('payBtn').style.background = 'linear-gradient(90deg, var(--gold-dim), var(--gold))';
-            document.getElementById('payBtn').style.color = '#000';
-        }
-        updateCalculator();
-    }
-
-    function calculateGatewayFee(amount) {
-        if (currentMethod === 'manual') return 0;
-        if (!amount || amount < 100) return 0;
-        let fee = amount < 2500 ? (amount * 0.015) / (1 - 0.015) : ((amount * 0.015) + 100) / (1 - 0.015);
-        return Math.ceil(fee > 2000 ? 2000 : fee); 
-    }
-
-    function updateCalculator() {
-        const amount = parseFloat(document.getElementById('fundAmount').value) || 0;
-        const fee = calculateGatewayFee(amount);
-        document.getElementById('calcPrincipal').innerText = '₦' + amount.toLocaleString(undefined, {minimumFractionDigits:2});
-        document.getElementById('calcFee').innerText = (fee === 0 && currentMethod === 'manual') ? 'FREE' : '₦' + fee.toLocaleString(undefined, {minimumFractionDigits:2});
-        document.getElementById('calcTotal').innerText = '₦' + (amount + fee).toLocaleString(undefined, {minimumFractionDigits:2});
-    }
-
-    function setAmount(amount) {
-        if (!document.getElementById('payBtn').disabled) {
-            document.getElementById('fundAmount').value = amount;
-            updateCalculator();
-        }
-    }
-
-    function copyDetail(text, label) {
-        navigator.clipboard.writeText(text).then(() => Swal.fire({ icon: 'success', title: 'Copied!', text: `${label} copied.`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#111', color: '#fff' }));
-    }
-
-    async function processFunding() {
-        const amount = parseFloat(document.getElementById('fundAmount').value);
-        if (!amount || amount < 100) return Swal.fire({ icon: 'error', title: 'Invalid Amount', text: 'Minimum funding amount is ₦100', background: '#111', color: '#fff' });
-
-        if (currentMethod === 'manual') {
-            const narration = document.getElementById('paymentReference').value.trim();
-            const confirm = await Swal.fire({
-                title: 'Confirm Payment', html: `Have you successfully completed the bank transfer?`, icon: 'question',
-                showCancelButton: true, confirmButtonColor: '#00ff88', confirmButtonText: 'Yes, I Have Paid', background: '#111', color: '#fff'
-            });
-            if (confirm.isConfirmed) executeManualFunding(amount, narration);
-        } else {
-            executePaystackFunding(amount);
-        }
-    }
-
-    async function executeManualFunding(amount, narration) {
-        const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) return window.location.href = '/index.html';
-        
-        toggleUIState(true);
-        Swal.fire({ title: 'Logging Request...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
-
-        try {
-            const formData = new FormData();
-            formData.append('amount', amount);
-            formData.append('narration', narration);
-            if (selectedReceiptFile) formData.append('receipt', selectedReceiptFile);
-
-            const res = await fetch('/api/wallet/fund-manual', { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` }, body: formData });
-            const data = await res.json();
-            
-            if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Request Submitted!', text: 'Our finance team will verify your transfer shortly.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
-                .then(() => window.location.href = 'dashboard.html');
-            } else {
-                Swal.fire({ icon: 'error', title: 'Failed', text: data.message, background: '#111', color: '#fff' });
-                toggleUIState(false);
-            }
-        } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Upload timed out. Please try again.', background: '#111', color: '#fff' });
-            toggleUIState(false);
-        }
-    }
-
-    async function executePaystackFunding(amount) {
-        const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) return window.location.href = '/index.html';
-
-        toggleUIState(true);
-        Swal.fire({ title: 'Securing Gateway...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, background: '#111', color: '#fff' });
-
-        try {
-            const res = await fetch('/api/wallet/fund', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ amount, provider: 'paystack' }) 
-            });
-            const data = await res.json();
-
-            if (data.success && data.checkoutUrl) {
-                // THE FIX: Memorize the transaction ID *before* leaving the page
-                localStorage.setItem('pending_funding_ref', data.paymentReference);
-                
-                // Strip the "Securing Gateway" spinner completely right before redirecting
-                Swal.close();
-                window.location.href = data.checkoutUrl;
-            } else {
-                Swal.fire({ icon: 'error', title: 'Gateway Error', text: data.message, background: '#111', color: '#fff' });
-                toggleUIState(false);
-            }
-        } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: 'Could not reach server. Check connection.', background: '#111', color: '#fff' });
-            toggleUIState(false);
-        }
-    }
-
-    // ====================================================================
-    // BULLETPROOF VERIFICATION SYSTEM
-    // ====================================================================
-    async function verifyReturnedPayment(reference) {
-        const authToken = localStorage.getItem("naterpay_token");
-        if (!authToken) return;
-
-        // Wipe the memory instantly so it doesn't get stuck in a verification loop
-        localStorage.removeItem('pending_funding_ref');
-
-        Swal.fire({
-            title: 'Verifying Transaction...',
-            html: 'Please wait while we sync with the banking gateway.',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading(),
-            background: '#111', color: '#fff'
-        });
-
-        try {
-            const res = await fetch('/api/wallet/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ reference })
-            });
-            const data = await res.json();
-
-            // Strip the ugly reference tracking from the URL so it looks clean
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Payment Successful!', text: 'Your wallet has been credited.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
-                .then(() => window.location.href = 'dashboard.html');
-            } else {
-                // Instantly tell user it failed if they cancelled, and mark it FAILED in the DB
-                Swal.fire({ icon: 'error', title: 'Payment Failed', text: data.message || 'Transaction was abandoned or failed.', confirmButtonColor: '#d32f2f', background: '#111', color: '#fff' })
-                .then(() => window.location.href = 'dashboard.html');
-            }
-        } catch (error) {
-            Swal.fire({ icon: 'warning', title: 'Pending Sync', text: 'Could not verify instantly. The system will auto-reconcile shortly.', confirmButtonColor: '#d4af37', background: '#111', color: '#fff' })
-            .then(() => window.location.href = 'dashboard.html');
-        }
-    }
-
     window.onload = () => {
         initStars();
         loadCompanyBankDetails();
+        loadUserVirtualAccount(); // This triggers the backend to auto-generate the Kora account if missing
 
-        // THE FIX: Look for the reference in the URL OR the local memory
         const urlParams = new URLSearchParams(window.location.search);
         const paystackRef = urlParams.get('reference') || urlParams.get('trxref') || localStorage.getItem('pending_funding_ref');
         
         if (paystackRef) {
+            switchTab('paystack'); // Switch UI to show Paystack loader logic
             verifyReturnedPayment(paystackRef);
         }
     };
