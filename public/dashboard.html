@@ -9,6 +9,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <!-- Added html2canvas for generating beautiful shareable receipt images -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/socket.io/socket.io.js"></script>
 
@@ -88,7 +91,15 @@
         .kyc-clickable-badge:hover { transform: scale(1.05); filter: brightness(1.2); }
 
         .balance-card { background: linear-gradient(145deg, #111 0%, #222 100%); border: 2px solid var(--gold); border-radius: 30px; padding: clamp(25px, 5vw, 45px); margin: 25px 0 40px 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; animation: pulse-border 5s infinite ease-in-out; }
-        .amount-text { font-family: 'Cinzel', serif; font-size: clamp(2rem, 8vw, 3.5rem); color: var(--gold); font-weight: 900; margin: 10px 0; word-break: break-word; }
+        .amount-text { font-family: 'Cinzel', serif; font-size: clamp(2rem, 8vw, 3.5rem); color: var(--gold); font-weight: 900; word-break: break-word; }
+
+        /* Modern Balance Toggle Design */
+        .balance-toggle-btn {
+            background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); color: var(--gold);
+            border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+        }
+        .balance-toggle-btn:hover { background: var(--gold); color: #000; transform: scale(1.1); box-shadow: 0 4px 10px rgba(255, 215, 0, 0.4); }
 
         .ecosystem-section-title { font-family: 'Cinzel', serif; font-size: 1.2rem; font-weight: 900; color: var(--gold); border-bottom: 1px solid rgba(255,215,0,0.2); padding-bottom: 10px; margin-bottom: 20px; margin-top: 40px; display: flex; align-items: center; gap: 10px; }
 
@@ -101,7 +112,6 @@
         .service-link.loading { border-color: #2eb82e; background: rgba(46, 184, 46, 0.1); transform: scale(0.95); box-shadow: inset 0 0 15px rgba(46, 184, 46, 0.2); }
         .service-link.loading i.main-icon { color: #2eb82e; text-shadow: 0 0 15px rgba(46, 184, 46, 0.6); }
 
-        /* FIXED: Removed transform scale to ensure cards stay the exact same size */
         @keyframes pumping {
             0% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
             50% { box-shadow: 0 0 30px rgba(212, 175, 55, 0.8); border-color: #ffd700; }
@@ -183,20 +193,26 @@
         footer { background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%; margin-top: 60px; position: relative; z-index: 5; }
         .footer-compliance-tag { color: #ffffff !important; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
 
-        /* FULL-SCREEN NOTIFICATION MODAL REDESIGN */
+        /* NEW OPAY STYLE NOTIFICATION UI */
         #opayNotifCard {
             display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; 
-            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); 
+            background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px); /* Transparent blur so main site is visible */
             align-items: center; justify-content: center;
         }
         .notif-modal-content {
-            background: linear-gradient(145deg, #111, #1a1a1a); border: 2px solid var(--gold);
-            border-radius: 20px; width: 90%; max-width: 400px; padding: 25px; text-align: center;
-            box-shadow: 0 15px 50px rgba(0,0,0,0.9); position: relative;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: #111; border: 1.5px solid var(--gold);
+            border-radius: 24px; width: 85%; max-width: 360px; text-align: center;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.9); position: relative;
+            animation: opayPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
         }
-        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .notif-img { max-width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
+        @keyframes opayPop { from { transform: scale(0.9) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        .notif-img { width: 100%; height: 160px; object-fit: cover; display: block; border-bottom: 2px solid var(--gold); }
+        .notif-body { padding: 25px 20px 20px 20px; }
+        .notif-btn { background: var(--gold); color: #000; border: none; width: 100%; padding: 14px; font-weight: 900; border-radius: 14px; margin-top: 15px; font-size: 0.95rem; letter-spacing: 1.5px; box-shadow: 0 4px 15px rgba(255,215,0,0.3); transition: 0.3s; }
+        .notif-btn:hover { background: #fff; transform: translateY(-2px); }
+        .notif-close { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #fff; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; backdrop-filter: blur(5px); transition: 0.3s; z-index: 10; }
+        .notif-close:hover { background: #d32f2f; color: #fff; border-color: #d32f2f; }
 
         .fee-badge-small { display: inline-block; background: rgba(255, 68, 68, 0.15); color: #ff4444; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-top: 4px; font-weight: bold; border: 1px solid rgba(255, 68, 68, 0.3); }
         
@@ -209,6 +225,7 @@
 
 <canvas id="starCanvas"></canvas>
 
+<!-- Container for Full Screen Transparent Notification -->
 <div id="opayNotifCard"></div>
 
 <div class="offcanvas offcanvas-start custom-terminal-sidebar" tabindex="-1" id="terminalHubSidebar" aria-labelledby="terminalHubSidebarLabel">
@@ -297,13 +314,14 @@
     <div class="balance-card">
         <div class="row align-items-center">
             <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
-                <span class="small text-white fw-bold" style="letter-spacing: 2px;">AVAILABLE LEDGER FUND</span>
-                <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-3 mt-2">
-                    <div id="walletBalance" class="amount-text m-0">₦0.00</div>
-                    <button onclick="toggleBalance()" style="background:none; border:none; color:var(--gold); font-size:1.8rem; cursor:pointer;" title="Hide/Show Balance">
+                <!-- Redesigned Toggle Container -->
+                <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-3 mb-2">
+                    <span class="small text-white fw-bold" style="letter-spacing: 2px;">AVAILABLE LEDGER FUND</span>
+                    <button onclick="toggleBalance()" class="balance-toggle-btn" title="Hide/Show Balance">
                         <i class="fas fa-eye" id="eyeIcon"></i>
                     </button>
                 </div>
+                <div id="walletBalance" class="amount-text m-0">₦0.00</div>
             </div>
             <div class="col-md-6 d-flex flex-wrap gap-2">
                 <button class="btn btn-warning fw-bold py-3 rounded-pill flex-grow-1 high-priority-glow" onclick="location.href='fund.html'">
@@ -325,6 +343,7 @@
         <button class="btn btn-light btn-sm rounded-pill fw-bold px-4 py-2" id="promoBtn" onclick="location.href='reseller.html'">UPGRADE NOW</button>
     </div>
 
+    <!-- ALL GRIDS STANDARDIZED TO col-4 col-md-2 FOR IDENTICAL CARD SIZES -->
     <h5 class="ecosystem-section-title"><i class="fas fa-plug"></i> Bills & Utilities</h5>
     <div class="row g-2" id="gridUtilities">
         <div class="col-4 col-md-2 service-wrapper-node">
@@ -352,24 +371,24 @@
 
     <h5 class="ecosystem-section-title"><i class="fas fa-globe"></i> Internet & Global</h5>
     <div class="row g-2" id="gridGlobal">
-        <div class="col-6 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="best-value-data.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
                 <i class="fas fa-fire main-icon" style="color: #ff4d4d;"></i><span>GLO Best Value</span>
             </a>
         </div>
-        <div class="col-6 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="international.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
                 <i class="fas fa-globe-africa main-icon text-info"></i><span>Global Airtime</span>
             </a>
         </div>
-        <div class="col-6 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="spectranet.html" class="service-link" onclick="triggerLoad(this)">
                 <i class="fas fa-satellite main-icon text-danger"></i><span>Spectranet 4G</span>
             </a>
         </div>
-        <div class="col-6 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="smile.html" class="service-link" onclick="triggerLoad(this)">
                 <i class="fas fa-signal main-icon text-warning"></i><span>Smile Network</span>
             </a>
@@ -378,22 +397,22 @@
 
     <h5 class="ecosystem-section-title"><i class="fas fa-store"></i> Merchant & Business</h5>
     <div class="row g-2" id="gridBusiness">
-        <div class="col-4 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="merchant-dashboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-chart-line main-icon"></i><span>Biz Analytics</span></a>
         </div>
-        <div class="col-4 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="reseller.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
                 <i class="fas fa-network-wired main-icon"></i><span>Reseller Network</span>
             </a>
         </div>
-        <div class="col-4 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="payment-links.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
                 <i class="fas fa-box-open main-icon"></i><span>Sell Products</span>
             </a>
         </div>
-        <div class="col-4 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="invoices.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-file-invoice-dollar main-icon"></i><span>Smart Invoicing</span></a>
         </div>
     </div>
@@ -424,25 +443,25 @@
 
     <h5 class="ecosystem-section-title"><i class="fas fa-user-shield"></i> Security & Profile</h5>
     <div class="row g-2" id="gridSecurity">
-        <div class="col-4 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="#" class="service-link" onclick="showNextNotification(); return false;" style="position: relative;">
                 <span class="position-absolute badge rounded-pill bg-danger" id="unreadBadge" style="display: none; top: 15px; right: 15px; font-size: 0.65rem; z-index: 5;">0</span>
                 <i class="fas fa-bell text-warning main-icon"></i><span>System Alerts</span>
             </a>
         </div>
-        <div class="col-4 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="kyc.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
                 <i class="fas fa-id-badge text-warning main-icon"></i><span>Verify Identity</span>
             </a>
         </div>
-        <div class="col-4 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="security.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-lock main-icon"></i><span>Vault Security</span></a>
         </div>
-        <div class="col-4 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="profile.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-user-edit main-icon"></i><span>Account Profile</span></a>
         </div>
-        <div class="col-4 col-md-3 service-wrapper-node">
+        <div class="col-4 col-md-2 service-wrapper-node">
             <a href="referrals.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-users main-icon"></i><span>Referral Tree</span></a>
         </div>
     </div>
@@ -532,17 +551,97 @@
         }
     }
 
-    // Receipt Sharing Logic
+    // Designed Receipt Sharing Logic
     function shareReceipt(type, desc, amount, date, status) {
-        const shareText = `NATER-PAY Receipt\n\nService: ${type.replace('_', ' ').toUpperCase()}\nDetail: ${desc}\nAmount: ₦${amount}\nStatus: ${status.toUpperCase()}\nDate: ${new Date(date).toLocaleString()}\n\nSecured by Nater-Pay`;
+        const colorStat = status === 'success' ? '#2eb82e' : '#d32f2f';
+        const formattedDate = new Date(date).toLocaleString();
         
-        if (navigator.share) {
-            navigator.share({
-                title: 'NATER-PAY Transaction Receipt',
-                text: shareText
-            }).catch(console.error);
-        } else {
-            Swal.fire({ icon: 'info', title: 'Share Detail', text: shareText, background: '#111', color: '#fff' });
+        // This is the HTML structure that looks exactly like a physical POS receipt
+        const receiptHtml = `
+            <div id="receiptNode" style="background: #111; border: 2px solid #d4af37; border-radius: 12px; padding: 25px; text-align: left; color: #fff; font-family: 'Montserrat', sans-serif; position: relative; overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);">
+                <div style="position: absolute; top: -10px; right: -10px; font-size: 6rem; opacity: 0.04; color: #d4af37;"><i class="fas fa-check-circle"></i></div>
+                <div style="text-align: center; border-bottom: 2px dashed #333; padding-bottom: 15px; margin-bottom: 20px;">
+                    <h4 style="font-family: 'Cinzel', serif; color: #d4af37; font-weight: 900; margin:0; letter-spacing: 2px; font-size: 1.5rem;">NATER<span style="color:#d32f2f;">PAY</span></h4>
+                    <small style="color: #888; font-size: 0.75rem; letter-spacing: 1px;">OFFICIAL TRANSACTION RECEIPT</small>
+                </div>
+                <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color:#888; font-size: 0.85rem; font-weight: 600;">Amount</span>
+                    <span style="color:#d4af37; font-weight: 900; font-family: 'Cinzel', serif; font-size: 1.3rem;">₦${amount}</span>
+                </div>
+                <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color:#888; font-size: 0.85rem; font-weight: 600;">Service</span>
+                    <span style="font-weight: 800; font-size: 0.85rem; text-transform: uppercase;">${type.replace('_', ' ')}</span>
+                </div>
+                <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-start;">
+                    <span style="color:#888; font-size: 0.85rem; font-weight: 600;">Detail</span>
+                    <span style="font-weight: 700; font-size: 0.85rem; text-align: right; max-width: 65%; line-height: 1.3;">${desc}</span>
+                </div>
+                <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color:#888; font-size: 0.85rem; font-weight: 600;">Status</span>
+                    <span style="font-weight: 900; font-size: 0.85rem; text-transform: uppercase; color: ${colorStat}; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">${status}</span>
+                </div>
+                <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color:#888; font-size: 0.85rem; font-weight: 600;">Date</span>
+                    <span style="font-weight: 700; font-size: 0.85rem;">${formattedDate}</span>
+                </div>
+                <div style="text-align: center; border-top: 2px dashed #333; padding-top: 15px; font-size: 0.65rem; color: #555; font-weight: 900; letter-spacing: 1.5px;">
+                    SECURED BY NATER-PAY INFRASTRUCTURE
+                </div>
+            </div>
+        `;
+        
+        // Show receipt preview in SweetAlert with custom action buttons
+        Swal.fire({
+            title: '',
+            html: receiptHtml,
+            background: '#0a0a0a',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-share-square me-2"></i> Share / Download',
+            cancelButtonText: 'Close',
+            confirmButtonColor: '#d4af37',
+            cancelButtonColor: '#333',
+            customClass: { confirmButton: 'text-dark fw-bold px-4 py-2 rounded-pill', cancelButton: 'fw-bold px-4 py-2 rounded-pill' }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                generateAndShareReceiptImage();
+            }
+        });
+    }
+
+    // Process HTML to Image and trigger Share Sheet
+    async function generateAndShareReceiptImage() {
+        const node = document.getElementById('receiptNode');
+        if (!node) return;
+        
+        try {
+            Swal.fire({ title: 'Generating Receipt...', text: 'Preparing image file.', didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff', allowOutsideClick: false });
+            
+            // Convert the HTML node into a high-quality Canvas image
+            const canvas = await html2canvas(node, { backgroundColor: '#111', scale: 2 });
+            const dataUrl = canvas.toDataURL('image/png');
+            
+            const res = await fetch(dataUrl);
+            const blob = await res.blob();
+            const file = new File([blob], "naterpay-receipt.png", { type: 'image/png' });
+            
+            Swal.close();
+            
+            // Check if device supports native sharing of image files
+            if (navigator.share && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'NATER-PAY Receipt',
+                    files: [file]
+                });
+            } else {
+                // Fallback for browsers (like desktop Chrome) that can't share files natively
+                const link = document.createElement('a');
+                link.download = 'naterpay-receipt.png';
+                link.href = dataUrl;
+                link.click();
+                Swal.fire({ icon: 'success', title: 'Downloaded!', text: 'Receipt saved to your device.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d4af37' });
+            }
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Oops', text: 'Could not generate image. Please try again.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d4af37' });
         }
     }
 
@@ -643,21 +742,24 @@
         const notif = unreadNotifications[0];
         const cardContainer = document.getElementById('opayNotifCard');
         
-        // Include image if API provides it (e.g. notif.image)
-        const imgHtml = notif.image ? `<img src="${notif.image}" alt="Notification Image" class="notif-img" style="display:block;">` : '';
+        // Use provided image, otherwise show a clean fallback header matching the OPay style
+        const imgHtml = notif.image 
+            ? `<img src="${notif.image}" alt="Notification Image" class="notif-img">` 
+            : `<div style="background: linear-gradient(135deg, #111, #1a1a1a); height: 120px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid var(--gold);"><i class="fas fa-bell" style="font-size: 3.5rem; color: var(--gold); opacity: 0.2;"></i></div>`;
 
+        // Modern, full-screen transparent modal
         cardContainer.innerHTML = `
             <div class="notif-modal-content">
-                <button onclick="closeNotificationCard()" style="position:absolute; top:15px; right:15px; background:none; border:none; color:#888; font-size:1.5rem; transition:0.3s; cursor:pointer;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'"><i class="fas fa-times"></i></button>
+                <button class="notif-close" onclick="closeNotificationCard()"><i class="fas fa-times"></i></button>
                 ${imgHtml}
-                <h5 class="fw-bold mb-3 mt-2" style="color: var(--gold);"><i class="fas fa-bullhorn me-2"></i>${notif.title}</h5>
-                <p class="text-white mb-4" style="font-size: 0.95rem; line-height: 1.6; font-weight: 500;">${notif.message}</p>
-                <div style="border-top: 1px solid #333; padding-top: 15px;">
-                    <button class="btn btn-warning fw-bold w-100 rounded-pill py-2" onclick="markReadAndNext('${notif._id}')" style="font-size: 0.9rem; letter-spacing: 1px;">MARK AS READ</button>
+                <div class="notif-body">
+                    <h5 class="fw-bold mb-3" style="color: var(--gold); font-size: 1.15rem;">${notif.title}</h5>
+                    <p class="text-white opacity-75 mb-4" style="font-size: 0.9rem; line-height: 1.5; font-weight: 500;">${notif.message}</p>
+                    <button class="notif-btn" onclick="markReadAndNext('${notif._id}')">GOT IT</button>
                 </div>
             </div>
         `;
-        cardContainer.style.display = 'flex'; // Triggers full screen modal
+        cardContainer.style.display = 'flex'; // Triggers flexbox centering logic for full screen overlay
     }
 
     function closeNotificationCard() {
@@ -888,7 +990,7 @@
                                 <div class="tx-right">
                                     <div class="d-flex align-items-center justify-content-end gap-2">
                                         <div class="tx-amount ${flowColor}">${flowSymbol}₦${displayAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                                        <button onclick="shareReceipt('${tx.type}', '${shareDesc}', '${displayAmount}', '${rawDate}', '${tx.status}')" style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:0.75rem; cursor:pointer;" title="Share Receipt"><i class="fas fa-share-alt"></i></button>
+                                        <button onclick="shareReceipt('${tx.type}', '${shareDesc}', '${displayAmount}', '${rawDate}', '${tx.status}')" style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:0.75rem; cursor:pointer; transition:0.3s;" onmouseover="this.style.background='var(--gold)'; this.style.color='#000';" onmouseout="this.style.background='rgba(255,215,0,0.1)'; this.style.color='var(--gold)';" title="Share Receipt"><i class="fas fa-share-alt"></i></button>
                                     </div>
                                     ${feeBadge}
                                     <div class="status-pill text-white ${statusClass}">${tx.status}</div>
