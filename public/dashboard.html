@@ -12,10 +12,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/socket.io/socket.io.js"></script>
 
-
-<script>(function(s){s.dataset.zone='11384420',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+    <script>(function(s){s.dataset.zone='11384420',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
     
-
     <style>
         :root { --red: #d32f2f; --gold: #FFD700; --bg: #030303; --card-bg: rgba(20, 20, 20, 0.95); --glass: rgba(255, 255, 255, 0.03); }
         
@@ -103,10 +101,11 @@
         .service-link.loading { border-color: #2eb82e; background: rgba(46, 184, 46, 0.1); transform: scale(0.95); box-shadow: inset 0 0 15px rgba(46, 184, 46, 0.2); }
         .service-link.loading i.main-icon { color: #2eb82e; text-shadow: 0 0 15px rgba(46, 184, 46, 0.6); }
 
+        /* FIXED: Removed transform scale to ensure cards stay the exact same size */
         @keyframes pumping {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            0% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(212, 175, 55, 0.8); border-color: #ffd700; }
+            100% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
         }
         @keyframes spin-pulse {
             0% { transform: rotate(0deg) scale(1); }
@@ -118,7 +117,6 @@
             position: relative;
             overflow: hidden;
             border: 1.5px solid var(--gold) !important;
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4) !important;
             animation: pumping 2.5s infinite ease-in-out !important;
         }
         .high-priority-glow::before {
@@ -185,13 +183,20 @@
         footer { background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%; margin-top: 60px; position: relative; z-index: 5; }
         .footer-compliance-tag { color: #ffffff !important; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
 
+        /* FULL-SCREEN NOTIFICATION MODAL REDESIGN */
         #opayNotifCard {
-            display: none; position: fixed; bottom: 30px; right: 20px; z-index: 9999; 
-            width: 340px; background: rgba(15, 15, 15, 0.98); border: 1.5px solid var(--gold); 
-            border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.9); 
-            backdrop-filter: blur(15px); animation: slideUpNotif 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; 
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); 
+            align-items: center; justify-content: center;
         }
-        @keyframes slideUpNotif { from { transform: translateY(150px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .notif-modal-content {
+            background: linear-gradient(145deg, #111, #1a1a1a); border: 2px solid var(--gold);
+            border-radius: 20px; width: 90%; max-width: 400px; padding: 25px; text-align: center;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.9); position: relative;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .notif-img { max-width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
 
         .fee-badge-small { display: inline-block; background: rgba(255, 68, 68, 0.15); color: #ff4444; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-top: 4px; font-weight: bold; border: 1px solid rgba(255, 68, 68, 0.3); }
         
@@ -293,7 +298,12 @@
         <div class="row align-items-center">
             <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
                 <span class="small text-white fw-bold" style="letter-spacing: 2px;">AVAILABLE LEDGER FUND</span>
-                <div id="walletBalance" class="amount-text">₦0.00</div>
+                <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-3 mt-2">
+                    <div id="walletBalance" class="amount-text m-0">₦0.00</div>
+                    <button onclick="toggleBalance()" style="background:none; border:none; color:var(--gold); font-size:1.8rem; cursor:pointer;" title="Hide/Show Balance">
+                        <i class="fas fa-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
             </div>
             <div class="col-md-6 d-flex flex-wrap gap-2">
                 <button class="btn btn-warning fw-bold py-3 rounded-pill flex-grow-1 high-priority-glow" onclick="location.href='fund.html'">
@@ -340,7 +350,6 @@
         </div>
     </div>
 
-    <!-- NEW SECTION: INTERNET & GLOBAL -->
     <h5 class="ecosystem-section-title"><i class="fas fa-globe"></i> Internet & Global</h5>
     <div class="row g-2" id="gridGlobal">
         <div class="col-6 col-md-3 service-wrapper-node">
@@ -369,8 +378,6 @@
 
     <h5 class="ecosystem-section-title"><i class="fas fa-store"></i> Merchant & Business</h5>
     <div class="row g-2" id="gridBusiness">
-        <!-- Suspended Features Completely Removed -->
-        
         <div class="col-4 col-md-3 service-wrapper-node">
             <a href="merchant-dashboard.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-chart-line main-icon"></i><span>Biz Analytics</span></a>
         </div>
@@ -380,14 +387,12 @@
                 <i class="fas fa-network-wired main-icon"></i><span>Reseller Network</span>
             </a>
         </div>
-        
         <div class="col-4 col-md-3 service-wrapper-node">
             <a href="payment-links.html" class="service-link high-priority-glow" onclick="triggerLoad(this)">
                 <i class="fas fa-star star-badge"></i>
                 <i class="fas fa-box-open main-icon"></i><span>Sell Products</span>
             </a>
         </div>
-        
         <div class="col-4 col-md-3 service-wrapper-node">
             <a href="invoices.html" class="service-link" onclick="triggerLoad(this)"><i class="fas fa-file-invoice-dollar main-icon"></i><span>Smart Invoicing</span></a>
         </div>
@@ -497,11 +502,49 @@
     let stars = [];
     let socketConnectionLink = null;
     let unreadNotifications = [];
+    let isBalanceHidden = localStorage.getItem('hide_balance') === 'true';
+    let rawBalanceNumber = 0;
 
     const platformCommissionRates = { 
         airtime: 0.03, data: 0.03, cable: 0.015, electricity: 0.015, 
         betting: 0.01, insurance: 0.015, sms: 0.01, education: 0 
     };
+
+    // Balance visibility toggle logic
+    function toggleBalance() {
+        isBalanceHidden = !isBalanceHidden;
+        localStorage.setItem('hide_balance', isBalanceHidden);
+        updateBalanceDisplay();
+    }
+
+    function updateBalanceDisplay() {
+        const balanceElement = document.getElementById('walletBalance');
+        const eyeIcon = document.getElementById('eyeIcon');
+        
+        if(isBalanceHidden) {
+            balanceElement.innerText = '****';
+            eyeIcon.classList.remove('fa-eye');
+            eyeIcon.classList.add('fa-eye-slash');
+        } else {
+            balanceElement.innerText = '₦' + Number(rawBalanceNumber).toLocaleString(undefined, {minimumFractionDigits: 2});
+            eyeIcon.classList.remove('fa-eye-slash');
+            eyeIcon.classList.add('fa-eye');
+        }
+    }
+
+    // Receipt Sharing Logic
+    function shareReceipt(type, desc, amount, date, status) {
+        const shareText = `NATER-PAY Receipt\n\nService: ${type.replace('_', ' ').toUpperCase()}\nDetail: ${desc}\nAmount: ₦${amount}\nStatus: ${status.toUpperCase()}\nDate: ${new Date(date).toLocaleString()}\n\nSecured by Nater-Pay`;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'NATER-PAY Transaction Receipt',
+                text: shareText
+            }).catch(console.error);
+        } else {
+            Swal.fire({ icon: 'info', title: 'Share Detail', text: shareText, background: '#111', color: '#fff' });
+        }
+    }
 
     async function verifyReturnedPayment(reference) {
         const authToken = localStorage.getItem("naterpay_token");
@@ -600,20 +643,21 @@
         const notif = unreadNotifications[0];
         const cardContainer = document.getElementById('opayNotifCard');
         
+        // Include image if API provides it (e.g. notif.image)
+        const imgHtml = notif.image ? `<img src="${notif.image}" alt="Notification Image" class="notif-img" style="display:block;">` : '';
+
         cardContainer.innerHTML = `
-            <div style="padding: 18px;">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="text-gold fw-bold mb-0" style="color: var(--gold); font-size: 0.95rem; text-transform: uppercase;"><i class="fas fa-bullhorn me-2"></i>${notif.title}</h6>
-                    <button onclick="closeNotificationCard()" style="background:none; border:none; color:#888; font-size:1.2rem; padding:0; line-height:1; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'"><i class="fas fa-times-circle"></i></button>
-                </div>
-                <p class="text-white mb-3 mt-2" style="font-size: 0.85rem; line-height: 1.5; font-weight: 500;">${notif.message}</p>
-                <div class="d-flex justify-content-between align-items-center pt-2" style="border-top: 1px solid #333;">
-                    <small class="text-muted" style="font-size: 0.7rem;">${new Date(notif.createdAt).toLocaleDateString()}</small>
-                    <button class="btn btn-sm btn-warning fw-bold px-4 rounded-pill" onclick="markReadAndNext('${notif._id}')" style="font-size: 0.75rem; letter-spacing: 1px;">MARK READ</button>
+            <div class="notif-modal-content">
+                <button onclick="closeNotificationCard()" style="position:absolute; top:15px; right:15px; background:none; border:none; color:#888; font-size:1.5rem; transition:0.3s; cursor:pointer;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'"><i class="fas fa-times"></i></button>
+                ${imgHtml}
+                <h5 class="fw-bold mb-3 mt-2" style="color: var(--gold);"><i class="fas fa-bullhorn me-2"></i>${notif.title}</h5>
+                <p class="text-white mb-4" style="font-size: 0.95rem; line-height: 1.6; font-weight: 500;">${notif.message}</p>
+                <div style="border-top: 1px solid #333; padding-top: 15px;">
+                    <button class="btn btn-warning fw-bold w-100 rounded-pill py-2" onclick="markReadAndNext('${notif._id}')" style="font-size: 0.9rem; letter-spacing: 1px;">MARK AS READ</button>
                 </div>
             </div>
         `;
-        cardContainer.style.display = 'block';
+        cardContainer.style.display = 'flex'; // Triggers full screen modal
     }
 
     function closeNotificationCard() {
@@ -776,8 +820,9 @@
                     document.getElementById('adminDivider').style.display = 'block';
                 }
 
-                const safeBalance = data.balance?.$numberDecimal || data.balance || 0;
-                document.getElementById('walletBalance').innerText = '₦' + Number(safeBalance).toLocaleString(undefined, {minimumFractionDigits:2});
+                // Balance assignment and display update
+                rawBalanceNumber = data.balance?.$numberDecimal || data.balance || 0;
+                updateBalanceDisplay();
                 
                 const safeSpent = data.totalSpent?.$numberDecimal || data.totalSpent || 0;
                 document.getElementById('statTrans').innerText = `${data.totalLogs || 0} Logs`;
@@ -831,6 +876,7 @@
                         
                         let displayAmount = isCredit ? baseAmount : totalDeducted;
                         let feeBadge = (!isCredit && feeAmount > 0) ? `<div class="fee-badge-small">Fee: ₦${feeAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>` : '';
+                        let shareDesc = (tx.description || 'System Log').replace(/'/g, "\\'"); // Escaping description string for the onclick handler
 
                         tbody.innerHTML += `
                             <div class="transaction-row">
@@ -840,7 +886,10 @@
                                     <div class="tx-date">${dateString}</div>
                                 </div>
                                 <div class="tx-right">
-                                    <div class="tx-amount ${flowColor}">${flowSymbol}₦${displayAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                                    <div class="d-flex align-items-center justify-content-end gap-2">
+                                        <div class="tx-amount ${flowColor}">${flowSymbol}₦${displayAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                                        <button onclick="shareReceipt('${tx.type}', '${shareDesc}', '${displayAmount}', '${rawDate}', '${tx.status}')" style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:0.75rem; cursor:pointer;" title="Share Receipt"><i class="fas fa-share-alt"></i></button>
+                                    </div>
                                     ${feeBadge}
                                     <div class="status-pill text-white ${statusClass}">${tx.status}</div>
                                 </div>
@@ -879,8 +928,8 @@
                 if(payload.balance !== undefined) {
                     const balanceElement = document.getElementById('walletBalance');
                     balanceElement.style.color = '#fff';
-                    const safePayloadBalance = payload.balance?.$numberDecimal || payload.balance;
-                    balanceElement.innerText = '₦' + Number(safePayloadBalance).toLocaleString(undefined, {minimumFractionDigits: 2});
+                    rawBalanceNumber = payload.balance?.$numberDecimal || payload.balance;
+                    updateBalanceDisplay();
                     setTimeout(() => balanceElement.style.color = 'var(--gold)', 500);
                 }
             });
