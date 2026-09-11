@@ -308,14 +308,33 @@
         <div class="row">
             <div class="col-lg-4 mb-3">
                 <div class="admin-card h-100">
-                    <h5 class="mb-3 text-gold fw-bold text-center">CREATE ANNOUNCEMENT</h5>
-                    <label class="high-vis-label">Target (Email or empty for ALL)</label>
-                    <input type="text" id="notifyTarget" class="input-dark" placeholder="Target Email">
+                    <h5 class="mb-3 text-gold fw-bold text-center border-bottom border-secondary pb-2">CREATE ANNOUNCEMENT</h5>
+                    
+                    <label class="high-vis-label">Target Audience</label>
+                    <select id="notifyType" class="input-dark mb-2" onchange="toggleNotifyTarget()">
+                        <option value="all">General (All Users)</option>
+                        <option value="single">Single User (via Email)</option>
+                    </select>
+                    
+                    <div id="notifyTargetWrapper" style="display: none;">
+                        <label class="high-vis-label">Target Email</label>
+                        <input type="email" id="notifyTarget" class="input-dark" placeholder="user@example.com">
+                    </div>
+
+                    <label class="high-vis-label">Announcement Image (Optional)</label>
+                    <div class="file-upload-wrapper mb-3" style="padding: 15px;">
+                        <input type="file" id="notifyImageFile" accept="image/*" onchange="updateNotifyFileName(this)">
+                        <i class="fas fa-image fa-2x mb-2 text-info"></i>
+                        <div class="fw-bold" id="notifyFileName">Upload Image File</div>
+                    </div>
+
                     <label class="high-vis-label">Title</label>
-                    <input type="text" id="notifyTitle" class="input-dark" placeholder="Message Title">
+                    <input type="text" id="notifyTitle" class="input-dark" placeholder="Message Title" required>
+                    
                     <label class="high-vis-label">Message Body</label>
-                    <textarea id="notifyBody" class="input-dark" rows="4" placeholder="Message Body"></textarea>
-                    <button class="btn btn-danger w-100 py-3 rounded-pill fw-bold" onclick="sendPushNotification()"><i class="fas fa-broadcast-tower me-2"></i> TRANSMIT</button>
+                    <textarea id="notifyBody" class="input-dark" rows="4" placeholder="Message Body" required></textarea>
+                    
+                    <button class="btn btn-danger w-100 py-3 rounded-pill fw-bold mt-2" onclick="sendPushNotification()"><i class="fas fa-broadcast-tower me-2"></i> TRANSMIT NOTIFICATION</button>
                 </div>
             </div>
             <div class="col-lg-8 mb-3">
@@ -349,6 +368,7 @@
         if(t === 'founder') loadCurrentFounderData();
         if(t === 'deposits') fetchManualDeposits();
         if(t === 'tickets') fetchAdminTickets();
+        if(t === 'notifications') fetchNotifications();
     }
 
     const parseNum = (val) => Number(val?.$numberDecimal || val || 0);
@@ -397,7 +417,7 @@
             if (u) {
                 name = u.name || name;
                 email = u.email || email;
-                userObj = u; // FIXED: Forces the full user object to the badge function
+                userObj = u; // Forces the full user object to the badge function
             }
         }
         
@@ -1178,18 +1198,83 @@
     }
 
     // ==========================================
-    // NOTIFICATIONS
+    // NOTIFICATIONS / ANNOUNCEMENTS
     // ==========================================
+    
+    // Toggle the target email input box
+    function toggleNotifyTarget() {
+        const type = document.getElementById('notifyType').value;
+        document.getElementById('notifyTargetWrapper').style.display = type === 'single' ? 'block' : 'none';
+    }
+
+    // Update Notification file upload name
+    function updateNotifyFileName(input) { 
+        if (input.files && input.files[0]) { 
+            document.getElementById('notifyFileName').innerText = input.files[0].name; 
+            document.getElementById('notifyFileName').style.color = '#00ff88'; 
+        } 
+    }
+    
     async function fetchNotifications() {
-        try { const res = await fetch('/api/admin/notifications', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); document.getElementById('notificationsTable').innerHTML = ((await res.json()).notifications || []).map(n => `<tr><td>${new Date(n.createdAt).toLocaleDateString()}</td><td><div class="fw-bold">${n.title}</div><small class="text-secondary">${n.message}</small></td><td><span class="status-pill bg-dark border">${n.target || 'ALL USERS'}</span></td></tr>`).join('') || '<tr><td colspan="3" class="text-center opacity-50 py-4">No active announcements.</td></tr>'; } catch(e) {}
+        try { 
+            const res = await fetch('/api/admin/notifications', { headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` } }); 
+            const notifs = (await res.json()).notifications || [];
+            
+            document.getElementById('notificationsTable').innerHTML = notifs.map(n => {
+                const hasImg = n.image ? '<i class="fas fa-image text-info ms-2" title="Image Attached"></i>' : '';
+                return `<tr><td>${new Date(n.createdAt).toLocaleDateString()}</td><td><div class="fw-bold">${n.title}${hasImg}</div><small class="text-secondary">${n.message}</small></td><td><span class="status-pill bg-dark border">${n.target || 'ALL USERS'}</span></td></tr>`;
+            }).join('') || '<tr><td colspan="3" class="text-center opacity-50 py-4">No active announcements.</td></tr>'; 
+        } catch(e) {}
     }
     
     async function sendPushNotification() {
         requireSuperAdmin(async () => {
-            const target = document.getElementById('notifyTarget').value; const title = document.getElementById('notifyTitle').value; const body = document.getElementById('notifyBody').value;
-            if(!title || !body) return Swal.fire('Error', 'Title and body required', 'error');
+            const notifyType = document.getElementById('notifyType').value;
+            const targetEmail = notifyType === 'single' ? document.getElementById('notifyTarget').value : '';
+            const title = document.getElementById('notifyTitle').value; 
+            const body = document.getElementById('notifyBody').value;
+            const fileInput = document.getElementById('notifyImageFile');
+            
+            if(!title || !body) return Swal.fire('Error', 'Title and message body are required', 'error');
+            if(notifyType === 'single' && !targetEmail) return Swal.fire('Error', 'Target email is required for Single User broadcast', 'error');
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('message', body);
+            
+            if (notifyType === 'single' && targetEmail) {
+                formData.append('targetEmail', targetEmail);
+            }
+
+            if (fileInput.files && fileInput.files[0]) {
+                // Appends the raw File object. Your backend Multer setup will intercept this and upload it to Cloudinary.
+                formData.append('image', fileInput.files[0]);
+            }
+
             Swal.fire({title:'Broadcasting...', didOpen:()=>Swal.showLoading(), background:'#0a0a0a', color:'#fff'});
-            try { const res = await fetch('/api/admin/notifications/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, body: JSON.stringify({ targetEmail: target, title, message: body }) }); if((await res.json()).success) { Swal.fire('Sent', '', 'success'); fetchNotifications(); } } catch(e) { Swal.fire('Error', 'Broadcast failed', 'error'); }
+            try { 
+                const res = await fetch('/api/admin/notifications/send', { 
+                    method: 'POST', 
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, // Browser automatically sets Content-Type to multipart/form-data with boundary
+                    body: formData
+                }); 
+                
+                const data = await res.json();
+                if(data.success) { 
+                    Swal.fire('Sent!', 'Announcement successfully transmitted.', 'success'); 
+                    fetchNotifications(); 
+                    
+                    // Reset Form Elements
+                    document.getElementById('notifyTitle').value = '';
+                    document.getElementById('notifyBody').value = '';
+                    document.getElementById('notifyTarget').value = '';
+                    document.getElementById('notifyImageFile').value = '';
+                    document.getElementById('notifyFileName').innerText = 'Upload Image File';
+                    document.getElementById('notifyFileName').style.color = '#fff';
+                } else {
+                    Swal.fire('Error', data.message || 'Broadcast failed', 'error');
+                }
+            } catch(e) { Swal.fire('Error', 'Network error during broadcast.', 'error'); }
         });
     }
 
