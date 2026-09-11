@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
-    <!-- Added html2canvas for generating beautiful shareable receipt images -->
+    <!-- html2canvas for generating beautiful shareable receipt images -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -93,13 +93,13 @@
         .balance-card { background: linear-gradient(145deg, #111 0%, #222 100%); border: 2px solid var(--gold); border-radius: 30px; padding: clamp(25px, 5vw, 45px); margin: 25px 0 40px 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; animation: pulse-border 5s infinite ease-in-out; }
         .amount-text { font-family: 'Cinzel', serif; font-size: clamp(2rem, 8vw, 3.5rem); color: var(--gold); font-weight: 900; word-break: break-word; }
 
-        /* Modern Balance Toggle Design */
+        /* UPGRADED: Balance Toggle Pill Design */
         .balance-toggle-btn {
-            background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); color: var(--gold);
-            border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
-            font-size: 0.75rem; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.4); color: var(--gold);
+            border-radius: 50px; padding: 6px 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            font-size: 0.75rem; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.4);
         }
-        .balance-toggle-btn:hover { background: var(--gold); color: #000; transform: scale(1.1); box-shadow: 0 4px 10px rgba(255, 215, 0, 0.4); }
+        .balance-toggle-btn:hover { background: var(--gold); color: #000; transform: scale(1.05); box-shadow: 0 4px 10px rgba(255, 215, 0, 0.4); }
 
         .ecosystem-section-title { font-family: 'Cinzel', serif; font-size: 1.2rem; font-weight: 900; color: var(--gold); border-bottom: 1px solid rgba(255,215,0,0.2); padding-bottom: 10px; margin-bottom: 20px; margin-top: 40px; display: flex; align-items: center; gap: 10px; }
 
@@ -193,26 +193,47 @@
         footer { background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%; margin-top: 60px; position: relative; z-index: 5; }
         .footer-compliance-tag { color: #ffffff !important; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
 
-        /* NEW OPAY STYLE NOTIFICATION UI */
+        /* -----------------------------------------------------
+           PERFECTED OPAY STYLE NOTIFICATION UI
+           ----------------------------------------------------- */
         #opayNotifCard {
             display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; 
-            background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px); /* Transparent blur so main site is visible */
-            align-items: center; justify-content: center;
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); /* Transparent blur to see site behind */
+            align-items: center; justify-content: center; flex-direction: column;
         }
-        .notif-modal-content {
-            background: #111; border: 1.5px solid var(--gold);
-            border-radius: 24px; width: 85%; max-width: 360px; text-align: center;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.9); position: relative;
-            animation: opayPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            overflow: hidden;
+        .notif-modal-wrapper {
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+            animation: opayPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         @keyframes opayPop { from { transform: scale(0.9) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
-        .notif-img { width: 100%; height: 160px; object-fit: cover; display: block; border-bottom: 2px solid var(--gold); }
-        .notif-body { padding: 25px 20px 20px 20px; }
-        .notif-btn { background: var(--gold); color: #000; border: none; width: 100%; padding: 14px; font-weight: 900; border-radius: 14px; margin-top: 15px; font-size: 0.95rem; letter-spacing: 1.5px; box-shadow: 0 4px 15px rgba(255,215,0,0.3); transition: 0.3s; }
+        
+        .notif-modal-content {
+            width: 90vw; max-width: 360px; position: relative; display: flex; flex-direction: column;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.9); border-radius: 16px;
+        }
+        .notif-header-brand {
+            background: linear-gradient(90deg, #d32f2f, #111); padding: 10px 15px; border-radius: 16px 16px 0 0;
+            color: #fff; font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; font-size: 0.95rem;
+            display: flex; justify-content: center; align-items: center; gap: 8px; border: 1.5px solid var(--gold); border-bottom: none;
+        }
+        .notif-main-body {
+            background: #111; border: 1.5px solid var(--gold); border-top: none; border-radius: 0 0 16px 16px; overflow: hidden; text-align: center;
+        }
+        .notif-img { width: 100%; max-height: 200px; object-fit: cover; display: block; border-bottom: 2px solid #222; }
+        .notif-body-content { padding: 25px 20px 20px 20px; }
+        .notif-btn { 
+            background: var(--gold); color: #000; border: none; width: 100%; padding: 14px; 
+            font-weight: 900; border-radius: 50px; margin-top: 15px; font-size: 0.95rem; 
+            letter-spacing: 1px; box-shadow: 0 4px 15px rgba(255,215,0,0.3); transition: 0.3s; 
+        }
         .notif-btn:hover { background: #fff; transform: translateY(-2px); }
-        .notif-close { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.6); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #fff; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; backdrop-filter: blur(5px); transition: 0.3s; z-index: 10; }
-        .notif-close:hover { background: #d32f2f; color: #fff; border-color: #d32f2f; }
+        
+        .notif-close-bottom {
+            background: transparent; border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 50%;
+            width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;
+            color: rgba(255, 255, 255, 0.8); font-size: 1.4rem; cursor: pointer; transition: 0.3s;
+        }
+        .notif-close-bottom:hover { background: rgba(255,255,255,0.2); color: #fff; border-color: #fff; transform: scale(1.1); }
 
         .fee-badge-small { display: inline-block; background: rgba(255, 68, 68, 0.15); color: #ff4444; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-top: 4px; font-weight: bold; border: 1px solid rgba(255, 68, 68, 0.3); }
         
@@ -314,11 +335,12 @@
     <div class="balance-card">
         <div class="row align-items-center">
             <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
-                <!-- Redesigned Toggle Container -->
                 <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-3 mb-2">
                     <span class="small text-white fw-bold" style="letter-spacing: 2px;">AVAILABLE LEDGER FUND</span>
-                    <button onclick="toggleBalance()" class="balance-toggle-btn" title="Hide/Show Balance">
+                    <!-- UPDATED TOGGLE PILL WITH TEXT -->
+                    <button onclick="toggleBalance()" class="balance-toggle-btn" title="Toggle Balance">
                         <i class="fas fa-eye" id="eyeIcon"></i>
+                        <span id="toggleText">Hide</span>
                     </button>
                 </div>
                 <div id="walletBalance" class="amount-text m-0">₦0.00</div>
@@ -343,7 +365,7 @@
         <button class="btn btn-light btn-sm rounded-pill fw-bold px-4 py-2" id="promoBtn" onclick="location.href='reseller.html'">UPGRADE NOW</button>
     </div>
 
-    <!-- ALL GRIDS STANDARDIZED TO col-4 col-md-2 FOR IDENTICAL CARD SIZES -->
+    <!-- ALL GRIDS ARE STANDARDIZED TO col-4 col-md-2 FOR IDENTICAL CARD SIZES -->
     <h5 class="ecosystem-section-title"><i class="fas fa-plug"></i> Bills & Utilities</h5>
     <div class="row g-2" id="gridUtilities">
         <div class="col-4 col-md-2 service-wrapper-node">
@@ -529,7 +551,7 @@
         betting: 0.01, insurance: 0.015, sms: 0.01, education: 0 
     };
 
-    // Balance visibility toggle logic
+    // LOGIC FIX: Balance visibility toggle with Text Update
     function toggleBalance() {
         isBalanceHidden = !isBalanceHidden;
         localStorage.setItem('hide_balance', isBalanceHidden);
@@ -539,110 +561,134 @@
     function updateBalanceDisplay() {
         const balanceElement = document.getElementById('walletBalance');
         const eyeIcon = document.getElementById('eyeIcon');
+        const toggleText = document.getElementById('toggleText');
         
         if(isBalanceHidden) {
             balanceElement.innerText = '****';
             eyeIcon.classList.remove('fa-eye');
             eyeIcon.classList.add('fa-eye-slash');
+            toggleText.innerText = 'Show';
         } else {
             balanceElement.innerText = '₦' + Number(rawBalanceNumber).toLocaleString(undefined, {minimumFractionDigits: 2});
             eyeIcon.classList.remove('fa-eye-slash');
             eyeIcon.classList.add('fa-eye');
+            toggleText.innerText = 'Hide';
         }
     }
 
-    // Designed Receipt Sharing Logic
-    function shareReceipt(type, desc, amount, date, status) {
+    // LOGIC FIX: Flawless Share Receipt Generation (Rendered Off-Screen)
+    async function shareReceipt(type, desc, amount, date, status) {
+        Swal.fire({
+            title: 'Generating Receipt...',
+            text: 'Please wait while we prepare your document.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading(),
+            background: '#111', color: '#fff'
+        });
+
         const colorStat = status === 'success' ? '#2eb82e' : '#d32f2f';
         const formattedDate = new Date(date).toLocaleString();
+
+        // 1. Create a hidden DOM element explicitly for HTML2Canvas to read cleanly
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '-9999px';
+        container.style.width = '350px'; 
+        container.style.background = '#111';
+        container.style.color = '#fff';
+        container.style.fontFamily = "'Montserrat', sans-serif";
         
-        // This is the HTML structure that looks exactly like a physical POS receipt
-        const receiptHtml = `
-            <div id="receiptNode" style="background: #111; border: 2px solid #d4af37; border-radius: 12px; padding: 25px; text-align: left; color: #fff; font-family: 'Montserrat', sans-serif; position: relative; overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);">
-                <div style="position: absolute; top: -10px; right: -10px; font-size: 6rem; opacity: 0.04; color: #d4af37;"><i class="fas fa-check-circle"></i></div>
+        container.innerHTML = `
+            <div style="background: #111; border: 2px solid #d4af37; border-radius: 12px; padding: 25px; text-align: left; position: relative; overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);">
                 <div style="text-align: center; border-bottom: 2px dashed #333; padding-bottom: 15px; margin-bottom: 20px;">
-                    <h4 style="font-family: 'Cinzel', serif; color: #d4af37; font-weight: 900; margin:0; letter-spacing: 2px; font-size: 1.5rem;">NATER<span style="color:#d32f2f;">PAY</span></h4>
-                    <small style="color: #888; font-size: 0.75rem; letter-spacing: 1px;">OFFICIAL TRANSACTION RECEIPT</small>
+                    <h4 style="font-family: 'Cinzel', serif; color: #d4af37; font-weight: 900; margin:0; letter-spacing: 2px; font-size: 1.8rem;">NATER<span style="color:#d32f2f;">PAY</span></h4>
+                    <small style="color: #888; font-size: 0.85rem; letter-spacing: 1px;">OFFICIAL RECEIPT</small>
                 </div>
-                <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color:#888; font-size: 0.85rem; font-weight: 600;">Amount</span>
-                    <span style="color:#d4af37; font-weight: 900; font-family: 'Cinzel', serif; font-size: 1.3rem;">₦${amount}</span>
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color:#888; font-size: 0.95rem; font-weight: 600;">Amount</span>
+                    <span style="color:#d4af37; font-weight: 900; font-family: 'Cinzel', serif; font-size: 1.4rem;">₦${amount}</span>
                 </div>
-                <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color:#888; font-size: 0.85rem; font-weight: 600;">Service</span>
-                    <span style="font-weight: 800; font-size: 0.85rem; text-transform: uppercase;">${type.replace('_', ' ')}</span>
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color:#888; font-size: 0.95rem; font-weight: 600;">Service</span>
+                    <span style="font-weight: 800; font-size: 0.95rem; text-transform: uppercase;">${type.replace('_', ' ')}</span>
                 </div>
-                <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-start;">
-                    <span style="color:#888; font-size: 0.85rem; font-weight: 600;">Detail</span>
-                    <span style="font-weight: 700; font-size: 0.85rem; text-align: right; max-width: 65%; line-height: 1.3;">${desc}</span>
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-start;">
+                    <span style="color:#888; font-size: 0.95rem; font-weight: 600;">Detail</span>
+                    <span style="font-weight: 700; font-size: 0.95rem; text-align: right; max-width: 65%; line-height: 1.3;">${desc}</span>
                 </div>
-                <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color:#888; font-size: 0.85rem; font-weight: 600;">Status</span>
-                    <span style="font-weight: 900; font-size: 0.85rem; text-transform: uppercase; color: ${colorStat}; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">${status}</span>
+                <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color:#888; font-size: 0.95rem; font-weight: 600;">Status</span>
+                    <span style="font-weight: 900; font-size: 0.95rem; text-transform: uppercase; color: ${colorStat}; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 4px;">${status}</span>
                 </div>
-                <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color:#888; font-size: 0.85rem; font-weight: 600;">Date</span>
-                    <span style="font-weight: 700; font-size: 0.85rem;">${formattedDate}</span>
+                <div style="margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color:#888; font-size: 0.95rem; font-weight: 600;">Date</span>
+                    <span style="font-weight: 700; font-size: 0.95rem;">${formattedDate}</span>
                 </div>
-                <div style="text-align: center; border-top: 2px dashed #333; padding-top: 15px; font-size: 0.65rem; color: #555; font-weight: 900; letter-spacing: 1.5px;">
+                <div style="text-align: center; border-top: 2px dashed #333; padding-top: 15px; font-size: 0.75rem; color: #555; font-weight: 900; letter-spacing: 1.5px;">
                     SECURED BY NATER-PAY INFRASTRUCTURE
                 </div>
             </div>
         `;
         
-        // Show receipt preview in SweetAlert with custom action buttons
-        Swal.fire({
-            title: '',
-            html: receiptHtml,
-            background: '#0a0a0a',
-            showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-share-square me-2"></i> Share / Download',
-            cancelButtonText: 'Close',
-            confirmButtonColor: '#d4af37',
-            cancelButtonColor: '#333',
-            customClass: { confirmButton: 'text-dark fw-bold px-4 py-2 rounded-pill', cancelButton: 'fw-bold px-4 py-2 rounded-pill' }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                generateAndShareReceiptImage();
-            }
-        });
-    }
+        document.body.appendChild(container);
 
-    // Process HTML to Image and trigger Share Sheet
-    async function generateAndShareReceiptImage() {
-        const node = document.getElementById('receiptNode');
-        if (!node) return;
-        
         try {
-            Swal.fire({ title: 'Generating Receipt...', text: 'Preparing image file.', didOpen: () => Swal.showLoading(), background: '#0a0a0a', color: '#fff', allowOutsideClick: false });
-            
-            // Convert the HTML node into a high-quality Canvas image
-            const canvas = await html2canvas(node, { backgroundColor: '#111', scale: 2 });
+            // Give DOM time to render before capturing
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // 2. Generate Image
+            const canvas = await html2canvas(container, { backgroundColor: '#111', scale: 2, useCORS: true, logging: false });
             const dataUrl = canvas.toDataURL('image/png');
             
-            const res = await fetch(dataUrl);
-            const blob = await res.blob();
-            const file = new File([blob], "naterpay-receipt.png", { type: 'image/png' });
+            // Clean up DOM
+            document.body.removeChild(container);
             
-            Swal.close();
-            
-            // Check if device supports native sharing of image files
-            if (navigator.share && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: 'NATER-PAY Receipt',
-                    files: [file]
-                });
-            } else {
-                // Fallback for browsers (like desktop Chrome) that can't share files natively
-                const link = document.createElement('a');
-                link.download = 'naterpay-receipt.png';
-                link.href = dataUrl;
-                link.click();
-                Swal.fire({ icon: 'success', title: 'Downloaded!', text: 'Receipt saved to your device.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d4af37' });
-            }
+            // 3. Show Final Image in SweetAlert with specific action buttons
+            Swal.fire({
+                title: 'Transaction Receipt',
+                imageUrl: dataUrl,
+                imageWidth: 300,
+                imageAlt: 'Receipt Preview',
+                background: '#111',
+                color: '#fff',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fas fa-share-alt me-1"></i> Share',
+                cancelButtonText: '<i class="fas fa-download me-1"></i> Download',
+                confirmButtonColor: '#d4af37',
+                cancelButtonColor: '#444',
+                customClass: { confirmButton: 'text-dark fw-bold px-4 py-2 rounded-pill', cancelButton: 'text-white fw-bold px-4 py-2 rounded-pill' }
+            }).then(async (result) => {
+                const res = await fetch(dataUrl);
+                const blob = await res.blob();
+                const file = new File([blob], "naterpay-receipt.png", { type: 'image/png' });
+
+                if (result.isConfirmed) {
+                    // Tapped SHARE
+                    if (navigator.share && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ title: 'NATER-PAY Receipt', files: [file] });
+                    } else {
+                        // Fallback if sharing is unavailable
+                        triggerDownload(dataUrl);
+                        Swal.fire({ icon: 'success', title: 'Downloaded', text: 'Receipt saved to device (Sharing not supported here).', background: '#111', color: '#fff', confirmButtonColor: '#d4af37' });
+                    }
+                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                    // Tapped DOWNLOAD
+                    triggerDownload(dataUrl);
+                }
+            });
+
         } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Oops', text: 'Could not generate image. Please try again.', background: '#0a0a0a', color: '#fff', confirmButtonColor: '#d4af37' });
+            if (document.body.contains(container)) document.body.removeChild(container);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Could not generate image right now.', background: '#111', color: '#fff', confirmButtonColor: '#d4af37' });
         }
+    }
+
+    function triggerDownload(dataUrl) {
+        const link = document.createElement('a');
+        link.download = 'naterpay-receipt.png';
+        link.href = dataUrl;
+        link.click();
     }
 
     async function verifyReturnedPayment(reference) {
@@ -733,6 +779,7 @@
         }
     }
 
+    // LOGIC FIX: Perfected OPay Style Notification Rendering
     function showNextNotification() {
         if (unreadNotifications.length === 0) {
             document.getElementById('opayNotifCard').style.display = 'none';
@@ -742,24 +789,30 @@
         const notif = unreadNotifications[0];
         const cardContainer = document.getElementById('opayNotifCard');
         
-        // Use provided image, otherwise show a clean fallback header matching the OPay style
+        // Show Image if provided, else fallback pattern matching OPay clean aesthetics
         const imgHtml = notif.image 
-            ? `<img src="${notif.image}" alt="Notification Image" class="notif-img">` 
-            : `<div style="background: linear-gradient(135deg, #111, #1a1a1a); height: 120px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid var(--gold);"><i class="fas fa-bell" style="font-size: 3.5rem; color: var(--gold); opacity: 0.2;"></i></div>`;
+            ? `<img src="${notif.image}" alt="Promo Banner" class="notif-img">` 
+            : `<div style="background: linear-gradient(135deg, #111, #1a1a1a); height: 130px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid var(--gold);"><i class="fas fa-gift" style="font-size: 4rem; color: var(--gold); opacity: 0.3;"></i></div>`;
 
-        // Modern, full-screen transparent modal
         cardContainer.innerHTML = `
-            <div class="notif-modal-content">
-                <button class="notif-close" onclick="closeNotificationCard()"><i class="fas fa-times"></i></button>
-                ${imgHtml}
-                <div class="notif-body">
-                    <h5 class="fw-bold mb-3" style="color: var(--gold); font-size: 1.15rem;">${notif.title}</h5>
-                    <p class="text-white opacity-75 mb-4" style="font-size: 0.9rem; line-height: 1.5; font-weight: 500;">${notif.message}</p>
-                    <button class="notif-btn" onclick="markReadAndNext('${notif._id}')">GOT IT</button>
+            <div class="notif-modal-wrapper">
+                <div class="notif-modal-content">
+                    <div class="notif-header-brand">
+                        <i class="fas fa-shield-alt text-warning"></i> NATER-PAY ALERT
+                    </div>
+                    <div class="notif-main-body">
+                        ${imgHtml}
+                        <div class="notif-body-content">
+                            <h5 class="fw-bold mb-3" style="color: var(--gold); font-size: 1.15rem; line-height: 1.3;">${notif.title}</h5>
+                            <p class="text-white opacity-90 mb-4" style="font-size: 0.9rem; line-height: 1.5; font-weight: 500;">${notif.message}</p>
+                            <button class="notif-btn" onclick="markReadAndNext('${notif._id}')">Proceed Now</button>
+                        </div>
+                    </div>
                 </div>
+                <div class="notif-close-bottom" onclick="closeNotificationCard()"><i class="fas fa-times"></i></div>
             </div>
         `;
-        cardContainer.style.display = 'flex'; // Triggers flexbox centering logic for full screen overlay
+        cardContainer.style.display = 'flex'; 
     }
 
     function closeNotificationCard() {
