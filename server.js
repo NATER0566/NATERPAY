@@ -98,9 +98,14 @@ async function registerPlugins() {
         credentials: true
     });
 
-    await fastify.register(require('@fastify/multipart'), {
-        limits: { fileSize: 25 * 1024 * 1024 } 
+
+    
+
+        await fastify.register(require('@fastify/multipart'), {
+        limits: { fileSize: 25 * 1024 * 1024 },
+        attachFieldsToBody: true // This binds the FormData to request.body
     });
+
   
     await fastify.register(require('@fastify/helmet'), {
         contentSecurityPolicy: false // Disabled to allow external images (Cloudinary) and scripts
