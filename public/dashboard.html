@@ -93,7 +93,6 @@
         .balance-card { background: linear-gradient(145deg, #111 0%, #222 100%); border: 2px solid var(--gold); border-radius: 30px; padding: clamp(25px, 5vw, 45px); margin: 25px 0 40px 0; box-shadow: 0 20px 50px rgba(0,0,0,0.5); position: relative; animation: pulse-border 5s infinite ease-in-out; }
         .amount-text { font-family: 'Cinzel', serif; font-size: clamp(2rem, 8vw, 3.5rem); color: var(--gold); font-weight: 900; word-break: break-word; }
 
-        /* UPGRADED: Balance Toggle Pill Design */
         .balance-toggle-btn {
             background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.4); color: var(--gold);
             border-radius: 50px; padding: 6px 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -193,12 +192,10 @@
         footer { background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%; margin-top: 60px; position: relative; z-index: 5; }
         .footer-compliance-tag { color: #ffffff !important; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
 
-        /* -----------------------------------------------------
-           PERFECTED OPAY STYLE NOTIFICATION UI
-           ----------------------------------------------------- */
+        /* PERFECTED OPAY STYLE NOTIFICATION UI */
         #opayNotifCard {
             display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; 
-            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); /* Transparent blur to see site behind */
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); 
             align-items: center; justify-content: center; flex-direction: column;
         }
         .notif-modal-wrapper {
@@ -337,7 +334,6 @@
             <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
                 <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-3 mb-2">
                     <span class="small text-white fw-bold" style="letter-spacing: 2px;">AVAILABLE LEDGER FUND</span>
-                    <!-- UPDATED TOGGLE PILL WITH TEXT -->
                     <button onclick="toggleBalance()" class="balance-toggle-btn" title="Toggle Balance">
                         <i class="fas fa-eye" id="eyeIcon"></i>
                         <span id="toggleText">Hide</span>
@@ -365,7 +361,6 @@
         <button class="btn btn-light btn-sm rounded-pill fw-bold px-4 py-2" id="promoBtn" onclick="location.href='reseller.html'">UPGRADE NOW</button>
     </div>
 
-    <!-- ALL GRIDS ARE STANDARDIZED TO col-4 col-md-2 FOR IDENTICAL CARD SIZES -->
     <h5 class="ecosystem-section-title"><i class="fas fa-plug"></i> Bills & Utilities</h5>
     <div class="row g-2" id="gridUtilities">
         <div class="col-4 col-md-2 service-wrapper-node">
@@ -466,7 +461,7 @@
     <h5 class="ecosystem-section-title"><i class="fas fa-user-shield"></i> Security & Profile</h5>
     <div class="row g-2" id="gridSecurity">
         <div class="col-4 col-md-2 service-wrapper-node">
-            <a href="#" class="service-link" onclick="showNextNotification(); return false;" style="position: relative;">
+            <a href="#" class="service-link" onclick="updateNotificationUI(); return false;" style="position: relative;">
                 <span class="position-absolute badge rounded-pill bg-danger" id="unreadBadge" style="display: none; top: 15px; right: 15px; font-size: 0.65rem; z-index: 5;">0</span>
                 <i class="fas fa-bell text-warning main-icon"></i><span>System Alerts</span>
             </a>
@@ -551,7 +546,6 @@
         betting: 0.01, insurance: 0.015, sms: 0.01, education: 0 
     };
 
-    // LOGIC FIX: Balance visibility toggle with Text Update
     function toggleBalance() {
         isBalanceHidden = !isBalanceHidden;
         localStorage.setItem('hide_balance', isBalanceHidden);
@@ -576,7 +570,6 @@
         }
     }
 
-    // LOGIC FIX: Flawless Share Receipt Generation (Rendered Off-Screen)
     async function shareReceipt(type, desc, amount, date, status) {
         Swal.fire({
             title: 'Generating Receipt...',
@@ -589,7 +582,6 @@
         const colorStat = status === 'success' ? '#2eb82e' : '#d32f2f';
         const formattedDate = new Date(date).toLocaleString();
 
-        // 1. Create a hidden DOM element explicitly for HTML2Canvas to read cleanly
         const container = document.createElement('div');
         container.style.position = 'absolute';
         container.style.left = '-9999px';
@@ -634,17 +626,13 @@
         document.body.appendChild(container);
 
         try {
-            // Give DOM time to render before capturing
             await new Promise(resolve => setTimeout(resolve, 200));
 
-            // 2. Generate Image
             const canvas = await html2canvas(container, { backgroundColor: '#111', scale: 2, useCORS: true, logging: false });
             const dataUrl = canvas.toDataURL('image/png');
             
-            // Clean up DOM
             document.body.removeChild(container);
             
-            // 3. Show Final Image in SweetAlert with specific action buttons
             Swal.fire({
                 title: 'Transaction Receipt',
                 imageUrl: dataUrl,
@@ -664,16 +652,13 @@
                 const file = new File([blob], "naterpay-receipt.png", { type: 'image/png' });
 
                 if (result.isConfirmed) {
-                    // Tapped SHARE
                     if (navigator.share && navigator.canShare({ files: [file] })) {
                         await navigator.share({ title: 'NATER-PAY Receipt', files: [file] });
                     } else {
-                        // Fallback if sharing is unavailable
                         triggerDownload(dataUrl);
                         Swal.fire({ icon: 'success', title: 'Downloaded', text: 'Receipt saved to device (Sharing not supported here).', background: '#111', color: '#fff', confirmButtonColor: '#d4af37' });
                     }
                 } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    // Tapped DOWNLOAD
                     triggerDownload(dataUrl);
                 }
             });
@@ -753,6 +738,10 @@
         requestAnimationFrame(animate);
     }
 
+    /* -----------------------------------------------------
+       [FIX] PERFECTED NOTIFICATION ENGINE LOGIC
+       ----------------------------------------------------- */
+
     async function loadNotifications() {
         const authToken = localStorage.getItem("naterpay_token");
         if (!authToken) return;
@@ -762,24 +751,45 @@
             const data = await res.json();
 
             if (data.success && data.notifications) {
-                unreadNotifications = data.notifications.filter(n => !n.isRead);
-                const badge = document.getElementById('unreadBadge');
+                const dbUnread = data.notifications.filter(n => !n.isRead);
                 
-                if (unreadNotifications.length > 0) {
-                    badge.style.display = 'block';
-                    badge.innerText = unreadNotifications.length;
-                    showNextNotification(); 
-                } else {
-                    badge.style.display = 'none';
-                    document.getElementById('opayNotifCard').style.display = 'none';
-                }
+                // Add DB notifications WITHOUT destroying rich live socket data
+                dbUnread.forEach(dbN => {
+                    if (!unreadNotifications.some(n => n._id === dbN._id)) {
+                        unreadNotifications.push({
+                            _id: dbN._id,
+                            title: dbN.title || dbN.subject || "NATER-PAY ALERT",
+                            message: dbN.message || dbN.body || "",
+                            image: dbN.image || dbN.imageUrl || dbN.icon || null,
+                            isRead: false
+                        });
+                    }
+                });
+                
+                updateNotificationUI();
             }
         } catch (e) {
             console.warn("Failed to fetch notification history.");
         }
     }
 
-    // LOGIC FIX: Perfected OPay Style Notification Rendering
+    function updateNotificationUI() {
+        const badge = document.getElementById('unreadBadge');
+        if (unreadNotifications.length > 0) {
+            badge.style.display = 'block';
+            badge.innerText = unreadNotifications.length;
+            
+            // If the card is currently completely hidden, show the next one!
+            const notifCard = document.getElementById('opayNotifCard');
+            if (notifCard.style.display === 'none' || notifCard.style.display === '') {
+                showNextNotification(); 
+            }
+        } else {
+            badge.style.display = 'none';
+            document.getElementById('opayNotifCard').style.display = 'none';
+        }
+    }
+
     function showNextNotification() {
         if (unreadNotifications.length === 0) {
             document.getElementById('opayNotifCard').style.display = 'none';
@@ -789,7 +799,6 @@
         const notif = unreadNotifications[0];
         const cardContainer = document.getElementById('opayNotifCard');
         
-        // Show Image if provided, else fallback pattern matching OPay clean aesthetics
         const imgHtml = notif.image 
             ? `<img src="${notif.image}" alt="Promo Banner" class="notif-img">` 
             : `<div style="background: linear-gradient(135deg, #111, #1a1a1a); height: 130px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid var(--gold);"><i class="fas fa-gift" style="font-size: 4rem; color: var(--gold); opacity: 0.3;"></i></div>`;
@@ -803,7 +812,7 @@
                     <div class="notif-main-body">
                         ${imgHtml}
                         <div class="notif-body-content">
-                            <h5 class="fw-bold mb-3" style="color: var(--gold); font-size: 1.15rem; line-height: 1.3;">${notif.title}</h5>
+                            <h5 class="fw-bold mb-3" style="color: var(--gold); font-size: 1.15rem; line-height: 1.3;">${notif.title || 'System Notification'}</h5>
                             <p class="text-white opacity-90 mb-4" style="font-size: 0.9rem; line-height: 1.5; font-weight: 500;">${notif.message}</p>
                             <button class="notif-btn" onclick="markReadAndNext('${notif._id}')">Proceed Now</button>
                         </div>
@@ -823,20 +832,23 @@
         const authToken = localStorage.getItem("naterpay_token");
         document.getElementById('opayNotifCard').style.display = 'none';
 
-        await fetch(`/api/notifications/${id}/read`, { 
-            method: 'PUT', headers: { 'Authorization': `Bearer ${authToken}` } 
-        });
-
-        unreadNotifications = unreadNotifications.filter(n => n._id !== id);
-        const badge = document.getElementById('unreadBadge');
-        
-        if (unreadNotifications.length > 0) {
-            badge.innerText = unreadNotifications.length;
-            setTimeout(showNextNotification, 400); 
-        } else {
-            badge.style.display = 'none';
+        // Only mark read in the database if it's a real DB ID (not a live_ socket ID)
+        if (id && !id.toString().startsWith('live_')) {
+            fetch(`/api/notifications/${id}/read`, { 
+                method: 'PUT', headers: { 'Authorization': `Bearer ${authToken}` } 
+            }).catch(e => console.warn(e));
         }
+
+        // Remove the top notification we just read
+        unreadNotifications = unreadNotifications.filter(n => n._id !== id);
+        
+        // Wait a split second to simulate natural dismissal, then show the next if any
+        setTimeout(() => {
+            updateNotificationUI();
+        }, 400); 
     }
+
+    /* ------------------------------------------------------------------------- */
 
     async function checkPendingFunding() {
         const pendingRef = localStorage.getItem('pending_funding_ref');
@@ -975,7 +987,6 @@
                     document.getElementById('adminDivider').style.display = 'block';
                 }
 
-                // Balance assignment and display update
                 rawBalanceNumber = data.balance?.$numberDecimal || data.balance || 0;
                 updateBalanceDisplay();
                 
@@ -1031,7 +1042,7 @@
                         
                         let displayAmount = isCredit ? baseAmount : totalDeducted;
                         let feeBadge = (!isCredit && feeAmount > 0) ? `<div class="fee-badge-small">Fee: ₦${feeAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>` : '';
-                        let shareDesc = (tx.description || 'System Log').replace(/'/g, "\\'"); // Escaping description string for the onclick handler
+                        let shareDesc = (tx.description || 'System Log').replace(/'/g, "\\'"); 
 
                         tbody.innerHTML += `
                             <div class="transaction-row">
@@ -1091,8 +1102,18 @@
 
             socketConnectionLink.on('dashboard:refresh', () => { syncDashboardData(); });
 
+            // [FIX] PERFECTED LIVE SOCKET NOTIFICATION HANDLER
             socketConnectionLink.on('notification', (payload) => {
-                loadNotifications();
+                const liveNotif = {
+                    _id: payload._id || 'live_' + Date.now(),
+                    title: payload.title || "NATER-PAY ALERT",
+                    message: payload.message || payload.body || "You have a new message.",
+                    image: payload.image || payload.imageUrl || null,
+                    isRead: false
+                };
+                
+                unreadNotifications.unshift(liveNotif);
+                updateNotificationUI();
             });
 
         } catch(err) { console.warn("Realtime WebSocket channel unavailable."); }
