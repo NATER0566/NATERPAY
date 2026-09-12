@@ -310,6 +310,13 @@
                 <div class="admin-card h-100">
                     <h5 class="mb-3 text-gold fw-bold text-center border-bottom border-secondary pb-2">CREATE ANNOUNCEMENT</h5>
                     
+                    <!-- NEW: Message Format Selector -->
+                    <label class="high-vis-label">Message Format</label>
+                    <select id="notifyFormat" class="input-dark mb-3" onchange="toggleNotifyFormat()">
+                        <option value="text">Text Only Announcement</option>
+                        <option value="image">Image Only Announcement</option>
+                    </select>
+
                     <label class="high-vis-label">Target Audience</label>
                     <select id="notifyType" class="input-dark mb-2" onchange="toggleNotifyTarget()">
                         <option value="all">General (All Users)</option>
@@ -321,18 +328,24 @@
                         <input type="email" id="notifyTarget" class="input-dark" placeholder="user@example.com">
                     </div>
 
-                    <label class="high-vis-label">Announcement Image (Optional)</label>
-                    <div class="file-upload-wrapper mb-3" style="padding: 15px;">
-                        <input type="file" id="notifyImageFile" accept="image/*" onchange="updateNotifyFileName(this)">
-                        <i class="fas fa-image fa-2x mb-2 text-info"></i>
-                        <div class="fw-bold" id="notifyFileName">Upload Image File</div>
-                    </div>
-
-                    <label class="high-vis-label">Title</label>
+                    <label class="high-vis-label">Header Title</label>
                     <input type="text" id="notifyTitle" class="input-dark" placeholder="Message Title" required>
                     
-                    <label class="high-vis-label">Message Body</label>
-                    <textarea id="notifyBody" class="input-dark" rows="4" placeholder="Message Body" required></textarea>
+                    <!-- Text Wrapper -->
+                    <div id="notifyTextWrapper">
+                        <label class="high-vis-label">Message Body</label>
+                        <textarea id="notifyBody" class="input-dark" rows="4" placeholder="Message Body"></textarea>
+                    </div>
+
+                    <!-- Image Wrapper -->
+                    <div id="notifyImageWrapper" style="display: none;">
+                        <label class="high-vis-label">Upload Announcement Image</label>
+                        <div class="file-upload-wrapper mb-3" style="padding: 15px;">
+                            <input type="file" id="notifyImageFile" accept="image/*" onchange="updateNotifyFileName(this)">
+                            <i class="fas fa-image fa-2x mb-2 text-info"></i>
+                            <div class="fw-bold" id="notifyFileName">Upload Image File</div>
+                        </div>
+                    </div>
                     
                     <button class="btn btn-danger w-100 py-3 rounded-pill fw-bold mt-2" onclick="sendPushNotification()"><i class="fas fa-broadcast-tower me-2"></i> TRANSMIT NOTIFICATION</button>
                 </div>
@@ -341,7 +354,7 @@
                 <div class="admin-card h-100">
                     <div class="table-responsive">
                         <table class="table table-dark">
-                            <thead><tr><th>DATE</th><th>TITLE & MESSAGE</th><th>TARGET</th></tr></thead>
+                            <thead><tr><th>DATE</th><th>TITLE & FORMAT</th><th>TARGET</th></tr></thead>
                             <tbody id="notificationsTable"><tr><td colspan="3" class="text-center opacity-50 py-4">No active announcements.</td></tr></tbody>
                         </table>
                     </div>
@@ -1201,13 +1214,25 @@
     // NOTIFICATIONS / ANNOUNCEMENTS
     // ==========================================
     
-    // Toggle the target email input box
     function toggleNotifyTarget() {
         const type = document.getElementById('notifyType').value;
         document.getElementById('notifyTargetWrapper').style.display = type === 'single' ? 'block' : 'none';
     }
 
-    // Update Notification file upload name
+    function toggleNotifyFormat() {
+        const format = document.getElementById('notifyFormat').value;
+        const textWrapper = document.getElementById('notifyTextWrapper');
+        const imgWrapper = document.getElementById('notifyImageWrapper');
+        
+        if (format === 'text') {
+            textWrapper.style.display = 'block';
+            imgWrapper.style.display = 'none';
+        } else {
+            textWrapper.style.display = 'none';
+            imgWrapper.style.display = 'block';
+        }
+    }
+
     function updateNotifyFileName(input) { 
         if (input.files && input.files[0]) { 
             document.getElementById('notifyFileName').innerText = input.files[0].name; 
@@ -1229,14 +1254,26 @@
     
     async function sendPushNotification() {
         requireSuperAdmin(async () => {
+            const format = document.getElementById('notifyFormat').value;
             const notifyType = document.getElementById('notifyType').value;
             const targetEmail = notifyType === 'single' ? document.getElementById('notifyTarget').value : '';
             const title = document.getElementById('notifyTitle').value; 
-            const body = document.getElementById('notifyBody').value;
             const fileInput = document.getElementById('notifyImageFile');
             
-            if(!title || !body) return Swal.fire('Error', 'Title and message body are required', 'error');
+            if(!title) return Swal.fire('Error', 'Announcement Title is required', 'error');
             if(notifyType === 'single' && !targetEmail) return Swal.fire('Error', 'Target email is required for Single User broadcast', 'error');
+
+            let body = '';
+
+            if (format === 'text') {
+                body = document.getElementById('notifyBody').value;
+                if (!body) return Swal.fire('Error', 'Message body is required for Text announcements', 'error');
+                fileInput.value = ''; // Ensure no file is accidentally sent
+            } else {
+                if (!fileInput.files || !fileInput.files[0]) return Swal.fire('Error', 'Image file is required for Image announcements', 'error');
+                // Auto-fill a hidden placeholder message so the backend does not crash!
+                body = '[Graphical Announcement]'; 
+            }
 
             const formData = new FormData();
             formData.append('title', title);
@@ -1246,8 +1283,7 @@
                 formData.append('targetEmail', targetEmail);
             }
 
-            if (fileInput.files && fileInput.files[0]) {
-                // Appends the raw File object. Your backend Multer setup will intercept this and upload it to Cloudinary.
+            if (format === 'image' && fileInput.files && fileInput.files[0]) {
                 formData.append('image', fileInput.files[0]);
             }
 
@@ -1255,7 +1291,7 @@
             try { 
                 const res = await fetch('/api/admin/notifications/send', { 
                     method: 'POST', 
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` }, // Browser automatically sets Content-Type to multipart/form-data with boundary
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
                     body: formData
                 }); 
                 
@@ -1264,7 +1300,6 @@
                     Swal.fire('Sent!', 'Announcement successfully transmitted.', 'success'); 
                     fetchNotifications(); 
                     
-                    // Reset Form Elements
                     document.getElementById('notifyTitle').value = '';
                     document.getElementById('notifyBody').value = '';
                     document.getElementById('notifyTarget').value = '';
