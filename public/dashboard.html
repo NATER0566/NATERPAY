@@ -193,13 +193,13 @@
         .footer-compliance-tag { color: #ffffff !important; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
 
         /* -----------------------------------------------------------------------------------
-           [UPGRADED] DUAL-MODE PROFESSIONAL NOTIFICATION UI
+           [ULTIMATE] DUAL-MODE PROFESSIONAL NOTIFICATION UI (NO OVERLAPPING, PERFECT SCALING)
            ----------------------------------------------------------------------------------- */
         #opayNotifCard {
             display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; 
-            /* Transparent dark background so the site remains highly visible */
-            background: rgba(0, 0, 0, 0.45); 
-            backdrop-filter: blur(4px); 
+            /* Improved transparency: See the dashboard clearly behind it */
+            background: rgba(0, 0, 0, 0.35); 
+            backdrop-filter: blur(3px); 
             align-items: center; justify-content: center; flex-direction: column;
         }
         
@@ -211,58 +211,55 @@
         @keyframes opayPop { from { transform: scale(0.9) translateY(40px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
         
         .notif-modal-content {
-            width: 92vw; max-width: 420px; position: relative; display: flex; flex-direction: column;
-            /* Premium Shining Box Shadow and Border */
-            box-shadow: 0 25px 65px rgba(0,0,0,0.9), 0 0 20px rgba(212,175,55,0.2); 
-            border-radius: 18px;
-            background: #050505;
-            border: 1px solid rgba(212, 175, 55, 0.5);
+            width: 92vw; max-width: 450px; position: relative; display: flex; flex-direction: column;
+            /* Premium Shining Box Shadow and highly curved border */
+            box-shadow: 0 25px 65px rgba(0,0,0,0.9), 0 0 25px rgba(212,175,55,0.3); 
+            border-radius: 28px;
+            background: #080808;
+            border: 1.5px solid rgba(212, 175, 55, 0.6);
             overflow: hidden;
             animation: breatheGlow 4s infinite ease-in-out;
         }
 
         @keyframes breatheGlow {
-            0%, 100% { box-shadow: 0 25px 65px rgba(0,0,0,0.9), 0 0 15px rgba(212,175,55,0.15); }
-            50% { box-shadow: 0 25px 65px rgba(0,0,0,0.9), 0 0 35px rgba(212,175,55,0.4); }
+            0%, 100% { box-shadow: 0 25px 65px rgba(0,0,0,0.9), 0 0 15px rgba(212,175,55,0.2); border-color: rgba(212, 175, 55, 0.4); }
+            50% { box-shadow: 0 25px 65px rgba(0,0,0,0.9), 0 0 35px rgba(212,175,55,0.5); border-color: rgba(212, 175, 55, 0.8); }
         }
 
-        /* Animated Refractive Shine Effect (Subtle & Professional) */
+        /* Subtle Light Sweep */
         .notif-modal-content::after {
             content: ''; position: absolute; top: 0; left: -150%; width: 50%; height: 100%;
-            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,215,0,0.08) 50%, rgba(255,255,255,0) 100%);
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,215,0,0.06) 50%, rgba(255,255,255,0) 100%);
             transform: skewX(-25deg); animation: cardShineSweep 6s infinite ease-in-out; pointer-events: none; z-index: 10;
         }
         @keyframes cardShineSweep { 0% { left: -150%; } 15% { left: 200%; } 100% { left: 200%; } }
 
-        /* HEADER: Flexbox structure preventing Overlapping completely */
+        /* HEADER: Perfect Flexbox to prevent Overlapping. STATIC IDENTITY. */
         .notif-header-brand {
-            background: linear-gradient(90deg, #111, #0a0a0a); padding: 14px 18px; 
-            border-bottom: 1px solid rgba(212, 175, 55, 0.3); position: relative; z-index: 5;
-            display: flex; justify-content: space-between; align-items: center; gap: 15px;
+            background: linear-gradient(90deg, #111, #000); padding: 18px 20px; 
+            border-bottom: 1.5px solid rgba(212, 175, 55, 0.3); position: relative; z-index: 5;
+            display: flex; justify-content: space-between; align-items: flex-start; gap: 15px;
         }
-        .notif-title-container {
-            display: flex; align-items: center; gap: 8px;
-            flex: 1; /* Takes available space */
-            min-width: 0; /* Prevents flex blowout */
+        .static-identity-header {
+            color: #fff; font-family: 'Cinzel', serif; font-weight: 900; font-size: 0.95rem;
+            letter-spacing: 2px; text-transform: uppercase; display: flex; align-items: flex-start; gap: 10px;
         }
-        .notif-title-text {
-            color: #d4af37; font-family: 'Cinzel', serif; font-weight: 900; font-size: 0.95rem;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 1px;
-            text-transform: uppercase;
-        }
+        .static-identity-header i { margin-top: 3px; }
+        
         .notif-badge-container {
-            flex-shrink: 0; /* Never shrinks or wraps */
+            flex-shrink: 0; /* Strictly prevents the badge from being squished */
+            margin-top: 2px;
         }
 
-        /* Global / Personal Badges */
+        /* Dynamic Broadcast Badges */
         .badge-indicator-global {
-            background: #d32f2f; color: #FFF; font-size: 0.6rem; padding: 5px 10px; 
-            border-radius: 6px; letter-spacing: 1px; font-weight: 900; font-family: 'Montserrat', sans-serif;
+            background: #d32f2f; color: #FFF; font-size: 0.6rem; padding: 6px 12px; 
+            border-radius: 8px; letter-spacing: 1px; font-weight: 900; font-family: 'Montserrat', sans-serif;
             text-transform: uppercase; box-shadow: 0 0 10px rgba(211, 47, 47, 0.5); border: 1px solid #ff4d4d;
         }
         .badge-indicator-personal {
-            background: #2eb82e; color: #FFF; font-size: 0.6rem; padding: 5px 10px; 
-            border-radius: 6px; letter-spacing: 1px; font-weight: 900; font-family: 'Montserrat', sans-serif;
+            background: #2eb82e; color: #FFF; font-size: 0.6rem; padding: 6px 12px; 
+            border-radius: 8px; letter-spacing: 1px; font-weight: 900; font-family: 'Montserrat', sans-serif;
             text-transform: uppercase; box-shadow: 0 0 10px rgba(46, 184, 46, 0.5); border: 1px solid #47d147;
         }
 
@@ -270,22 +267,37 @@
             position: relative; z-index: 5; display: flex; flex-direction: column; width: 100%;
         }
 
-        /* ---------------- IMAGE MODE ---------------- */
-        .notif-img-wrapper {
-            width: 100%; background: #000; display: flex; justify-content: center; align-items: center;
+        /* UPLOADED TITLE STYLING */
+        .notif-dynamic-title-area {
+            padding: 20px 20px 10px 20px; background: #080808; text-align: center;
         }
-        .notif-img { 
-            width: 100%; 
-            height: auto; 
-            max-height: 60vh; /* Allocates exact image size without scrolling off-screen */
-            object-fit: contain; /* PERFECT RENDERING: NO CROPPING OR HIDING */
-            display: block; 
-            border-bottom: 1px solid #222;
+        .notif-uploaded-title {
+            color: var(--gold); font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 1.15rem;
+            text-transform: uppercase; margin: 0; letter-spacing: 1px;
+        }
+        
+        .notif-uploaded-title-text {
+            color: var(--gold); font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 1.3rem;
+            text-transform: uppercase; margin: 0 0 15px 0; letter-spacing: 1px; text-shadow: 0 2px 5px rgba(0,0,0,0.5);
         }
 
-        /* ---------------- TEXT MODE ---------------- */
+        /* ---------------- IMAGE MODE (Full focus, no text body) ---------------- */
+        .notif-img-wrapper {
+            width: 100%; background: #000; display: flex; justify-content: center; align-items: center;
+            padding: 10px 0; /* Slight padding to keep it off the edges */
+        }
+        .notif-img { 
+            max-width: 100%; 
+            height: auto; 
+            max-height: 55vh; /* Fits perfectly on screen */
+            object-fit: contain; /* PERFECT RENDERING: NO CROPPING OR HIDING */
+            display: block; 
+            margin: 0 auto;
+        }
+
+        /* ---------------- TEXT MODE (No image, glowing typography) ---------------- */
         .notif-text-wrapper {
-            padding: 35px 25px; text-align: center;
+            padding: 30px 25px; text-align: center;
             background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
             border-bottom: 1px solid #222;
         }
@@ -296,23 +308,24 @@
         }
         @keyframes floatIcon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         .notif-text-content {
-            color: #f0f0f0; font-size: 1rem; line-height: 1.6; font-weight: 500; margin: 0;
+            color: #f0f0f0; font-size: 1.05rem; line-height: 1.6; font-weight: 600; margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
 
         /* ACTION AREA & BUTTON */
-        .notif-action-area { padding: 18px 20px 22px 20px; background: #050505; }
+        .notif-action-area { padding: 20px 25px 25px 25px; background: #050505; }
         
         .notif-btn { 
             background: linear-gradient(45deg, var(--gold), #ffdf00); color: #000; border: none; width: 100%; 
-            padding: 15px; font-weight: 900; border-radius: 12px; font-size: 0.95rem; 
-            letter-spacing: 1.5px; box-shadow: 0 4px 15px rgba(212,175,55,0.3); transition: all 0.3s ease; 
-            cursor: pointer; text-transform: uppercase;
+            padding: 16px; font-weight: 900; border-radius: 14px; font-size: 1rem; 
+            letter-spacing: 2px; box-shadow: 0 4px 20px rgba(212,175,55,0.3); transition: all 0.3s ease; 
+            cursor: pointer; text-transform: uppercase; font-family: 'Montserrat', sans-serif;
         }
-        .notif-btn:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,175,55,0.5); }
+        .notif-btn:hover { background: #fff; transform: translateY(-3px) scale(1.02); box-shadow: 0 8px 25px rgba(212,175,55,0.6); }
         
         .notif-close-bottom {
-            background: rgba(0,0,0,0.6); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%;
-            width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.7); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%;
+            width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
             color: rgba(255, 255, 255, 0.7); font-size: 1.2rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(5px);
         }
         .notif-close-bottom:hover { background: rgba(255,255,255,0.15); color: #fff; border-color: #fff; transform: scale(1.1); }
@@ -847,7 +860,7 @@
                     if (!unreadNotifications.some(n => n._id === dbN._id)) {
                         unreadNotifications.push({
                             _id: dbN._id,
-                            title: dbN.title || dbN.subject || "SYSTEM ANNOUNCEMENT",
+                            title: dbN.title || dbN.subject || null,
                             message: dbN.message || dbN.body || "",
                             image: dbN.image || dbN.imageUrl || dbN.icon || (dbN.metadata && dbN.metadata.image) || null,
                             isRead: false,
@@ -889,30 +902,32 @@
         const cardContainer = document.getElementById('opayNotifCard');
         
         const globalIndicator = notif.isGlobal 
-            ? `<span class="badge-indicator-global"><i class="fas fa-globe-americas me-1"></i>GLOBAL</span>` 
-            : `<span class="badge-indicator-personal"><i class="fas fa-user me-1"></i>PERSONAL</span>`;
+            ? `<span class="badge-indicator-global"><i class="fas fa-globe-americas me-1"></i> GLOBAL</span>` 
+            : `<span class="badge-indicator-personal"><i class="fas fa-shield-alt me-1"></i> PERSONAL</span>`;
 
         let bodyHtml = '';
 
         if (notif.image) {
-            // IMAGE MODE: No text body, full image focus.
             bodyHtml = `
+                <div class="notif-dynamic-title-area">
+                    <h4 class="notif-uploaded-title">${notif.title || ''}</h4>
+                </div>
                 <div class="notif-img-wrapper">
                     <img src="${notif.image}" alt="Notification Image" class="notif-img">
                 </div>
                 <div class="notif-action-area">
-                    <button class="notif-btn" onclick="markReadAndNext('${notif._id}')">Acknowledge</button>
+                    <button class="notif-btn" onclick="markReadAndNext('${notif._id}')">ACKNOWLEDGE & CLOSE</button>
                 </div>
             `;
         } else {
-            // TEXT MODE: No image, stylish text focus.
             bodyHtml = `
                 <div class="notif-text-wrapper">
                     <i class="fas fa-envelope-open-text notif-text-icon"></i>
+                    <h4 class="notif-uploaded-title-text">${notif.title || ''}</h4>
                     <p class="notif-text-content">${notif.message}</p>
                 </div>
                 <div class="notif-action-area">
-                    <button class="notif-btn" onclick="markReadAndNext('${notif._id}')">Acknowledge</button>
+                    <button class="notif-btn" onclick="markReadAndNext('${notif._id}')">ACKNOWLEDGE & CLOSE</button>
                 </div>
             `;
         }
@@ -921,9 +936,9 @@
             <div class="notif-modal-wrapper">
                 <div class="notif-modal-content">
                     <div class="notif-header-brand">
-                        <div class="notif-title-container">
-                            <i class="fas fa-bell text-warning"></i> 
-                            <span class="notif-title-text" title="${notif.title || 'SYSTEM ANNOUNCEMENT'}">${notif.title || 'SYSTEM ANNOUNCEMENT'}</span>
+                        <div class="static-identity-header">
+                            <i class="fas fa-bullhorn text-warning mt-1"></i> 
+                            <span>NATER-PAY ANNOUNCEMENT</span>
                         </div>
                         <div class="notif-badge-container">
                             ${globalIndicator}
@@ -1233,7 +1248,7 @@
             socketConnectionLink.on('notification', (payload) => {
                 const liveNotif = {
                     _id: payload._id || 'live_' + Date.now(),
-                    title: payload.title || "SYSTEM ANNOUNCEMENT",
+                    title: payload.title || null,
                     message: payload.message || payload.body || "You have a new message.",
                     image: payload.image || payload.imageUrl || null,
                     isRead: false,
