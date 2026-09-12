@@ -192,48 +192,104 @@
         footer { background: linear-gradient(180deg, rgba(15,15,15,0.98) 0%, #000000 100%); border-top: 2.5px solid var(--gold); padding: 40px 6% 20px 6%; margin-top: 60px; position: relative; z-index: 5; }
         .footer-compliance-tag { color: #ffffff !important; font-weight: 800; font-size: 0.85rem; letter-spacing: 2px; text-shadow: 0px 2px 4px rgba(0,0,0,1); }
 
-        /* PERFECTED OPAY STYLE NOTIFICATION UI */
+        /* -----------------------------------------------------------------------------------
+           [NEW & PERFECTED] DUAL-MODE ANIMATED OPAY-STYLE NOTIFICATION UI
+           ----------------------------------------------------------------------------------- */
         #opayNotifCard {
             display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; 
-            background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); 
+            /* Fixed transparency: Much more transparent to see the dashboard behind it */
+            background: rgba(0, 0, 0, 0.55); 
+            backdrop-filter: blur(3px); 
             align-items: center; justify-content: center; flex-direction: column;
         }
+        
         .notif-modal-wrapper {
             display: flex; flex-direction: column; align-items: center; gap: 20px;
-            animation: opayPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: opayPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 100%;
         }
-        @keyframes opayPop { from { transform: scale(0.9) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        @keyframes opayPop { from { transform: scale(0.85) translateY(30px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
         
         .notif-modal-content {
-            width: 90vw; max-width: 360px; position: relative; display: flex; flex-direction: column;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.9); border-radius: 16px;
+            width: 92vw; max-width: 420px; position: relative; display: flex; flex-direction: column;
+            /* Premium Shining Box Shadow and Border */
+            box-shadow: 0 25px 65px rgba(0,0,0,0.9), 0 0 25px rgba(212,175,55,0.25); 
+            border-radius: 20px;
+            background: #0a0a0a;
+            border: 2px solid var(--gold);
+            overflow: hidden;
         }
+
+        /* Animated Refractive Shine Effect over the entire card */
+        .notif-modal-content::after {
+            content: ''; position: absolute; top: 0; left: -150%; width: 50%; height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,215,0,0.15) 50%, rgba(255,255,255,0) 100%);
+            transform: skewX(-25deg); animation: cardShineSweep 5s infinite ease-in-out; pointer-events: none; z-index: 10;
+        }
+        @keyframes cardShineSweep { 0% { left: -150%; } 15% { left: 200%; } 100% { left: 200%; } }
+
         .notif-header-brand {
-            background: linear-gradient(90deg, #d32f2f, #111); padding: 10px 15px; border-radius: 16px 16px 0 0;
+            background: linear-gradient(90deg, #6b0000, #111); padding: 14px 18px; 
             color: #fff; font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: 2px; font-size: 0.95rem;
-            display: flex; justify-content: center; align-items: center; gap: 8px; border: 1.5px solid var(--gold); border-bottom: none;
+            display: flex; justify-content: space-between; align-items: center; 
+            border-bottom: 2px solid var(--gold); position: relative; z-index: 5;
         }
+
+        /* Global / Personal Indicators */
+        .badge-indicator-global {
+            background: #FF0000; color: #FFF; font-size: 0.55rem; padding: 4px 10px; 
+            border-radius: 50px; letter-spacing: 1px; font-weight: 900; font-family: 'Montserrat', sans-serif;
+            box-shadow: 0 0 10px rgba(255,0,0,0.8); animation: pulseRed 2s infinite; text-transform: uppercase;
+        }
+        @keyframes pulseRed { 0% { box-shadow: 0 0 5px rgba(255,0,0,0.5); } 50% { box-shadow: 0 0 15px rgba(255,0,0,1); } 100% { box-shadow: 0 0 5px rgba(255,0,0,0.5); } }
+
+        .badge-indicator-personal {
+            background: #2eb82e; color: #FFF; font-size: 0.55rem; padding: 4px 10px; 
+            border-radius: 50px; letter-spacing: 1px; font-weight: 900; font-family: 'Montserrat', sans-serif;
+            box-shadow: 0 0 10px rgba(46,184,46,0.6); text-transform: uppercase;
+        }
+
         .notif-main-body {
-            background: #111; border: 1.5px solid var(--gold); border-top: none; border-radius: 0 0 16px 16px; overflow: hidden; text-align: center;
+            position: relative; z-index: 5; display: flex; flex-direction: column;
         }
-        .notif-img { width: 100%; max-height: 200px; object-fit: cover; display: block; border-bottom: 2px solid #222; }
-        .notif-body-content { padding: 25px 20px 20px 20px; }
+
+        /* Image Mode Specifics */
+        .notif-img-wrapper {
+            width: 100%; background: #000; display: flex; justify-content: center; align-items: center;
+        }
+        .notif-img { 
+            width: 100%; 
+            /* Fixed: Uses 'contain' to ensure NO cropping. Max height set to 60vh to keep it on screen */
+            max-height: 55vh; 
+            object-fit: contain; 
+            display: block; 
+            border-bottom: 1px solid #222;
+        }
+
+        /* Text Mode Specifics */
+        .notif-text-header {
+            background: linear-gradient(135deg, #111, #1a1a1a); height: 120px; display: flex; align-items: center; 
+            justify-content: center; border-bottom: 1px solid rgba(255,215,0,0.3);
+        }
+        
+        .notif-body-content { padding: 30px 25px 25px 25px; text-align: center; }
+        
         .notif-btn { 
-            background: var(--gold); color: #000; border: none; width: 100%; padding: 14px; 
-            font-weight: 900; border-radius: 50px; margin-top: 15px; font-size: 0.95rem; 
-            letter-spacing: 1px; box-shadow: 0 4px 15px rgba(255,215,0,0.3); transition: 0.3s; cursor: pointer;
+            background: linear-gradient(45deg, var(--gold), #ffeb85); color: #000; border: none; width: 90%; 
+            padding: 16px; font-weight: 900; border-radius: 50px; margin: 15px auto 20px auto; font-size: 1rem; 
+            letter-spacing: 1px; box-shadow: 0 5px 20px rgba(255,215,0,0.3); transition: 0.3s; cursor: pointer;
+            display: block; text-transform: uppercase;
         }
-        .notif-btn:hover { background: #fff; transform: translateY(-2px); }
+        .notif-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 8px 25px rgba(255,215,0,0.6); }
         
         .notif-close-bottom {
-            background: transparent; border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 50%;
+            background: rgba(0,0,0,0.6); border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 50%;
             width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;
-            color: rgba(255, 255, 255, 0.8); font-size: 1.4rem; cursor: pointer; transition: 0.3s;
+            color: rgba(255, 255, 255, 0.8); font-size: 1.4rem; cursor: pointer; transition: 0.3s; backdrop-filter: blur(5px);
         }
         .notif-close-bottom:hover { background: rgba(255,255,255,0.2); color: #fff; border-color: #fff; transform: scale(1.1); }
 
         .fee-badge-small { display: inline-block; background: rgba(255, 68, 68, 0.15); color: #ff4444; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-top: 4px; font-weight: bold; border: 1px solid rgba(255, 68, 68, 0.3); }
-        
         .footer-links a { color: #aaa; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: color 0.3s ease; }
         .footer-links a:hover { color: var(--gold); }
         .footer-links-divider { color: #555; margin: 0 10px; }
@@ -751,14 +807,12 @@
             const data = await res.json();
 
             if (data.success && data.notifications) {
-                // Determine what notifications the user has already dismissed locally
                 const dismissedRaw = localStorage.getItem(`dismissed_notifs_${authToken.substring(0,20)}`);
                 let dismissedArray = [];
                 if (dismissedRaw) {
                     try { dismissedArray = JSON.parse(dismissedRaw); } catch(e){}
                 }
 
-                // Filter out any notification that has been marked read in the DB OR dismissed locally
                 const dbUnread = data.notifications.filter(n => !n.isRead && !dismissedArray.includes(n._id));
                 
                 dbUnread.forEach(dbN => {
@@ -767,10 +821,7 @@
                             _id: dbN._id,
                             title: dbN.title || dbN.subject || "NATER-PAY ALERT",
                             message: dbN.message || dbN.body || "",
-                            
-                            // AGGRESSIVE IMAGE EXTRACTION FIX
                             image: dbN.image || dbN.imageUrl || dbN.icon || (dbN.metadata && dbN.metadata.image) || null,
-                            
                             isRead: false,
                             isGlobal: dbN.isGlobal || false
                         });
@@ -809,23 +860,45 @@
         const notif = unreadNotifications[0];
         const cardContainer = document.getElementById('opayNotifCard');
         
-        const imgHtml = notif.image 
-            ? `<img src="${notif.image}" alt="Promo Banner" class="notif-img">` 
-            : `<div style="background: linear-gradient(135deg, #111, #1a1a1a); height: 130px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid var(--gold);"><i class="fas fa-gift" style="font-size: 4rem; color: var(--gold); opacity: 0.3;"></i></div>`;
+        const globalIndicator = notif.isGlobal ? `<span class="badge-indicator-global">GLOBAL</span>` : `<span class="badge-indicator-personal">PERSONAL</span>`;
+
+        let bodyHtml = '';
+
+        if (notif.image) {
+            // IMAGE MODE: No text body, full image focus.
+            bodyHtml = `
+                <div class="notif-img-wrapper">
+                    <img src="${notif.image}" alt="Notification Image" class="notif-img">
+                </div>
+                <div style="padding: 10px 0;">
+                    <button class="notif-btn" onclick="markReadAndNext('${notif._id}')">Proceed Now</button>
+                </div>
+            `;
+        } else {
+            // TEXT MODE: No image, stylish text focus.
+            bodyHtml = `
+                <div class="notif-text-header">
+                    <i class="fas fa-envelope-open-text" style="font-size: 3.5rem; color: var(--gold); opacity: 0.8; filter: drop-shadow(0 0 10px rgba(255,215,0,0.5));"></i>
+                </div>
+                <div class="notif-body-content">
+                    <p class="text-white opacity-90 mb-4" style="font-size: 0.95rem; line-height: 1.6; font-weight: 500;">${notif.message}</p>
+                    <button class="notif-btn" onclick="markReadAndNext('${notif._id}')">Acknowledge</button>
+                </div>
+            `;
+        }
 
         cardContainer.innerHTML = `
             <div class="notif-modal-wrapper">
                 <div class="notif-modal-content">
                     <div class="notif-header-brand">
-                        <i class="fas fa-shield-alt text-warning"></i> NATER-PAY ALERT
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-shield-alt text-warning"></i> 
+                            <span style="font-size:0.85rem;" class="text-truncate">${notif.title || 'SYSTEM ALERT'}</span>
+                        </div>
+                        ${globalIndicator}
                     </div>
                     <div class="notif-main-body">
-                        ${imgHtml}
-                        <div class="notif-body-content">
-                            <h5 class="fw-bold mb-3" style="color: var(--gold); font-size: 1.15rem; line-height: 1.3;">${notif.title || 'System Notification'}</h5>
-                            <p class="text-white opacity-90 mb-4" style="font-size: 0.9rem; line-height: 1.5; font-weight: 500;">${notif.message}</p>
-                            <button class="notif-btn" onclick="markReadAndNext('${notif._id}')">Proceed Now</button>
-                        </div>
+                        ${bodyHtml}
                     </div>
                 </div>
                 <div class="notif-close-bottom" onclick="closeNotificationCard()"><i class="fas fa-times"></i></div>
@@ -846,8 +919,6 @@
 
         if (notifToMark) {
             if (notifToMark.isGlobal) {
-                // For GLOBAL messages: We cannot mark them read in the DB (since they belong to everyone).
-                // Instead, we mark them read LOCALLY so this specific user doesn't see them again.
                 const storageKey = `dismissed_notifs_${authToken.substring(0,20)}`;
                 let dismissedArray = [];
                 try {
@@ -860,7 +931,6 @@
                     localStorage.setItem(storageKey, JSON.stringify(dismissedArray));
                 }
             } else if (id && !id.toString().startsWith('live_')) {
-                // For SINGLE messages: Safe to mark as read directly in the database.
                 fetch(`/api/notifications/${id}/read`, { 
                     method: 'PUT', headers: { 'Authorization': `Bearer ${authToken}` } 
                 }).catch(e => console.warn(e));
@@ -1133,7 +1203,6 @@
                     _id: payload._id || 'live_' + Date.now(),
                     title: payload.title || "NATER-PAY ALERT",
                     message: payload.message || payload.body || "You have a new message.",
-                    // AGGRESSIVE IMAGE EXTRACTION FIX FOR SOCKET PAYLOAD
                     image: payload.image || payload.imageUrl || null,
                     isRead: false,
                     isGlobal: payload.isGlobal || false
