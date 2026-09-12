@@ -726,29 +726,22 @@ async function verifyTransaction(request, reply) {
 
 
 
-
 async function sendPushNotification(request, reply) {
     try {
         if (!await checkRateLimit(request, 'admin_push_notif', 20)) throw { status: 429, message: 'Too many requests.' };
 
-        // 1. Extract values from Fastify Multipart Body
-        // Fastify wraps multipart text fields in an object, so we access .value
         const targetEmail = request.body.targetEmail ? request.body.targetEmail.value : null;
         const title = request.body.title ? request.body.title.value : null;
         const message = request.body.message ? request.body.message.value : null;
-        const imageFile = request.body.image; // This is the file object
+        const imageFile = request.body.image; 
 
         if (!title || !message) throw { status: 400, message: 'Title and message body are required' };
 
-        // 2. Process Image for Cloudinary if uploaded
         let cloudinaryUrl = null;
         if (imageFile && imageFile.filename) {
             const cloudinary = require('cloudinary').v2;
-            
-            // Convert file buffer to Base64 URI so Cloudinary can process it directly
             const buffer = await imageFile.toBuffer();
             const base64String = `data:${imageFile.mimetype};base64,${buffer.toString('base64')}`;
-            
             const uploadRes = await cloudinary.uploader.upload(base64String, { 
                 folder: 'naterpay/notifications', 
                 timeout: 30000 
@@ -758,16 +751,30 @@ async function sendPushNotification(request, reply) {
 
         // 3. Transmit to General Audience
         if (targetEmail === 'ALL' || !targetEmail) {
+            
+            // [FIX] ACTUALLY SAVE THE GLOBAL MESSAGE TO THE DATABASE!
+            if (Notification && typeof Notification.create === 'function') {
+                await Notification.create({ 
+                    title: sanitizeText(title), 
+                    message: sanitizeText(message), 
+                    type: 'system', 
+                    image: cloudinaryUrl, // Save the image!
+                    isGlobal: true,       // Mark it Global!
+                    priority: 'high' 
+                });
+            }
+
             if (request.server && request.server.io) {
                 request.server.io.emit('notification', { 
                     title: sanitizeText(title), 
                     message: sanitizeText(message), 
                     type: 'info', 
-                    image: cloudinaryUrl 
+                    image: cloudinaryUrl,
+                    isGlobal: true
                 });
             }
             await createAuditLog({ user: request.user._id, action: `Broadcast Notification: ${title}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
-            return reply.send({ success: true, message: 'Broadcast transmitted to all users' });
+            return reply.send({ success: true, message: 'Broadcast saved and transmitted to all users' });
         }
 
         // 4. Transmit to Single Target Audience
@@ -780,7 +787,7 @@ async function sendPushNotification(request, reply) {
                 title: sanitizeText(title), 
                 message: sanitizeText(message), 
                 type: 'system', 
-                image: cloudinaryUrl,
+                image: cloudinaryUrl, // Save the image!
                 priority: 'high' 
             });
         }
@@ -795,12 +802,13 @@ async function sendPushNotification(request, reply) {
         }
         
         await createAuditLog({ user: request.user._id, action: `Sent Notification to ${user.email}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
-        reply.send({ success: true, message: 'Notification transmitted to user successfully' });
+        reply.send({ success: true, message: 'Notification saved and transmitted to user successfully' });
         
     } catch (error) { 
         handleError(reply, error, 'Failed to transmit notification'); 
     }
 }
+
 
 
 
