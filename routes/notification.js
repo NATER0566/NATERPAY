@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
-const Joi = require('joi'); // [1] Strict Request Validation
+const Joi = require('joi'); 
 
-// [2] STRUCTURED LOGGING ENGINE
 let logger;
 try { 
     logger = require('pino')(); 
@@ -13,7 +12,6 @@ try {
     };
 }
 
-// [3] READ-OPTIMIZED RATE LIMITING ENGINE (DDoS Protection)
 let Redis;
 try { Redis = require('ioredis'); } catch(e) {}
 const redisClient = (Redis && process.env.REDIS_URL) ? new Redis(process.env.REDIS_URL) : null;
@@ -57,7 +55,6 @@ async function checkRateLimit(request, action = 'read_notif', limit = 60) {
     } else { return executeFallback(); }
 }
 
-// [4] CENTRALIZED ERROR HANDLING
 function handleError(reply, error, defaultMessage = 'System error occurred.') {
     if (error.isJoi) {
         return reply.status(400).send({ success: false, message: error.details[0].message });
@@ -66,7 +63,6 @@ function handleError(reply, error, defaultMessage = 'System error occurred.') {
     reply.status(error.status || 500).send({ success: false, message: error.message || defaultMessage });
 }
 
-// [5] TEXT SANITIZATION
 const sanitizeText = (str) => str ? String(str).replace(/[<>]/g, '').trim() : '';
 
 /* =========================================================================
@@ -74,7 +70,6 @@ const sanitizeText = (str) => str ? String(str).replace(/[<>]/g, '').trim() : ''
 ========================================================================= */
 async function getNotifications(request, reply) {
     try {
-        // Validation prevents malicious injection through query params
         const schema = Joi.object({
             unreadOnly: Joi.string().valid('true', 'false').optional(),
             type: Joi.string().optional(),
@@ -83,28 +78,21 @@ async function getNotifications(request, reply) {
         const { error, value } = schema.validate(request.query);
         if (error) throw error;
 
-        // Anti-Scraping / Loop Protection
         if (!await checkRateLimit(request, 'fetch_notifs', 120)) throw { status: 429, message: 'Too Many Requests.' };
 
-        const options = { limit: value.limit };
-        if (value.unreadOnly === 'true') options.unreadOnly = true;
-        if (value.type) options.type = sanitizeText(value.type);
+        // [FIX] Query for User's personal notifications OR Global announcements
+        const query = {
+            $or: [
+                { user: request.user._id },
+                { isGlobal: true }
+            ]
+        };
         
-        let notifications = [];
-        let unreadCount = 0;
-
-        // Failsafe execution linking to Schema Static Methods
-        if (typeof Notification.findByUser === 'function') {
-            notifications = await Notification.findByUser(request.user._id, options);
-            unreadCount = await Notification.findUnreadCount(request.user._id);
-        } else {
-            const query = { user: request.user._id };
-            if (options.unreadOnly) query.isRead = false;
-            if (options.type) query.type = options.type;
-            
-            notifications = await Notification.find(query).sort({ createdAt: -1 }).limit(options.limit);
-            unreadCount = await Notification.countDocuments({ user: request.user._id, isRead: false });
-        }
+        if (value.unreadOnly === 'true') query.isRead = false;
+        if (value.type) query.type = sanitizeText(value.type);
+        
+        const notifications = await Notification.find(query).sort({ createdAt: -1 }).limit(value.limit);
+        const unreadCount = await Notification.countDocuments({ user: request.user._id, isRead: false });
         
         reply.send({
             success: true,
@@ -112,6 +100,8 @@ async function getNotifications(request, reply) {
                 _id: notif._id,
                 title: notif.title,
                 message: notif.message,
+                image: notif.image,       // [FIX] ADDED IMAGE SO FRONTEND CAN SEE IT
+                isGlobal: notif.isGlobal, // [FIX] ADDED ISGLOBAL FLAG
                 type: notif.type,
                 priority: notif.priority,
                 actionLink: notif.actionLink,
