@@ -195,7 +195,7 @@
         /* PERFECTED OPAY STYLE NOTIFICATION UI */
         #opayNotifCard {
             display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; 
-            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); 
+            background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); 
             align-items: center; justify-content: center; flex-direction: column;
         }
         .notif-modal-wrapper {
@@ -221,7 +221,7 @@
         .notif-btn { 
             background: var(--gold); color: #000; border: none; width: 100%; padding: 14px; 
             font-weight: 900; border-radius: 50px; margin-top: 15px; font-size: 0.95rem; 
-            letter-spacing: 1px; box-shadow: 0 4px 15px rgba(255,215,0,0.3); transition: 0.3s; 
+            letter-spacing: 1px; box-shadow: 0 4px 15px rgba(255,215,0,0.3); transition: 0.3s; cursor: pointer;
         }
         .notif-btn:hover { background: #fff; transform: translateY(-2px); }
         
@@ -751,17 +751,28 @@
             const data = await res.json();
 
             if (data.success && data.notifications) {
-                const dbUnread = data.notifications.filter(n => !n.isRead);
+                // Determine what notifications the user has already dismissed locally
+                const dismissedRaw = localStorage.getItem(`dismissed_notifs_${authToken.substring(0,20)}`);
+                let dismissedArray = [];
+                if (dismissedRaw) {
+                    try { dismissedArray = JSON.parse(dismissedRaw); } catch(e){}
+                }
+
+                // Filter out any notification that has been marked read in the DB OR dismissed locally
+                const dbUnread = data.notifications.filter(n => !n.isRead && !dismissedArray.includes(n._id));
                 
-                // Add DB notifications WITHOUT destroying rich live socket data
                 dbUnread.forEach(dbN => {
                     if (!unreadNotifications.some(n => n._id === dbN._id)) {
                         unreadNotifications.push({
                             _id: dbN._id,
                             title: dbN.title || dbN.subject || "NATER-PAY ALERT",
                             message: dbN.message || dbN.body || "",
-                            image: dbN.image || dbN.imageUrl || dbN.icon || null,
-                            isRead: false
+                            
+                            // AGGRESSIVE IMAGE EXTRACTION FIX
+                            image: dbN.image || dbN.imageUrl || dbN.icon || (dbN.metadata && dbN.metadata.image) || null,
+                            
+                            isRead: false,
+                            isGlobal: dbN.isGlobal || false
                         });
                     }
                 });
@@ -779,7 +790,6 @@
             badge.style.display = 'block';
             badge.innerText = unreadNotifications.length;
             
-            // If the card is currently completely hidden, show the next one!
             const notifCard = document.getElementById('opayNotifCard');
             if (notifCard.style.display === 'none' || notifCard.style.display === '') {
                 showNextNotification(); 
@@ -832,17 +842,33 @@
         const authToken = localStorage.getItem("naterpay_token");
         document.getElementById('opayNotifCard').style.display = 'none';
 
-        // Only mark read in the database if it's a real DB ID (not a live_ socket ID)
-        if (id && !id.toString().startsWith('live_')) {
-            fetch(`/api/notifications/${id}/read`, { 
-                method: 'PUT', headers: { 'Authorization': `Bearer ${authToken}` } 
-            }).catch(e => console.warn(e));
+        const notifToMark = unreadNotifications.find(n => n._id === id);
+
+        if (notifToMark) {
+            if (notifToMark.isGlobal) {
+                // For GLOBAL messages: We cannot mark them read in the DB (since they belong to everyone).
+                // Instead, we mark them read LOCALLY so this specific user doesn't see them again.
+                const storageKey = `dismissed_notifs_${authToken.substring(0,20)}`;
+                let dismissedArray = [];
+                try {
+                    const existing = localStorage.getItem(storageKey);
+                    if (existing) dismissedArray = JSON.parse(existing);
+                } catch(e){}
+                
+                if (!dismissedArray.includes(id)) {
+                    dismissedArray.push(id);
+                    localStorage.setItem(storageKey, JSON.stringify(dismissedArray));
+                }
+            } else if (id && !id.toString().startsWith('live_')) {
+                // For SINGLE messages: Safe to mark as read directly in the database.
+                fetch(`/api/notifications/${id}/read`, { 
+                    method: 'PUT', headers: { 'Authorization': `Bearer ${authToken}` } 
+                }).catch(e => console.warn(e));
+            }
         }
 
-        // Remove the top notification we just read
         unreadNotifications = unreadNotifications.filter(n => n._id !== id);
         
-        // Wait a split second to simulate natural dismissal, then show the next if any
         setTimeout(() => {
             updateNotificationUI();
         }, 400); 
@@ -1102,14 +1128,15 @@
 
             socketConnectionLink.on('dashboard:refresh', () => { syncDashboardData(); });
 
-            // [FIX] PERFECTED LIVE SOCKET NOTIFICATION HANDLER
             socketConnectionLink.on('notification', (payload) => {
                 const liveNotif = {
                     _id: payload._id || 'live_' + Date.now(),
                     title: payload.title || "NATER-PAY ALERT",
                     message: payload.message || payload.body || "You have a new message.",
+                    // AGGRESSIVE IMAGE EXTRACTION FIX FOR SOCKET PAYLOAD
                     image: payload.image || payload.imageUrl || null,
-                    isRead: false
+                    isRead: false,
+                    isGlobal: payload.isGlobal || false
                 };
                 
                 unreadNotifications.unshift(liveNotif);
