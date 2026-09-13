@@ -2,20 +2,16 @@
 <html lang="en">
 <head>
 
-
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
-      appId: "48a27a07-6634-4f69-a80b-f195e4c1a2fc",
+      appId: "48a27a07-6534-4f69-a80b-f195e4c1a2fc", // Ensures matching App ID
     });
   });
 </script>
 
-
-
-    
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,12 +22,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/socket.io/socket.io.js" defer></script>
-
-
-    <!-- 00 -->
-
-
-    <!-- 00 -->
     
     <style>
         :root { --red: #d32f2f; --gold: #d4af37; --bg: #050505; --panel-bg: rgba(10, 10, 10, 0.55); }
@@ -857,6 +847,17 @@
                 localStorage.setItem("naterpay_token", data.token);
                 localStorage.setItem("naterpay_profile", JSON.stringify(data.user));
 
+                // --- ONESIGNAL USER LINKING (LOGIN SUCCESS) ---
+                if (window.OneSignalDeferred) {
+                    OneSignalDeferred.push(function(OneSignal) {
+                        const exactUserId = data.user?._id || data._id || data.userId;
+                        if (exactUserId) {
+                            OneSignal.login(exactUserId);
+                        }
+                    });
+                }
+                // ----------------------------------------------
+
                 Swal.fire({ 
                     icon: 'success', title: 'Access Granted', text: data.message || 'Synchronizing Dashboard Hub...', 
                     timer: 1500, showConfirmButton: false 
@@ -882,6 +883,18 @@
                             if (otpData.success) {
                                 localStorage.setItem("naterpay_token", otpData.token);
                                 localStorage.setItem("naterpay_profile", JSON.stringify(otpData.user));
+                                
+                                // --- ONESIGNAL USER LINKING (LOGIN OTP SUCCESS) ---
+                                if (window.OneSignalDeferred) {
+                                    OneSignalDeferred.push(function(OneSignal) {
+                                        const exactUserId = otpData.user?._id || otpData._id || otpData.userId;
+                                        if (exactUserId) {
+                                            OneSignal.login(exactUserId);
+                                        }
+                                    });
+                                }
+                                // --------------------------------------------------
+
                                 Swal.fire({ icon: 'success', title: 'Verified!', text: 'Your account is secured. Logging you in now...', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff', timer: 1500, showConfirmButton: false }).then(() => {
                                     window.location.href = otpData.redirectUrl || '/dashboard.html';
                                 });
@@ -935,6 +948,18 @@
                             if (otpData.success) {
                                 localStorage.setItem("naterpay_token", otpData.token);
                                 localStorage.setItem("naterpay_profile", JSON.stringify(otpData.user));
+                                
+                                // --- ONESIGNAL USER LINKING (REGISTRATION OTP SUCCESS) ---
+                                if (window.OneSignalDeferred) {
+                                    OneSignalDeferred.push(function(OneSignal) {
+                                        const exactUserId = otpData.user?._id || otpData._id || otpData.userId;
+                                        if (exactUserId) {
+                                            OneSignal.login(exactUserId);
+                                        }
+                                    });
+                                }
+                                // ---------------------------------------------------------
+
                                 Swal.fire({ icon: 'success', title: 'Verified!', text: 'Your account is secured. Logging you in now...', confirmButtonColor: '#FFD700', background: '#0a0a0a', color: '#fff', timer: 1500, showConfirmButton: false }).then(() => {
                                     window.location.href = otpData.redirectUrl || '/dashboard.html';
                                 });
