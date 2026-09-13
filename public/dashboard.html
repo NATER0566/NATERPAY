@@ -2,20 +2,15 @@
 <html lang="en">
 <head>
 
-
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
-      appId: "48a27a07-6634-4f69-a80b-f195e4c1a2fc",
+      appId: "48a27a07-6534-4f69-a80b-f195e4c1a2fc", // Matches your exact NATER-PAY App ID
     });
   });
 </script>
-
-
-
-
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4661775522120249" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
@@ -1048,6 +1043,18 @@
             const data = await res.json();
 
             if(data.success) {
+                
+                // --- ONESIGNAL USER LINKING ADDED HERE ---
+                if (window.OneSignalDeferred) {
+                    OneSignalDeferred.push(function(OneSignal) {
+                        const exactUserId = data.userId || data.user?._id || data._id; 
+                        if (exactUserId) {
+                            OneSignal.login(exactUserId);
+                        }
+                    });
+                }
+                // -----------------------------------------
+
                 document.getElementById('profileBadgeName').innerText = data.userFullName || "Verified Terminal Operator";
                 const userRole = (data.userRole || 'user').toLowerCase();
                 const roleMultiplier = (userRole === 'vip' || userRole === 'admin' || userRole === 'superadmin') ? 0.35 : (userRole === 'reseller' || userRole === 'agent') ? 0.20 : 0.05;
