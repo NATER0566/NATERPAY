@@ -223,7 +223,6 @@ async function getTransactions(request, reply) {
         if (value.type) query.type = sanitizeText(value.type);
         if (value.status) query.status = sanitizeText(value.status);
         
-        // FIXED: Added kycLevel and role to populate query to fix "Unverified" display
         const transactions = await Transaction.find(query).populate('user', 'name email phoneNumber kycLevel role').sort({ createdAt: -1 }).skip((value.page - 1) * value.limit).limit(value.limit).lean();
         const formattedTx = transactions.map(tx => ({ ...tx, userEmail: tx.user ? tx.user.email : 'Unknown User' }));
         const total = await Transaction.countDocuments(query);
@@ -248,14 +247,13 @@ async function getAnalytics(request, reply) {
 }
 
 // ============================================================================
-// ENTERPRISE WITHDRAWAL MANAGEMENT (ATOMIC AUTO-REFUND & AUDIT ENGINE)
+// ENTERPRISE WITHDRAWAL MANAGEMENT
 // ============================================================================
 
 async function getPendingWithdrawals(request, reply) {
     try {
         if (!await checkRateLimit(request, 'admin_withdrawals', 60)) throw { status: 429, message: 'Too many requests.' };
         
-        // FIXED: Added kycLevel and role to populate query to fix "Unverified" display
         const pendingWithdrawals = await Transaction.find({ type: 'withdrawal', status: 'processing' })
             .populate('user', 'name email phoneNumber kycLevel role')
             .sort({ createdAt: -1 })
@@ -376,7 +374,6 @@ async function processWithdrawal(request, reply) {
 async function getPendingKYC(request, reply) {
     try {
         if (!await checkRateLimit(request, 'admin_get_kyc', 60)) throw { status: 429, message: 'Too many requests.' };
-        // FIXED: Added kycLevel and role to populate query to fix "Unverified" display
         const pendingKYC = await KYC.find({ status: 'under_review' }).populate('user', 'name email phoneNumber kycLevel role').sort({ createdAt: 1 });
         reply.send({ success: true, kycRequests: pendingKYC });
     } catch (error) { handleError(reply, error, 'Failed to fetch pending KYC requests'); }
@@ -494,13 +491,12 @@ async function deleteProduct(request, reply) {
 }
 
 // ============================================================================
-// ENTERPRISE ADVERTS MODERATION ENGINE (ATOMIC REFUND)
+// ENTERPRISE ADVERTS MODERATION ENGINE 
 // ============================================================================
 
 async function getPendingAds(request, reply) {
     try {
         if (!await checkRateLimit(request, 'admin_get_ads', 60)) throw { status: 429, message: 'Too many requests.' };
-        // FIXED: Added kycLevel and role to populate query
         const ads = await Ad.find({}).populate('user', 'name email kycLevel role phoneNumber').sort({ status: -1, createdAt: -1 }); 
         reply.send({ success: true, ads });
     } catch (error) { handleError(reply, error, 'Failed to fetch adverts'); }
@@ -725,7 +721,9 @@ async function verifyTransaction(request, reply) {
 }
 
 
-
+/* =========================================================================
+   [NEW FIX] ONE SIGNAL PUSH NOTIFICATION ENGINE INTEGRATED HERE
+========================================================================= */
 async function sendPushNotification(request, reply) {
     try {
         if (!await checkRateLimit(request, 'admin_push_notif', 20)) throw { status: 429, message: 'Too many requests.' };
@@ -749,68 +747,93 @@ async function sendPushNotification(request, reply) {
             cloudinaryUrl = uploadRes.secure_url;
         }
 
-        // 3. Transmit to General Audience
+        // --- ONESIGNAL PUSH NOTIFICATION HELPER ---
+        const triggerOneSignal = async (pushTitle, pushMsg, targetId = null, imgUrl = null) => {
+            try {
+                if (!process.env.ONESIGNAL_APP_ID || !process.env.ONESIGNAL_REST_API_KEY) {
+                    console.warn("OneSignal Env variables missing. Skipping external push.");
+                    return;
+                }
+
+                const payload = {
+                    app_id: process.env.ONESIGNAL_APP_ID,
+                    headings: { "en": pushTitle },
+                    contents: { "en": pushMsg },
+                    url: "https://naterpay-yrf7.onrender.com/" // User clicks and opens site
+                };
+
+                if (imgUrl) payload.big_picture = imgUrl;
+
+                if (targetId) {
+                    payload.include_aliases = { "external_id": [targetId.toString()] };
+                } else {
+                    payload.included_segments = ["Subscribed Users"]; // Sends to everyone!
+                }
+
+                await axios.post('https://onesignal.com/api/v1/notifications', payload, {
+                    headers: {
+                        'Authorization': `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            } catch (err) {
+                console.error("OneSignal push failed:", err.response ? err.response.data : err.message);
+            }
+        };
+
+        // Transmit to General Audience
         if (targetEmail === 'ALL' || !targetEmail) {
             
-            // [FIX] ACTUALLY SAVE THE GLOBAL MESSAGE TO THE DATABASE!
             if (Notification && typeof Notification.create === 'function') {
                 await Notification.create({ 
-                    title: sanitizeText(title), 
-                    message: sanitizeText(message), 
-                    type: 'system', 
-                    image: cloudinaryUrl, // Save the image!
-                    isGlobal: true,       // Mark it Global!
-                    priority: 'high' 
+                    title: sanitizeText(title), message: sanitizeText(message), type: 'system', 
+                    image: cloudinaryUrl, isGlobal: true, priority: 'high' 
                 });
             }
 
             if (request.server && request.server.io) {
                 request.server.io.emit('notification', { 
-                    title: sanitizeText(title), 
-                    message: sanitizeText(message), 
-                    type: 'info', 
-                    image: cloudinaryUrl,
-                    isGlobal: true
+                    title: sanitizeText(title), message: sanitizeText(message), 
+                    type: 'info', image: cloudinaryUrl, isGlobal: true
                 });
             }
+
+            // FIRE EXTERNAL PUSH (TO EVERYONE)
+            const pushBody = message === '[Graphical Announcement]' ? 'Tap to view announcement!' : sanitizeText(message);
+            await triggerOneSignal(sanitizeText(title), pushBody, null, cloudinaryUrl);
+
             await createAuditLog({ user: request.user._id, action: `Broadcast Notification: ${title}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
-            return reply.send({ success: true, message: 'Broadcast saved and transmitted to all users' });
+            return reply.send({ success: true, message: 'Broadcast transmitted to all users and devices.' });
         }
 
-        // 4. Transmit to Single Target Audience
+        // Transmit to Single Target Audience
         const user = await User.findOne({ email: sanitizeText(targetEmail).toLowerCase() });
         if (!user) throw { status: 404, message: 'Target user not found' };
 
         if (Notification && typeof Notification.create === 'function') {
             await Notification.create({ 
-                user: user._id, 
-                title: sanitizeText(title), 
-                message: sanitizeText(message), 
-                type: 'system', 
-                image: cloudinaryUrl, // Save the image!
-                priority: 'high' 
+                user: user._id, title: sanitizeText(title), message: sanitizeText(message), 
+                type: 'system', image: cloudinaryUrl, priority: 'high' 
             });
         }
 
         if (request.server && request.server.io) {
             request.server.io.to(`user:${user._id}`).emit('notification', { 
-                title: sanitizeText(title), 
-                message: sanitizeText(message), 
-                type: 'info', 
-                image: cloudinaryUrl 
+                title: sanitizeText(title), message: sanitizeText(message), type: 'info', image: cloudinaryUrl 
             });
         }
         
+        // FIRE EXTERNAL PUSH (SINGLE USER)
+        const pushBodySingle = message === '[Graphical Announcement]' ? 'Tap to view your alert!' : sanitizeText(message);
+        await triggerOneSignal(sanitizeText(title), pushBodySingle, user._id, cloudinaryUrl);
+
         await createAuditLog({ user: request.user._id, action: `Sent Notification to ${user.email}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
-        reply.send({ success: true, message: 'Notification saved and transmitted to user successfully' });
+        reply.send({ success: true, message: 'Notification transmitted to user successfully.' });
         
     } catch (error) { 
         handleError(reply, error, 'Failed to transmit notification'); 
     }
 }
-
-
-
 
 
 /* =========================================================================
@@ -871,7 +894,6 @@ async function getInvoices(request, reply) {
                     const owner = await User.findById(targetId).select('name email kycLevel role phoneNumber').lean();
                     if (owner) {
                         inv.resolvedUser = owner;
-                        // FIXED: Re-attaching directly to inv.user so frontend automatically maps to the Real Email & KYC!
                         inv.user = owner; 
                     }
                 } catch(err) {}
