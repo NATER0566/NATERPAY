@@ -57,45 +57,30 @@
         }
         .brand-nater { color: var(--primary); font-size: 1.4rem; }
         .brand-pay { color: var(--text); font-size: 1.4rem; }
-        .nav-link {
-            color: var(--muted) !important;
-            font-weight: 500;
-            margin: 0 10px;
-            transition: color 0.3s;
-        }
-        .nav-link:hover, .nav-link.active { color: var(--primary) !important; }
-        .user-profile-btn {
+        
+        .btn-back-header {
             background: var(--surface-light);
             border: 1px solid var(--border);
-            border-radius: 50px;
-            padding: 6px 15px 6px 6px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
             color: var(--text);
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.9rem;
             text-decoration: none;
             transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .user-profile-btn:hover { border-color: var(--primary); }
-        .user-avatar {
-            width: 32px; height: 32px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: #000;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 700;
+        .btn-back-header:hover {
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
         /* --- Layout & Cards --- */
-        .main-container { max-width: 1000px; margin: 40px auto; padding: 0 15px; }
-        .page-header-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; }
+        .main-container { max-width: 750px; margin: 40px auto; padding: 0 15px; }
+        .page-header-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 25px; text-align: center; }
         
-        .layout-grid { display: grid; grid-template-columns: 1fr; gap: 30px; transition: all 0.3s ease; }
-        @media (min-width: 992px) {
-            .layout-grid.has-sidebar { grid-template-columns: 1.5fr 1fr; align-items: start; }
-            .sticky-panel { position: sticky; top: 100px; }
-        }
-
         .nater-card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -107,6 +92,33 @@
 
         .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: var(--text); }
         .section-desc { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+
+        /* --- Info Banners --- */
+        .info-banner {
+            background: rgba(214, 173, 85, 0.08);
+            border-left: 3px solid var(--primary);
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .info-banner strong { color: var(--text); }
+        
+        .system-feedback {
+            background: rgba(40, 183, 121, 0.1);
+            border: 1px solid rgba(40, 183, 121, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: #d1f0e1;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .system-feedback i { font-size: 1.2rem; color: var(--success); margin-top: 2px; }
 
         /* --- Amount Entry --- */
         .amount-input-group {
@@ -138,7 +150,7 @@
 
         .config-select {
             background: var(--background); color: var(--text); border: 1px solid var(--border);
-            border-radius: 12px; padding: 12px 15px; font-size: 0.9rem; font-weight: 600; width: 100%;
+            border-radius: 12px; padding: 10px 15px; font-size: 0.85rem; font-weight: 600; width: 100%;
             appearance: none; outline: none; cursor: pointer;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a7b0bf' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
             background-repeat: no-repeat; background-position: right 15px center; background-size: 16px;
@@ -193,29 +205,14 @@
         .da-name { font-size: 1rem; font-weight: 600; color: var(--text); }
 
         /* Generic Gateway & QR Panels */
-        .generic-gateway-panel { text-align: center; padding: 25px 15px; }
+        .generic-gateway-panel { text-align: center; padding: 15px; }
         .gateway-icon { font-size: 3.5rem; color: var(--primary); margin-bottom: 15px; }
-        .gateway-text { font-size: 0.95rem; color: var(--muted); margin-bottom: 0; }
-
+        
         .qr-placeholder-box {
             background: var(--background); border: 2px dashed var(--border); border-radius: 16px;
             padding: 30px; text-align: center; max-width: 280px; margin: 0 auto;
         }
         .qr-icon { font-size: 8rem; color: var(--muted); opacity: 0.5; margin-bottom: 15px; }
-
-        /* --- Payment Summary --- */
-        .summary-panel { background: var(--background); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
-        .summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem; color: var(--muted); font-weight: 500; }
-        .summary-row .value { color: var(--text); font-weight: 600; }
-        .summary-divider { height: 1px; background: var(--border); margin: 15px 0; border: none; }
-        .summary-total { display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; font-weight: 700; color: var(--text); }
-        .summary-total .value { color: var(--primary); font-size: 1.5rem; font-family: var(--mono-font); }
-        
-        .fee-notice {
-            background: rgba(214, 173, 85, 0.08); border-left: 3px solid var(--primary);
-            padding: 12px 14px; border-radius: 0 8px 8px 0; font-size: 0.8rem; color: var(--muted);
-            margin-top: 15px; line-height: 1.4;
-        }
 
         /* --- Buttons --- */
         .btn-primary-action {
@@ -234,194 +231,156 @@
 </head>
 <body>
 
-    <!-- Global Navigation Header -->
-    <nav class="navbar navbar-expand-lg global-header">
+    <!-- Simplified Global Navigation Header -->
+    <nav class="navbar global-header">
         <div class="container">
             <a class="navbar-brand" href="dashboard.html">
                 <span class="brand-nater">NATER</span><span class="brand-pay">-PAY</span>
             </a>
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <i class="fas fa-bars text-white"></i>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mx-auto">
-                    <li class="nav-link-item"><a class="nav-link" href="dashboard.html">Dashboard</a></li>
-                    <li class="nav-link-item"><a class="nav-link active" href="fund-wallet.html">Fund Wallet</a></li>
-                    <li class="nav-link-item"><a class="nav-link" href="transactions.html">Transactions</a></li>
-                    <li class="nav-link-item"><a class="nav-link" href="settings.html">Settings</a></li>
-                </ul>
-                <div class="d-flex mt-3 mt-lg-0">
-                    <a href="profile.html" class="user-profile-btn">
-                        <div class="user-avatar" id="headerAvatar">NP</div>
-                        <span class="fs-6 fw-semibold" id="headerUserName">My Account</span>
-                    </a>
-                </div>
-            </div>
+            
+            <a href="dashboard.html" class="btn-back-header">
+                <i class="fas fa-arrow-left"></i> 
+                <span class="d-none d-sm-inline">Back to Dashboard</span>
+            </a>
         </div>
     </nav>
 
     <!-- Main Content Flow -->
-    <div id="fundingFlowView" class="main-container">
+    <div class="main-container">
         
-        <div class="page-header-title">
-            <a href="dashboard.html" class="text-muted text-decoration-none me-2"><i class="fas fa-arrow-left"></i></a>
-            Fund Your Wallet
+        <h1 class="page-header-title">Fund Your Wallet</h1>
+
+        <!-- Info Notice Before Amount Selection -->
+        <div class="info-banner" id="globalNotice">
+            <i class="fas fa-lightbulb me-2 text-primary"></i>
+            <strong>Notice:</strong> Selecting an amount is only required for checkout-based payments (like Cards or Web Transfers). If you are using a <strong>Dedicated Account</strong> or <strong>QR Scan</strong>, you can skip the amount section.
         </div>
 
-        <div class="layout-grid" id="layoutGrid">
-            <!-- Left Column: Inputs & Methods -->
-            <div class="flow-main">
-
-                <!-- 1. Amount Setup Section (Only shown for methods requiring pre-specified amount) -->
-                <div class="nater-card" id="amountCard">
-                    <div class="row align-items-center mb-4">
-                        <div class="col-7">
-                            <h2 class="section-title">How much to add?</h2>
-                        </div>
-                        <div class="col-5">
-                            <select class="config-select" id="countrySelector" onchange="handleCountryChange()">
-                                <option value="NGN" data-symbol="₦" selected>🇳🇬 NGN</option>
-                                <option value="GHS" data-symbol="GH₵">🇬🇭 GHS</option>
-                                <option value="KES" data-symbol="KSh">🇰🇪 KES</option>
-                                <option value="UGX" data-symbol="USh">🇺🇬 UGX</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="amount-input-group">
-                        <span class="currency-symbol" id="uiCurrencySymbol">₦</span>
-                        <input type="number" id="fundAmount" class="amount-input" placeholder="0.00" min="100" step="any" oninput="handleAmountChange()">
-                    </div>
-                    
-                    <div class="quick-amounts" id="quickAmountsContainer">
-                        <!-- Populated by JS -->
-                    </div>
+        <!-- 1. Amount Setup Section -->
+        <div class="nater-card" id="amountCard">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="section-title m-0">Funding Amount</h2>
+                
+                <!-- Compact Country/Currency Selector -->
+                <div style="width: 130px;">
+                    <select class="config-select" id="countrySelector" onchange="handleCountryChange()">
+                        <option value="NGN" data-symbol="₦" selected>🇳🇬 NGN</option>
+                        <option value="GHS" data-symbol="GH₵">🇬🇭 GHS</option>
+                        <option value="KES" data-symbol="KSh">🇰🇪 KES</option>
+                        <option value="UGX" data-symbol="USh">🇺🇬 UGX</option>
+                    </select>
                 </div>
-
-                <!-- 2A. Method Selection Catalogue -->
-                <div class="nater-card" id="methodListState">
-                    <h2 class="section-title">Choose payment method</h2>
-                    <p class="section-desc">Select the option that is most convenient for you.</p>
-
-                    <div class="methods-grid">
-                        <div class="method-card" onclick="selectPaymentMethod('dedicated')">
-                            <span class="badge-recommended">Recommended</span>
-                            <div class="method-icon-wrap"><i class="fas fa-landmark"></i></div>
-                            <div class="method-title">Dedicated Bank Account</div>
-                            <div class="method-desc">Automated 24/7 personal deposit account.</div>
-                        </div>
-
-                        <div class="method-card" onclick="selectPaymentMethod('card')">
-                            <div class="method-icon-wrap"><i class="fas fa-credit-card"></i></div>
-                            <div class="method-title">Debit or Credit Card</div>
-                            <div class="method-desc">Pay securely using a supported bank card.</div>
-                        </div>
-
-                        <div class="method-card" onclick="selectPaymentMethod('transfer')">
-                            <div class="method-icon-wrap"><i class="fas fa-money-bill-transfer"></i></div>
-                            <div class="method-title">Bank Transfer</div>
-                            <div class="method-desc">One-time checkout bank transfer.</div>
-                        </div>
-
-                        <div class="method-card" onclick="selectPaymentMethod('ussd')">
-                            <div class="method-icon-wrap"><i class="fas fa-mobile-screen-button"></i></div>
-                            <div class="method-title">USSD</div>
-                            <div class="method-desc">Instant USSD banking code payment.</div>
-                        </div>
-                        
-                        <div class="method-card" onclick="selectPaymentMethod('opay')">
-                            <div class="method-icon-wrap"><i class="fas fa-wallet"></i></div>
-                            <div class="method-title">OPay</div>
-                            <div class="method-desc">Pay via OPay wallet or portal.</div>
-                        </div>
-
-                        <div class="method-card" onclick="selectPaymentMethod('qr')">
-                            <div class="method-icon-wrap"><i class="fas fa-qrcode"></i></div>
-                            <div class="method-title">NIBSS QR</div>
-                            <div class="method-desc">Scan QR code using your mobile banking app.</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2B. Selected Method Terminal View -->
-                <div class="nater-card hidden" id="methodActiveState">
-                    <div class="active-method-header">
-                        <h2 class="active-method-title">
-                            <i id="activeMethodIcon" class="fas fa-landmark text-primary"></i> 
-                            <span id="activeMethodName">Method</span>
-                        </h2>
-                        <button class="btn-change-method" onclick="resetMethodSelection()">Change Method</button>
-                    </div>
-
-                    <!-- Panel A: Dedicated Account (No Summary Needed) -->
-                    <div id="panelDedicatedAccount" class="hidden">
-                        <div class="dedicated-account-panel">
-                            <div class="da-bank" id="daBankName"><span class="skeleton" style="display:inline-block; width:120px;">&nbsp;</span></div>
-                            <div class="da-number-wrap">
-                                <div class="da-number" id="daAccountNumber"><span class="skeleton" style="display:inline-block; width:200px;">&nbsp;</span></div>
-                                <button class="btn-copy" onclick="copyText('daAccountNumber', 'Account Number')" id="btnCopyAcc">
-                                    <i class="far fa-copy me-1"></i> Copy
-                                </button>
-                            </div>
-                            <div class="da-name" id="daAccountName"><span class="skeleton" style="display:inline-block; width:150px;">&nbsp;</span></div>
-                        </div>
-                        <div class="fee-notice mt-3">
-                            <i class="fas fa-robot text-primary me-2"></i> Transfer any amount directly from your banking app. Your wallet is automatically detected and credited 24/7. Standard provider network processing fee applies upon arrival.
-                        </div>
-                    </div>
-
-                    <!-- Panel B: QR Code Direct Terminal (No Summary Needed) -->
-                    <div id="panelQR" class="hidden generic-gateway-panel">
-                        <div class="qr-placeholder-box">
-                            <i class="fas fa-qrcode qr-icon"></i>
-                            <p class="text-muted small mb-0" id="qrStatusText">Connecting to live NIBSS QR network...</p>
-                        </div>
-                        <p class="text-muted mt-3 mb-0" style="font-size: 0.85rem;">
-                            Scan this QR code using your bank app. Once scanned and completed, your NATER-PAY wallet is credited instantly.
-                        </p>
-                    </div>
-
-                    <!-- Panel C: Redirect Checkout Gateway (Card, Transfer, OPay, USSD) -->
-                    <div id="panelGeneralGateway" class="hidden generic-gateway-panel">
-                        <i class="fas fa-shield-halved gateway-icon"></i>
-                        <p class="gateway-text" id="gatewayInstruction">
-                            You will be redirected securely to complete your transaction.
-                        </p>
-                    </div>
-                </div>
-
             </div>
 
-            <!-- Right Column: Interactive Payment Summary (Only for Interactive Methods) -->
-            <div class="flow-sidebar hidden" id="sidebarSummary">
-                <div class="sticky-panel">
-                    <div class="nater-card">
-                        <h2 class="section-title">Payment Summary</h2>
-                        
-                        <div class="summary-panel mt-3">
-                            <div class="summary-row">
-                                <span>Deposit Amount:</span>
-                                <span class="value" id="sumPrincipal">₦0.00</span>
-                            </div>
-                            <hr class="summary-divider">
-                            <div class="summary-total">
-                                <span>Total Payable:</span>
-                                <span class="value" id="sumTotal">₦0.00</span>
-                            </div>
-                        </div>
-                        
-                        <div class="fee-notice">
-                            <i class="fas fa-circle-info me-1"></i> Applicable provider processing fees may apply at checkout depending on the chosen channel.
-                        </div>
+            <div class="amount-input-group">
+                <span class="currency-symbol" id="uiCurrencySymbol">₦</span>
+                <input type="number" id="fundAmount" class="amount-input" placeholder="0.00" min="100" step="any" oninput="handleAmountChange()">
+            </div>
+            
+            <div class="quick-amounts" id="quickAmountsContainer">
+                <!-- Populated by JS -->
+            </div>
+        </div>
 
-                        <!-- Main Action Button -->
-                        <button class="btn-primary-action" id="btnMainAction" onclick="continuePayment()">
-                            Proceed to Payment <i class="fas fa-arrow-right ms-2"></i>
+        <!-- 2A. Method Selection Catalogue -->
+        <div class="nater-card" id="methodListState">
+            <h2 class="section-title">Select Payment Method</h2>
+            <p class="section-desc">Choose how you would like to fund your wallet today.</p>
+
+            <div class="methods-grid">
+                <div class="method-card" onclick="selectPaymentMethod('dedicated')">
+                    <span class="badge-recommended">Recommended</span>
+                    <div class="method-icon-wrap"><i class="fas fa-landmark"></i></div>
+                    <div class="method-title">Dedicated Bank Account</div>
+                    <div class="method-desc">Automated 24/7 personal deposit account.</div>
+                </div>
+
+                <div class="method-card" onclick="selectPaymentMethod('card')">
+                    <div class="method-icon-wrap"><i class="fas fa-credit-card"></i></div>
+                    <div class="method-title">Debit or Credit Card</div>
+                    <div class="method-desc">Pay securely using a supported bank card.</div>
+                </div>
+
+                <div class="method-card" onclick="selectPaymentMethod('transfer')">
+                    <div class="method-icon-wrap"><i class="fas fa-money-bill-transfer"></i></div>
+                    <div class="method-title">Bank Transfer</div>
+                    <div class="method-desc">One-time checkout bank transfer.</div>
+                </div>
+
+                <div class="method-card" onclick="selectPaymentMethod('ussd')">
+                    <div class="method-icon-wrap"><i class="fas fa-mobile-screen-button"></i></div>
+                    <div class="method-title">USSD</div>
+                    <div class="method-desc">Instant USSD banking code payment.</div>
+                </div>
+                
+                <div class="method-card" onclick="selectPaymentMethod('opay')">
+                    <div class="method-icon-wrap"><i class="fas fa-wallet"></i></div>
+                    <div class="method-title">OPay</div>
+                    <div class="method-desc">Pay via OPay wallet or portal.</div>
+                </div>
+
+                <div class="method-card" onclick="selectPaymentMethod('qr')">
+                    <div class="method-icon-wrap"><i class="fas fa-qrcode"></i></div>
+                    <div class="method-title">NIBSS QR</div>
+                    <div class="method-desc">Scan QR code using your mobile banking app.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2B. Selected Method Terminal View -->
+        <div class="nater-card hidden" id="methodActiveState">
+            
+            <div class="active-method-header">
+                <h2 class="active-method-title">
+                    <i id="activeMethodIcon" class="fas fa-landmark text-primary"></i> 
+                    <span id="activeMethodName">Method</span>
+                </h2>
+                <button class="btn-change-method" onclick="resetMethodSelection()">Change Method</button>
+            </div>
+
+            <!-- Smart System Feedback Area -->
+            <div class="system-feedback" id="systemFeedbackArea">
+                <i class="fas fa-check-circle"></i>
+                <div id="systemFeedbackText">You have selected a payment method.</div>
+            </div>
+
+            <!-- Panel A: Dedicated Account (No Checkout Needed) -->
+            <div id="panelDedicatedAccount" class="hidden">
+                <div class="dedicated-account-panel">
+                    <div class="da-bank" id="daBankName"><span class="skeleton" style="display:inline-block; width:120px;">&nbsp;</span></div>
+                    <div class="da-number-wrap">
+                        <div class="da-number" id="daAccountNumber"><span class="skeleton" style="display:inline-block; width:200px;">&nbsp;</span></div>
+                        <button class="btn-copy" onclick="copyText('daAccountNumber', 'Account Number')" id="btnCopyAcc">
+                            <i class="far fa-copy me-1"></i> Copy
                         </button>
                     </div>
+                    <div class="da-name" id="daAccountName"><span class="skeleton" style="display:inline-block; width:150px;">&nbsp;</span></div>
                 </div>
             </div>
+
+            <!-- Panel B: QR Code (No Checkout Needed) -->
+            <div id="panelQR" class="hidden generic-gateway-panel">
+                <div class="qr-placeholder-box">
+                    <i class="fas fa-qrcode qr-icon"></i>
+                    <p class="text-muted small mb-0" id="qrStatusText">Connecting to live NIBSS QR network...</p>
+                </div>
+                <p class="text-muted mt-3 mb-0" style="font-size: 0.85rem;">
+                    Scan this QR code directly inside your bank app.
+                </p>
+            </div>
+
+            <!-- Panel C: Redirect Checkout Gateway (Requires Proceeding) -->
+            <div id="panelGeneralGateway" class="hidden generic-gateway-panel">
+                <i class="fas fa-shield-halved gateway-icon"></i>
+                
+                <!-- Main Action Button (Moved here from removed sidebar) -->
+                <button class="btn-primary-action mt-2" id="btnMainAction" onclick="continuePayment()">
+                    Proceed to Checkout <i class="fas fa-arrow-right ms-2"></i>
+                </button>
+            </div>
+            
         </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -443,13 +402,14 @@
                 'KES': [500, 1000, 2500, 5000],
                 'UGX': [10000, 20000, 50000, 100000]
             },
+            // updated config defining if a checkout redirect is required
             methods: {
-                'dedicated': { name: 'Dedicated Bank Account', icon: 'fa-landmark', isAutonomous: true },
-                'card': { name: 'Debit or Credit Card', icon: 'fa-credit-card', isAutonomous: false },
-                'transfer': { name: 'Bank Transfer', icon: 'fa-money-bill-transfer', isAutonomous: false },
-                'ussd': { name: 'USSD', icon: 'fa-mobile-screen-button', isAutonomous: false },
-                'opay': { name: 'OPay Wallet', icon: 'fa-wallet', isAutonomous: false },
-                'qr': { name: 'NIBSS QR Code', icon: 'fa-qrcode', isAutonomous: true }
+                'dedicated': { name: 'Dedicated Bank Account', icon: 'fa-landmark', requiresCheckout: false },
+                'card': { name: 'Debit or Credit Card', icon: 'fa-credit-card', requiresCheckout: true },
+                'transfer': { name: 'Bank Transfer', icon: 'fa-money-bill-transfer', requiresCheckout: true },
+                'ussd': { name: 'USSD', icon: 'fa-mobile-screen-button', requiresCheckout: true },
+                'opay': { name: 'OPay Wallet', icon: 'fa-wallet', requiresCheckout: true },
+                'qr': { name: 'NIBSS QR Code', icon: 'fa-qrcode', requiresCheckout: false }
             }
         };
 
@@ -469,7 +429,6 @@
             
             document.getElementById('uiCurrencySymbol').innerText = state.symbol;
             renderQuickAmounts();
-            updatePaymentSummary();
         }
 
         function renderQuickAmounts() {
@@ -499,7 +458,6 @@
                 state.amount = 0;
                 document.getElementById('fundAmount').value = '';
             }
-            updatePaymentSummary();
         }
 
         // --- View Toggling: Method Selection ---
@@ -507,9 +465,12 @@
             state.method = methodId;
             const methodConfig = config.methods[methodId];
 
-            // Toggle Primary Views
+            // Hide method list, show active terminal
             document.getElementById('methodListState').classList.add('hidden');
             document.getElementById('methodActiveState').classList.remove('hidden');
+            
+            // Hide the global notice since they've now picked a path
+            document.getElementById('globalNotice').classList.add('hidden');
 
             // Update Active Method Header
             document.getElementById('activeMethodName').innerText = methodConfig.name;
@@ -520,33 +481,34 @@
             document.getElementById('panelQR').classList.add('hidden');
             document.getElementById('panelGeneralGateway').classList.add('hidden');
 
-            const layoutGrid = document.getElementById('layoutGrid');
-            const sidebarSummary = document.getElementById('sidebarSummary');
+            const feedbackText = document.getElementById('systemFeedbackText');
 
-            if (methodId === 'dedicated') {
-                document.getElementById('panelDedicatedAccount').classList.remove('hidden');
-                document.getElementById('amountCard').classList.add('hidden');
-                sidebarSummary.classList.add('hidden');
-                layoutGrid.classList.remove('has-sidebar');
-                renderVirtualAccountUI();
-            } else if (methodId === 'qr') {
-                document.getElementById('panelQR').classList.remove('hidden');
-                document.getElementById('amountCard').classList.add('hidden');
-                sidebarSummary.classList.add('hidden');
-                layoutGrid.classList.remove('has-sidebar');
-            } else {
-                // Interactive Methods (Card, Transfer, USSD, OPay) requiring amount and summary sidebar
-                document.getElementById('panelGeneralGateway').classList.remove('hidden');
+            if (methodConfig.requiresCheckout) {
+                // E.g. Card, Transfer, OPay
                 document.getElementById('amountCard').classList.remove('hidden');
-                document.getElementById('gatewayInstruction').innerText = `You will be redirected securely to complete your ${methodConfig.name} payment.`;
+                document.getElementById('panelGeneralGateway').classList.remove('hidden');
                 
-                sidebarSummary.classList.remove('hidden');
-                layoutGrid.classList.add('has-sidebar');
-                updatePaymentSummary();
+                // Smart feedback for Checkout Methods
+                feedbackText.innerHTML = `You have selected <strong>${methodConfig.name}</strong>. This payment method requires you to proceed to a secure checkout page.<br><br><strong>Action required:</strong> Please ensure you have filled out your funding amount above before proceeding.`;
+
+            } else {
+                // E.g. Dedicated Account, QR Code
+                document.getElementById('amountCard').classList.add('hidden');
+                
+                if (methodId === 'dedicated') {
+                    document.getElementById('panelDedicatedAccount').classList.remove('hidden');
+                    // Smart feedback for Autonomous Methods
+                    feedbackText.innerHTML = `You have selected <strong>${methodConfig.name}</strong>. This method accepts direct deposits and <strong>does not</strong> require you to proceed to a web checkout page.<br><br>Simply send any amount to the account details provided below.`;
+                    renderVirtualAccountUI();
+                } else if (methodId === 'qr') {
+                    document.getElementById('panelQR').classList.remove('hidden');
+                    feedbackText.innerHTML = `You have selected <strong>${methodConfig.name}</strong>. This method <strong>does not</strong> require a web checkout. Simply scan the code below using your bank's mobile app.`;
+                }
             }
 
-            if (window.innerWidth < 992) {
-                document.getElementById('methodActiveState').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Scroll down a bit on mobile
+            if (window.innerWidth < 768) {
+                document.getElementById('methodActiveState').scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }
 
@@ -557,10 +519,7 @@
             document.getElementById('methodActiveState').classList.add('hidden');
             document.getElementById('methodListState').classList.remove('hidden');
             document.getElementById('amountCard').classList.remove('hidden');
-            
-            const sidebarSummary = document.getElementById('sidebarSummary');
-            sidebarSummary.classList.add('hidden');
-            document.getElementById('layoutGrid').classList.remove('has-sidebar');
+            document.getElementById('globalNotice').classList.remove('hidden');
         }
 
         // --- Data Integration ---
@@ -593,25 +552,18 @@
             document.getElementById('btnCopyAcc').style.display = 'inline-block';
         }
 
-        function updatePaymentSummary() {
-            const pSum = document.getElementById('sumPrincipal');
-            const tSum = document.getElementById('sumTotal');
-
-            if (state.amount <= 0 || !state.method) {
-                pSum.innerText = `${state.symbol}0.00`;
-                tSum.innerText = `${state.symbol}0.00`;
-                return;
-            }
-
-            pSum.innerText = `${state.symbol}${state.amount.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-            tSum.innerText = `${state.symbol}${state.amount.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-        }
-
         async function continuePayment() {
             if (state.isProcessing) return;
 
+            // Enforce amount validation only for checkout methods
             if (state.amount <= 0) {
-                Swal.fire({ icon: 'warning', title: 'Amount Required', text: 'Please enter a valid deposit amount.', background: 'var(--surface)', color: 'var(--text)' });
+                Swal.fire({ 
+                    icon: 'warning', 
+                    title: 'Amount Required', 
+                    text: 'Please scroll up and enter a valid funding amount before proceeding.', 
+                    background: 'var(--surface)', 
+                    color: 'var(--text)' 
+                });
                 return;
             }
 
@@ -654,7 +606,7 @@
                 btn.innerHTML = `<i class="fas fa-circle-notch fa-spin me-2"></i> Connecting...`;
             } else {
                 btn.disabled = false;
-                btn.innerHTML = `Proceed to Payment <i class="fas fa-arrow-right ms-2"></i>`;
+                btn.innerHTML = `Proceed to Checkout <i class="fas fa-arrow-right ms-2"></i>`;
             }
         }
 
