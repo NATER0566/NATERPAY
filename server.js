@@ -23,7 +23,6 @@ let redisClient = null;
 try { 
     Redis = require('ioredis'); 
     if (process.env.REDIS_URL) {
-        // FIXED: Added TLS configuration so Upstash accepts the connection perfectly
         redisClient = new Redis(process.env.REDIS_URL, {
             tls: { rejectUnauthorized: false },
             maxRetriesPerRequest: 3
@@ -39,8 +38,8 @@ try {
 // CORE SYSTEM INITIALIZATION
 // ============================================================================
 const fastify = Fastify({
-    logger: false, // We use our custom Pino logger
-    trustProxy: true, // Crucial for accurate IP tracking behind Cloudflare/Nginx
+    logger: false,
+    trustProxy: true, 
     bodyLimit: 15 * 1024 * 1024 
 });
 
@@ -54,8 +53,6 @@ fastify.setErrorHandler(function (error, request, reply) {
             message: 'Database sync in progress. Please wait a few seconds and try again.'
         });
     }
-
-    // THE EXACT FIX: The hardcoded 429 black-screen response was completely removed from here.
     
     reply.status(500).send({ 
         success: false, 
@@ -78,9 +75,9 @@ async function connectDatabase() {
         await mongoose.connect(config.database.uri, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 30000, // FIXED: Increased from 5000 to prevent Atlas Free Tier crashes
-            socketTimeoutMS: 45000,          // FIXED: Keeps sockets alive longer
-            maxPoolSize: 100                 // FIXED: Allows more concurrent users
+            serverSelectionTimeoutMS: 30000, 
+            socketTimeoutMS: 45000,          
+            maxPoolSize: 100                 
         });
         logger.info('[SYSTEM] Naterpay Database Ledger connected successfully.');
     } catch (error) {
@@ -94,26 +91,18 @@ async function connectDatabase() {
 // ============================================================================
 async function registerPlugins() {
     await fastify.register(require('@fastify/cors'), {
-        origin: '*', // In strict production, restrict this to your exact frontend domain
+        origin: '*', 
         credentials: true
     });
 
-
-    
-
-        await fastify.register(require('@fastify/multipart'), {
+    await fastify.register(require('@fastify/multipart'), {
         limits: { fileSize: 25 * 1024 * 1024 },
-        attachFieldsToBody: true // This binds the FormData to request.body
+        attachFieldsToBody: true 
     });
-
   
     await fastify.register(require('@fastify/helmet'), {
-        contentSecurityPolicy: false // Disabled to allow external images (Cloudinary) and scripts
+        contentSecurityPolicy: false 
     });
-  
-    // THE EXACT FIX: The @fastify/rate-limit plugin was entirely removed from here.
-    // It was causing the global 429 black screens. Your route files (like wallet.js) 
-    // already have their own safe limiters, so this global one was redundant and dangerous.
   
     await fastify.register(require('@fastify/static'), {
         root: __dirname + '/public',
@@ -205,8 +194,8 @@ async function registerRoutes() {
     fastify.post('/api/wallet/set-pin', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.setPin);
     fastify.post('/api/wallet/verify-bank', { preHandler: require('./middleware/auth').authenticate }, walletRoutes.resolveBankAccount);
 
-    // === WEBHOOKS ===
-    fastify.post('/api/webhooks/paystack', walletRoutes.handlePaystackWebhook);
+    // === WEBHOOKS (FLUTTERWAVE REPLACES PAYSTACK) ===
+    fastify.post('/api/wallet/webhook/flutterwave', walletRoutes.handleFlutterwaveWebhook);
     
     const vtuRoutes = require('./routes/vtu');
     fastify.post('/api/vtu/airtime', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyAirtime);
@@ -220,7 +209,6 @@ async function registerRoutes() {
     fastify.get('/api/vtu/rates', vtuRoutes.getRates);
     fastify.get('/api/vtu/variations', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getVariations);
     
-    // [FIX] CONNECTIONS FOR GLOBAL AIRTIME & DATA
     fastify.get('/api/vtu/international/countries', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getInternationalCountries);
     fastify.get('/api/vtu/international/operators', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.getInternationalOperators);
     fastify.post('/api/vtu/foreign-airtime', { preHandler: require('./middleware/auth').authenticate }, vtuRoutes.buyForeignAirtime);
@@ -315,7 +303,6 @@ async function registerRoutes() {
     fastify.put('/api/admin/ads/:id/reject', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.rejectAd);
     fastify.delete('/api/admin/ads/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.deleteAd);
 
-    // [FIX] MISSING DELETE & EDIT ROUTES FOR ADMIN PANEL
     fastify.delete('/api/admin/support/tickets/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.deleteTicket);
     fastify.delete('/api/admin/kyc/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.deleteKycRecord);
     fastify.put('/api/admin/invoices/:id', { preHandler: require('./middleware/auth').authenticateAdmin }, adminRoutes.updateInvoice);
