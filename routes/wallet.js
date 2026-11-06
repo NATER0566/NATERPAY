@@ -25,7 +25,9 @@ try {
 }
 
 const APP_URL = config.appUrl || process.env.APP_URL || 'https://naterpay-yrf7.onrender.com';
-const FLUTTERWAVE_BASE_URL = 'https://api.flutterwave.com/v3';
+
+// UPDATE: Switch to v4 API Base URL
+const FLUTTERWAVE_BASE_URL = 'https://api.flutterwave.com/v4';
 
 const TX_STATUS = { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', FAILED: 'failed' };
 
@@ -41,7 +43,10 @@ function handleError(reply, error, defaultMessage = 'System error occurred.') {
     if (error.isJoi) return reply.status(400).send({ success: false, message: error.details[0].message });
     
     let safeMessage = error.message || defaultMessage;
-    if (error.response && error.response.data && error.response.data.message) {
+    // V4 returns structured errors: error.response.data.error.message
+    if (error.response?.data?.error?.message) {
+        safeMessage = error.response.data.error.message;
+    } else if (error.response?.data?.message) {
         safeMessage = error.response.data.message;
     }
     
@@ -50,7 +55,7 @@ function handleError(reply, error, defaultMessage = 'System error occurred.') {
 }
 
 /* =========================================================================
-   [3] DATA SANITIZERS
+   [3] DATA SANITIZERS & [4] REDIS ENGINE (Unchanged)
 ========================================================================= */
 const parseDecimal = (val) => {
     if (val === null || val === undefined) return 0;
@@ -93,9 +98,6 @@ function encryptBankData(text) {
     return `${iv.toString('hex')}:${encrypted}:${authTag}`;
 }
 
-/* =========================================================================
-   [4] REDIS ENGINE & UTILS
-========================================================================= */
 const redisClient = (Redis && process.env.REDIS_URL) ? new Redis(process.env.REDIS_URL) : null;
 const fallbackRateLimits = new Map();
 
@@ -202,35 +204,40 @@ async function verifyAndHandlePin(user, wallet, providedPin) {
 }
 
 /* =========================================================================
-   1. GET WALLET & AUTO FLUTTERWAVE VIRTUAL ACCOUNT GENERATOR
+   1. GET WALLET & V4 VIRTUAL ACCOUNT GENERATOR
 ========================================================================= */
 async function getWallet(request, reply) {
     try {
         let wallet = await Wallet.findOne({ user: request.user._id });
         if (!wallet) throw new Error('Wallet not found');
 
-        // Check if the user already has a permanent virtual account
         if (!wallet.virtualAccount || !wallet.virtualAccount.accountNumber) {
             try {
                 const user = await User.findById(request.user._id);
-                if (user && process.env.FLUTTERWAVE_SECRET_KEY) {
+                // V4 uses FLW_CLIENT_SECRET
+                if (user && process.env.FLW_CLIENT_SECRET) {
                     const fullName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Naterpay User';
                     const txRef = `VA_${user._id}_${Date.now()}`;
                     
+                    // V4 specific payload structure
                     const payload = {
-                        email: user.email,
-                        is_permanent: true,
-                        bvn: user.bvn || "22222222222",
-                        tx_ref: txRef,
-                        firstname: user.firstName || fullName.split(' ')[0] || 'User',
-                        lastname: user.lastName || fullName.split(' ')[1] || 'Naterpay',
-                        narration: `Naterpay - ${fullName}`
+                        reference: txRef,
+                        customer: {
+                            email: user.email,
+                            firstname: user.firstName || fullName.split(' ')[0] || 'User',
+                            lastname: user.lastName || fullName.split(' ')[1] || 'Naterpay',
+                            bvn: user.bvn || "22222222222",
+                        },
+                        amount: 0,
+                        currency: 'NGN',
+                        account_type: 'static'
                     };
 
-                    const flwRes = await axios.post(`${FLUTTERWAVE_BASE_URL}/virtual-account-numbers`, payload, {
+                    const flwRes = await axios.post(`${FLUTTERWAVE_BASE_URL}/virtual-accounts`, payload, {
                         headers: {
-                            'Authorization': `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
-                            'Content-Type': 'application/json'
+                            'Authorization': `Bearer ${process.env.FLW_CLIENT_SECRET}`,
+                            'Content-Type': 'application/json',
+                            'X-Idempotency-Key': crypto.randomUUID()
                         }
                     });
 
@@ -239,13 +246,13 @@ async function getWallet(request, reply) {
                             bankName: flwRes.data.data.bank_name,
                             accountNumber: flwRes.data.data.account_number,
                             accountName: `NATERPAY - ${fullName}`.substring(0, 50),
-                            accountReference: flwRes.data.data.order_ref
+                            accountReference: flwRes.data.data.reference || txRef
                         };
                         await wallet.save();
                     }
                 }
             } catch (flwErr) {
-                logger.error('Flutterwave Auto-Generation Error', flwErr.response?.data || flwErr.message);
+                logger.error('Flutterwave V4 Auto-Generation Error', flwErr.response?.data || flwErr.message);
             }
         }
 
@@ -254,7 +261,7 @@ async function getWallet(request, reply) {
 }
 
 /* =========================================================================
-   2. INITIALIZE FUNDING (FLUTTERWAVE) WITH FULL DIAGNOSTICS
+   2. INITIALIZE FUNDING (FLUTTERWAVE V4) 
 ========================================================================= */
 async function fundWallet(request, reply) {
     try {
@@ -268,24 +275,12 @@ async function fundWallet(request, reply) {
 
         if (!await checkRateLimit(request, 'fund_init')) throw { status: 429, message: 'Too many funding attempts.' };
 
-        // --- DEBUG DIAGNOSTICS START ---
-        const rawKey = process.env.FLUTTERWAVE_SECRET_KEY;
+        // Ensure we are checking for the V4 Secret Client Credentials
+        const rawKey = process.env.FLW_CLIENT_SECRET;
         if (!rawKey) {
-            logger.error('[FW DEBUG] FLUTTERWAVE_SECRET_KEY is completely missing or undefined in environment variables.');
-            throw new Error('Server configuration error: Payment gateway key missing.');
+            throw new Error('Server configuration error: FLW_CLIENT_SECRET gateway key missing.');
         }
-
         const trimmedKey = rawKey.trim();
-        const maskedKey = trimmedKey.length > 15 
-            ? `${trimmedKey.substring(0, 10)}...${trimmedKey.substring(trimmedKey.length - 5)}`
-            : 'KEY_TOO_SHORT';
-
-        logger.info(`[FW DEBUG] Key Length (Raw): ${rawKey.length}`);
-        logger.info(`[FW DEBUG] Key Length (Trimmed): ${trimmedKey.length}`);
-        logger.info(`[FW DEBUG] Masked Key Seen By Server: ${maskedKey}`);
-        logger.info(`[FW DEBUG] Contains whitespace/spaces? ${/\\s/.test(rawKey)}`);
-        logger.info(`[FW DEBUG] Contains quotes? ${/['"]/.test(rawKey)}`);
-        // --- DEBUG DIAGNOSTICS END ---
 
         const amount = sanitizeAmount(value.amount);
         let fee = amount < 2500 ? (amount * 0.015) / (1 - 0.015) : ((amount * 0.015) + 100) / (1 - 0.015);
@@ -303,8 +298,9 @@ async function fundWallet(request, reply) {
         
         let flwRes;
         try {
-            flwRes = await axios.post(`${FLUTTERWAVE_BASE_URL}/payments`, {
-                tx_ref: txReference,
+            // V4 Payment Orchestrator Payload
+            flwRes = await axios.post(`${FLUTTERWAVE_BASE_URL}/payments/initialize`, {
+                reference: txReference,
                 amount: totalCharge,
                 currency: value.currency || 'NGN',
                 redirect_url: redirectUrl,
@@ -316,23 +312,18 @@ async function fundWallet(request, reply) {
                     title: "NATER-PAY Wallet Funding",
                     description: "Fund your wallet securely"
                 },
-                meta: { userId: request.user._id.toString(), type: 'wallet_fund', amount: amount, fee: fee }
+                metadata: { userId: request.user._id.toString(), type: 'wallet_fund', amount: amount, fee: fee }
             }, {
                 headers: { 
-                    Authorization: `Bearer ${trimmedKey}`, // Safely use the trimmed key
-                    'Content-Type': 'application/json'
+                    Authorization: `Bearer ${trimmedKey}`,
+                    'Content-Type': 'application/json',
+                    'X-Idempotency-Key': crypto.randomUUID()
                 },
                 timeout: 12000 
             });
         } catch (gatewayError) {
-            const exactError = gatewayError.response?.data?.message || gatewayError.message || 'Flutterwave gateway connection error.';
-            const flwStatus = gatewayError.response?.data?.status || 'Unknown Status';
-            
-            logger.error(`[FW REJECTED] Status: ${flwStatus} | Message: ${exactError}`);
-            if (gatewayError.response?.data) {
-                logger.error(`[FW RAW RESPONSE]: ${JSON.stringify(gatewayError.response.data)}`);
-            }
-            
+            const exactError = gatewayError.response?.data?.error?.message || gatewayError.message || 'Flutterwave gateway connection error.';
+            logger.error(`[FW V4 REJECTED] Message: ${exactError}`);
             throw new Error(`Gateway Error: ${exactError}`);
         }
 
@@ -343,20 +334,19 @@ async function fundWallet(request, reply) {
         });
         await transaction.save({ validateBeforeSave: false });
 
-        reply.send({ success: true, paymentReference: txReference, checkoutUrl: flwRes.data.data.link });
+        reply.send({ success: true, paymentReference: txReference, checkoutUrl: flwRes.data.data.checkout_url });
     } catch (error) { handleError(reply, error, 'Failed to initialize payment'); }
 }
 
 /* =========================================================================
-   3 & 4 & 5. MANUAL FUNDING (Unchanged as they are internal flows)
+   3 & 4 & 5. MANUAL FUNDING (Internal flows unchanged)
 ========================================================================= */
-// [Kept exactly as requested since they are internal and don't rely on third-party integrations]
 async function fundManualWallet(request, reply) { /* ... same implementation ... */ }
 async function adminApproveManualFunding(request, reply) { /* ... same implementation ... */ }
 async function adminRejectManualFunding(request, reply) { /* ... same implementation ... */ }
 
 /* =========================================================================
-   6. VERIFY FUNDING (FLUTTERWAVE)
+   6. VERIFY FUNDING (FLUTTERWAVE V4)
 ========================================================================= */
 async function verifyFunding(request, reply) {
     try {
@@ -371,8 +361,9 @@ async function verifyFunding(request, reply) {
         if (txCheck.status === TX_STATUS.SUCCESS) return reply.send({ success: true, message: 'Wallet already credited' }); 
         if (txCheck.status === TX_STATUS.FAILED) throw new Error('Transaction was cancelled or declined.'); 
         
-        const response = await withRetry(() => axios.get(`${FLUTTERWAVE_BASE_URL}/transactions/verify_by_reference?tx_ref=${value.reference}`, { 
-            headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` }, timeout: 15000 
+        // V4 Verification Route
+        const response = await withRetry(() => axios.get(`${FLUTTERWAVE_BASE_URL}/transactions/verify?reference=${value.reference}`, { 
+            headers: { Authorization: `Bearer ${process.env.FLW_CLIENT_SECRET}` }, timeout: 15000 
         })); 
         const gatewayData = response.data.data; 
         
@@ -418,13 +409,12 @@ async function verifyFunding(request, reply) {
 /* =========================================================================
    7 & 8 & 9. WITHDRAWAL, TRANSFER, SET PIN (Internal Flow)
 ========================================================================= */
-// [Maintained unmodified to preserve internal routing mechanics]
 async function withdraw(request, reply) { /* ... same implementation ... */ }
 async function transfer(request, reply) { /* ... same implementation ... */ }
 async function setPin(request, reply) { /* ... same implementation ... */ }
 
 /* =========================================================================
-   10. RESOLVE BANK ACCOUNT (FLUTTERWAVE)
+   10. RESOLVE BANK ACCOUNT (FLUTTERWAVE V4)
 ========================================================================= */
 async function resolveBankAccount(request, reply) {
     try {
@@ -434,9 +424,9 @@ async function resolveBankAccount(request, reply) {
 
         const response = await withRetry(() => axios.post(`${FLUTTERWAVE_BASE_URL}/accounts/resolve`, {
             account_number: value.accountNumber,
-            account_bank: value.bankCode
+            bank_code: value.bankCode // Updated to v4 parameter standard
         }, {
-            headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` }, timeout: 10000
+            headers: { Authorization: `Bearer ${process.env.FLW_CLIENT_SECRET}` }, timeout: 10000
         }));
         
         reply.send({ success: true, accountName: response.data.data.account_name });
@@ -448,7 +438,6 @@ async function resolveBankAccount(request, reply) {
 ========================================================================= */
 async function handleFlutterwaveWebhook(request, reply) {
     try {
-        // 1. Authenticate the webhook request securely
         const secretHash = process.env.FLUTTERWAVE_SECRET_HASH;
         const signature = request.headers['verif-hash'];
         
@@ -458,16 +447,13 @@ async function handleFlutterwaveWebhook(request, reply) {
         }
 
         const payload = request.body;
-        
-        // Acknowledge receipt to avoid retries
         reply.code(200).send({ status: 'received' });
 
-        // Handle successful payment events
+        // V4 Webhook structure check
         if (payload.event === 'charge.completed' && payload.data.status === 'successful') {
             const gatewayData = payload.data;
-            const reference = gatewayData.tx_ref;
+            const reference = gatewayData.reference || gatewayData.tx_ref; // Fallback for v4/v3 compatibility during transition
 
-            // Prevent processing duplicate webhooks
             const cacheKey = `webhook_flw_processed_${gatewayData.id}`;
             if (redisClient && redisClient.status === 'ready') {
                 const exists = await redisClient.get(cacheKey);
@@ -475,16 +461,14 @@ async function handleFlutterwaveWebhook(request, reply) {
                 await redisClient.set(cacheKey, '1', 'EX', 86400); 
             }
             
-            // Check if it's a dynamic standard checkout or a direct virtual account transfer
             let txCheck = await Transaction.findOne({ providerReference: reference }); 
 
-            // If transaction does not exist, it might be a direct transfer to the Virtual Account (similar to old Korapay feature)
             if (!txCheck) {
                 const txUser = await User.findOne({ email: gatewayData.customer.email });
                 if (!txUser) return;
 
                 const amountPaid = parseFloat(gatewayData.amount);
-                const fee = parseFloat(gatewayData.app_fee || 0);
+                const fee = parseFloat(gatewayData.fee || 0); // V4 uses fee instead of app_fee
                 const netAmount = sanitizeAmount(amountPaid - fee);
 
                 if (netAmount <= 0) return;
@@ -533,7 +517,6 @@ async function handleFlutterwaveWebhook(request, reply) {
                 return;
             }
 
-            // It's a standard Checkout Transaction
             if (txCheck.status !== TX_STATUS.PENDING) return;
 
             const amountVal = parseDecimal(txCheck.amount);
