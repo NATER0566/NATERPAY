@@ -199,7 +199,7 @@
         }
         .da-bank { font-size: 0.85rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
         .da-number-wrap { display: flex; align-items: center; justify-content: space-between; margin: 15px 0; }
-        .da-number { font-family: var(--mono-font); font-size: 2rem; font-weight: 700; color: var(--primary); letter-spacing: 2px; }
+        .da-number { font-family: var(--mono-font); font-size: 1.8rem; font-weight: 700; color: var(--primary); letter-spacing: 2px; }
         .btn-copy { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; font-weight: 600; }
         .btn-copy:hover { color: var(--primary); border-color: var(--primary); }
         .da-name { font-size: 1rem; font-weight: 600; color: var(--text); }
@@ -350,7 +350,7 @@
                     <div class="da-bank" id="daBankName"><span class="skeleton" style="display:inline-block; width:120px;">&nbsp;</span></div>
                     <div class="da-number-wrap">
                         <div class="da-number" id="daAccountNumber"><span class="skeleton" style="display:inline-block; width:200px;">&nbsp;</span></div>
-                        <button class="btn-copy" onclick="copyText('daAccountNumber', 'Account Number')" id="btnCopyAcc">
+                        <button class="btn-copy" onclick="copyText('daAccountNumber', 'Account Number')" id="btnCopyAcc" style="display: none;">
                             <i class="far fa-copy me-1"></i> Copy
                         </button>
                     </div>
@@ -373,7 +373,7 @@
             <div id="panelGeneralGateway" class="hidden generic-gateway-panel">
                 <i class="fas fa-shield-halved gateway-icon"></i>
                 
-                <!-- Main Action Button (Moved here from removed sidebar) -->
+                <!-- Main Action Button -->
                 <button class="btn-primary-action mt-2" id="btnMainAction" onclick="continuePayment()">
                     Proceed to Checkout <i class="fas fa-arrow-right ms-2"></i>
                 </button>
@@ -402,7 +402,6 @@
                 'KES': [500, 1000, 2500, 5000],
                 'UGX': [10000, 20000, 50000, 100000]
             },
-            // updated config defining if a checkout redirect is required
             methods: {
                 'dedicated': { name: 'Dedicated Bank Account', icon: 'fa-landmark', requiresCheckout: false },
                 'card': { name: 'Debit or Credit Card', icon: 'fa-credit-card', requiresCheckout: true },
@@ -418,6 +417,11 @@
             handleCountryChange();
             fetchVirtualAccountData(); 
         });
+
+        // Helper to retrieve token correctly across various login implementations
+        function getAuthToken() {
+            return localStorage.getItem("naterpay_token") || localStorage.getItem("token") || "";
+        }
 
         // --- Core Interactions ---
         function handleCountryChange() {
@@ -468,8 +472,6 @@
             // Hide method list, show active terminal
             document.getElementById('methodListState').classList.add('hidden');
             document.getElementById('methodActiveState').classList.remove('hidden');
-            
-            // Hide the global notice since they've now picked a path
             document.getElementById('globalNotice').classList.add('hidden');
 
             // Update Active Method Header
@@ -484,20 +486,15 @@
             const feedbackText = document.getElementById('systemFeedbackText');
 
             if (methodConfig.requiresCheckout) {
-                // E.g. Card, Transfer, OPay
                 document.getElementById('amountCard').classList.remove('hidden');
                 document.getElementById('panelGeneralGateway').classList.remove('hidden');
-                
-                // Smart feedback for Checkout Methods
                 feedbackText.innerHTML = `You have selected <strong>${methodConfig.name}</strong>. This payment method requires you to proceed to a secure checkout page.<br><br><strong>Action required:</strong> Please ensure you have filled out your funding amount above before proceeding.`;
 
             } else {
-                // E.g. Dedicated Account, QR Code
                 document.getElementById('amountCard').classList.add('hidden');
                 
                 if (methodId === 'dedicated') {
                     document.getElementById('panelDedicatedAccount').classList.remove('hidden');
-                    // Smart feedback for Autonomous Methods
                     feedbackText.innerHTML = `You have selected <strong>${methodConfig.name}</strong>. This method accepts direct deposits and <strong>does not</strong> require you to proceed to a web checkout page.<br><br>Simply send any amount to the account details provided below.`;
                     renderVirtualAccountUI();
                 } else if (methodId === 'qr') {
@@ -506,7 +503,6 @@
                 }
             }
 
-            // Scroll down a bit on mobile
             if (window.innerWidth < 768) {
                 document.getElementById('methodActiveState').scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
@@ -514,8 +510,6 @@
 
         function resetMethodSelection() {
             state.method = null;
-            
-            // Revert Views
             document.getElementById('methodActiveState').classList.add('hidden');
             document.getElementById('methodListState').classList.remove('hidden');
             document.getElementById('amountCard').classList.remove('hidden');
@@ -525,37 +519,61 @@
         // --- Data Integration ---
         
         async function fetchVirtualAccountData() {
-            const token = localStorage.getItem("naterpay_token");
+            const token = getAuthToken();
             try {
-                const res = await fetch('/api/wallet/virtual-account', { 
+                // FIXED: Changed endpoint to /api/wallet matching server.js API route map
+                const res = await fetch('/api/wallet', { 
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.success && data.account) {
-                        state.virtualAccount = data.account;
+                    // FIXED: Read data.wallet.virtualAccount matching wallet.js getWallet response schema
+                    if (data.success && data.wallet && data.wallet.virtualAccount && data.wallet.virtualAccount.accountNumber) {
+                        state.virtualAccount = data.wallet.virtualAccount;
+                        if (state.method === 'dedicated') renderVirtualAccountUI();
+                        return;
+                    }
+                }
+                // Fallback to static company bank endpoint if dynamic account isn't auto-generated yet
+                fetchCompanyFallbackBank();
+            } catch (e) {
+                console.info("Primary virtual account sync pending, loading company backup account details...");
+                fetchCompanyFallbackBank();
+            }
+        }
+
+        async function fetchCompanyFallbackBank() {
+            try {
+                const res = await fetch('/api/settings/company-bank');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        state.virtualAccount = {
+                            bankName: data.bankName,
+                            accountNumber: data.accountNumber,
+                            accountName: data.accountName
+                        };
                         if (state.method === 'dedicated') renderVirtualAccountUI();
                     }
                 }
-            } catch (e) {
-                console.info("Awaiting live backend payload for Virtual Account details.");
+            } catch (err) {
+                console.warn("Unable to retrieve fallback company bank account.");
             }
         }
 
         function renderVirtualAccountUI() {
             if (!state.virtualAccount) return; 
 
-            document.getElementById('daBankName').innerHTML = state.virtualAccount.bankName;
-            document.getElementById('daAccountNumber').innerHTML = state.virtualAccount.accountNumber;
-            document.getElementById('daAccountName').innerHTML = state.virtualAccount.accountName;
+            document.getElementById('daBankName').innerHTML = state.virtualAccount.bankName || 'MONIEPOINT MFB';
+            document.getElementById('daAccountNumber').innerHTML = state.virtualAccount.accountNumber || '8160979620';
+            document.getElementById('daAccountName').innerHTML = state.virtualAccount.accountName || 'NATER GRACE CODE';
             document.getElementById('btnCopyAcc').style.display = 'inline-block';
         }
 
         async function continuePayment() {
             if (state.isProcessing) return;
 
-            // Enforce amount validation only for checkout methods
             if (state.amount <= 0) {
                 Swal.fire({ 
                     icon: 'warning', 
@@ -572,25 +590,32 @@
             try {
                 const res = await fetch('/api/wallet/fund', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Authorization': `Bearer ${getAuthToken()}` 
+                    },
                     body: JSON.stringify({ amount: state.amount, currency: state.currency, method: state.method })
                 });
 
-                if (!res.ok) throw new Error("Gateway connection pending");
-
                 const data = await res.json();
+
+                // FIXED: Read true server response error rather than catching blindly
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || "Gateway initialization failed.");
+                }
 
                 if (data.success && data.checkoutUrl) {
                     window.location.href = data.checkoutUrl;
                 } else {
-                    throw new Error(data.message || "Gateway initialization failed.");
+                    throw new Error("No checkout URL was provided by the payment gateway.");
                 }
             } catch (err) {
                 setLoading(false);
+                // FIXED: Displays exact error message from Flutterwave/Backend to allow direct resolution
                 Swal.fire({ 
-                    icon: 'info', 
-                    title: 'Gateway Connecting', 
-                    text: 'Connecting to live payment provider backend...', 
+                    icon: 'error', 
+                    title: 'Gateway Error', 
+                    text: err.message || 'Unable to connect to Flutterwave payment backend.', 
                     background: 'var(--surface)', 
                     color: 'var(--text)' 
                 });
