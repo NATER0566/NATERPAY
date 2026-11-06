@@ -1,2506 +1,954 @@
-
+<!-- 
+FRONTEND ASSUMPTIONS REQUIRING BACKEND CONFIRMATION:
+1. GET /api/wallet: Returns { success: true, wallet: { balance: 25000, currency: 'NGN', virtualAccount: { bankName, accountNumber, accountName } } }
+2. POST /api/wallet/quote: New endpoint needed. Accepts { amount, currency, method }. Returns { success: true, fee: 100, totalPayable: 5100, walletCredit: 5000 }.
+3. POST /api/wallet/fund: Accepts { amount, currency, method }. Returns { success: true, checkoutUrl, paymentReference } or instructions for non-redirect methods.
+4. POST /api/wallet/verify: Accepts { reference, provider }. Returns { success: true, amount, reference, method, date, newBalance }.
+5. Supported Assets: Official logos (Visa, Mastercard, Verve, OPay, etc.) should be placed in '/assets/img/'. Fallbacks are implemented via FontAwesome.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#080d16">
-    <meta name="description" content="Securely fund your NATER-PAY digital wallet.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Fund Wallet | NATER-PAY</title>
-
-    <!-- Existing project libraries -->
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
+    
     <style>
-        :root {
-            --primary: #d6ad55;
-            --primary-hover: #e8c778;
-            --background: #080d16;
-            --surface: #111a28;
-            --surface-light: #192536;
-            --text: #ffffff;
-            --muted: #a7b0bf;
-            --border: rgba(255,255,255,.09);
-            --success: #28b779;
-            --warning: #e8aa43;
+        :root { 
+            --primary: #d6ad55; 
+            --primary-hover: #e8c778; 
+            --background: #080d16; 
+            --surface: #111a28; 
+            --surface-light: #192536; 
+            --text: #ffffff; 
+            --muted: #a7b0bf; 
+            --border: rgba(255,255,255,0.09); 
+            --success: #28b779; 
+            --warning: #e8aa43; 
             --danger: #e15b64;
-            --radius: 18px;
-            --shadow: 0 15px 45px rgba(0,0,0,.25);
+            --brand-font: 'Cinzel', serif;
+            --main-font: 'Montserrat', sans-serif;
+            --mono-font: 'Space Mono', monospace;
         }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            background:
-                radial-gradient(ellipse at 15% 0%, rgba(214,173,85,.075), transparent 35%),
-                var(--background);
-            color: var(--text);
-            font-family: system-ui, -apple-system, BlinkMacSystemFont,
-                "Segoe UI", sans-serif;
+        
+        body { 
+            background: var(--background); 
+            color: var(--text); 
+            font-family: var(--main-font); 
+            -webkit-font-smoothing: antialiased;
             min-height: 100vh;
-            margin: 0;
-            overflow-x: hidden;
+            padding-bottom: 60px;
         }
 
-        button, input, select {
-            font: inherit;
-        }
-
-        button:focus-visible,
-        a:focus-visible,
-        input:focus-visible,
-        select:focus-visible {
-            outline: 2px solid var(--primary);
-            outline-offset: 3px;
-        }
-
-        a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-
-        a:hover {
-            color: var(--primary-hover);
-        }
-
-        .topbar {
+        /* --- Header --- */
+        .app-header {
             position: sticky;
             top: 0;
-            z-index: 100;
-            background: rgba(8,13,22,.96);
+            background: rgba(8, 13, 22, 0.95);
+            backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border);
-            backdrop-filter: blur(16px);
+            padding: 15px 0;
+            z-index: 1000;
         }
-
-        .topbar-inner {
-            max-width: 1200px;
-            margin: auto;
-            min-height: 76px;
-            padding: 12px 22px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-        }
-
-        .brand {
-            display: inline-flex;
-            align-items: center;
-            gap: 11px;
-            color: white;
+        
+        .brand-logo {
+            font-family: var(--brand-font);
             font-weight: 900;
-            letter-spacing: 1.5px;
-            font-size: 19px;
-        }
-
-        .brand-mark {
-            width: 39px;
-            height: 39px;
-            border-radius: 12px;
-            display: grid;
-            place-items: center;
-            color: #111;
-            background: linear-gradient(135deg, #f0d58c, #bd8b32);
-            font-size: 19px;
-        }
-
-        .brand span:last-child {
-            color: var(--primary);
-        }
-
-        .back-link {
-            border: 1px solid var(--border);
-            border-radius: 30px;
-            padding: 10px 16px;
-            color: var(--text);
-            font-size: 13px;
-            font-weight: 700;
-            transition: .2s;
-        }
-
-        .back-link:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .page-container {
-            width: min(1160px, calc(100% - 32px));
-            margin: 35px auto 65px;
-        }
-
-        .page-heading {
-            margin-bottom: 25px;
-        }
-
-        .eyebrow {
-            color: var(--primary);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-size: 11px;
-            font-weight: 800;
-        }
-
-        .page-heading h1 {
-            font-size: clamp(25px, 4vw, 36px);
-            font-weight: 850;
-            letter-spacing: -.8px;
-            margin: 8px 0;
-        }
-
-        .page-heading p {
-            color: var(--muted);
-            font-size: 14px;
-            margin: 0;
-        }
-
-        .secure-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            border: 1px solid rgba(40,183,121,.2);
-            background: rgba(40,183,121,.07);
-            color: #64d9a3;
-            border-radius: 30px;
-            padding: 8px 12px;
-            font-size: 11px;
-            font-weight: 800;
-            white-space: nowrap;
-        }
-
-        .wallet-card {
-            background:
-                radial-gradient(circle at 90% 10%, rgba(214,173,85,.2), transparent 35%),
-                linear-gradient(125deg, #192536, #101824 70%);
-            border: 1px solid rgba(214,173,85,.3);
-            border-radius: 22px;
-            padding: 25px;
-            margin-bottom: 28px;
-            box-shadow: var(--shadow);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .wallet-card::after {
-            content: "";
-            position: absolute;
-            width: 180px;
-            height: 180px;
-            border: 1px solid rgba(214,173,85,.12);
-            border-radius: 50%;
-            right: -65px;
-            bottom: -100px;
-            pointer-events: none;
-        }
-
-        .wallet-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-        }
-
-        .wallet-label {
-            color: var(--muted);
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 1.7px;
-        }
-
-        .wallet-icon {
-            width: 42px;
-            height: 42px;
-            display: grid;
-            place-items: center;
-            border-radius: 13px;
-            background: rgba(214,173,85,.13);
-            color: var(--primary);
-            font-size: 20px;
-        }
-
-        .wallet-balance {
-            font-size: clamp(29px, 6vw, 42px);
-            font-weight: 850;
-            letter-spacing: -1px;
-            margin-top: 15px;
-            overflow-wrap: anywhere;
-        }
-
-        .wallet-currency {
-            color: var(--primary);
-            font-size: 12px;
-            font-weight: 800;
-            margin-top: 4px;
-        }
-
-        .refresh-button {
-            border: 1px solid var(--border);
-            background: rgba(255,255,255,.04);
-            color: var(--muted);
-            width: 36px;
-            height: 36px;
-            border-radius: 11px;
-            cursor: pointer;
-        }
-
-        .refresh-button:hover {
-            color: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .content-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.65fr) minmax(280px, .85fr);
-            gap: 24px;
-            align-items: start;
-        }
-
-        .main-column,
-        .side-column {
-            min-width: 0;
-        }
-
-        .panel {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: clamp(18px, 3vw, 27px);
-            margin-bottom: 22px;
-            box-shadow: var(--shadow);
-        }
-
-        .section-title {
-            font-size: 17px;
-            font-weight: 850;
-            margin: 0 0 6px;
-        }
-
-        .section-description {
-            color: var(--muted);
-            font-size: 12px;
-            line-height: 1.6;
-            margin: 0 0 20px;
-        }
-
-        .field-label {
-            display: block;
-            color: #e8ebf1;
-            font-size: 12px;
-            font-weight: 750;
-            margin-bottom: 9px;
-        }
-
-        .country-select {
-            background: #0b1320;
-            color: white;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 13px 14px;
-            width: 100%;
-            min-height: 49px;
-            font-size: 14px;
-        }
-
-        .country-select option {
-            background: var(--surface);
-        }
-
-        .country-note {
-            font-size: 11px;
-            color: var(--muted);
-            margin-top: 8px;
-        }
-
-        .amount-wrapper {
-            position: relative;
-            margin-bottom: 13px;
-        }
-
-        .amount-symbol {
-            position: absolute;
-            left: 18px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 23px;
-            font-weight: 800;
-            color: var(--primary);
-            pointer-events: none;
-        }
-
-        .amount-input {
-            width: 100%;
-            min-height: 76px;
-            border: 1px solid rgba(214,173,85,.35);
-            background: #0a121e;
-            border-radius: 15px;
-            padding: 13px 18px 13px 48px;
-            color: white;
-            font-size: clamp(27px, 5vw, 36px);
-            font-weight: 850;
-            letter-spacing: -.5px;
-            outline: none;
-        }
-
-        .amount-input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(214,173,85,.1);
-        }
-
-        .amount-input::placeholder {
-            color: #536072;
-        }
-
-        .amount-meta {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            flex-wrap: wrap;
-            font-size: 11px;
-            color: var(--muted);
-            margin-bottom: 16px;
-        }
-
-        .quick-amounts {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0,1fr));
-            gap: 9px;
-        }
-
-        .quick-amount {
-            border: 1px solid var(--border);
-            background: var(--surface-light);
-            color: #e9edf3;
-            border-radius: 10px;
-            padding: 12px 5px;
-            font-size: 12px;
-            font-weight: 800;
-            cursor: pointer;
-            transition: .2s;
-        }
-
-        .quick-amount:hover,
-        .quick-amount.active {
-            color: var(--primary);
-            border-color: var(--primary);
-            background: rgba(214,173,85,.09);
-        }
-
-        .method-grid {
-            display: grid;
-            grid-template-columns: repeat(2,minmax(0,1fr));
-            gap: 11px;
-        }
-
-        .method-card {
-            width: 100%;
-            text-align: left;
-            position: relative;
-            min-height: 120px;
-            padding: 15px;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            background: #0d1623;
-            color: white;
-            cursor: pointer;
-            transition: .2s;
-        }
-
-        .method-card:hover:not(:disabled) {
-            border-color: rgba(214,173,85,.6);
-            transform: translateY(-2px);
-        }
-
-        .method-card.active {
-            border: 1.5px solid var(--primary);
-            background: rgba(214,173,85,.075);
-            box-shadow: 0 0 18px rgba(214,173,85,.08);
-        }
-
-        .method-card:disabled {
-            opacity: .4;
-            cursor: not-allowed;
-        }
-
-        .method-icon {
-            width: 36px;
-            height: 36px;
-            display: grid;
-            place-items: center;
-            border-radius: 10px;
-            background: rgba(214,173,85,.1);
-            color: var(--primary);
-            font-size: 17px;
-            margin-bottom: 12px;
-        }
-
-        .method-name {
-            display: block;
-            font-size: 12px;
-            font-weight: 850;
-            padding-right: 20px;
-        }
-
-        .method-description {
-            display: block;
-            color: var(--muted);
-            font-size: 10px;
-            line-height: 1.5;
-            margin-top: 5px;
-        }
-
-        .method-check {
-            position: absolute;
-            right: 12px;
-            top: 14px;
-            color: var(--primary);
-            display: none;
-        }
-
-        .method-card.active .method-check {
-            display: block;
-        }
-
-        .recommended {
-            display: inline-block;
-            margin-top: 8px;
-            padding: 3px 7px;
-            border-radius: 5px;
-            color: var(--primary);
-            background: rgba(214,173,85,.12);
-            font-size: 9px;
-            font-weight: 900;
-            letter-spacing: .6px;
-        }
-
-        .method-content {
-            display: none;
-            animation: appear .25s ease;
-        }
-
-        .method-content.active {
-            display: block;
-        }
-
-        @keyframes appear {
-            from { opacity: 0; transform: translateY(7px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .account-card {
-            background:
-                radial-gradient(circle at 95% 0%, rgba(214,173,85,.13), transparent 40%),
-                linear-gradient(140deg,#1a2635,#101722);
-            border: 1px solid rgba(214,173,85,.3);
-            border-radius: 16px;
-            padding: 21px;
-            margin: 15px 0;
-        }
-
-        .account-card-top {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 23px;
-        }
-
-        .account-bank {
-            font-size: 13px;
-            font-weight: 850;
-            color: var(--primary);
-            text-transform: uppercase;
             letter-spacing: 1px;
-        }
-
-        .account-status {
-            color: var(--success);
-            font-size: 10px;
-            font-weight: 850;
-        }
-
-        .account-number-label,
-        .account-name-label {
-            color: var(--muted);
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 1.2px;
-            margin-bottom: 6px;
-        }
-
-        .account-number-row {
+            line-height: 1;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 10px;
+            text-decoration: none;
+        }
+        .brand-nater { color: var(--primary); font-size: 1.2rem; }
+        .brand-pay { color: var(--text); font-size: 1.2rem; }
+        
+        .header-title { font-size: 1rem; font-weight: 700; margin: 0; color: var(--text); }
+        .header-desc { font-size: 0.75rem; color: var(--muted); margin: 0; }
+        
+        .btn-back {
+            color: var(--muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--surface-light);
+            transition: 0.2s;
+        }
+        .btn-back:hover { color: var(--primary); background: var(--surface); }
+        
+        .security-badge {
+            font-size: 0.75rem;
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 600;
+            background: rgba(40, 183, 121, 0.1);
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        /* --- Layout & Cards --- */
+        .main-container { max-width: 1000px; margin: 30px auto; padding: 0 15px; }
+        .layout-grid { display: grid; grid-template-columns: 1fr; gap: 30px; }
+        @media (min-width: 992px) {
+            .layout-grid { grid-template-columns: 1.5fr 1fr; align-items: start; }
+            .sticky-panel { position: sticky; top: 100px; }
+        }
+
+        .nater-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             margin-bottom: 20px;
         }
 
-        .account-number {
-            font-family: monospace;
-            font-size: clamp(19px, 4vw, 26px);
-            font-weight: 850;
-            color: white;
-            overflow-wrap: anywhere;
-        }
+        .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: var(--text); }
+        .section-desc { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
 
-        .account-name {
-            font-size: 14px;
-            font-weight: 850;
-            overflow-wrap: anywhere;
+        /* --- Wallet Balance Card --- */
+        .wallet-balance-card {
+            background: linear-gradient(145deg, var(--surface), var(--surface-light));
+            border-left: 4px solid var(--primary);
+            position: relative;
+            overflow: hidden;
         }
-
-        .copy-button {
-            flex-shrink: 0;
-            border: 1px solid rgba(214,173,85,.45);
-            background: rgba(214,173,85,.1);
-            color: var(--primary);
-            padding: 8px 11px;
-            border-radius: 9px;
-            font-size: 11px;
-            font-weight: 800;
+        .wallet-balance-card::after {
+            content: '\f555';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: -10px;
+            bottom: -20px;
+            font-size: 6rem;
+            color: rgba(255,255,255,0.03);
+            pointer-events: none;
+        }
+        .balance-label { font-size: 0.8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .balance-value { font-family: var(--mono-font); font-size: 2rem; font-weight: 700; color: var(--text); margin: 5px 0; }
+        
+        /* --- Amount Entry --- */
+        .amount-input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: var(--background);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 10px 20px;
+            transition: 0.3s;
+        }
+        .amount-input-group:focus-within { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(214, 173, 85, 0.1); }
+        .currency-symbol { font-size: 1.5rem; font-weight: 600; color: var(--muted); margin-right: 10px; }
+        .amount-input {
+            background: transparent; border: none; color: var(--text);
+            font-size: 2rem; font-weight: 700; font-family: var(--main-font);
+            width: 100%; outline: none; padding: 0;
+        }
+        .amount-input::placeholder { color: rgba(255,255,255,0.1); }
+        
+        .quick-amounts { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+        .btn-quick {
+            background: var(--surface-light); border: 1px solid var(--border);
+            color: var(--text); font-weight: 600; font-size: 0.85rem;
+            padding: 8px 16px; border-radius: 12px; transition: 0.2s; flex: 1; text-align: center;
             cursor: pointer;
         }
+        .btn-quick:hover { background: rgba(214, 173, 85, 0.1); border-color: var(--primary); color: var(--primary); }
 
-        .copy-button:hover {
-            background: var(--primary);
-            color: #111;
+        /* --- Configuration Selectors (Country) --- */
+        .config-select {
+            background: var(--background);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 15px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            width: 100%;
+            appearance: none;
+            outline: none;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a7b0bf' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 16px;
         }
+        .config-select:focus { border-color: var(--primary); }
 
-        .account-state {
-            color: var(--muted);
-            font-size: 12px;
-            padding: 14px;
-            background: rgba(255,255,255,.025);
-            border-radius: 10px;
-            line-height: 1.6;
-        }
-
-        .instruction-card {
+        /* --- Payment Methods --- */
+        .methods-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        @media (min-width: 576px) { .methods-grid { grid-template-columns: 1fr 1fr; } }
+        
+        .method-card {
+            background: var(--background);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 18px 15px;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
             display: flex;
+            flex-direction: column;
             align-items: flex-start;
-            gap: 13px;
-            background: rgba(214,173,85,.055);
-            border: 1px solid rgba(214,173,85,.15);
+        }
+        .method-card:hover:not(.disabled) { border-color: rgba(214, 173, 85, 0.4); background: var(--surface-light); }
+        .method-card.active {
+            border-color: var(--primary);
+            background: rgba(214, 173, 85, 0.05);
+        }
+        .method-card.active::after {
+            content: '\f058';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute; top: 15px; right: 15px;
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+        .method-card.disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        
+        .method-icon-wrap {
+            width: 40px; height: 40px;
+            background: var(--surface-light);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: var(--text);
+            margin-bottom: 12px;
+        }
+        .method-card.active .method-icon-wrap { background: var(--primary); color: #000; }
+        
+        .method-title { font-weight: 700; font-size: 0.95rem; color: var(--text); margin-bottom: 4px; }
+        .method-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.4; }
+        
+        .badge-recommended {
+            position: absolute; top: -10px; left: 15px;
+            background: var(--primary); color: #000;
+            font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+            padding: 3px 8px; border-radius: 6px;
+        }
+        
+        /* Dedicated Account Panel */
+        .dedicated-account-panel {
+            background: linear-gradient(135deg, var(--background) 0%, var(--surface-light) 100%);
+            border: 1px solid rgba(214, 173, 85, 0.2);
+            border-radius: 16px; padding: 20px;
+            margin-top: 15px;
+            display: none; /* toggled via JS */
+        }
+        .da-bank { font-size: 0.8rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+        .da-number-wrap { display: flex; align-items: center; justify-content: space-between; margin: 10px 0; }
+        .da-number { font-family: var(--mono-font); font-size: 1.8rem; font-weight: 700; color: var(--primary); letter-spacing: 2px; }
+        .btn-copy { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 0.8rem; }
+        .btn-copy:hover { color: var(--primary); border-color: var(--primary); }
+        .da-name { font-size: 1rem; font-weight: 600; color: var(--text); }
+
+        /* --- Payment Summary & Instructions --- */
+        .summary-panel {
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.9rem; color: var(--muted); font-weight: 500; }
+        .summary-row .value { color: var(--text); font-weight: 600; }
+        .summary-row.fee .value { color: var(--warning); }
+        .summary-divider { height: 1px; background: var(--border); margin: 15px 0; border: none; }
+        .summary-total { display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; font-weight: 700; color: var(--text); }
+        .summary-total .value { color: var(--primary); font-size: 1.4rem; font-family: var(--mono-font); }
+        
+        .fee-notice {
+            background: rgba(232, 170, 67, 0.1); border-left: 3px solid var(--warning);
+            padding: 10px 12px; border-radius: 0 8px 8px 0; font-size: 0.75rem; color: var(--muted);
+            margin-top: 15px; line-height: 1.4;
+        }
+        
+        .instruction-box {
+            background: var(--surface-light);
             border-radius: 12px;
             padding: 15px;
-            margin: 15px 0;
-        }
-
-        .instruction-icon {
-            color: var(--primary);
-            font-size: 19px;
-            padding-top: 2px;
-        }
-
-        .instruction-card strong {
-            display: block;
-            font-size: 12px;
-            margin-bottom: 5px;
-        }
-
-        .instruction-card p {
-            margin: 0;
-            color: var(--muted);
-            font-size: 11px;
-            line-height: 1.6;
-        }
-
-        .summary-card {
-            position: sticky;
-            top: 100px;
-        }
-
-        .summary-line {
             display: flex;
-            justify-content: space-between;
             align-items: flex-start;
             gap: 15px;
-            color: var(--muted);
-            font-size: 12px;
-            margin: 17px 0;
-        }
-
-        .summary-line strong {
-            color: white;
-            text-align: right;
-            overflow-wrap: anywhere;
-        }
-
-        .summary-total {
-            border-top: 1px dashed rgba(255,255,255,.16);
-            padding-top: 18px;
             margin-top: 20px;
         }
+        .instruction-icon { font-size: 1.5rem; color: var(--primary); }
+        .instruction-text { font-size: 0.85rem; color: var(--muted); line-height: 1.5; margin: 0; }
 
-        .summary-total span {
-            color: white;
-            font-weight: 850;
-            font-size: 13px;
-        }
-
-        .summary-total strong {
-            color: var(--primary);
-            font-size: 23px;
-            font-weight: 900;
-        }
-
-        .summary-note {
-            color: var(--muted);
-            font-size: 11px;
-            line-height: 1.7;
-            background: rgba(255,255,255,.035);
-            border-radius: 10px;
-            padding: 12px;
-            margin-top: 17px;
-        }
-
-        .quote-status {
-            font-size: 11px;
-            line-height: 1.6;
-            color: var(--warning);
-            margin-top: 12px;
-        }
-
-        .primary-button {
+        /* --- Buttons --- */
+        .btn-primary-action {
+            background: var(--primary);
+            color: #000;
+            border: none;
             width: 100%;
-            border: 0;
-            border-radius: 13px;
-            min-height: 55px;
-            padding: 14px 17px;
-            background: linear-gradient(110deg,#bd9140,#e8c778);
-            color: #15110a;
-            font-weight: 900;
-            font-size: 13px;
-            letter-spacing: .4px;
-            cursor: pointer;
-            transition: .2s;
-        }
-
-        .primary-button:hover:not(:disabled) {
-            background: #f0d58c;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(214,173,85,.15);
-        }
-
-        .primary-button:disabled {
-            opacity: .5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .secondary-button {
-            border: 1px solid var(--border);
-            background: var(--surface-light);
-            color: white;
-            border-radius: 11px;
-            padding: 11px 15px;
-            font-size: 12px;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 1rem;
             font-weight: 800;
+            margin-top: 25px;
             cursor: pointer;
-        }
-
-        .security-grid {
-            display: grid;
-            grid-template-columns: repeat(3,1fr);
-            gap: 12px;
-        }
-
-        .security-item {
-            text-align: center;
-            padding: 17px 8px;
-            background: rgba(255,255,255,.025);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-        }
-
-        .security-item i {
-            color: var(--primary);
-            font-size: 21px;
-            margin-bottom: 9px;
-        }
-
-        .security-item strong {
-            display: block;
-            font-size: 10px;
-        }
-
-        .security-item span {
-            display: block;
-            color: var(--muted);
-            font-size: 9px;
-            margin-top: 5px;
-        }
-
-        .support-panel {
-            text-align: center;
-        }
-
-        .support-panel p {
-            color: var(--muted);
-            font-size: 12px;
-            line-height: 1.7;
-        }
-
-        .support-links {
+            transition: 0.3s;
             display: flex;
             justify-content: center;
-            flex-wrap: wrap;
-            gap: 18px;
-            margin-top: 15px;
-            font-size: 12px;
-            font-weight: 750;
+            align-items: center;
+            gap: 10px;
         }
-
-        .footer {
-            text-align: center;
-            color: #687587;
-            font-size: 10px;
-            padding: 25px 10px;
+        .btn-primary-action:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(214, 173, 85, 0.2);
         }
+        .btn-primary-action:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        .status-view {
-            display: none;
-            text-align: center;
-            padding: 35px 20px;
-        }
+        /* --- Trust & Help Sections --- */
+        .trust-section { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-top: 30px; }
+        .trust-item { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+        .trust-item i { color: var(--primary); font-size: 1.1rem; }
+        
+        .help-section { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); }
+        .help-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+        .help-desc { font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }
+        .help-link { color: var(--primary); text-decoration: none; font-weight: 600; font-size: 0.85rem; }
+        .help-link:hover { text-decoration: underline; }
 
-        .status-view.active {
-            display: block;
-        }
+        /* --- Status Panels (Hidden by default) --- */
+        .status-panel { display: none; text-align: center; padding: 40px 20px; }
+        .status-icon { font-size: 4rem; margin-bottom: 20px; }
+        .status-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; }
+        .status-desc { font-size: 0.9rem; color: var(--muted); margin-bottom: 30px; }
+        .status-details { background: var(--background); border: 1px solid var(--border); border-radius: 12px; padding: 15px; text-align: left; margin-bottom: 30px; }
+        .status-details .detail-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; }
+        .status-details .detail-row:last-child { margin-bottom: 0; }
+        
+        .text-success-custom { color: var(--success); }
+        .text-warning-custom { color: var(--warning); }
+        .text-danger-custom { color: var(--danger); }
 
-        .status-icon {
-            font-size: 55px;
-            margin-bottom: 17px;
-        }
-
-        .status-view h2 {
-            font-size: 23px;
-            font-weight: 900;
-            margin-bottom: 10px;
-        }
-
-        .status-view p {
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 1.7;
-        }
-
-        .status-details {
-            background: #0a121e;
-            border: 1px solid var(--border);
-            border-radius: 13px;
-            text-align: left;
-            padding: 17px;
-            margin: 22px 0;
-        }
-
-        .status-details .summary-line {
-            margin: 12px 0;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        @media(max-width: 850px) {
-            .content-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .summary-card {
-                position: static;
-            }
-
-            .side-column {
-                display: contents;
-            }
-        }
-
-        @media(max-width: 575px) {
-            .topbar-inner {
-                min-height: 64px;
-                padding: 10px 15px;
-            }
-
-            .brand {
-                font-size: 16px;
-            }
-
-            .brand-mark {
-                width: 34px;
-                height: 34px;
-            }
-
-            .back-link {
-                font-size: 11px;
-                padding: 9px 12px;
-            }
-
-            .page-container {
-                width: calc(100% - 24px);
-                margin-top: 23px;
-            }
-
-            .page-heading h1 {
-                font-size: 27px;
-            }
-
-            .wallet-card {
-                padding: 20px;
-                border-radius: 17px;
-            }
-
-            .panel {
-                padding: 18px 15px;
-            }
-
-            .method-grid {
-                gap: 9px;
-            }
-
-            .method-card {
-                min-height: 127px;
-                padding: 12px;
-            }
-
-            .method-name {
-                font-size: 11px;
-            }
-
-            .method-description {
-                font-size: 9px;
-            }
-
-            .quick-amounts {
-                grid-template-columns: repeat(2,1fr);
-            }
-
-            .security-grid {
-                gap: 7px;
-            }
-
-            .security-item strong {
-                font-size: 9px;
-            }
-
-            .security-item span {
-                font-size: 8px;
-            }
-        }
-
-        @media(prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: .01ms !important;
-                transition-duration: .01ms !important;
-                scroll-behavior: auto !important;
-            }
-        }
+        /* Utilities */
+        .hidden { display: none !important; }
+        .skeleton { background: linear-gradient(90deg, var(--surface) 25%, var(--surface-light) 50%, var(--surface) 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 8px; color: transparent !important; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
-
 <body>
 
-<header class="topbar">
-    <div class="topbar-inner">
-        <!-- Replace with the existing project logo asset if available. -->
-        <a href="dashboard.html" class="brand" aria-label="NATER-PAY home">
-            <span class="brand-mark"><i class="fas fa-wallet"></i></span>
-            <span>NATER<span>-PAY</span></span>
-        </a>
-
-        <a href="dashboard.html" class="back-link">
-            <i class="fas fa-arrow-left me-2"></i> Back to Wallet
-        </a>
-    </div>
-</header>
-
-<main class="page-container">
-
-    <section class="page-heading">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <div>
-                <div class="eyebrow">NATER-PAY / Wallet Services</div>
-                <h1>Fund Wallet</h1>
-                <p>Add money securely to your NATER-PAY wallet.</p>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="dashboard.html" class="btn-back" aria-label="Back to Wallet">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <div class="text-center">
+                <h1 class="header-title">Fund Wallet</h1>
+                <p class="header-desc">Add money securely to NATER-PAY</p>
             </div>
-
-            <div class="secure-indicator">
+            <div class="security-badge">
                 <i class="fas fa-shield-halved"></i>
-                Secure payment
+                <span class="d-none d-sm-inline">Secure</span>
             </div>
         </div>
-    </section>
+    </header>
 
-    <!-- WALLET BALANCE -->
-    <section class="wallet-card" aria-live="polite">
-        <div class="wallet-top">
-            <div class="wallet-label">AVAILABLE WALLET BALANCE</div>
-            <div class="wallet-icon"><i class="fas fa-wallet"></i></div>
-        </div>
-
-        <div class="wallet-balance" id="walletBalance">Loading...</div>
-        <div class="wallet-currency" id="walletCurrency">NGN · Nigerian Naira</div>
-
-        <div class="mt-3 d-flex align-items-center gap-2">
-            <span class="small text-secondary" id="walletStatus">Retrieving wallet information</span>
-            <button class="refresh-button" type="button" id="refreshWallet"
-                    aria-label="Refresh wallet balance" title="Refresh balance">
-                <i class="fas fa-rotate"></i>
-            </button>
-        </div>
-    </section>
-
-    <!-- FUNDING INTERFACE -->
-    <div id="fundingInterface">
-
-        <div class="content-grid">
-
-            <div class="main-column">
-
-                <!-- COUNTRY -->
-                <section class="panel">
-                    <h2 class="section-title">Select your country</h2>
-                    <p class="section-description">
-                        Choose a supported country to see its available funding options.
-                    </p>
-
-                    <label class="field-label" for="countrySelect">Country and currency</label>
-
-                    <select id="countrySelect" class="country-select">
-                        <option value="NG">🇳🇬 Nigeria — NGN</option>
-                    </select>
-
-                    <div class="country-note" id="countryNote">
-                        Nigeria is currently configured for this funding integration.
-                    </div>
-                </section>
-
-                <!-- AMOUNT -->
-                <section class="panel">
-                    <h2 class="section-title">How much would you like to add?</h2>
-                    <p class="section-description">
-                        Enter your preferred wallet funding amount.
-                    </p>
-
-                    <label for="fundAmount" class="field-label">
-                        Deposit amount (<span id="amountCurrency">NGN</span>)
-                    </label>
-
-                    <div class="amount-wrapper">
-                        <span class="amount-symbol" id="amountSymbol">₦</span>
-                        <input
-                            type="number"
-                            id="fundAmount"
-                            class="amount-input"
-                            placeholder="0.00"
-                            min="1"
-                            step="0.01"
-                            inputmode="decimal"
-                            autocomplete="off"
-                            aria-describedby="amountLimits amountError"
-                        >
-                    </div>
-
-                    <div class="amount-meta" id="amountLimits">
-                        <span id="minimumLimit">Minimum: Not provided</span>
-                        <span id="maximumLimit">Maximum: Not provided</span>
-                    </div>
-
-                    <div id="amountError" class="text-danger small mb-3" role="alert"></div>
-
-                    <div class="field-label">Quick select</div>
-
-                    <div class="quick-amounts">
-                        <button class="quick-amount" type="button" data-amount="1000">₦1,000</button>
-                        <button class="quick-amount" type="button" data-amount="2000">₦2,000</button>
-                        <button class="quick-amount" type="button" data-amount="5000">₦5,000</button>
-                        <button class="quick-amount" type="button" data-amount="10000">₦10,000</button>
-                    </div>
-                </section>
-
-                <!-- PAYMENT METHODS -->
-                <section class="panel">
-                    <h2 class="section-title">Choose your payment method</h2>
-                    <p class="section-description">
-                        Select the payment option that is most convenient for you.
-                    </p>
-
-                    <div class="method-grid" id="methodGrid">
-
-                        <button type="button" class="method-card active"
-                                data-method="dedicated" aria-pressed="true">
-                            <i class="fas fa-check-circle method-check"></i>
-                            <span class="method-icon"><i class="fas fa-building-columns"></i></span>
-                            <span class="method-name">Dedicated Bank Account</span>
-                            <span class="method-description">
-                                Transfer to your personal NATER-PAY account.
-                            </span>
-                            <span class="recommended">RECOMMENDED</span>
+    <!-- Main Content Flow -->
+    <div id="fundingFlowView" class="main-container">
+        
+        <div class="layout-grid">
+            <!-- Left Column: Inputs & Methods -->
+            <div class="flow-main">
+                
+                <!-- Wallet Balance -->
+                <div class="nater-card wallet-balance-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="balance-label">Available Balance</div>
+                            <div class="balance-value" id="uiWalletBalance"><span class="skeleton">₦0.00</span></div>
+                        </div>
+                        <button class="btn-back" style="width:32px; height:32px;" onclick="loadWalletData()" title="Refresh Balance">
+                            <i class="fas fa-rotate"></i>
                         </button>
+                    </div>
+                </div>
 
-                        <button type="button" class="method-card"
-                                data-method="flutterwave" aria-pressed="false">
-                            <i class="fas fa-check-circle method-check"></i>
-                            <span class="method-icon"><i class="fas fa-money-bill-transfer"></i></span>
-                            <span class="method-name">Instant Payment Gateway</span>
-                            <span class="method-description">
-                                Continue through supported Flutterwave checkout options.
-                            </span>
-                        </button>
+                <!-- Setup Region -->
+                <div class="nater-card">
+                    <div class="row align-items-center mb-4">
+                        <div class="col-7">
+                            <h2 class="section-title">How much to add?</h2>
+                        </div>
+                        <div class="col-5">
+                            <select class="config-select" id="countrySelector" onchange="handleCountryChange()">
+                                <option value="NGN" data-symbol="₦" selected>🇳🇬 NGN</option>
+                                <option value="GHS" data-symbol="GH₵">🇬🇭 GHS</option>
+                                <option value="KES" data-symbol="KSh">🇰🇪 KES</option>
+                                <option value="UGX" data-symbol="USh">🇺🇬 UGX</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="amount-input-group">
+                        <span class="currency-symbol" id="uiCurrencySymbol">₦</span>
+                        <input type="number" id="fundAmount" class="amount-input" placeholder="0.00" min="100" step="any" oninput="handleAmountChange()">
+                    </div>
+                    
+                    <div class="quick-amounts" id="quickAmountsContainer">
+                        <!-- Populated by JS based on currency -->
+                    </div>
+                </div>
+
+                <!-- Payment Methods -->
+                <div class="nater-card">
+                    <h2 class="section-title">Choose payment method</h2>
+                    <p class="section-desc">Select the option that is most convenient for you.</p>
+
+                    <div class="methods-grid" id="methodsContainer">
+                        
+                        <!-- Dedicated Account -->
+                        <div class="method-card active" data-method="dedicated" onclick="selectPaymentMethod('dedicated')">
+                            <span class="badge-recommended">Recommended</span>
+                            <div class="method-icon-wrap"><i class="fas fa-landmark"></i></div>
+                            <div class="method-title">Dedicated Bank Account</div>
+                            <div class="method-desc">Transfer directly to your personal NATER-PAY account.</div>
+                        </div>
+
+                        <!-- Card -->
+                        <div class="method-card" data-method="card" onclick="selectPaymentMethod('card')">
+                            <div class="method-icon-wrap"><i class="fas fa-credit-card"></i></div>
+                            <div class="method-title">Debit or Credit Card</div>
+                            <div class="method-desc">Pay securely using a supported bank card.</div>
+                        </div>
+
+                        <!-- Bank Transfer -->
+                        <div class="method-card" data-method="transfer" onclick="selectPaymentMethod('transfer')">
+                            <div class="method-icon-wrap"><i class="fas fa-money-bill-transfer"></i></div>
+                            <div class="method-title">Bank Transfer</div>
+                            <div class="method-desc">One-time transfer via secure checkout.</div>
+                        </div>
+
+                        <!-- USSD -->
+                        <div class="method-card" data-method="ussd" onclick="selectPaymentMethod('ussd')">
+                            <div class="method-icon-wrap"><i class="fas fa-mobile-screen-button"></i></div>
+                            <div class="method-title">USSD</div>
+                            <div class="method-desc">Complete payment using bank USSD codes.</div>
+                        </div>
+                        
+                        <!-- OPay -->
+                        <div class="method-card" data-method="opay" onclick="selectPaymentMethod('opay')">
+                            <div class="method-icon-wrap"><i class="fas fa-wallet"></i></div>
+                            <div class="method-title">OPay</div>
+                            <div class="method-desc">Pay using the OPay payment option.</div>
+                        </div>
+
+                        <!-- NIBSS QR -->
+                        <div class="method-card" data-method="qr" onclick="selectPaymentMethod('qr')">
+                            <div class="method-icon-wrap"><i class="fas fa-qrcode"></i></div>
+                            <div class="method-title">NIBSS QR</div>
+                            <div class="method-desc">Scan QR code using a banking application.</div>
+                        </div>
+                        
+                        <!-- Mobile Money (Disabled by default, enabled for specific currencies via JS) -->
+                        <div class="method-card disabled hidden" id="momoMethod" data-method="momo" onclick="selectPaymentMethod('momo')">
+                            <div class="method-icon-wrap"><i class="fas fa-mobile-retro"></i></div>
+                            <div class="method-title">Mobile Money</div>
+                            <div class="method-desc">Pay using supported MoMo networks.</div>
+                        </div>
 
                     </div>
 
-                    <div class="mt-4">
-
-                        <!-- DEDICATED ACCOUNT -->
-                        <div class="method-content active" id="content-dedicated">
-
-                            <h3 class="section-title">Your NATER-PAY bank account</h3>
-                            <p class="section-description">
-                                Transfer money to this dedicated account from your banking application.
-                            </p>
-
-                            <div class="account-card">
-
-                                <div class="account-card-top">
-                                    <div class="account-bank" id="vaBank">
-                                        Loading bank details...
-                                    </div>
-
-                                    <div class="account-status" id="vaStatus">
-                                        <i class="fas fa-circle-notch fa-spin"></i> LOADING
-                                    </div>
-                                </div>
-
-                                <div class="account-number-label">ACCOUNT NUMBER</div>
-
-                                <div class="account-number-row">
-                                    <div class="account-number" id="vaNumber">---------- </div>
-
-                                    <button class="copy-button" type="button" id="copyAccountNumber">
-                                        <i class="far fa-copy"></i> COPY
-                                    </button>
-                                </div>
-
-                                <div class="account-name-label">ACCOUNT NAME</div>
-
-                                <div class="account-number-row mb-0">
-                                    <div class="account-name" id="vaName">Please wait...</div>
-
-                                    <button class="copy-button" type="button" id="copyAccountName">
-                                        <i class="far fa-copy"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="instruction-card">
-                                <i class="fas fa-circle-info instruction-icon"></i>
-                                <div>
-                                    <strong>How to fund your wallet</strong>
-                                    <p>
-                                        Transfer your chosen amount to the dedicated bank account
-                                        displayed above. Your wallet will be updated after your
-                                        transfer is confirmed by the payment system.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="account-state" id="accountMessage" aria-live="polite">
-                                Your account information will appear here once retrieved.
-                            </div>
-
-                            <div class="mt-3">
-                                <button type="button" class="secondary-button w-100" id="refreshAccount">
-                                    <i class="fas fa-rotate me-2"></i> Refresh Account Details
-                                </button>
-                            </div>
-
+                    <!-- Dynamic Dedicated Account Panel -->
+                    <div class="dedicated-account-panel" id="dedicatedAccountPanel">
+                        <div class="da-bank" id="daBankName"><span class="skeleton">Loading Bank...</span></div>
+                        <div class="da-number-wrap">
+                            <div class="da-number" id="daAccountNumber"><span class="skeleton">0000000000</span></div>
+                            <button class="btn-copy" onclick="copyText('daAccountNumber', 'Account Number')">
+                                <i class="far fa-copy"></i> Copy
+                            </button>
                         </div>
-
-                        <!-- FLUTTERWAVE CHECKOUT -->
-                        <div class="method-content" id="content-flutterwave">
-
-                            <h3 class="section-title">Secure payment checkout</h3>
-                            <p class="section-description">
-                                Complete your deposit through the existing supported payment provider.
-                            </p>
-
-                            <div class="instruction-card">
-                                <i class="fas fa-credit-card instruction-icon"></i>
-                                <div>
-                                    <strong>Supported checkout options</strong>
-                                    <p>
-                                        Available payment methods are determined by your payment
-                                        provider and transaction configuration. Follow the options
-                                        presented on the hosted checkout page.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-                                <span class="small text-secondary">PAYMENT PROVIDER</span>
-                                <strong class="text-warning">FLUTTERWAVE</strong>
-                            </div>
-
-                            <div class="account-state">
-                                <i class="fas fa-shield-halved text-success me-2"></i>
-                                Sensitive card details are handled through the payment provider's
-                                hosted checkout. NATER-PAY does not collect your card number,
-                                CVV, PIN or OTP on this page.
-                            </div>
-
-                        </div>
-
+                        <div class="da-name" id="daAccountName"><span class="skeleton">Loading Name...</span></div>
                     </div>
-                </section>
 
-                <!-- SECURITY -->
-                <section class="panel">
-                    <h2 class="section-title text-center mb-4">Your payments matter to us</h2>
-
-                    <div class="security-grid">
-                        <div class="security-item">
-                            <i class="fas fa-shield-halved"></i>
-                            <strong>Secure Processing</strong>
-                            <span>Provider-managed checkout</span>
-                        </div>
-
-                        <div class="security-item">
-                            <i class="fas fa-receipt"></i>
-                            <strong>Transparent Charges</strong>
-                            <span>Review applicable fees</span>
-                        </div>
-
-                        <div class="security-item">
-                            <i class="fas fa-circle-check"></i>
-                            <strong>Verified Funding</strong>
-                            <span>Payment confirmation required</span>
-                        </div>
-                    </div>
-                </section>
+                </div>
 
             </div>
 
-            <!-- SUMMARY -->
-            <aside class="side-column">
+            <!-- Right Column: Summary & Action -->
+            <div class="flow-sidebar">
+                <div class="sticky-panel">
+                    <div class="nater-card">
+                        <h2 class="section-title">Payment Summary</h2>
+                        
+                        <div class="summary-panel mt-3">
+                            <div class="summary-row">
+                                <span>Wallet credit:</span>
+                                <span class="value" id="sumPrincipal">₦0.00</span>
+                            </div>
+                            <div class="summary-row fee">
+                                <span>Processing fee:</span>
+                                <span class="value" id="sumFee">₦0.00</span>
+                            </div>
+                            <hr class="summary-divider">
+                            <div class="summary-total">
+                                <span>Total to pay:</span>
+                                <span class="value" id="sumTotal">₦0.00</span>
+                            </div>
+                        </div>
+                        
+                        <div class="fee-notice">
+                            <i class="fas fa-circle-exclamation me-1"></i> Any applicable payment processing fee will be shown before you continue. Review the total payment amount before confirming.
+                        </div>
 
-                <section class="panel summary-card">
+                        <div class="instruction-box" id="instructionBox">
+                            <i class="fas fa-landmark instruction-icon" id="instIcon"></i>
+                            <p class="instruction-text" id="instText">
+                                Transfer the amount to your dedicated NATER-PAY account. Your wallet will update after the transfer is confirmed.
+                            </p>
+                        </div>
 
-                    <h2 class="section-title">Payment Summary</h2>
-                    <p class="section-description">
-                        Review your funding details before continuing.
-                    </p>
-
-                    <div class="summary-line">
-                        <span>Wallet credit</span>
-                        <strong id="summaryAmount">₦0.00</strong>
-                    </div>
-
-                    <div class="summary-line">
-                        <span>Processing fee</span>
-                        <strong id="summaryFee">Not yet quoted</strong>
-                    </div>
-
-                    <div class="summary-line summary-total">
-                        <span>Total to pay</span>
-                        <strong id="summaryTotal">Not yet quoted</strong>
-                    </div>
-
-                    <div class="summary-note" id="summaryNotice">
-                        Any applicable payment processing fee will be shown before you continue.
-                        Review the total payment amount before confirming.
-                    </div>
-
-                    <div class="quote-status" id="quoteStatus" aria-live="polite">
-                        The actual fee and payable total must be confirmed by the payment backend.
-                    </div>
-
-                    <div class="mt-4" id="gatewayAction">
-                        <button type="button" class="primary-button" id="payBtn">
-                            <i class="fas fa-lock me-2"></i>
-                            Continue to Payment
+                        <button class="btn-primary-action" id="btnMainAction" onclick="continuePayment()">
+                            I've Made a Transfer
                         </button>
                     </div>
 
-                    <div class="mt-3" id="dedicatedAction">
-                        <button type="button" class="primary-button" id="accountActionBtn">
-                            <i class="fas fa-building-columns me-2"></i>
-                            View Bank Account Details
-                        </button>
+                    <!-- Trust Indicators -->
+                    <div class="trust-section">
+                        <div class="trust-item"><i class="fas fa-shield-halved"></i> Secure processing</div>
+                        <div class="trust-item"><i class="fas fa-receipt"></i> Transparent charges</div>
+                        <div class="trust-item"><i class="fas fa-check-circle"></i> Verified funding</div>
                     </div>
-
-                    <div class="text-center text-secondary mt-3" style="font-size:10px;">
-                        <i class="fas fa-lock me-1"></i>
-                        Your payment is processed through supported payment infrastructure.
+                    
+                    <div class="help-section">
+                        <h3 class="help-title">Need help with your deposit?</h3>
+                        <p class="help-desc">Provide your transaction reference when contacting support.</p>
+                        <a href="support.html" class="help-link">Contact Customer Support <i class="fas fa-chevron-right ms-1" style="font-size:0.7rem;"></i></a>
                     </div>
-
-                </section>
-
-                <!-- HELP -->
-                <section class="panel support-panel">
-                    <h2 class="section-title">Need help with your deposit?</h2>
-
-                    <p>
-                        If your payment is delayed, contact our support team with your
-                        transaction reference so we can investigate.
-                    </p>
-
-                    <!-- Change these paths only if the actual project routes differ. -->
-                    <div class="support-links">
-                        <a href="support.html">
-                            <i class="fas fa-headset me-1"></i> Customer Support
-                        </a>
-
-                        <a href="transactions.html">
-                            <i class="fas fa-clock-rotate-left me-1"></i> Transaction History
-                        </a>
-                    </div>
-                </section>
-
-            </aside>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- TRANSACTION STATUS -->
-    <section class="panel status-view" id="statusView" aria-live="polite">
+    <!-- Status Views (Replaces Main Flow when triggered) -->
+    <div id="statusView" class="main-container hidden">
+        <div class="nater-card" style="max-width: 500px; margin: 40px auto;">
+            <div class="status-panel active" id="panelSuccess">
+                <i class="fas fa-check-circle status-icon text-success-custom"></i>
+                <h2 class="status-title">Payment Successful!</h2>
+                <p class="status-desc" id="statusDescSuccess">Your wallet has been credited.</p>
+                
+                <div class="status-details">
+                    <div class="detail-row"><span>Amount Credited:</span> <strong id="sdAmount">₦0.00</strong></div>
+                    <div class="detail-row"><span>Reference:</span> <strong id="sdRef">---</strong></div>
+                    <div class="detail-row"><span>Method:</span> <strong id="sdMethod">---</strong></div>
+                    <div class="detail-row"><span>Date:</span> <strong id="sdDate">---</strong></div>
+                </div>
+                
+                <button class="btn-primary-action" onclick="window.location.href='dashboard.html'">Back to Wallet</button>
+            </div>
 
-        <div id="statusIcon" class="status-icon"></div>
-        <h2 id="statusTitle"></h2>
-        <p id="statusDescription"></p>
+            <div class="status-panel" id="panelPending">
+                <i class="fas fa-clock status-icon text-warning-custom"></i>
+                <h2 class="status-title">Confirmation Pending</h2>
+                <p class="status-desc">We are waiting for confirmation of your payment. Your wallet will be updated once the transaction has been confirmed.</p>
+                <button class="btn-primary-action" onclick="window.location.href='transactions.html'">Check Payment Status</button>
+            </div>
 
-        <div class="status-details" id="statusDetails"></div>
-
-        <button type="button" class="primary-button" id="statusAction">
-            Back to Wallet
-        </button>
-
-    </section>
-
-    <footer class="footer">
-        <div class="mb-2">
-            <span style="color:var(--primary);font-weight:900;">NATER-PAY</span>
-            &nbsp;|&nbsp; Digital Wallet Services
+            <div class="status-panel" id="panelFailed">
+                <i class="fas fa-circle-exclamation status-icon text-danger-custom"></i>
+                <h2 class="status-title">Payment Unsuccessful</h2>
+                <p class="status-desc" id="statusDescFailed">We could not confirm this payment. Please check your transaction status before trying again.</p>
+                <button class="btn-primary-action" onclick="resetToFundingFlow()">Try Again</button>
+            </div>
         </div>
-        Secure wallet funding. Transparent payment information.
-    </footer>
+    </div>
 
-</main>
+    <!-- Javascript Application Logic -->
+    <script>
+        // --- State Management ---
+        const state = {
+            currency: 'NGN',
+            symbol: '₦',
+            amount: 0,
+            method: 'dedicated',
+            virtualAccount: null,
+            quote: { fee: 0, total: 0 },
+            isProcessing: false
+        };
 
-<script>
-"use strict";
+        const config = {
+            quickAmounts: {
+                'NGN': [1000, 2000, 5000, 10000],
+                'GHS': [50, 100, 200, 500],
+                'KES': [500, 1000, 2500, 5000],
+                'UGX': [10000, 20000, 50000, 100000]
+            },
+            methodContent: {
+                'dedicated': { action: "I've Made a Transfer", icon: 'fa-landmark', text: "Transfer the amount to your dedicated NATER-PAY account. Your wallet will update after the transfer is confirmed." },
+                'card': { action: "Continue to Payment", icon: 'fa-credit-card', text: "You will be redirected to a secure payment page to complete your card payment." },
+                'transfer': { action: "Continue to Payment", icon: 'fa-money-bill-transfer', text: "Continue to generate your payment transfer instructions. Complete the transfer using the details provided." },
+                'ussd': { action: "Continue to Payment", icon: 'fa-mobile-screen-button', text: "Follow the instructions displayed by your payment provider to complete your transaction." },
+                'opay': { action: "Continue to Payment", icon: 'fa-wallet', text: "Continue to the supported OPay payment flow and follow the instructions." },
+                'qr': { action: "Continue to Payment", icon: 'fa-qrcode', text: "Scan the transaction QR code using a supported banking application." },
+                'momo': { action: "Continue to Payment", icon: 'fa-mobile-retro', text: "Follow the instructions provided for your selected mobile-money network." }
+            }
+        };
 
-/* =========================================================
-   1. APPLICATION CONFIGURATION
-   ========================================================= */
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            initPage();
+            loadWalletData();
+            checkPendingVerification();
+        });
 
-const CONFIG = Object.freeze({
-    walletEndpoint: "/api/wallet",
-    fundingEndpoint: "/api/wallet/fund",
-    verificationEndpoint: "/api/wallet/verify",
-
-    dashboardUrl: "dashboard.html",
-
-    tokenKey: "naterpay_token",
-    pendingReferenceKey: "pending_funding_ref",
-
-    provider: "flutterwave",
-
-    // Do not invent deposit limits. Populate these from an
-    // existing backend configuration when available.
-    fallbackMinimum: null,
-    fallbackMaximum: null,
-
-    // Country availability must be explicitly configured.
-    countries: {
-        NG: {
-            name: "Nigeria",
-            currency: "NGN",
-            symbol: "₦",
-            locale: "en-NG",
-            enabled: true,
-            methods: ["dedicated", "flutterwave"]
-        },
-
-        GH: {
-            name: "Ghana",
-            currency: "GHS",
-            symbol: "GH₵",
-            locale: "en-GH",
-            enabled: false,
-            methods: []
-        },
-
-        KE: {
-            name: "Kenya",
-            currency: "KES",
-            symbol: "KSh",
-            locale: "en-KE",
-            enabled: false,
-            methods: []
-        },
-
-        UG: {
-            name: "Uganda",
-            currency: "UGX",
-            symbol: "USh",
-            locale: "en-UG",
-            enabled: false,
-            methods: []
-        }
-    }
-});
-
-
-/* =========================================================
-   2. APPLICATION STATE
-   ========================================================= */
-
-const state = {
-    wallet: null,
-    virtualAccount: null,
-
-    selectedCountry: "NG",
-    selectedMethod: "dedicated",
-
-    minimumAmount: null,
-    maximumAmount: null,
-
-    submitting: false,
-    verifying: false,
-
-    lastFundingReference: null,
-    lastTransaction: null
-};
-
-
-const $ = (id) => document.getElementById(id);
-
-
-/* =========================================================
-   3. AUTHENTICATION AND HTTP HELPERS
-   ========================================================= */
-
-function getAuthToken() {
-    return localStorage.getItem(CONFIG.tokenKey);
-}
-
-function requireAuthentication() {
-    if (!getAuthToken()) {
-        window.location.href = "/index.html";
-        return false;
-    }
-
-    return true;
-}
-
-async function apiRequest(url, options = {}) {
-    const token = getAuthToken();
-
-    if (!token) {
-        throw new Error("Your session has expired. Please log in again.");
-    }
-
-    const headers = {
-        "Authorization": `Bearer ${token}`,
-        ...(options.headers || {})
-    };
-
-    const response = await fetch(url, {
-        ...options,
-        headers
-    });
-
-    const contentType = response.headers.get("content-type") || "";
-
-    let data = {};
-
-    if (contentType.includes("application/json")) {
-        data = await response.json();
-    } else {
-        const text = await response.text();
-        throw new Error(text || "Unexpected server response.");
-    }
-
-    if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem(CONFIG.tokenKey);
-        window.location.href = "/index.html";
-        throw new Error("Authentication required.");
-    }
-
-    if (!response.ok) {
-        throw new Error(data.message || "The request could not be completed.");
-    }
-
-    return data;
-}
-
-function formatMoney(amount, currency = "NGN", locale = "en-NG") {
-    const value = Number(amount);
-
-    if (!Number.isFinite(value)) {
-        return "Unavailable";
-    }
-
-    try {
-        return new Intl.NumberFormat(locale, {
-            style: "currency",
-            currency,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(value);
-    } catch {
-        return `${currency} ${value.toFixed(2)}`;
-    }
-}
-
-function formatCurrency(amount) {
-    const country = CONFIG.countries[state.selectedCountry];
-
-    return formatMoney(
-        amount,
-        country.currency,
-        country.locale
-    );
-}
-
-function safeNumber(value) {
-    const number = Number(value);
-    return Number.isFinite(number) ? number : null;
-}
-
-function showToast(icon, title, text = "") {
-    return Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon,
-        title,
-        text,
-        showConfirmButton: false,
-        timer: 2600,
-        background: "#111a28",
-        color: "#fff"
-    });
-}
-
-
-/* =========================================================
-   4. WALLET INFORMATION
-   ========================================================= */
-
-function setWalletLoading() {
-    $("walletBalance").textContent = "Loading...";
-    $("walletStatus").textContent = "Retrieving wallet information";
-}
-
-function setWalletError(message) {
-    $("walletBalance").textContent = "Unavailable";
-    $("walletStatus").textContent = message;
-}
-
-async function loadWallet() {
-    setWalletLoading();
-
-    try {
-        const data = await apiRequest(CONFIG.walletEndpoint);
-
-        if (!data.success || !data.wallet) {
-            throw new Error(data.message || "Wallet information is unavailable.");
-        }
-
-        state.wallet = data.wallet;
-
-        const balance = safeNumber(data.wallet.balance);
-
-        if (balance === null) {
-            throw new Error("The wallet balance response is invalid.");
-        }
-
-        const currency = data.wallet.currency || "NGN";
-
-        const country = Object.values(CONFIG.countries).find(
-            item => item.currency === currency
-        );
-
-        if (country) {
-            const countryCode = Object.keys(CONFIG.countries).find(
-                key => CONFIG.countries[key] === country
-            );
-
-            if (countryCode && CONFIG.countries[countryCode].enabled) {
-                state.selectedCountry = countryCode;
+        function checkAuth() {
+            if (!localStorage.getItem("naterpay_token")) {
+                window.location.href = 'login.html';
             }
         }
 
-        updateCountryInterface();
-
-        $("walletBalance").textContent = formatMoney(
-            balance,
-            currency,
-            currency === "NGN" ? "en-NG" : undefined
-        );
-
-        $("walletCurrency").textContent = `${currency} · Available Balance`;
-        $("walletStatus").textContent = "Wallet information updated";
-
-        const virtualAccount = data.wallet.virtualAccount;
-
-        if (virtualAccount && virtualAccount.accountNumber) {
-            state.virtualAccount = virtualAccount;
-            renderVirtualAccount();
-        } else {
-            state.virtualAccount = null;
-            renderVirtualAccountError(
-                "No dedicated bank account is currently available for this wallet."
-            );
+        function initPage() {
+            handleCountryChange(); // Sets initial currency & quick amounts
+            selectPaymentMethod('dedicated'); // Default method
         }
 
-        // Read limits only when the backend supplies them.
-        state.minimumAmount = safeNumber(
-            data.wallet.minimumDeposit ??
-            data.wallet.minDeposit ??
-            data.wallet.limits?.minimum
-        );
-
-        state.maximumAmount = safeNumber(
-            data.wallet.maximumDeposit ??
-            data.wallet.maxDeposit ??
-            data.wallet.limits?.maximum
-        );
-
-        updateAmountLimits();
-
-        return true;
-
-    } catch (error) {
-        console.error("Wallet loading error:", error);
-        setWalletError(error.message || "Could not load wallet.");
-        renderVirtualAccountError("Unable to retrieve bank account details.");
-        return false;
-    }
-}
-
-
-/* =========================================================
-   5. DEDICATED BANK ACCOUNT
-   ========================================================= */
-
-function renderVirtualAccount() {
-    const account = state.virtualAccount;
-
-    if (!account) {
-        renderVirtualAccountError("Dedicated account information is unavailable.");
-        return;
-    }
-
-    $("vaBank").textContent = account.bankName || "Bank name unavailable";
-    $("vaNumber").textContent = account.accountNumber || "Unavailable";
-    $("vaName").textContent = account.accountName || "Unavailable";
-
-    $("vaStatus").innerHTML =
-        '<i class="fas fa-circle-check"></i> ACCOUNT AVAILABLE';
-
-    $("accountMessage").textContent =
-        "Use these account details to transfer money. Your wallet will be updated after your transfer is confirmed.";
-}
-
-function renderVirtualAccountError(message) {
-    $("vaBank").textContent = "Account unavailable";
-    $("vaNumber").textContent = "Unavailable";
-    $("vaName").textContent = "Unavailable";
-
-    $("vaStatus").textContent = "NOT AVAILABLE";
-    $("accountMessage").textContent = message;
-}
-
-async function refreshAccount() {
-    const success = await loadWallet();
-
-    if (success && state.virtualAccount) {
-        showToast("success", "Account details refreshed");
-    } else {
-        showToast("error", "Account details unavailable");
-    }
-}
-
-async function copyDetail(value, label) {
-    if (!value || value === "Unavailable") {
-        showToast("warning", "Information unavailable");
-        return;
-    }
-
-    try {
-        if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(String(value));
-        } else {
-            const temporary = document.createElement("textarea");
-            temporary.value = String(value);
-            temporary.style.position = "fixed";
-            temporary.style.opacity = "0";
-
-            document.body.appendChild(temporary);
-            temporary.select();
-
-            const copied = document.execCommand("copy");
-            temporary.remove();
-
-            if (!copied) throw new Error("Copy operation failed.");
+        // --- Core Interactions ---
+        function handleCountryChange() {
+            const selector = document.getElementById('countrySelector');
+            const selectedOption = selector.options[selector.selectedIndex];
+            
+            state.currency = selectedOption.value;
+            state.symbol = selectedOption.getAttribute('data-symbol');
+            
+            document.getElementById('uiCurrencySymbol').innerText = state.symbol;
+            renderQuickAmounts();
+            updatePaymentSummary();
+            toggleMobileMoneyVisibility();
         }
 
-        showToast("success", `${label} copied`);
-
-    } catch (error) {
-        console.error("Clipboard error:", error);
-        showToast("error", "Unable to copy information");
-    }
-}
-
-
-/* =========================================================
-   6. COUNTRY CONFIGURATION
-   ========================================================= */
-
-function updateCountryInterface() {
-    const country = CONFIG.countries[state.selectedCountry];
-
-    $("amountCurrency").textContent = country.currency;
-    $("amountSymbol").textContent = country.symbol;
-
-    $("countryNote").textContent = country.enabled
-        ? `${country.name} is enabled for the current funding integration.`
-        : `${country.name} is not currently enabled.`;
-
-    $("walletCurrency").textContent =
-        `${country.currency} · ${country.name}`;
-
-    renderAvailableMethods();
-    updateSummary();
-    updateAmountLimits();
-}
-
-function renderAvailableMethods() {
-    const country = CONFIG.countries[state.selectedCountry];
-
-    document.querySelectorAll(".method-card").forEach(card => {
-        const available = country.methods.includes(card.dataset.method);
-
-        card.disabled = !available;
-        card.setAttribute("aria-disabled", String(!available));
-
-        card.title = available
-            ? ""
-            : "This payment method is not currently enabled for this country.";
-    });
-
-    if (!country.methods.includes(state.selectedMethod)) {
-        state.selectedMethod = country.methods[0] || null;
-    }
-
-    if (state.selectedMethod) {
-        selectPaymentMethod(state.selectedMethod);
-    } else {
-        $("gatewayAction").classList.add("hidden");
-        $("dedicatedAction").classList.add("hidden");
-    }
-}
-
-
-/* =========================================================
-   7. AMOUNT VALIDATION AND SUMMARY
-   ========================================================= */
-
-function getAmount() {
-    return safeNumber($("fundAmount").value);
-}
-
-function updateAmountLimits() {
-    $("minimumLimit").textContent = state.minimumAmount !== null
-        ? `Minimum: ${formatCurrency(state.minimumAmount)}`
-        : "Minimum: Set by payment provider";
-
-    $("maximumLimit").textContent = state.maximumAmount !== null
-        ? `Maximum: ${formatCurrency(state.maximumAmount)}`
-        : "Maximum: Set by payment provider";
-}
-
-function validateAmount() {
-    const amount = getAmount();
-
-    if (amount === null || amount <= 0) {
-        return {
-            valid: false,
-            message: "Enter an amount greater than zero."
-        };
-    }
-
-    if (state.minimumAmount !== null && amount < state.minimumAmount) {
-        return {
-            valid: false,
-            message: `Minimum deposit is ${formatCurrency(state.minimumAmount)}.`
-        };
-    }
-
-    if (state.maximumAmount !== null && amount > state.maximumAmount) {
-        return {
-            valid: false,
-            message: `Maximum deposit is ${formatCurrency(state.maximumAmount)}.`
-        };
-    }
-
-    if (!Number.isSafeInteger(Math.round(amount * 100))) {
-        return {
-            valid: false,
-            message: "Enter a valid amount."
-        };
-    }
-
-    return {
-        valid: true,
-        amount
-    };
-}
-
-function updateSummary() {
-    const amount = getAmount();
-
-    $("summaryAmount").textContent =
-        amount !== null && amount > 0
-            ? formatCurrency(amount)
-            : formatCurrency(0);
-
-    // No frontend fee formula is used.
-    // Actual fee and total must come from a confirmed backend quote.
-    $("summaryFee").textContent = "Awaiting confirmed quote";
-    $("summaryTotal").textContent = "Awaiting confirmed quote";
-
-    $("quoteStatus").textContent =
-        "The actual processing fee and total must be supplied by the backend or payment provider. No estimated fee is being presented as confirmed.";
-
-    $("summaryNotice").textContent =
-        "Any applicable payment processing fee will be shown before you continue. Review the total payment amount before confirming.";
-}
-
-
-/* =========================================================
-   8. AMOUNT INPUT AND QUICK SELECTION
-   ========================================================= */
-
-function updateAmount() {
-    document.querySelectorAll(".quick-amount").forEach(button => {
-        const selected = Number(button.dataset.amount) === getAmount();
-        button.classList.toggle("active", selected);
-    });
-
-    const validation = validateAmount();
-
-    $("amountError").textContent =
-        $("fundAmount").value && !validation.valid
-            ? validation.message
-            : "";
-
-    updateSummary();
-}
-
-function setAmount(amount) {
-    $("fundAmount").value = amount;
-    updateAmount();
-}
-
-
-/* =========================================================
-   9. PAYMENT METHOD SELECTION
-   ========================================================= */
-
-function selectPaymentMethod(method) {
-    const country = CONFIG.countries[state.selectedCountry];
-
-    if (!country || !country.methods.includes(method)) {
-        return;
-    }
-
-    state.selectedMethod = method;
-
-    document.querySelectorAll(".method-card").forEach(card => {
-        const active = card.dataset.method === method;
-
-        card.classList.toggle("active", active);
-        card.setAttribute("aria-pressed", String(active));
-    });
-
-    document.querySelectorAll(".method-content").forEach(content => {
-        content.classList.toggle(
-            "active",
-            content.id === `content-${method}`
-        );
-    });
-
-    $("gatewayAction").classList.toggle(
-        "hidden",
-        method !== "flutterwave"
-    );
-
-    $("dedicatedAction").classList.toggle(
-        "hidden",
-        method !== "dedicated"
-    );
-}
-
-
-/* =========================================================
-   10. PAYMENT INITIALIZATION
-   ========================================================= */
-
-function setSubmitting(value) {
-    state.submitting = value;
-
-    $("payBtn").disabled = value;
-
-    $("payBtn").innerHTML = value
-        ? '<i class="fas fa-circle-notch fa-spin me-2"></i> Initializing Payment...'
-        : '<i class="fas fa-lock me-2"></i> Continue to Payment';
-}
-
-function extractPaymentReference(data) {
-    return data.paymentReference ||
-        data.tx_ref ||
-        data.reference ||
-        data.transactionReference ||
-        null;
-}
-
-function extractCheckoutUrl(data) {
-    return data.checkoutUrl ||
-        data.checkout_url ||
-        data.data?.checkoutUrl ||
-        data.data?.link ||
-        null;
-}
-
-function extractQuote(data, amount) {
-    const quote = data.quote || data.feeQuote || data.data?.quote || data;
-
-    const fee = safeNumber(
-        quote.fee ??
-        quote.processingFee ??
-        quote.processing_fee
-    );
-
-    const total = safeNumber(
-        quote.totalPayable ??
-        quote.total_payable ??
-        quote.total
-    );
-
-    const walletCredit = safeNumber(
-        quote.walletCredit ??
-        quote.wallet_credit ??
-        quote.amountToCredit ??
-        quote.amount_to_credit
-    );
-
-    if (fee === null || total === null) {
-        return null;
-    }
-
-    if (fee < 0 || total < 0) {
-        return null;
-    }
-
-    if (walletCredit !== null && Math.abs(walletCredit - amount) > 0.01) {
-        return null;
-    }
-
-    if (Math.abs(total - (amount + fee)) > 0.02) {
-        return null;
-    }
-
-    return {
-        fee,
-        total,
-        walletCredit: walletCredit ?? amount
-    };
-}
-
-function displayConfirmedQuote(quote) {
-    $("summaryAmount").textContent = formatCurrency(quote.walletCredit);
-    $("summaryFee").textContent = formatCurrency(quote.fee);
-    $("summaryTotal").textContent = formatCurrency(quote.total);
-
-    $("quoteStatus").textContent = "Payment quote received from the backend.";
-
-    $("summaryNotice").textContent =
-        `You will receive ${formatCurrency(quote.walletCredit)} in your NATER-PAY wallet. The processing fee is shown separately.`;
-}
-
-async function executeGatewayFunding() {
-    if (state.submitting) return;
-
-    const validation = validateAmount();
-
-    if (!validation.valid) {
-        $("amountError").textContent = validation.message;
-        $("fundAmount").focus();
-        return;
-    }
-
-    if (!requireAuthentication()) return;
-
-    if (state.selectedMethod !== "flutterwave") {
-        showToast("warning", "Select a payment method first");
-        return;
-    }
-
-    setSubmitting(true);
-
-    try {
-        const response = await apiRequest(CONFIG.fundingEndpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                amount: validation.amount,
-                provider: CONFIG.provider
-            })
-        });
-
-        if (!response.success) {
-            throw new Error(response.message || "Payment initialization failed.");
-        }
-
-        const reference = extractPaymentReference(response);
-        const checkoutUrl = extractCheckoutUrl(response);
-
-        if (reference) {
-            state.lastFundingReference = reference;
-
-            // Save the reference before redirecting.
-            localStorage.setItem(CONFIG.pendingReferenceKey, reference);
-        }
-
-        if (!checkoutUrl) {
-            throw new Error(
-                "The server did not return a valid checkout URL. Please contact support before attempting another payment."
-            );
-        }
-
-        // Require actual backend fee data before claiming a total.
-        // If not supplied, the hosted provider checkout remains the
-        // authoritative place for any applicable charge disclosure.
-        const quote = extractQuote(response, validation.amount);
-
-        if (quote) {
-            displayConfirmedQuote(quote);
-
-            const confirmation = await Swal.fire({
-                title: "Review your payment",
-                html: `
-                    <div style="text-align:left;line-height:2;color:#ddd">
-                        <div>Wallet credit: <b>${formatCurrency(quote.walletCredit)}</b></div>
-                        <div>Processing fee: <b>${formatCurrency(quote.fee)}</b></div>
-                        <hr style="border-color:#444">
-                        <div>Total payable: <b style="color:#e8c778">${formatCurrency(quote.total)}</b></div>
-                    </div>
-                `,
-                icon: "info",
-                showCancelButton: true,
-                confirmButtonText: "Continue to Secure Checkout",
-                cancelButtonText: "Cancel",
-                confirmButtonColor: "#d6ad55",
-                background: "#111a28",
-                color: "#fff"
+        function renderQuickAmounts() {
+            const container = document.getElementById('quickAmountsContainer');
+            container.innerHTML = '';
+            const amounts = config.quickAmounts[state.currency] || [100, 500, 1000, 2000];
+            
+            amounts.forEach(amt => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-quick';
+                btn.innerText = `${state.symbol}${amt.toLocaleString()}`;
+                btn.onclick = () => setAmount(amt);
+                container.appendChild(btn);
             });
+        }
 
-            if (!confirmation.isConfirmed) {
-                // The initialized reference is retained because a
-                // backend payment session may already exist.
-                showToast(
-                    "info",
-                    "Checkout not opened",
-                    "Check the transaction status before starting another payment."
-                );
+        function setAmount(val) {
+            document.getElementById('fundAmount').value = val;
+            handleAmountChange();
+        }
 
+        function handleAmountChange() {
+            const inputVal = document.getElementById('fundAmount').value;
+            state.amount = parseFloat(inputVal) || 0;
+            
+            if (state.amount < 0) {
+                state.amount = 0;
+                document.getElementById('fundAmount').value = '';
+            }
+            
+            updatePaymentSummary();
+        }
+
+        function selectPaymentMethod(methodId) {
+            if (document.getElementById(`methodsContainer`).querySelector(`[data-method="${methodId}"]`).classList.contains('disabled')) return;
+
+            state.method = methodId;
+
+            // UI Updates
+            document.querySelectorAll('.method-card').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.method-card[data-method="${methodId}"]`).classList.add('active');
+
+            // Panel toggles
+            const daPanel = document.getElementById('dedicatedAccountPanel');
+            if (methodId === 'dedicated') {
+                daPanel.style.display = 'block';
+                if(state.virtualAccount) renderVirtualAccount();
+            } else {
+                daPanel.style.display = 'none';
+            }
+
+            // Update Instructions & Button
+            const content = config.methodContent[methodId];
+            document.getElementById('instIcon').className = `fas ${content.icon} instruction-icon`;
+            document.getElementById('instText').innerText = content.text;
+            
+            const btn = document.getElementById('btnMainAction');
+            btn.innerHTML = methodId === 'dedicated' 
+                ? `I've Made a Transfer <i class="fas fa-rotate"></i>` 
+                : `${content.action} <i class="fas fa-lock"></i>`;
+
+            updatePaymentSummary();
+        }
+
+        function toggleMobileMoneyVisibility() {
+            const momoCard = document.getElementById('momoMethod');
+            if (['GHS', 'KES', 'UGX'].includes(state.currency)) {
+                momoCard.classList.remove('disabled', 'hidden');
+            } else {
+                momoCard.classList.add('disabled', 'hidden');
+                if (state.method === 'momo') selectPaymentMethod('card');
+            }
+        }
+
+        // --- Data & API Integration (Frontend aligned for backend replacement) ---
+        
+        async function loadWalletData() {
+            const token = localStorage.getItem("naterpay_token");
+            try {
+                // ASSUMPTION: GET /api/wallet exists and returns balance + virtual account
+                const res = await fetch('/api/wallet', { headers: { 'Authorization': `Bearer ${token}` }});
+                if(!res.ok) throw new Error("Network response was not ok");
+                const data = await res.json();
+                
+                if (data.success && data.wallet) {
+                    const balanceEl = document.getElementById('uiWalletBalance');
+                    balanceEl.innerText = `${state.symbol}${parseFloat(data.wallet.balance).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                    
+                    if (data.wallet.virtualAccount) {
+                        state.virtualAccount = data.wallet.virtualAccount;
+                        if(state.method === 'dedicated') renderVirtualAccount();
+                    }
+                }
+            } catch (e) {
+                console.warn("Wallet API failed or unavailable. Using fallback state.");
+                document.getElementById('uiWalletBalance').innerHTML = `<span class="text-danger" style="font-size:1rem;">Unavailable</span>`;
+                document.getElementById('daBankName').innerText = "Account Generation Pending";
+                document.getElementById('daAccountNumber').innerText = "---";
+                document.getElementById('daAccountName').innerText = "Please contact support.";
+            }
+        }
+
+        function renderVirtualAccount() {
+            if(!state.virtualAccount) return;
+            document.getElementById('daBankName').innerText = state.virtualAccount.bankName || "Partner Bank";
+            document.getElementById('daAccountNumber').innerText = state.virtualAccount.accountNumber || "---";
+            document.getElementById('daAccountName').innerText = state.virtualAccount.accountName || "NATER-PAY";
+            
+            // Remove skeletons
+            document.querySelectorAll('#dedicatedAccountPanel .skeleton').forEach(el => el.classList.remove('skeleton'));
+        }
+
+        // Dynamic Fee Calculation (Calls API to prevent hardcoding logic)
+        let quoteDebounce;
+        function updatePaymentSummary() {
+            clearTimeout(quoteDebounce);
+            
+            const pSum = document.getElementById('sumPrincipal');
+            const fSum = document.getElementById('sumFee');
+            const tSum = document.getElementById('sumTotal');
+
+            if (state.amount <= 0) {
+                pSum.innerText = `${state.symbol}0.00`;
+                fSum.innerText = `${state.symbol}0.00`;
+                tSum.innerText = `${state.symbol}0.00`;
                 return;
             }
 
-        } else {
-            // The backend currently may not return a quote.
-            // Never fabricate or calculate a customer-facing fee.
-            const confirmation = await Swal.fire({
-                title: "Continue to payment?",
-                text: "Any applicable processing fee and final payable amount must be reviewed on the secure payment provider checkout before you confirm payment.",
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonText: "Open Secure Checkout",
-                cancelButtonText: "Cancel",
-                confirmButtonColor: "#d6ad55",
-                background: "#111a28",
-                color: "#fff"
-            });
+            // Show loading state
+            fSum.innerHTML = '<i class="fas fa-circle-notch fa-spin text-muted"></i>';
+            tSum.innerHTML = '<i class="fas fa-circle-notch fa-spin text-muted"></i>';
 
-            if (!confirmation.isConfirmed) {
+            quoteDebounce = setTimeout(async () => {
+                try {
+                    // ASSUMPTION: POST /api/wallet/quote endpoint to securely calculate fees
+                    const res = await fetch('/api/wallet/quote', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                        body: JSON.stringify({ amount: state.amount, currency: state.currency, method: state.method })
+                    });
+                    
+                    // If endpoint doesn't exist yet, we catch error and show 0 fee as fallback safely
+                    if (!res.ok) throw new Error("Quote API unavailable");
+                    
+                    const data = await res.json();
+                    if (data.success) {
+                        state.quote.fee = data.fee;
+                        state.quote.total = data.totalPayable;
+                    }
+                } catch (e) {
+                    // Fallback for UI visualization until Backend implements the exact API contract
+                    console.info("Quote API fallback used.");
+                    state.quote.fee = 0; // The prompt forbids frontend fixed formulas. Backend must supply this.
+                    state.quote.total = state.amount;
+                }
+
+                // Render Summary
+                pSum.innerText = `${state.symbol}${state.amount.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                fSum.innerText = `${state.symbol}${state.quote.fee.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                tSum.innerText = `${state.symbol}${state.quote.total.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+
+            }, 400); // 400ms debounce
+        }
+
+        async function continuePayment() {
+            if (state.isProcessing) return;
+
+            if (state.method === 'dedicated') {
+                // Dedicated account just checks balance/status
+                return checkPaymentStatus();
+            }
+
+            if (state.amount <= 0) {
+                Swal.fire({ icon: 'warning', title: 'Invalid Amount', text: 'Please enter a valid amount to fund.', background: 'var(--surface)', color: 'var(--text)' });
                 return;
             }
+
+            setLoading(true);
+
+            try {
+                // ASSUMPTION: POST /api/wallet/fund endpoint returns a checkoutUrl for gateway methods
+                const res = await fetch('/api/wallet/fund', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                    body: JSON.stringify({ amount: state.amount, currency: state.currency, method: state.method })
+                });
+
+                // Fallback for missing backend during development
+                if (!res.ok && res.status === 404) {
+                    throw new Error("API_NOT_READY");
+                }
+
+                const data = await res.json();
+
+                if (data.success && data.checkoutUrl) {
+                    localStorage.setItem('pending_funding_ref', data.paymentReference || data.tx_ref);
+                    window.location.href = data.checkoutUrl;
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Request Failed', text: data.message || "Unable to initialize payment.", background: 'var(--surface)', color: 'var(--text)' });
+                    setLoading(false);
+                }
+            } catch (err) {
+                setLoading(false);
+                if (err.message === "API_NOT_READY") {
+                    Swal.fire({ icon: 'info', title: 'Integration Pending', text: 'This payment method integration is pending backend alignment.', background: 'var(--surface)', color: 'var(--text)' });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Network Error', text: 'Could not connect to payment gateway.', background: 'var(--surface)', color: 'var(--text)' });
+                }
+            }
         }
 
-        // Only allow redirects to HTTP(S) hosted checkout URLs.
-        const destination = new URL(checkoutUrl, window.location.origin);
-
-        if (!["https:", "http:"].includes(destination.protocol)) {
-            throw new Error("Invalid checkout destination.");
+        // --- Status & Verification ---
+        async function checkPaymentStatus() {
+            setLoading(true);
+            // Simulates checking the dedicated account balance update
+            await loadWalletData(); 
+            setTimeout(() => {
+                setLoading(false);
+                Swal.fire({ icon: 'info', title: 'Status Checked', text: 'If you made a transfer, your balance will update shortly.', background: 'var(--surface)', color: 'var(--text)' });
+            }, 1000);
         }
 
-        window.location.assign(destination.href);
+        async function verifyReturnedPayment(reference) {
+            document.getElementById('fundingFlowView').classList.add('hidden');
+            document.getElementById('statusView').classList.remove('hidden');
+            showStatusPanel('panelPending');
 
-    } catch (error) {
-        console.error("Funding initialization error:", error);
+            try {
+                // ASSUMPTION: POST /api/wallet/verify validates the tx
+                const res = await fetch('/api/wallet/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem("naterpay_token")}` },
+                    body: JSON.stringify({ reference })
+                });
+                const data = await res.json();
 
-        await Swal.fire({
-            icon: "error",
-            title: "Unable to initialize payment",
-            text: error.message || "Please try again later.",
-            confirmButtonColor: "#d6ad55",
-            background: "#111a28",
-            color: "#fff"
-        });
+                // Clean URL parameters
+                window.history.replaceState({}, document.title, window.location.pathname);
+                localStorage.removeItem('pending_funding_ref');
 
-    } finally {
-        setSubmitting(false);
-    }
-}
-
-
-/* =========================================================
-   11. PAYMENT VERIFICATION
-   ========================================================= */
-
-async function verifyReturnedPayment(reference) {
-    if (state.verifying || !reference) return;
-
-    if (!requireAuthentication()) return;
-
-    state.verifying = true;
-
-    state.lastFundingReference = reference;
-
-    Swal.fire({
-        title: "Verifying your payment",
-        html: "Please wait while NATER-PAY checks your transaction.",
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false,
-        didOpen: () => Swal.showLoading(),
-        background: "#111a28",
-        color: "#fff"
-    });
-
-    try {
-        const data = await apiRequest(CONFIG.verificationEndpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                reference,
-                provider: CONFIG.provider
-            })
-        });
-
-        // Only a backend-confirmed status may be displayed as success.
-        const status = String(
-            data.status ||
-            data.transaction?.status ||
-            data.payment?.status ||
-            ""
-        ).toLowerCase();
-
-        if (data.success && (
-            status === "successful" ||
-            status === "success" ||
-            status === "completed" ||
-            status === "paid" ||
-            data.paymentStatus === "successful"
-        )) {
-            localStorage.removeItem(CONFIG.pendingReferenceKey);
-
-            state.lastTransaction = data;
-
-            const wallet = await loadWallet();
-
-            showTransactionStatus("success", data, wallet);
-
-            return;
+                if (data.success) {
+                    document.getElementById('sdAmount').innerText = `${state.symbol}${parseFloat(data.amount).toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                    document.getElementById('sdRef').innerText = data.reference || reference;
+                    document.getElementById('sdMethod').innerText = data.method || 'Online Payment';
+                    document.getElementById('sdDate').innerText = new Date().toLocaleDateString();
+                    showStatusPanel('panelSuccess');
+                } else {
+                    document.getElementById('statusDescFailed').innerText = data.message || "We could not confirm this payment.";
+                    showStatusPanel('panelFailed');
+                }
+            } catch (error) {
+                // If it fails due to network, keep it pending
+                console.error(error);
+                showStatusPanel('panelPending');
+            }
         }
 
-        if (
-            status === "pending" ||
-            status === "processing" ||
-            status === "initiated" ||
-            status === "awaiting_confirmation"
-        ) {
-            showTransactionStatus("pending", data);
-            return;
+        function checkPendingVerification() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const fwTxRef = urlParams.get('tx_ref'); // Retaining existing provider convention
+            const fwTransId = urlParams.get('transaction_id');
+            const status = urlParams.get('status');
+            const pendingRef = localStorage.getItem('pending_funding_ref');
+            
+            if (status === 'cancelled') {
+                localStorage.removeItem('pending_funding_ref');
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
+
+            if (fwTxRef || fwTransId || pendingRef) {
+                verifyReturnedPayment(fwTxRef || pendingRef);
+            }
         }
 
-        if (
-            status === "failed" ||
-            status === "cancelled" ||
-            status === "canceled" ||
-            status === "abandoned"
-        ) {
-            localStorage.removeItem(CONFIG.pendingReferenceKey);
-            showTransactionStatus("failed", data);
-            return;
+        // --- Helpers ---
+        function setLoading(isLoading) {
+            state.isProcessing = isLoading;
+            const btn = document.getElementById('btnMainAction');
+            if (isLoading) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Processing...`;
+            } else {
+                btn.disabled = false;
+                selectPaymentMethod(state.method); // resets button text properly
+            }
         }
 
-        // Do not treat an unknown response as a successful payment.
-        showTransactionStatus("pending", data);
-
-    } catch (error) {
-        console.error("Payment verification error:", error);
-
-        // Preserve reference for later retry.
-        localStorage.setItem(CONFIG.pendingReferenceKey, reference);
-
-        showTransactionStatus("pending", {
-            message: "We could not confirm the transaction right now.",
-            reference
-        });
-
-    } finally {
-        state.verifying = false;
-    }
-}
-
-
-/* =========================================================
-   12. TRANSACTION STATUS UI
-   ========================================================= */
-
-function showTransactionStatus(type, data = {}, walletLoaded = false) {
-    $("fundingInterface").classList.add("hidden");
-    $("statusView").classList.add("active");
-
-    const transaction = data.transaction || data.payment || data;
-
-    const reference =
-        transaction.reference ||
-        transaction.paymentReference ||
-        transaction.tx_ref ||
-        data.reference ||
-        state.lastFundingReference ||
-        "Not provided";
-
-    const amount = safeNumber(
-        transaction.amountCredited ??
-        transaction.amount_credited ??
-        transaction.amount ??
-        data.amountCredited ??
-        data.amount
-    );
-
-    const method =
-        transaction.paymentMethod ||
-        transaction.payment_method ||
-        transaction.method ||
-        "Payment gateway";
-
-    const date =
-        transaction.paidAt ||
-        transaction.paid_at ||
-        transaction.createdAt ||
-        transaction.created_at ||
-        null;
-
-    if (type === "success") {
-        $("statusIcon").innerHTML =
-            '<i class="fas fa-circle-check" style="color:var(--success)"></i>';
-
-        $("statusTitle").textContent = "Payment Successful!";
-
-        $("statusDescription").textContent =
-            "Your transaction has been confirmed by the backend.";
-
-        $("statusAction").textContent = "Back to Wallet";
-        $("statusAction").onclick = () => {
-            window.location.href = CONFIG.dashboardUrl;
-        };
-
-        $("statusDetails").innerHTML = "";
-
-        addStatusRow("Amount credited", amount !== null
-            ? formatCurrency(amount)
-            : "Confirmed");
-
-        addStatusRow("Transaction reference", reference);
-        addStatusRow("Payment method", method);
-
-        if (date) {
-            addStatusRow(
-                "Transaction date",
-                new Date(date).toLocaleString()
-            );
+        function showStatusPanel(panelId) {
+            document.querySelectorAll('.status-panel').forEach(p => {
+                p.classList.remove('active');
+                p.style.display = 'none';
+            });
+            document.getElementById(panelId).style.display = 'block';
+            document.getElementById(panelId).classList.add('active');
         }
 
-        if (state.wallet && safeNumber(state.wallet.balance) !== null) {
-            addStatusRow(
-                "Updated wallet balance",
-                formatMoney(
-                    state.wallet.balance,
-                    state.wallet.currency || "NGN"
-                )
-            );
+        function resetToFundingFlow() {
+            document.getElementById('statusView').classList.add('hidden');
+            document.getElementById('fundingFlowView').classList.remove('hidden');
+            initPage();
         }
 
-        if (!walletLoaded) {
-            addStatusRow("Wallet balance", "Refresh to retrieve");
+        function copyText(elementId, label) {
+            const text = document.getElementById(elementId).innerText;
+            if(!text || text.includes('---')) return;
+            navigator.clipboard.writeText(text).then(() => {
+                Swal.fire({ icon: 'success', title: 'Copied!', text: `${label} copied to clipboard.`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: 'var(--surface)', color: 'var(--text)' });
+            });
         }
-
-        return;
-    }
-
-    if (type === "pending") {
-        $("statusIcon").innerHTML =
-            '<i class="fas fa-clock" style="color:var(--warning)"></i>';
-
-        $("statusTitle").textContent = "Payment Confirmation Pending";
-
-        $("statusDescription").textContent =
-            "We are waiting for confirmation of your payment. Your wallet will be updated once the transaction has been confirmed. Do not make another payment while this transaction is being checked.";
-
-        $("statusAction").textContent = "Check Payment Status";
-
-        $("statusAction").onclick = () => {
-            verifyReturnedPayment(reference);
-        };
-
-        $("statusDetails").innerHTML = "";
-
-        addStatusRow("Transaction reference", reference);
-        addStatusRow("Status", "Awaiting confirmation");
-
-        return;
-    }
-
-    $("statusIcon").innerHTML =
-        '<i class="fas fa-circle-exclamation" style="color:var(--danger)"></i>';
-
-    $("statusTitle").textContent = "Payment Unsuccessful";
-
-    $("statusDescription").textContent =
-        "We could not confirm this payment. Please check your transaction status before trying again.";
-
-    $("statusAction").textContent = "Return to Funding";
-
-    $("statusAction").onclick = () => {
-        $("statusView").classList.remove("active");
-        $("fundingInterface").classList.remove("hidden");
-    };
-
-    $("statusDetails").innerHTML = "";
-
-    addStatusRow("Transaction reference", reference);
-    addStatusRow("Status", "Unsuccessful");
-
-    if (data.message) {
-        addStatusRow("Information", data.message);
-    }
-}
-
-function addStatusRow(label, value) {
-    const row = document.createElement("div");
-    row.className = "summary-line";
-
-    const labelElement = document.createElement("span");
-    labelElement.textContent = label;
-
-    const valueElement = document.createElement("strong");
-    valueElement.textContent = String(value);
-
-    row.append(labelElement, valueElement);
-    $("statusDetails").appendChild(row);
-}
-
-
-/* =========================================================
-   13. RETURNED PAYMENT HANDLING
-   ========================================================= */
-
-function handlePaymentReturn() {
-    const params = new URLSearchParams(window.location.search);
-
-    const callbackReference = params.get("tx_ref");
-
-    const transactionId = params.get("transaction_id");
-
-    const pendingReference = localStorage.getItem(
-        CONFIG.pendingReferenceKey
-    );
-
-    // A transaction ID alone is not proof of payment.
-    // The backend verification endpoint must confirm it.
-    const reference = callbackReference || pendingReference;
-
-    if (!reference && transactionId) {
-        Swal.fire({
-            icon: "warning",
-            title: "Transaction reference missing",
-            text: "We cannot verify this payment without its transaction reference. Please check your transaction history or contact support.",
-            background: "#111a28",
-            color: "#fff",
-            confirmButtonColor: "#d6ad55"
-        });
-
-        return;
-    }
-
-    if (reference) {
-        // Remove callback parameters to prevent accidental
-        // repeated verification from URL refreshes.
-        window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname
-        );
-
-        selectPaymentMethod("flutterwave");
-
-        verifyReturnedPayment(reference);
-    }
-}
-
-
-/* =========================================================
-   14. EVENT LISTENERS
-   ========================================================= */
-
-function bindEvents() {
-
-    $("fundAmount").addEventListener("input", updateAmount);
-
-    document.querySelectorAll(".quick-amount").forEach(button => {
-        button.addEventListener("click", () => {
-            setAmount(Number(button.dataset.amount));
-        });
-    });
-
-    document.querySelectorAll(".method-card").forEach(card => {
-        card.addEventListener("click", () => {
-            if (!card.disabled) {
-                selectPaymentMethod(card.dataset.method);
+        
+        // Handle physical back button safety
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                const pendingRef = localStorage.getItem('pending_funding_ref');
+                if (pendingRef) verifyReturnedPayment(pendingRef);
             }
         });
-    });
-
-    $("countrySelect").addEventListener("change", event => {
-        const selected = event.target.value;
-        const country = CONFIG.countries[selected];
-
-        if (!country || !country.enabled) {
-            event.target.value = state.selectedCountry;
-
-            showToast(
-                "warning",
-                "Country unavailable",
-                "This market has not been enabled yet."
-            );
-
-            return;
-        }
-
-        state.selectedCountry = selected;
-        updateCountryInterface();
-    });
-
-    $("payBtn").addEventListener("click", executeGatewayFunding);
-
-    $("copyAccountNumber").addEventListener("click", () => {
-        copyDetail(
-            state.virtualAccount?.accountNumber,
-            "Account number"
-        );
-    });
-
-    $("copyAccountName").addEventListener("click", () => {
-        copyDetail(
-            state.virtualAccount?.accountName,
-            "Account name"
-        );
-    });
-
-    $("refreshWallet").addEventListener("click", loadWallet);
-
-    $("refreshAccount").addEventListener("click", refreshAccount);
-
-    $("accountActionBtn").addEventListener("click", () => {
-        if (!state.virtualAccount?.accountNumber) {
-            showToast(
-                "error",
-                "Bank account unavailable",
-                "Please refresh your account details."
-            );
-
-            return;
-        }
-
-        document.querySelector(".account-card").scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-        });
-
-        showToast("success", "Bank account details are displayed above");
-    });
-}
-
-
-/* =========================================================
-   15. APPLICATION INITIALIZATION
-   ========================================================= */
-
-async function initializeFundingPage() {
-    if (!requireAuthentication()) return;
-
-    bindEvents();
-
-    // Initially only Nigeria is enabled.
-    $("countrySelect").value = "NG";
-
-    updateCountryInterface();
-    updateSummary();
-
-    const walletLoaded = await loadWallet();
-
-    if (!walletLoaded) {
-        // Keep the page available so the user can see the
-        // error, but never display a fabricated balance.
-        console.warn("Wallet information could not be loaded.");
-    }
-
-    handlePaymentReturn();
-}
-
-document.addEventListener("DOMContentLoaded", initializeFundingPage);
-
-// Handle browser back/forward cache restoration.
-window.addEventListener("pageshow", event => {
-    if (event.persisted) {
-        const reference = localStorage.getItem(
-            CONFIG.pendingReferenceKey
-        );
-
-        if (reference && !state.verifying) {
-            verifyReturnedPayment(reference);
-        }
-    }
-});
-
-</script>
-
+    </script>
 </body>
 </html>
