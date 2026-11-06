@@ -254,7 +254,7 @@ async function getWallet(request, reply) {
 }
 
 /* =========================================================================
-   2. INITIALIZE FUNDING (FLUTTERWAVE)
+   2. INITIALIZE FUNDING (FLUTTERWAVE) WITH FULL DIAGNOSTICS
 ========================================================================= */
 async function fundWallet(request, reply) {
     try {
@@ -267,6 +267,25 @@ async function fundWallet(request, reply) {
         if (error) throw { status: 400, message: error.details[0].message };
 
         if (!await checkRateLimit(request, 'fund_init')) throw { status: 429, message: 'Too many funding attempts.' };
+
+        // --- DEBUG DIAGNOSTICS START ---
+        const rawKey = process.env.FLUTTERWAVE_SECRET_KEY;
+        if (!rawKey) {
+            logger.error('[FW DEBUG] FLUTTERWAVE_SECRET_KEY is completely missing or undefined in environment variables.');
+            throw new Error('Server configuration error: Payment gateway key missing.');
+        }
+
+        const trimmedKey = rawKey.trim();
+        const maskedKey = trimmedKey.length > 15 
+            ? `${trimmedKey.substring(0, 10)}...${trimmedKey.substring(trimmedKey.length - 5)}`
+            : 'KEY_TOO_SHORT';
+
+        logger.info(`[FW DEBUG] Key Length (Raw): ${rawKey.length}`);
+        logger.info(`[FW DEBUG] Key Length (Trimmed): ${trimmedKey.length}`);
+        logger.info(`[FW DEBUG] Masked Key Seen By Server: ${maskedKey}`);
+        logger.info(`[FW DEBUG] Contains whitespace/spaces? ${/\\s/.test(rawKey)}`);
+        logger.info(`[FW DEBUG] Contains quotes? ${/['"]/.test(rawKey)}`);
+        // --- DEBUG DIAGNOSTICS END ---
 
         const amount = sanitizeAmount(value.amount);
         let fee = amount < 2500 ? (amount * 0.015) / (1 - 0.015) : ((amount * 0.015) + 100) / (1 - 0.015);
@@ -299,11 +318,21 @@ async function fundWallet(request, reply) {
                 },
                 meta: { userId: request.user._id.toString(), type: 'wallet_fund', amount: amount, fee: fee }
             }, {
-                headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` },
-                timeout: 10000 
+                headers: { 
+                    Authorization: `Bearer ${trimmedKey}`, // Safely use the trimmed key
+                    'Content-Type': 'application/json'
+                },
+                timeout: 12000 
             });
         } catch (gatewayError) {
-            const exactError = gatewayError.response?.data?.message || 'Flutterwave servers are not responding. Please check your API keys.';
+            const exactError = gatewayError.response?.data?.message || gatewayError.message || 'Flutterwave gateway connection error.';
+            const flwStatus = gatewayError.response?.data?.status || 'Unknown Status';
+            
+            logger.error(`[FW REJECTED] Status: ${flwStatus} | Message: ${exactError}`);
+            if (gatewayError.response?.data) {
+                logger.error(`[FW RAW RESPONSE]: ${JSON.stringify(gatewayError.response.data)}`);
+            }
+            
             throw new Error(`Gateway Error: ${exactError}`);
         }
 
