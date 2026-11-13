@@ -1,3 +1,4 @@
+
 const mongoose = require('mongoose');
 
 const supportTicketSchema = new mongoose.Schema({
@@ -7,60 +8,56 @@ const supportTicketSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  
+
   ticketId: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
-  
+
   subject: {
     type: String,
     required: true
   },
-  
+
   category: {
     type: String,
     enum: ['transaction', 'account', 'kyc', 'payment', 'technical', 'feature_request', 'bug_report', 'other'],
     default: 'other'
   },
-  
+
   priority: {
     type: String,
     enum: ['low', 'medium', 'high', 'urgent'],
     default: 'medium'
   },
-  
+
   description: {
     type: String,
     required: true
   },
-  
-  // Status
+
   status: {
     type: String,
     enum: ['open', 'in_progress', 'waiting', 'resolved', 'closed'],
     default: 'open'
   },
-  
-  // Assigned to
+
   assignedTo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  
+
   assignedAt: Date,
-  
-  // Resolution
+
   resolution: String,
   resolvedAt: Date,
+
   resolvedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  
-  // Messages
+
   messages: [{
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -81,48 +78,54 @@ const supportTicketSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
-  
-  // Related transaction
+
   relatedTransaction: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Transaction'
   },
-  
-  // Satisfaction
+
   satisfactionRating: {
     type: Number,
     min: 1,
     max: 5
   },
-  
+
   satisfactionComment: String,
-  
-  // Metadata
+
   metadata: {
     type: Map,
     of: mongoose.Schema.Types.Mixed,
-    default: new Map()
+    default: () => new Map()
   }
 }, {
   timestamps: true
 });
 
 // Indexes
+// ticketId already has a unique index from its field definition.
+// Do not declare that index again.
 supportTicketSchema.index({ user: 1, status: 1 });
-supportTicketSchema.index({ ticketId: 1 });
 supportTicketSchema.index({ status: 1, priority: 1 });
 supportTicketSchema.index({ assignedTo: 1 });
 
-// Pre-save middleware
-supportTicketSchema.pre('save', function(next) {
+// Generate ticket ID before validation.
+supportTicketSchema.pre('validate', function() {
   if (!this.ticketId) {
-    this.ticketId = 'tk_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    this.ticketId =
+      'tk_' +
+      Date.now() +
+      '_' +
+      require('crypto').randomBytes(4).toString('hex').toUpperCase();
   }
-  next();
 });
 
 // Instance methods
-supportTicketSchema.methods.addMessage = function(userId, message, isInternal = false, attachments = []) {
+supportTicketSchema.methods.addMessage = function(
+  userId,
+  message,
+  isInternal = false,
+  attachments = []
+) {
   this.messages.push({
     user: userId,
     message,
@@ -130,6 +133,7 @@ supportTicketSchema.methods.addMessage = function(userId, message, isInternal = 
     attachments,
     createdAt: new Date()
   });
+
   return this.save();
 };
 
@@ -137,14 +141,17 @@ supportTicketSchema.methods.assignTo = function(adminId) {
   this.assignedTo = adminId;
   this.assignedAt = new Date();
   this.status = 'in_progress';
+
   return this.save();
 };
 
 supportTicketSchema.methods.setStatus = function(status) {
   this.status = status;
+
   if (status === 'resolved') {
     this.resolvedAt = new Date();
   }
+
   return this.save();
 };
 
@@ -153,6 +160,7 @@ supportTicketSchema.methods.resolve = function(resolution, resolvedBy) {
   this.resolution = resolution;
   this.resolvedAt = new Date();
   this.resolvedBy = resolvedBy;
+
   return this.save();
 };
 
@@ -166,12 +174,20 @@ supportTicketSchema.methods.reopen = function() {
   this.resolution = null;
   this.resolvedAt = null;
   this.resolvedBy = null;
+
   return this.save();
 };
 
-supportTicketSchema.methods.setSatisfaction = function(rating, comment = null) {
+supportTicketSchema.methods.setSatisfaction = function(
+  rating,
+  comment = null
+) {
   this.satisfactionRating = rating;
-  if (comment) this.satisfactionComment = comment;
+
+  if (comment) {
+    this.satisfactionComment = comment;
+  }
+
   return this.save();
 };
 
