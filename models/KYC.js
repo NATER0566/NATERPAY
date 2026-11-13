@@ -8,7 +8,7 @@ const kycSchema = new mongoose.Schema({
     unique: true,
     index: true
   },
-  
+
   // Level 1: Basic Info
   level1: {
     completed: {
@@ -38,7 +38,7 @@ const kycSchema = new mongoose.Schema({
       ref: 'User'
     }
   },
-  
+
   // Level 2: ID Document
   level2: {
     completed: {
@@ -77,7 +77,7 @@ const kycSchema = new mongoose.Schema({
       ref: 'User'
     }
   },
-  
+
   // Level 3: Address Verification
   level3: {
     completed: {
@@ -115,22 +115,22 @@ const kycSchema = new mongoose.Schema({
       ref: 'User'
     }
   },
-  
+
   // Overall status
   currentLevel: {
     type: Number,
     default: 0,
     enum: [0, 1, 2, 3]
   },
-  
+
   status: {
     type: String,
     enum: ['pending', 'under_review', 'approved', 'rejected'],
     default: 'pending'
   },
-  
+
   rejectionReason: String,
-  
+
   // Metadata
   metadata: {
     type: Map,
@@ -142,7 +142,8 @@ const kycSchema = new mongoose.Schema({
 });
 
 // Indexes
-kycSchema.index({ user: 1 });
+// The user index is already declared in the user field above.
+// Do not declare kycSchema.index({ user: 1 }) again.
 kycSchema.index({ currentLevel: 1 });
 kycSchema.index({ status: 1 });
 
