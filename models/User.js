@@ -1,3 +1,4 @@
+
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -7,46 +8,46 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
     lowercase: true,
-    trim: true,
-    index: true
+    trim: true
   },
+
   phoneNumber: {
     type: String,
     required: true,
     unique: true,
-    trim: true,
-    index: true
+    trim: true
   },
+
   password: {
     type: String,
     required: true,
     minlength: 8
   },
+
   name: {
     type: String,
     required: true,
     trim: true
   },
-  
-  // THE FIX: Added isEmailVerified to satisfy Mongoose strict mode for the Hard Gate!
+
   isEmailVerified: {
     type: Boolean,
     default: false
   },
-  
-  // THE FIX: Added 'reseller' and 'vip' to the allowed enum list!
+
   role: {
     type: String,
     enum: ['user', 'agent', 'reseller', 'vip', 'merchant', 'admin', 'superadmin'],
     default: 'user'
   },
-  
-  // KYC Information
+
+  // KYC
   kycLevel: {
     type: Number,
     default: 0,
     enum: [0, 1, 2, 3]
   },
+
   kycData: {
     bvn: String,
     nin: String,
@@ -61,132 +62,148 @@ const userSchema = new mongoose.Schema({
     dateOfBirth: Date,
     gender: String
   },
+
   kycStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
+
   kycSubmittedAt: Date,
   kycVerifiedAt: Date,
-  
+
   // Wallet
   balance: {
     type: mongoose.Schema.Types.Decimal128,
     default: 0
   },
+
   frozenBalance: {
     type: mongoose.Schema.Types.Decimal128,
     default: 0
   },
-  
+
   // Security
   withdrawalPin: String,
+
   withdrawalPinSet: {
     type: Boolean,
     default: false
   },
+
   isSecured: {
     type: Boolean,
     default: false
   },
-  
+
   // Login tracking
   loginAttempts: {
     type: Number,
     default: 0
   },
+
   lockUntil: Date,
   lastLogin: Date,
   lastLoginIP: String,
-  
-  // Referral system
+
+  // Referral
   referralCode: {
     type: String,
-    unique: true,
-    index: true
+    unique: true
   },
+
   referredBy: {
-    type: String, 
+    type: String,
     default: null,
     index: true
   },
+
   referralBonusPaid: {
-    type: Boolean, 
-    default: false 
+    type: Boolean,
+    default: false
   },
-  // ---> THE ENTERPRISE FIX: Tracks total user spending for milestone rewards <---
+
   cumulativeSpend: {
     type: Number,
     default: 0
   },
-  // -----------------------------------------------------------------------------
+
   referralCount: {
     type: Number,
     default: 0
   },
+
   referralBonus: {
     type: mongoose.Schema.Types.Decimal128,
     default: 0
   },
-  
+
   // Reseller
   isReseller: {
     type: Boolean,
     default: false
   },
+
   resellerLevel: {
     type: String,
     enum: ['basic', 'silver', 'gold', 'platinum'],
     default: null
   },
-  
+
   // Merchant
   isMerchant: {
     type: Boolean,
     default: false
   },
+
   businessName: String,
   businessType: String,
   businessAddress: String,
-  
+
   // Preferences
   hiddenWidgets: [{
     type: String
   }],
+
   notificationsEnabled: {
     type: Boolean,
     default: true
   },
+
   emailNotifications: {
     type: Boolean,
     default: true
   },
+
   smsNotifications: {
     type: Boolean,
     default: false
   },
-  
+
   // Status
   isActive: {
     type: Boolean,
     default: true
   },
+
   isSuspended: {
     type: Boolean,
     default: false
   },
+
   suspensionReason: String,
   suspendedAt: Date,
-  
+
   // OTP
   otp: String,
   otpExpiry: Date,
+
   isVerified: {
     type: Boolean,
     default: false
   },
-  
-  // API Keys
+
+  // API keys
   apiKeys: [{
     key: String,
     name: String,
@@ -194,47 +211,48 @@ const userSchema = new mongoose.Schema({
     lastUsed: Date,
     isActive: { type: Boolean, default: true }
   }],
-  
+
   // Metadata
   metadata: {
     type: Map,
     of: mongoose.Schema.Types.Mixed,
-    default: new Map()
+    default: () => new Map()
   }
+
 }, {
   timestamps: true
 });
 
 // Indexes
-userSchema.index({ email: 1, phoneNumber: 1 });
-userSchema.index({ referralCode: 1 });
+// email and phoneNumber already have unique indexes.
+// referralCode already has a unique index.
+// Do not declare those indexes again.
 userSchema.index({ role: 1, isActive: 1 });
 userSchema.index({ createdAt: -1 });
 
 // Virtual for total balance
 userSchema.virtual('totalBalance').get(function() {
-  return (parseFloat(this.balance.toString()) + parseFloat(this.frozenBalance.toString())).toFixed(2);
+  return (
+    parseFloat(this.balance.toString()) +
+    parseFloat(this.frozenBalance.toString())
+  ).toFixed(2);
 });
 
-// Pre-save middleware
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+// Password hashing
+userSchema.pre('save', async function() {
+  if (!this.isModified('password')) return;
+
+  const salt = await bcrypt.genSalt(12);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Generate referral code
-userSchema.pre('save', function(next) {
+userSchema.pre('save', function() {
   if (!this.referralCode) {
-    this.referralCode = 'NP' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    this.referralCode =
+      'NP' +
+      require('crypto').randomBytes(4).toString('hex').toUpperCase();
   }
-  next();
 });
 
 // Instance methods
@@ -244,6 +262,7 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 
 userSchema.methods.compareWithdrawalPin = async function(candidatePin) {
   if (!this.withdrawalPin) return false;
+
   return bcrypt.compare(candidatePin, this.withdrawalPin);
 };
 
@@ -253,13 +272,15 @@ userSchema.methods.incrementLoginAttempts = function() {
       $unset: { lockUntil: 1, loginAttempts: 1 }
     });
   }
-  
+
   const updates = { $inc: { loginAttempts: 1 } };
-  
+
   if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
-    updates.$set = { lockUntil: Date.now() + 30 * 60 * 1000 }; // 30 minutes
+    updates.$set = {
+      lockUntil: Date.now() + 30 * 60 * 1000
+    };
   }
-  
+
   return this.updateOne(updates);
 };
 
@@ -275,21 +296,26 @@ userSchema.methods.resetLoginAttempts = function() {
 
 userSchema.methods.setWithdrawalPin = async function(pin) {
   const salt = await bcrypt.genSalt(12);
+
   this.withdrawalPin = await bcrypt.hash(pin, salt);
   this.withdrawalPinSet = true;
+
   return this.save();
 };
 
 userSchema.methods.generateOTP = function() {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
   this.otp = otp;
-  this.otpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+  this.otpExpiry = Date.now() + 5 * 60 * 1000;
+
   return this.save();
 };
 
 userSchema.methods.verifyOTP = function(otp) {
   if (!this.otp || !this.otpExpiry) return false;
   if (Date.now() > this.otpExpiry) return false;
+
   return this.otp === otp;
 };
 
@@ -297,26 +323,34 @@ userSchema.methods.consumeOTP = function() {
   this.otp = undefined;
   this.otpExpiry = undefined;
   this.isVerified = true;
+
   return this.save();
 };
 
 userSchema.methods.generateApiKey = function(name) {
-  const key = 'np_' + require('crypto').randomBytes(32).toString('hex');
+  const key =
+    'np_' + require('crypto').randomBytes(32).toString('hex');
+
   this.apiKeys.push({
     key,
     name: name || 'Default API Key',
     createdAt: new Date(),
     isActive: true
   });
+
   return this.save();
 };
 
 userSchema.methods.revokeApiKey = function(keyId) {
-  const keyIndex = this.apiKeys.findIndex(k => k._id.toString() === keyId);
+  const keyIndex = this.apiKeys.findIndex(
+    key => key._id.toString() === keyId
+  );
+
   if (keyIndex > -1) {
     this.apiKeys[keyIndex].isActive = false;
     return this.save();
   }
+
   return Promise.resolve(this);
 };
 
@@ -335,20 +369,22 @@ userSchema.statics.findByReferralCode = function(code) {
 
 userSchema.statics.getReferralTree = async function(userId) {
   const user = await this.findById(userId);
+
   if (!user) return [];
-  
+
   return this.find({ referredBy: user.referralCode })
     .select('name email phoneNumber referralCount createdAt cumulativeSpend referralBonusPaid')
     .sort({ createdAt: -1 });
 };
 
-// Transform for JSON
+// JSON transformation
 userSchema.set('toJSON', {
   transform: function(doc, ret) {
     delete ret.password;
     delete ret.withdrawalPin;
     delete ret.otp;
     delete ret.__v;
+
     return ret;
   }
 });
