@@ -1,4 +1,3 @@
-
 'use strict';
 
 const mongoose = require('mongoose');
@@ -8,30 +7,16 @@ const Joi = require('joi');
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
-const config = require('../config');
 const flutterwave = require('../services/flutterwave');
 
 let AuditLog;
 let Notification;
-let Redis;
-
-try {
-    AuditLog = require('../models/AuditLog');
-} catch (_) {}
-
-try {
-    Notification = require('../models/Notification');
-} catch (_) {}
-
-try {
-    Redis = require('ioredis');
-} catch (_) {}
+try { AuditLog = require('../models/AuditLog'); } catch (_) {}
+try { Notification = require('../models/Notification'); } catch (_) {}
 
 let logger;
-
-try {
-    logger = require('pino')();
-} catch (_) {
+try { logger = require('pino')(); }
+catch (_) {
     logger = {
         info: (...args) => console.log('[INFO]', ...args),
         warn: (...args) => console.warn('[WARN]', ...args),
@@ -39,1234 +24,415 @@ try {
     };
 }
 
-const TX_STATUS = {
-    PENDING: 'pending',
-    PROCESSING: 'processing',
-    SUCCESS: 'success',
-    FAILED: 'failed'
-};
-
 const PROVIDER = 'flutterwave';
 const CURRENCY = 'NGN';
 const MINIMUM_FUNDING = 100;
+const APP_URL = String(process.env.APP_URL || 'https://naterpay-yrf7.onrender.com').replace(/\/+$/, '');
+const TX = Object.freeze({ PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', FAILED: 'failed' });
+const rateLimits = new Map();
 
-const redisClient =
-    Redis && process.env.REDIS_URL
-        ? new Redis(process.env.REDIS_URL, {
-            maxRetriesPerRequest: 2,
-            enableReadyCheck: true
-        })
-        : null;
-
-const fallbackRateLimits = new Map();
-
-const APP_URL = (
-    config.appUrl ||
-    process.env.APP_URL ||
-    'https://naterpay-yrf7.onrender.com'
-).replace(/\/+$/, '');
-
-
-// ============================================================
-// 1. GENERAL HELPERS
-// ============================================================
-
-function parseDecimal(value) {
-    if (value === null || value === undefined) return 0;
-
-    if (value.$numberDecimal !== undefined) {
-        return Number(value.$numberDecimal);
-    }
-
-    return Number(value.toString()) || 0;
+function userIdOf(req) { return req.user?._id || req.user?.id || null; }
+function money(value) {
+    const n = Number(value?.toString?.() ?? value);
+    if (!Number.isFinite(n)) return 0;
+    return Number(n.toFixed(2));
 }
-
-function decimal128(value) {
-    return mongoose.Types.Decimal128.fromString(
-        Number(value).toFixed(2)
-    );
+function decimal(value) {
+    return mongoose.Types.Decimal128.fromString(money(value).toFixed(2));
 }
-
-function sanitizeAmount(value) {
-    const amount = Number(value);
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-        throw new Error('Invalid monetary amount.');
-    }
-
-    return Number(amount.toFixed(2));
+function safeText(value, max = 255) {
+    return String(value || '').replace(/[<>]/g, '').trim().slice(0, max);
 }
-
-function sanitizeText(value) {
-    return String(value || '')
-        .replace(/[<>]/g, '')
-        .trim()
-        .substring(0, 255);
+function metaGet(meta, key) {
+    return typeof meta?.get === 'function' ? meta.get(key) : meta?.[key];
 }
-
-function getRequestUserId(request) {
-    return request.user?._id || request.user?.id;
+function metaSet(doc, key, value) {
+    if (doc.metadata && typeof doc.metadata.set === 'function') doc.metadata.set(key, String(value));
+    else doc.metadata = { ...(doc.metadata?.toObject?.() || doc.metadata || {}), [key]: String(value) };
 }
-
-function getChargeData(response) {
-    return response?.data?.data ||
-        response?.data ||
-        response ||
-        {};
+function chargeData(response) {
+    return response?.data?.data || response?.data || response || {};
 }
-
-function getCustomerId(response) {
-    const data = getChargeData(response);
-
-    return (
-        data.customer_id ||
-        data.id ||
-        data.customer?.id ||
-        null
-    );
+function chargeIdFrom(response) {
+    const d = chargeData(response);
+    return d.id || d.charge_id || d.charge?.id || null;
 }
-
-function getChargeId(response) {
-    const data = getChargeData(response);
-
-    return (
-        data.id ||
-        data.charge_id ||
-        data.charge?.id ||
-        null
-    );
+function customerIdFrom(response) {
+    const d = chargeData(response);
+    return d.id || d.customer_id || d.customer?.id || null;
 }
-
-function getNextAction(response) {
-    const data = getChargeData(response);
-
-    return (
-        data.next_action ||
-        data.nextAction ||
-        data.charge?.next_action ||
-        null
-    );
+function nextActionFrom(response) {
+    return chargeData(response).next_action || null;
 }
-
-function getRedirectUrl(nextAction) {
-    if (!nextAction || typeof nextAction !== 'object') {
-        return null;
-    }
-
-    const actionType = String(
-        nextAction.type ||
-        nextAction.action ||
-        ''
-    ).toLowerCase();
-
-    if (
-        actionType.includes('redirect') ||
-        nextAction.redirect_url ||
-        nextAction.redirectUrl
-    ) {
-        const url =
-            nextAction.redirect_url ||
-            nextAction.redirectUrl ||
-            nextAction.url;
-
-        if (typeof url === 'string') {
-            try {
-                const parsed = new URL(url);
-
-                if (
-                    parsed.protocol === 'https:' &&
-                    parsed.hostname
-                ) {
-                    return parsed.toString();
-                }
-            } catch (_) {}
-        }
-    }
-
-    return null;
+function redirectUrlFrom(action) {
+    if (!action || action.type !== 'redirect_url') return null;
+    const raw = action.redirect_url?.url || action.redirect_url || action.url;
+    if (typeof raw !== 'string') return null;
+    try {
+        const url = new URL(raw);
+        return url.protocol === 'https:' ? url.toString() : null;
+    } catch (_) { return null; }
 }
-
-function handleError(reply, error, fallbackMessage) {
-    const statusCode =
-        error.statusCode ||
-        error.status ||
-        (error.isJoi ? 400 : 400);
-
-    const message = error.isJoi
-        ? error.details?.[0]?.message
-        : (
-            error.response?.data?.error?.message ||
-            error.response?.data?.message ||
-            error.message ||
-            fallbackMessage
-        );
-
-    logger.error({
-        message: fallbackMessage || 'Wallet operation failed',
-        error: message
-    });
-
-    return reply.code(statusCode).send({
-        success: false,
-        message: message || fallbackMessage
-    });
-}
-
-
-// ============================================================
-// 2. RATE LIMITING
-// ============================================================
-
-async function checkRateLimit(request, action, limit = 10) {
-    const userId = getRequestUserId(request) || 'anonymous';
-    const key = `rate:${action}:${userId}`;
-
-    if (redisClient && redisClient.status === 'ready') {
-        try {
-            const count = await redisClient.incr(key);
-
-            if (count === 1) {
-                await redisClient.expire(key, 60);
-            }
-
-            return count <= limit;
-        } catch (error) {
-            logger.error({
-                message: 'Redis rate-limit error',
-                error: error.message
-            });
-        }
-    }
-
+function rateLimit(req, action, limit) {
+    const key = `${action}:${String(userIdOf(req) || req.ip || 'anonymous')}`;
     const now = Date.now();
-    const existing = fallbackRateLimits.get(key);
-
-    if (!existing || now > existing.resetTime) {
-        fallbackRateLimits.set(key, {
-            count: 1,
-            resetTime: now + 60000
-        });
-
+    const item = rateLimits.get(key);
+    if (!item || item.until <= now) {
+        rateLimits.set(key, { count: 1, until: now + 60000 });
         return true;
     }
-
-    existing.count += 1;
-
-    return existing.count <= limit;
+    item.count += 1;
+    return item.count <= limit;
 }
-
-
-// ============================================================
-// 3. AUDIT AND NOTIFICATIONS
-// ============================================================
-
-async function createAuditLog(params, session = null) {
+function fail(reply, status, message) {
+    return reply.code(status).send({ success: false, message });
+}
+function errorReply(reply, error, fallback) {
+    logger.error({ err: error, message: fallback });
+    const status = Number(error.statusCode || error.status || (error.isJoi ? 400 : 500));
+    const message = error.isJoi ? error.details?.[0]?.message : fallback;
+    return fail(reply, status >= 400 && status <= 599 ? status : 500, message || fallback);
+}
+async function audit(params, session) {
     if (!AuditLog) return;
-
     try {
-        const log = new AuditLog({
+        const doc = new AuditLog({
             user: params.user,
             transactionId: params.transactionId,
             transactionReference: params.reference,
             amount: params.amount,
             type: params.type,
-            previousBalance: String(params.previousBalance ?? '0'),
-            newBalance: String(params.newBalance ?? '0'),
-            ipAddress: params.ipAddress || 'SYSTEM',
-            userAgent: params.userAgent || 'SYSTEM',
+            previousBalance: String(params.before),
+            newBalance: String(params.after),
+            ipAddress: params.ip || 'SYSTEM',
+            userAgent: params.ua || 'SYSTEM',
             status: params.status,
-            source: params.source || 'API',
+            source: params.source || 'Flutterwave',
             details: params.details || {}
         });
-
-        if (session) {
-            await log.save({
-                session,
-                validateBeforeSave: false
-            });
-        } else {
-            await log.save({
-                validateBeforeSave: false
-            });
-        }
-    } catch (error) {
-        logger.error({
-            message: 'Audit log creation failed',
-            error: error.message
-        });
+        await doc.save(session ? { session, validateBeforeSave: false } : { validateBeforeSave: false });
+    } catch (err) {
+        // Audit failure must not silently roll back a confirmed customer payment.
+        logger.error({ err, message: 'Audit log write failed' });
     }
 }
-
-async function sendSystemNotification(
-    userId,
-    title,
-    message,
-    type,
-    request,
-    session = null
-) {
+async function notify(user, amount, req, session) {
     if (!Notification) return;
-
     try {
-        const notification = new Notification({
-            user: userId,
-            title,
-            message: sanitizeText(message),
-            type,
+        const doc = new Notification({
+            user,
+            title: 'Wallet Funded',
+            message: `Your wallet has been credited with ₦${money(amount).toLocaleString('en-NG')}.`,
+            type: 'funding',
             isRead: false
         });
-
-        if (session) {
-            await notification.save({ session });
-        } else {
-            await notification.save();
-        }
-
-        request?.server?.io
-            ?.to(`user:${userId}`)
-            .emit('notification:new', notification);
-
-    } catch (error) {
-        logger.error({
-            message: 'Notification creation failed',
-            error: error.message
-        });
+        await doc.save(session ? { session } : {});
+        // Emit only after the database transaction commits.
+        if (!session) req?.server?.io?.to(`user:${user}`).emit('notification:new', doc);
+    } catch (err) {
+        logger.error({ err, message: 'Notification write failed' });
     }
 }
-
-
-// ============================================================
-// 4. TRANSACTION FAILURE
-// ============================================================
-
-async function failTransactionStrictly(
-    transactionId,
-    reason,
-    request,
-    source = 'API'
-) {
-    const transaction = await Transaction.findOneAndUpdate(
-        {
-            _id: transactionId,
-            status: {
-                $in: [
-                    TX_STATUS.PENDING,
-                    TX_STATUS.PROCESSING
-                ]
-            }
-        },
-        {
-            $set: {
-                status: TX_STATUS.FAILED,
-                description: sanitizeText(reason)
-            }
-        },
-        { new: true }
-    );
-
-    if (!transaction) return null;
-
-    await createAuditLog({
-        user: transaction.user,
-        transactionId: transaction._id,
-        reference: transaction.providerReference,
-        amount: parseDecimal(transaction.amount),
-        type: transaction.type,
-        previousBalance: transaction.balanceBefore,
-        newBalance: transaction.balanceAfter,
-        ipAddress: request?.ip || 'SYSTEM',
-        userAgent: request?.headers?.['user-agent'] || 'SYSTEM',
-        status: TX_STATUS.FAILED,
-        source
-    });
-
-    return transaction;
-}
-
-
-// ============================================================
-// 5. CENTRALIZED, ATOMIC WALLET CREDIT
-//
-// Both verification and webhook processing use this function.
-// The transaction status guard prevents duplicate credits.
-// ============================================================
-
-async function creditVerifiedFunding(
-    transactionId,
-    request,
-    source = 'Flutterwave'
-) {
-    const session = await mongoose.startSession();
-
-    let result = {
-        credited: false,
-        alreadyProcessed: false,
-        balance: null
-    };
-
+async function getWallet(req, reply) {
     try {
-        await session.withTransaction(async () => {
-            const transaction = await Transaction.findOneAndUpdate(
-                {
-                    _id: transactionId,
-                    provider: PROVIDER,
-                    type: 'funding',
-                    status: {
-                        $in: [
-                            TX_STATUS.PENDING,
-                            TX_STATUS.PROCESSING
-                        ]
-                    }
-                },
-                {
-                    $set: {
-                        status: TX_STATUS.SUCCESS,
-                        description: 'Flutterwave payment verified'
-                    }
-                },
-                {
-                    new: true,
-                    session
-                }
-            );
-
-            if (!transaction) {
-                const existing = await Transaction.findById(
-                    transactionId
-                ).session(session);
-
-                result.alreadyProcessed =
-                    existing?.status === TX_STATUS.SUCCESS;
-
-                return;
-            }
-
-            const creditAmount = sanitizeAmount(
-                parseDecimal(transaction.amount)
-            );
-
-            const wallet = await Wallet.findOneAndUpdate(
-                { user: transaction.user },
-                {
-                    $inc: {
-                        balance: decimal128(creditAmount),
-                        availableBalance: decimal128(creditAmount)
-                    }
-                },
-                {
-                    new: true,
-                    session
-                }
-            );
-
-            if (!wallet) {
-                throw new Error(
-                    'Wallet not found while processing verified payment.'
-                );
-            }
-
-            const newBalance = parseDecimal(wallet.availableBalance);
-            const previousBalance = Number(
-                (newBalance - creditAmount).toFixed(2)
-            );
-
-            transaction.balanceBefore = String(previousBalance);
-            transaction.balanceAfter = String(newBalance);
-
-            await transaction.save({
-                session,
-                validateBeforeSave: false
-            });
-
-            await createAuditLog({
-                user: transaction.user,
-                transactionId: transaction._id,
-                reference: transaction.providerReference,
-                amount: creditAmount,
-                type: 'funding',
-                previousBalance,
-                newBalance,
-                ipAddress: request?.ip || 'FLUTTERWAVE',
-                userAgent:
-                    request?.headers?.['user-agent'] || 'SYSTEM',
-                status: TX_STATUS.SUCCESS,
-                source
-            }, session);
-
-            await sendSystemNotification(
-                transaction.user,
-                'Wallet Funded',
-                `Your wallet has been credited with ₦${creditAmount.toLocaleString()}.`,
-                'funding',
-                request,
-                session
-            );
-
-            result = {
-                credited: true,
-                alreadyProcessed: false,
-                balance: String(newBalance),
-                amount: creditAmount,
-                userId: transaction.user
-            };
-        });
-
-        if (result.credited) {
-            request?.server?.io
-                ?.to(`user:${result.userId}`)
-                .emit('wallet:update', {
-                    balance: result.balance
-                });
-        }
-
-        return result;
-
-    } finally {
-        await session.endSession();
-    }
+        const wallet = await Wallet.findOne({ user: userIdOf(req) });
+        if (!wallet) return fail(reply, 404, 'Wallet not found.');
+        return reply.send({ success: true, wallet });
+    } catch (err) { return errorReply(reply, err, 'Unable to retrieve wallet.'); }
 }
 
+/*
+ * Payment method keys are deliberately allow-listed. The V4 Orchestrator
+ * accepts a method-specific payment_method object; it is not a hosted checkout
+ * session and some methods return payment instructions instead of a URL.
+ */
+const METHOD_TYPES = Object.freeze({
+    card: 'card',
+    transfer: 'bank_transfer',
+    ussd: 'ussd',
+    opay: 'opay'
+});
 
-// ============================================================
-// 6. GET WALLET
-//
-// Does not fabricate virtual accounts or BVN details.
-// ============================================================
-
-async function getWallet(request, reply) {
-    try {
-        const userId = getRequestUserId(request);
-
-        const wallet = await Wallet.findOne({
-            user: userId
-        });
-
-        if (!wallet) {
-            return reply.code(404).send({
-                success: false,
-                message: 'Wallet not found.'
-            });
-        }
-
-        return reply.send({
-            success: true,
-            wallet
-        });
-
-    } catch (error) {
-        return handleError(
-            reply,
-            error,
-            'Failed to fetch wallet.'
-        );
-    }
-}
-
-
-// ============================================================
-// 7. INITIALIZE FLUTTERWAVE V4 FUNDING
-//
-// Expected request:
-// {
-//   "amount": 1000,
-//   "currency": "NGN",
-//   "paymentMethod": { ...V4 payment-method details... }
-// }
-//
-// paymentMethod is passed to the existing V4 service.
-// The frontend will be aligned to this contract separately.
-// ============================================================
-
-async function fundWallet(request, reply) {
-    let transaction;
-
+async function fundWallet(req, reply) {
+    let tx;
     try {
         const schema = Joi.object({
-            amount: Joi.number()
-                .min(MINIMUM_FUNDING)
-                .precision(2)
-                .required(),
+            amount: Joi.number().min(MINIMUM_FUNDING).precision(2).required(),
+            currency: Joi.string().valid(CURRENCY).default(CURRENCY),
+            method: Joi.string().valid('card', 'transfer', 'ussd', 'opay').required()
+        }).unknown(false);
+        const { error, value } = schema.validate(req.body || {});
+        if (error) return fail(reply, 400, error.details[0].message);
+        if (!rateLimit(req, 'fund-init', 8)) return fail(reply, 429, 'Too many funding attempts. Please wait and try again.');
 
-            currency: Joi.string()
-                .valid(CURRENCY)
-                .default(CURRENCY),
+        const userId = userIdOf(req);
+        if (!userId) return fail(reply, 401, 'Authentication is required.');
+        const [user, wallet] = await Promise.all([
+            User.findById(userId).select('email name firstName lastName'),
+            Wallet.findOne({ user: userId })
+        ]);
+        if (!user?.email) return fail(reply, 400, 'A valid email address is required on your account.');
+        if (!wallet) return fail(reply, 404, 'Wallet not found.');
 
-            paymentMethod: Joi.object()
-                .required(),
-
-            method: Joi.string()
-                .optional()
-        });
-
-        const { error, value } = schema.validate(
-            request.body || {},
-            { abortEarly: true }
-        );
-
-        if (error) {
-            return reply.code(400).send({
-                success: false,
-                message: error.details[0].message
-            });
+        const amount = money(value.amount);
+        const keyHeader = req.headers['x-idempotency-key'];
+        const idempotencyKey = typeof keyHeader === 'string' ? keyHeader.trim() : '';
+        if (idempotencyKey && (idempotencyKey.length < 8 || idempotencyKey.length > 128)) {
+            return fail(reply, 400, 'The idempotency key must contain 8–128 characters.');
         }
+        const key = idempotencyKey || crypto.randomUUID();
 
-        if (!await checkRateLimit(request, 'fund_init')) {
-            return reply.code(429).send({
-                success: false,
-                message: 'Too many funding attempts. Please wait.'
-            });
-        }
-
-        const userId = getRequestUserId(request);
-
-        const user = await User.findById(userId);
-
-        if (!user || !user.email) {
-            throw new Error(
-                'A valid customer email is required for payment.'
-            );
-        }
-
-        const wallet = await Wallet.findOne({
-            user: userId
-        });
-
-        if (!wallet) {
-            throw new Error('Wallet not found.');
-        }
-
-        const amount = sanitizeAmount(value.amount);
-        const currency = value.currency;
-
-        const idempotencyKey =
-            request.headers['x-idempotency-key'] ||
-            crypto.randomUUID();
-
-        if (
-            typeof idempotencyKey !== 'string' ||
-            idempotencyKey.length > 128
-        ) {
-            return reply.code(400).send({
-                success: false,
-                message: 'Invalid idempotency key.'
-            });
-        }
-
-        const existingTransaction = await Transaction.findOne({
-            idempotencyKey,
-            user: userId,
-            type: 'funding'
-        });
-
-        if (existingTransaction) {
-            if (existingTransaction.status === TX_STATUS.FAILED) {
-                return reply.code(409).send({
-                    success: false,
-                    message: 'This funding request has already failed. Start a new funding request.'
-                });
+        const existing = await Transaction.findOne({ idempotencyKey: key, user: userId, type: 'funding' });
+        if (existing) {
+            if (money(existing.amount) !== amount || (metaGet(existing.metadata, 'currency') || CURRENCY) !== CURRENCY ||
+                metaGet(existing.metadata, 'paymentMethod') !== value.method) {
+                return fail(reply, 409, 'This idempotency key was already used for a different funding request.');
             }
-
-            const existingMetadata =
-                existingTransaction.metadata;
-
-            const existingChargeId =
-                existingMetadata?.get?.('flutterwaveChargeId') ||
-                existingMetadata?.flutterwaveChargeId;
-
+            if (existing.status === TX.FAILED) return fail(reply, 409, 'This funding request failed. Start a new request with a new idempotency key.');
+            const action = metaGet(existing.metadata, 'nextAction');
             return reply.send({
-                success: true,
-                reused: true,
-                paymentReference:
-                    existingTransaction.providerReference,
-                chargeId: existingChargeId || null,
-                status: existingTransaction.status,
-                message: 'Existing funding request returned.'
+                success: true, reused: true,
+                paymentReference: existing.providerReference,
+                chargeId: metaGet(existing.metadata, 'flutterwaveChargeId') || null,
+                status: existing.status,
+                checkoutUrl: redirectUrlFrom(action),
+                nextAction: action || null
             });
         }
 
-        const reference =
-            `NPF_${Date.now()}_${crypto.randomBytes(6)
-                .toString('hex')
-                .toUpperCase()}`;
-
-        const currentBalance = parseDecimal(
-            wallet.availableBalance
-        );
-
-        // No invented or hardcoded gateway fee.
-        // The wallet is credited with the requested amount only.
-
-        transaction = new Transaction({
-            user: userId,
-            type: 'funding',
-            description: 'Wallet funding via Flutterwave V4',
-            amount,
-            fee: 0,
-            status: TX_STATUS.PENDING,
-            provider: PROVIDER,
-            providerReference: reference,
-            idempotencyKey,
-            balanceBefore: String(currentBalance),
-            balanceAfter: String(currentBalance),
-            metadata: {
-                paymentProvider: PROVIDER,
-                currency,
-                paymentMethod: value.method || 'customer-selected',
-                fundingAmount: String(amount)
-            }
+        const reference = `NPF${Date.now()}${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
+        tx = new Transaction({
+            user: userId, type: 'funding',
+            description: 'Wallet funding via Flutterwave',
+            amount, fee: 0, status: TX.PENDING, provider: PROVIDER,
+            providerReference: reference, idempotencyKey: key,
+            balanceBefore: String(money(wallet.availableBalance)),
+            balanceAfter: String(money(wallet.availableBalance)),
+            metadata: { paymentProvider: PROVIDER, currency: CURRENCY, paymentMethod: value.method, fundingAmount: String(amount) }
         });
-
-        await transaction.save({
-            validateBeforeSave: false
-        });
+        await tx.save({ validateBeforeSave: false });
 
         try {
-            // Create/retrieve the customer through the existing
-            // Flutterwave V4 OAuth service.
+            const customerResponse = await flutterwave.createCustomer({
+                email: user.email,
+                name: safeText(user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email, 120)
+            }, `naterpay-customer-${String(userId)}`);
 
-            const customerResponse =
-                await flutterwave.createCustomer({
-                    email: user.email,
-                    name:
-                        user.name ||
-                        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-                        user.email,
-                    idempotencyKey: `customer_${userId}`
-                });
+            const customerId = customerIdFrom(customerResponse);
+            if (!customerId) throw new Error('Flutterwave did not return a customer ID.');
 
-            const customerId = getCustomerId(
-                customerResponse
-            );
-
-            if (!customerId) {
-                throw new Error(
-                    'Flutterwave did not return a customer ID.'
-                );
-            }
-
-            // Create the charge using the existing V4 service.
-            // The service handles OAuth and API request headers.
-
-            const chargeResponse =
-                await flutterwave.createCharge({
-                    amount,
-                    currency,
-                    reference,
-                    customer: {
-                        id: customerId
-                    },
-                    payment_method: value.paymentMethod,
-                    redirect_url: `${APP_URL}/fund.html`,
-                    idempotencyKey: reference
-                });
-
-            const chargeId = getChargeId(chargeResponse);
-
-            if (!chargeId) {
-                throw new Error(
-                    'Flutterwave did not return a charge ID.'
-                );
-            }
-
-            const nextAction = getNextAction(
-                chargeResponse
-            );
-
-            const checkoutUrl = getRedirectUrl(
-                nextAction
-            );
-
-            transaction.providerResponse = {
-                data: {
-                    id: chargeId
-                }
+            /*
+             * The Orchestrator schema is method-specific. This route sends
+             * the selected method type only. If the merchant's enabled method
+             * requires additional customer fields, Flutterwave will reject it;
+             * no fabricated card, bank or account details are supplied.
+             */
+            const paymentMethod = { type: METHOD_TYPES[value.method] };
+            const payload = {
+                amount, currency: CURRENCY, reference,
+                customer: { id: customerId },
+                payment_method: paymentMethod,
+                redirect_url: `${APP_URL}/fund.html?reference=${encodeURIComponent(reference)}`
             };
 
-            if (transaction.metadata?.set) {
-                transaction.metadata.set(
-                    'flutterwaveChargeId',
-                    String(chargeId)
-                );
-
-                transaction.metadata.set(
-                    'flutterwaveCustomerId',
-                    String(customerId)
-                );
-            } else {
-                transaction.metadata = {
-                    ...(transaction.metadata || {}),
-                    flutterwaveChargeId: String(chargeId),
-                    flutterwaveCustomerId: String(customerId)
-                };
+            const chargeResponse = await flutterwave.createCharge(payload, reference);
+            const chargeId = chargeIdFrom(chargeResponse);
+            if (!chargeId || !String(chargeId).startsWith('chg_')) {
+                throw new Error('Flutterwave did not return a valid charge ID.');
             }
 
-            await transaction.save({
-                validateBeforeSave: false
-            });
+            const action = nextActionFrom(chargeResponse);
+            tx.providerResponse = { data: { id: String(chargeId) } };
+            metaSet(tx, 'flutterwaveChargeId', chargeId);
+            metaSet(tx, 'flutterwaveCustomerId', customerId);
+            metaSet(tx, 'nextAction', action || {});
+            await tx.save({ validateBeforeSave: false });
 
+            const checkoutUrl = redirectUrlFrom(action);
+            const instruction = action?.payment_instruction?.note || action?.payment_instructions?.note || null;
             return reply.send({
-                success: true,
-                paymentReference: reference,
-                chargeId,
-                status: TX_STATUS.PENDING,
-                checkoutUrl,
-                nextAction: nextAction || null,
-                message: checkoutUrl
-                    ? 'Payment initialized. Continue to the payment page.'
-                    : 'Payment initialized. Complete the required payment action.'
+                success: true, paymentReference: reference, chargeId,
+                status: TX.PENDING, checkoutUrl,
+                nextAction: action || null,
+                paymentInstruction: instruction,
+                message: checkoutUrl ? 'Payment initialized. Continue to Flutterwave.' :
+                    instruction ? 'Follow the payment instructions displayed.' :
+                    'Payment initialized. Awaiting the next authorization step.'
             });
-
         } catch (gatewayError) {
-            await failTransactionStrictly(
-                transaction._id,
-                gatewayError.message ||
-                    'Flutterwave payment initialization failed.',
-                request,
-                'Flutterwave V4 initialization'
-            );
-
+            /*
+             * A timeout/connection error is ambiguous: the provider may have
+             * created the charge. Leave it pending for reconciliation rather
+             * than incorrectly marking it failed.
+             */
+            const code = gatewayError.code || '';
+            const ambiguous = ['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'EAI_AGAIN'].includes(code) ||
+                gatewayError.response == null;
+            if (!ambiguous) {
+                await Transaction.updateOne(
+                    { _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
+                    { $set: { status: TX.FAILED, description: safeText(gatewayError.message || 'Flutterwave initialization failed.') } }
+                );
+            }
             throw gatewayError;
         }
-
-    } catch (error) {
-        return handleError(
-            reply,
-            error,
-            'Failed to initialize Flutterwave payment.'
-        );
+    } catch (err) {
+        return errorReply(reply, err, 'Unable to initialize your Flutterwave payment. If money was debited, do not retry yet; contact support with your reference.');
     }
 }
 
-
-// ============================================================
-// 8. VERIFY FLUTTERWAVE FUNDING
-//
-// Uses services/flutterwave.js verifyTransaction().
-// The frontend does not decide whether a payment succeeded.
-// ============================================================
-
-async function verifyFunding(request, reply) {
+async function verifyFunding(req, reply) {
     try {
-        const schema = Joi.object({
-            reference: Joi.string()
-                .trim()
-                .min(5)
-                .max(150)
-                .required()
+        const { error, value } = Joi.object({ reference: Joi.string().trim().min(8).max(150).required() }).validate(req.body || {});
+        if (error) return fail(reply, 400, 'A valid payment reference is required.');
+        if (!rateLimit(req, 'fund-verify', 20)) return fail(reply, 429, 'Too many verification requests.');
+        const tx = await Transaction.findOne({
+            providerReference: value.reference, user: userIdOf(req),
+            provider: PROVIDER, type: 'funding'
         });
+        if (!tx) return fail(reply, 404, 'Funding transaction not found.');
+        if (tx.status === TX.SUCCESS) return reply.send({ success: true, status: TX.SUCCESS, credited: false, message: 'Payment was already credited.' });
+        if (tx.status === TX.FAILED) return reply.send({ success: false, status: TX.FAILED, message: 'This payment was confirmed as failed.' });
 
-        const { error, value } = schema.validate(
-            request.body || {}
-        );
-
-        if (error) {
-            return reply.code(400).send({
-                success: false,
-                message: 'A valid payment reference is required.'
-            });
+        const verification = await flutterwave.verifyTransaction(tx);
+        if (!verification?.verified) {
+            return reply.send({ success: true, status: TX.PENDING, credited: false, message: 'Payment is still being confirmed. Your wallet has not been credited.' });
         }
-
-        if (!await checkRateLimit(request, 'verify', 20)) {
-            return reply.code(429).send({
-                success: false,
-                message: 'Too many verification requests.'
-            });
+        if (verification.status === 'failed') {
+            await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
+                { $set: { status: TX.FAILED, description: 'Flutterwave confirmed payment failure.' } });
+            return reply.send({ success: false, status: TX.FAILED, message: 'Flutterwave confirmed that this payment failed.' });
         }
-
-        const userId = getRequestUserId(request);
-
-        const transaction = await Transaction.findOne({
-            providerReference: value.reference,
-            user: userId,
-            provider: PROVIDER,
-            type: 'funding'
-        });
-
-        if (!transaction) {
-            return reply.code(404).send({
-                success: false,
-                message: 'Funding transaction not found.'
-            });
+        if (verification.status !== 'success') {
+            return reply.send({ success: true, status: TX.PENDING, credited: false, message: 'Payment is awaiting final confirmation.' });
         }
-
-        if (transaction.status === TX_STATUS.SUCCESS) {
-            return reply.send({
-                success: true,
-                status: TX_STATUS.SUCCESS,
-                message: 'This payment has already been credited.'
-            });
-        }
-
-        if (transaction.status === TX_STATUS.FAILED) {
-            return reply.send({
-                success: false,
-                status: TX_STATUS.FAILED,
-                message: 'This payment was unsuccessful.'
-            });
-        }
-
-        const verification =
-            await flutterwave.verifyTransaction(transaction);
-
-        if (!verification || verification.verified !== true) {
-            return reply.send({
-                success: true,
-                status: TX_STATUS.PENDING,
-                message: 'Payment is still being confirmed. Your wallet has not been credited.'
-            });
-        }
-
-        if (verification.status === TX_STATUS.FAILED) {
-            await failTransactionStrictly(
-                transaction._id,
-                'Flutterwave confirmed that payment failed.',
-                request,
-                'Flutterwave verification'
-            );
-
-            return reply.send({
-                success: false,
-                status: TX_STATUS.FAILED,
-                message: 'Flutterwave confirmed that the payment failed.'
-            });
-        }
-
-        if (verification.status !== TX_STATUS.SUCCESS) {
-            return reply.send({
-                success: true,
-                status: TX_STATUS.PENDING,
-                message: 'Payment is awaiting final confirmation.'
-            });
-        }
-
-        const creditResult = await creditVerifiedFunding(
-            transaction._id,
-            request,
-            'Flutterwave verification'
-        );
-
-        return reply.send({
-            success: true,
-            status: TX_STATUS.SUCCESS,
-            credited: creditResult.credited,
-            message: creditResult.credited
-                ? 'Payment verified and wallet credited successfully.'
-                : 'Payment was already processed.'
-        });
-
-    } catch (error) {
-        return handleError(
-            reply,
-            error,
-            'Failed to verify Flutterwave payment.'
-        );
-    }
+        const result = await creditVerifiedFunding(tx._id, req, 'Flutterwave verification');
+        return reply.send({ success: true, status: TX.SUCCESS, credited: result.credited, message: result.credited ? 'Payment verified and wallet credited.' : 'Payment was already processed.' });
+    } catch (err) { return errorReply(reply, err, 'Unable to verify the payment.'); }
 }
 
-
-// ============================================================
-// 9. FLUTTERWAVE V4 WEBHOOK
-//
-// Requires the original raw HTTP request body.
-// Do not calculate the signature from JSON.stringify(request.body).
-// ============================================================
-
-async function handleFlutterwaveWebhook(request, reply) {
+async function creditVerifiedFunding(transactionId, req, source) {
+    const session = await mongoose.startSession();
+    let result = { credited: false, alreadyProcessed: false };
     try {
-        const signature =
-            request.headers['flutterwave-signature'];
-
-        // This must be the exact original request bytes.
-        // server.js must expose rawBody for this webhook route.
-
-        const rawBody =
-            request.rawBody ||
-            (Buffer.isBuffer(request.body)
-                ? request.body
-                : null);
-
-        if (!rawBody || !signature) {
-            logger.warn(
-                'Flutterwave webhook rejected: raw body or signature missing.'
-            );
-
-            return reply.code(400).send({
-                success: false,
-                message: 'Webhook signature data is missing.'
-            });
+        await session.withTransaction(async () => {
+            const tx = await Transaction.findOneAndUpdate({
+                _id: transactionId, provider: PROVIDER, type: 'funding',
+                status: { $in: [TX.PENDING, TX.PROCESSING] }
+            }, { $set: { status: TX.SUCCESS, description: 'Flutterwave payment verified' } },
+            { new: true, session });
+            if (!tx) {
+                const prior = await Transaction.findById(transactionId).session(session);
+                result.alreadyProcessed = prior?.status === TX.SUCCESS;
+                return;
+            }
+            const amount = money(tx.amount);
+            if (amount <= 0) throw new Error('Invalid transaction amount.');
+            const wallet = await Wallet.findOneAndUpdate({ user: tx.user }, {
+                $inc: { balance: decimal(amount), availableBalance: decimal(amount) }
+            }, { new: true, session });
+            if (!wallet) throw new Error('Wallet not found while crediting verified payment.');
+            const after = money(wallet.availableBalance);
+            const before = Number((after - amount).toFixed(2));
+            tx.balanceBefore = String(before);
+            tx.balanceAfter = String(after);
+            await tx.save({ session, validateBeforeSave: false });
+            await audit({
+                user: tx.user, transactionId: tx._id, reference: tx.providerReference,
+                amount, type: 'funding', before, after, status: TX.SUCCESS,
+                ip: req?.ip || 'FLUTTERWAVE', ua: req?.headers?.['user-agent'] || 'SYSTEM', source
+            }, session);
+            await notify(tx.user, amount, null, session);
+            result = { credited: true, alreadyProcessed: false, balance: String(after), userId: String(tx.user) };
+        });
+        if (result.credited) {
+            req?.server?.io?.to(`user:${result.userId}`).emit('wallet:update', { balance: result.balance });
+            if (Notification) {
+                // Notification persisted in the same transaction; socket event is best-effort.
+                req?.server?.io?.to(`user:${result.userId}`).emit('notification:wallet-funded', { amount: result.balance });
+            }
         }
+        return result;
+    } finally { await session.endSession(); }
+}
 
-        const signatureValid =
-            flutterwave.verifyWebhookSignature(
-                rawBody,
-                signature
-            );
-
-        if (!signatureValid) {
-            logger.warn(
-                'Flutterwave webhook signature verification failed.'
-            );
-
-            return reply.code(401).send({
-                success: false,
-                message: 'Invalid webhook signature.'
-            });
-        }
+async function handleFlutterwaveWebhook(req, reply) {
+    try {
+        const signature = req.headers['flutterwave-signature'];
+        const rawBody = req.rawBody || (Buffer.isBuffer(req.body) ? req.body : null);
+        if (!rawBody || !signature) return fail(reply, 400, 'Webhook signature data is missing.');
+        if (!flutterwave.verifyWebhookSignature(rawBody, signature)) return fail(reply, 401, 'Invalid webhook signature.');
 
         let payload;
+        try { payload = JSON.parse(rawBody.toString('utf8')); }
+        catch (_) { return fail(reply, 400, 'Invalid webhook JSON.'); }
 
-        try {
-            payload = JSON.parse(rawBody.toString('utf8'));
-        } catch (_) {
-            return reply.code(400).send({
-                success: false,
-                message: 'Invalid webhook payload.'
-            });
-        }
+        const eventName = String(payload.type || payload.event || '').toLowerCase();
+        if (!eventName.includes('charge')) return reply.code(200).send({ received: true, ignored: true });
 
-        const event = payload.event;
         const data = payload.data || {};
+        const reference = data.reference || data.tx_ref;
+        const chargeId = data.id || data.charge_id;
+        if (!reference || !chargeId) return reply.code(200).send({ received: true, ignored: true });
 
-        // Ignore unrelated event types.
-        if (
-            !event ||
-            !String(event).toLowerCase().includes('charge')
-        ) {
-            return reply.code(200).send({
-                received: true,
-                ignored: true
-            });
+        const tx = await Transaction.findOne({ providerReference: reference, provider: PROVIDER, type: 'funding' });
+        if (!tx) {
+            logger.warn({ reference, message: 'Webhook reference not found; no wallet credit performed.' });
+            return reply.code(200).send({ received: true, ignored: true });
+        }
+        if (tx.status === TX.SUCCESS) return reply.code(200).send({ received: true, alreadyProcessed: true });
+
+        const storedId = metaGet(tx.metadata, 'flutterwaveChargeId') || tx.providerResponse?.data?.id;
+        if (storedId && String(storedId) !== String(chargeId)) {
+            logger.error({ reference, message: 'Webhook charge ID does not match stored charge ID.' });
+            return reply.code(400).send({ received: false, message: 'Charge ID mismatch.' });
+        }
+        if (!storedId) {
+            tx.providerResponse = { data: { id: String(chargeId) } };
+            metaSet(tx, 'flutterwaveChargeId', chargeId);
+            await tx.save({ validateBeforeSave: false });
         }
 
-        const reference =
-            data.reference ||
-            data.tx_ref ||
-            data.payment_reference;
-
-        const chargeId =
-            data.id ||
-            data.charge_id;
-
-        if (!reference || !chargeId) {
-            return reply.code(200).send({
-                received: true,
-                ignored: true,
-                message: 'Webhook has no matching payment reference.'
-            });
+        const verification = await flutterwave.verifyTransaction(tx);
+        if (!verification?.verified || verification.status === 'pending') {
+            return reply.code(200).send({ received: true, pendingVerification: true });
         }
-
-        const transaction = await Transaction.findOne({
-            providerReference: reference,
-            provider: PROVIDER,
-            type: 'funding'
-        });
-
-        // Unknown references are not credited automatically.
-        // This prevents arbitrary customer-email-based deposits.
-
-        if (!transaction) {
-            logger.warn({
-                message: 'Flutterwave webhook has no matching local transaction.',
-                reference
-            });
-
-            return reply.code(200).send({
-                received: true,
-                ignored: true
-            });
+        if (verification.status === 'failed') {
+            await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
+                { $set: { status: TX.FAILED, description: 'Flutterwave confirmed payment failure.' } });
+            return reply.code(200).send({ received: true, paymentStatus: TX.FAILED });
         }
+        if (verification.status !== 'success') return reply.code(200).send({ received: true, pendingVerification: true });
 
-        if (transaction.status === TX_STATUS.SUCCESS) {
-            return reply.code(200).send({
-                received: true,
-                alreadyProcessed: true
-            });
-        }
-
-        // Save the charge ID in the location expected by
-        // services/flutterwave.js verifyTransaction().
-
-        transaction.providerResponse = {
-            data: {
-                id: String(chargeId)
-            }
-        };
-
-        if (transaction.metadata?.set) {
-            transaction.metadata.set(
-                'flutterwaveChargeId',
-                String(chargeId)
-            );
-        } else {
-            transaction.metadata = {
-                ...(transaction.metadata || {}),
-                flutterwaveChargeId: String(chargeId)
-            };
-        }
-
-        await transaction.save({
-            validateBeforeSave: false
-        });
-
-        // Never credit from the webhook payload alone.
-        // Retrieve and verify the charge through the V4 service.
-
-        const verification =
-            await flutterwave.verifyTransaction(transaction);
-
-        if (!verification || verification.verified !== true) {
-            logger.warn({
-                message: 'Webhook received but charge is not yet verified.',
-                reference
-            });
-
-            // Non-verified events are acknowledged.
-            // Reconciliation will check pending transactions.
-
-            return reply.code(200).send({
-                received: true,
-                pendingVerification: true
-            });
-        }
-
-        if (verification.status === TX_STATUS.FAILED) {
-            await failTransactionStrictly(
-                transaction._id,
-                'Flutterwave confirmed payment failure.',
-                request,
-                'Flutterwave webhook'
-            );
-
-            return reply.code(200).send({
-                received: true,
-                paymentStatus: TX_STATUS.FAILED
-            });
-        }
-
-        if (verification.status !== TX_STATUS.SUCCESS) {
-            return reply.code(200).send({
-                received: true,
-                paymentStatus: TX_STATUS.PENDING
-            });
-        }
-
-        const result = await creditVerifiedFunding(
-            transaction._id,
-            request,
-            'Flutterwave webhook'
-        );
-
-        return reply.code(200).send({
-            received: true,
-            credited: result.credited,
-            alreadyProcessed: result.alreadyProcessed
-        });
-
-    } catch (error) {
-        logger.error({
-            message: 'Flutterwave webhook processing failed',
-            error: error.message
-        });
-
-        // A server error allows the provider to retry delivery.
-        return reply.code(500).send({
-            success: false,
-            message: 'Webhook processing failed.'
-        });
+        const result = await creditVerifiedFunding(tx._id, req, 'Flutterwave webhook');
+        return reply.code(200).send({ received: true, credited: result.credited, alreadyProcessed: result.alreadyProcessed });
+    } catch (err) {
+        logger.error({ err, message: 'Flutterwave webhook processing failed.' });
+        return reply.code(500).send({ success: false, message: 'Webhook processing failed.' });
     }
 }
 
-
-// ============================================================
-// 10. LEGACY ROUTE COMPATIBILITY
-//
-// These functions were placeholders in the supplied file.
-// They are deliberately not represented as working features.
-// ============================================================
-
-function unavailableFeature(name) {
-    return async function (request, reply) {
-        return reply.code(501).send({
-            success: false,
-            message: `${name} is not implemented in this wallet controller.`
-        });
+function disabled(name) {
+    return async function (_req, reply) {
+        return reply.code(501).send({ success: false, message: `${name} is not available in this controller.` });
     };
 }
-
-const fundManualWallet =
-    unavailableFeature('Manual wallet funding');
-
-const adminApproveManualFunding =
-    unavailableFeature('Manual funding approval');
-
-const adminRejectManualFunding =
-    unavailableFeature('Manual funding rejection');
-
-const withdraw =
-    unavailableFeature('Withdrawals');
-
-const transfer =
-    unavailableFeature('Wallet transfers');
-
-const setPin =
-    unavailableFeature('Transaction PIN management');
-
-const resolveBankAccount =
-    unavailableFeature('Bank account resolution');
-
-
-// ============================================================
-// 11. HEALTH CHECK
-// ============================================================
-
-async function healthCheck(request, reply) {
-    try {
-        return reply.send({
-            success: true,
-            status: 'Active',
-            database:
-                mongoose.connection.readyState === 1
-                    ? 'OK'
-                    : 'DOWN',
-            redis:
-                redisClient?.status === 'ready'
-                    ? 'OK'
-                    : 'UNAVAILABLE',
-            flutterwave:
-                process.env.FLW_CLIENT_ID &&
-                process.env.FLW_CLIENT_SECRET
-                    ? 'CONFIGURED'
-                    : 'NOT_CONFIGURED',
-            timestamp: new Date()
-        });
-
-    } catch (error) {
-        return reply.code(500).send({
-            success: false,
-            message: 'Health check failed.'
-        });
-    }
+async function healthCheck(_req, reply) {
+    return reply.send({
+        success: true, status: 'Active',
+        database: mongoose.connection.readyState === 1 ? 'OK' : 'DOWN',
+        flutterwave: process.env.FLW_CLIENT_ID && process.env.FLW_CLIENT_SECRET ? 'CONFIGURED' : 'NOT_CONFIGURED',
+        timestamp: new Date()
+    });
 }
 
-
-// ============================================================
-// 12. EXPORTS
-// ============================================================
-
 module.exports = {
-    getWallet,
-    fundWallet,
-    verifyFunding,
-
-    fundManualWallet,
-    adminApproveManualFunding,
-    adminRejectManualFunding,
-
-    withdraw,
-    transfer,
-    setPin,
-
-    resolveBankAccount,
-    handleFlutterwaveWebhook,
-    healthCheck
+    getWallet, fundWallet, verifyFunding, handleFlutterwaveWebhook, healthCheck,
+    fundManualWallet: disabled('Manual wallet funding'),
+    adminApproveManualFunding: disabled('Manual funding approval'),
+    adminRejectManualFunding: disabled('Manual funding rejection'),
+    withdraw: disabled('Withdrawals'),
+    transfer: disabled('Wallet transfers'),
+    setPin: disabled('Transaction PIN management'),
+    resolveBankAccount: disabled('Bank account resolution')
 };
