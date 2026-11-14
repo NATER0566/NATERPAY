@@ -92,12 +92,8 @@ async function checkFlutterwaveStatus(transaction) {
     try {
         const result = await flutterwave.verifyTransaction(transaction);
 
-        if (!result || result.verified !== true) {
-            return 'pending';
-        }
-
-        if (result.status === 'success') return 'success';
-        if (result.status === 'failed') return 'failed';
+        if (result?.status === 'success' && result.verified === true) return 'success';
+        if (['failed', 'cancelled'].includes(result?.status)) return 'failed';
 
         return 'pending';
 
@@ -187,12 +183,14 @@ async function reconcileTransactions() {
     try {
         logger.info('[SYSTEM] Starting transaction reconciliation...');
 
-        const fifteenMinutesAgo =
-            new Date(Date.now() - 15 * 60 * 1000);
+        const twoMinutesAgo =
+            new Date(Date.now() - 2 * 60 * 1000);
 
         const pendingTransactions = await Transaction.find({
             status: 'pending',
-            createdAt: { $lt: fifteenMinutesAgo }
+            provider: 'flutterwave',
+            type: 'funding',
+            createdAt: { $lt: twoMinutesAgo }
         }).limit(50);
 
         if (pendingTransactions.length === 0) {

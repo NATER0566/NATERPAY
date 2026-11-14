@@ -25,7 +25,7 @@ catch (_) {
 }
 
 const PROVIDER = 'flutterwave';
-const CURRENCY = 'NGN';
+const CURRENCIES = ['NGN', 'GHS', 'KES', 'UGX'];
 const MINIMUM_FUNDING = 100;
 const APP_URL = String(process.env.APP_URL || 'https://naterpay-yrf7.onrender.com').replace(/\/+$/, '');
 const TX = Object.freeze({ PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', FAILED: 'failed' });
@@ -147,7 +147,7 @@ async function fundWallet(req, reply) {
     try {
         const schema = Joi.object({
             amount: Joi.number().min(MINIMUM_FUNDING).precision(2).required(),
-            currency: Joi.string().valid(CURRENCY).default(CURRENCY),
+            currency: Joi.string().valid(...CURRENCIES).default('NGN'),
             method: Joi.string().valid('card', 'transfer', 'ussd', 'opay').required()
         }).unknown(false);
         const { error, value } = schema.validate(req.body || {});
@@ -173,7 +173,7 @@ async function fundWallet(req, reply) {
 
         const existing = await Transaction.findOne({ idempotencyKey: key, user: userId, type: 'funding' });
         if (existing) {
-            if (money(existing.amount) !== amount || (metaGet(existing.metadata, 'currency') || CURRENCY) !== CURRENCY ||
+            if (money(existing.amount) !== amount || (metaGet(existing.metadata, 'currency') || 'NGN') !== value.currency ||
                 metaGet(existing.metadata, 'paymentMethod') !== value.method) {
                 return fail(reply, 409, 'This idempotency key was already used for a different funding request.');
             }
@@ -196,21 +196,23 @@ async function fundWallet(req, reply) {
             providerReference: reference, idempotencyKey: key,
             balanceBefore: String(money(wallet.availableBalance)),
             balanceAfter: String(money(wallet.availableBalance)),
-            metadata: { paymentProvider: PROVIDER, currency: CURRENCY, paymentMethod: value.method, fundingAmount: String(amount) }
+            metadata: { paymentProvider: PROVIDER, currency: value.currency, paymentMethod: value.method, fundingAmount: String(amount) }
         });
         await tx.save({ validateBeforeSave: false });
 
         try {
             const payload = {
                 amount,
-                currency: CURRENCY,
+                currency: value.currency,
                 reference,
                 method: value.method,
                 customer: {
                     email: user.email,
-                    name: safeText(user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email, 120)
+                    name: safeText(user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email, 120),
+                    phonenumber: user.phoneNumber,
+                    userId: String(userId)
                 },
-                redirectUrl: `${APP_URL}/fund.html?reference=${encodeURIComponent(reference)}`,
+                redirectUrl: `${APP_URL}/fund-wallet.html?tx_ref=${encodeURIComponent(reference)}&status=returned`,
                 idempotencyKey: key
             };
 
@@ -259,7 +261,8 @@ async function fundWallet(req, reply) {
 
 async function verifyFunding(req, reply) {
     try {
-        const { error, value } = Joi.object({ reference: Joi.string().trim().min(8).max(150).required() }).validate(req.body || {});
+        const reference = req.query?.tx_ref || req.query?.reference || req.body?.tx_ref || req.body?.reference;
+        const { error, value } = Joi.object({ reference: Joi.string().trim().min(8).max(150).required() }).validate({ reference });
         if (error) return fail(reply, 400, 'A valid payment reference is required.');
         if (!rateLimit(req, 'fund-verify', 20)) return fail(reply, 429, 'Too many verification requests.');
         const tx = await Transaction.findOne({
@@ -268,22 +271,35 @@ async function verifyFunding(req, reply) {
         });
         if (!tx) return fail(reply, 404, 'Funding transaction not found.');
         if (tx.status === TX.SUCCESS) return reply.send({ success: true, status: TX.SUCCESS, credited: false, message: 'Payment was already credited.' });
-        if (tx.status === TX.FAILED) return reply.send({ success: false, status: TX.FAILED, message: 'This payment was confirmed as failed.' });
+        if ([TX.FAILED, 'cancelled'].includes(tx.status)) {
+            return reply.send({ success: false, status: tx.status, message: 'This payment was cancelled or failed.' });
+        }
 
         const verification = await flutterwave.verifyTransaction(tx);
+        if (verification.data) {
+            tx.providerResponse = { data: verification.data };
+            if (verification.data.id) metaSet(tx, 'flutterwaveTransactionId', verification.data.id);
+            await tx.save({ validateBeforeSave: false });
+        }
         if (!verification?.verified) {
+            if (['failed', 'cancelled'].includes(verification.status)) {
+                await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
+                    { $set: { status: verification.status, description: 'Flutterwave did not find or rejected this payment.' } });
+                return reply.send({ success: false, status: verification.status, credited: false, message: 'Flutterwave confirmed that this payment failed or was cancelled.' });
+            }
             return reply.send({ success: true, status: TX.PENDING, credited: false, message: 'Payment is still being confirmed. Your wallet has not been credited.' });
         }
-        if (verification.status === 'failed') {
+        if (['failed', 'cancelled'].includes(verification.status)) {
             await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
-                { $set: { status: TX.FAILED, description: 'Flutterwave confirmed payment failure.' } });
-            return reply.send({ success: false, status: TX.FAILED, message: 'Flutterwave confirmed that this payment failed.' });
+                { $set: { status: verification.status, description: 'Flutterwave confirmed payment failure.' } });
+            return reply.send({ success: false, status: verification.status, message: 'Flutterwave confirmed that this payment failed.' });
         }
         if (verification.status !== 'success') {
             return reply.send({ success: true, status: TX.PENDING, credited: false, message: 'Payment is awaiting final confirmation.' });
         }
         const result = await creditVerifiedFunding(tx._id, req, 'Flutterwave verification');
-        return reply.send({ success: true, status: TX.SUCCESS, credited: result.credited, message: result.credited ? 'Payment verified and wallet credited.' : 'Payment was already processed.' });
+        const wallet = await Wallet.findOne({ user: tx.user });
+        return reply.send({ success: true, status: TX.SUCCESS, credited: result.credited, balance: wallet?.availableBalance, message: result.credited ? 'Payment verified and wallet credited.' : 'Payment was already processed.' });
     } catch (err) { return errorReply(reply, err, 'Unable to verify the payment.'); }
 }
 
@@ -349,12 +365,50 @@ async function handleFlutterwaveWebhook(req, reply) {
         const data = payload.data || {};
         const reference = data.reference || data.tx_ref;
         const chargeId = data.id || data.charge_id;
+        logger.info({ webhook: maskSensitive(payload), reference, chargeId }, 'Flutterwave webhook received');
         if (!reference || !chargeId) return reply.code(200).send({ received: true, ignored: true });
 
         const tx = await Transaction.findOne({ providerReference: reference, provider: PROVIDER, type: 'funding' });
         if (!tx) {
             logger.warn({ reference, message: 'Webhook reference not found; no wallet credit performed.' });
             return reply.code(200).send({ received: true, ignored: true });
+        }
+
+        async function checkPending(req, reply) {
+            try {
+                const cutoff = new Date(Date.now() - 2 * 60 * 1000);
+                const pending = await Transaction.find({
+                    user: userIdOf(req), provider: PROVIDER, type: 'funding',
+                    status: { $in: [TX.PENDING, TX.PROCESSING] },
+                    createdAt: { $lt: cutoff }
+                }).sort({ createdAt: 1 }).limit(50);
+                const results = [];
+                for (const tx of pending) {
+                    const verification = await flutterwave.verifyTransaction(tx);
+                    if (verification.status === 'success' && verification.verified) {
+                        if (verification.data) {
+                            tx.providerResponse = { data: verification.data };
+                            if (verification.data.id) metaSet(tx, 'flutterwaveTransactionId', verification.data.id);
+                            await tx.save({ validateBeforeSave: false });
+                        }
+                        const credited = await creditVerifiedFunding(tx._id, req, 'Flutterwave reconciliation');
+                        results.push({ tx_ref: tx.providerReference, status: TX.SUCCESS, credited: credited.credited });
+                    } else if (['failed', 'cancelled'].includes(verification.status)) {
+                        await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
+                            { $set: { status: verification.status, description: 'Flutterwave confirmed payment failure or cancellation.' } });
+                        results.push({ tx_ref: tx.providerReference, status: verification.status });
+                    } else if (new Date(tx.createdAt).getTime() < Date.now() - 30 * 60 * 1000) {
+                        await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
+                            { $set: { status: TX.FAILED, description: 'Payment could not be found after the reconciliation window.' } });
+                        results.push({ tx_ref: tx.providerReference, status: TX.FAILED });
+                    } else {
+                        results.push({ tx_ref: tx.providerReference, status: TX.PENDING });
+                    }
+                }
+                return reply.send({ success: true, results });
+            } catch (err) {
+                return errorReply(reply, err, 'Unable to reconcile pending payments.');
+            }
         }
         if (tx.status === TX.SUCCESS) return reply.code(200).send({ received: true, alreadyProcessed: true });
 
@@ -373,10 +427,10 @@ async function handleFlutterwaveWebhook(req, reply) {
         if (!verification?.verified || verification.status === 'pending') {
             return reply.code(200).send({ received: true, pendingVerification: true });
         }
-        if (verification.status === 'failed') {
+        if (['failed', 'cancelled'].includes(verification.status)) {
             await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
-                { $set: { status: TX.FAILED, description: 'Flutterwave confirmed payment failure.' } });
-            return reply.code(200).send({ received: true, paymentStatus: TX.FAILED });
+                { $set: { status: verification.status, description: 'Flutterwave confirmed payment failure.' } });
+            return reply.code(200).send({ received: true, paymentStatus: verification.status });
         }
         if (verification.status !== 'success') return reply.code(200).send({ received: true, pendingVerification: true });
 
@@ -403,7 +457,7 @@ async function healthCheck(_req, reply) {
 }
 
 module.exports = {
-    getWallet, fundWallet, verifyFunding, handleFlutterwaveWebhook, healthCheck,
+    getWallet, fundWallet, verifyFunding, checkPending, handleFlutterwaveWebhook, healthCheck,
     fundManualWallet: disabled('Manual wallet funding'),
     adminApproveManualFunding: disabled('Manual funding approval'),
     adminRejectManualFunding: disabled('Manual funding rejection'),

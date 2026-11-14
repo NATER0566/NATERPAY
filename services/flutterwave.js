@@ -127,11 +127,18 @@ async function initializePayment({
     payment_options: selectedMethod,
     customer: {
       email: customer.email,
-      name: customer.name || customer.email
+      name: customer.name || customer.email,
+      phonenumber: customer.phonenumber || customer.phoneNumber || ''
     },
     customizations: customizations || {
-      title: 'NaterPay Wallet Funding',
-      description: 'Fund your NaterPay wallet'
+      title: 'NaterPay - Fund Wallet',
+      description: 'NaterPay Wallet Funding | Pay to NaterPay - Secure Payment by Flutterwave',
+      logo: 'https://your-domain/logo.png'
+    },
+    meta: {
+      userId: customer.userId || null,
+      platform: 'NaterPay',
+      merchant: 'NaterPay'
     }
   };
 
@@ -167,7 +174,8 @@ function transactionIdFrom(transaction) {
 function normalizeStatus(status) {
   const value = String(status || '').toLowerCase();
   if (['successful', 'success', 'succeeded'].includes(value)) return 'success';
-  if (['failed', 'cancelled', 'canceled', 'declined'].includes(value)) return 'failed';
+  if (['cancelled', 'canceled'].includes(value)) return 'cancelled';
+  if (['failed', 'declined'].includes(value)) return 'failed';
   return 'pending';
 }
 
@@ -187,33 +195,37 @@ async function verifyPayment(transactionId) {
   );
 }
 
+async function findPaymentsByReference(reference) {
+  if (!reference) {
+    throw new FlutterwaveError('A Flutterwave transaction reference is required.', 400);
+  }
+  return request('GET', '/transactions', { params: { tx_ref: reference } });
+}
+
 async function verifyTransaction(transaction) {
   if (!transaction) {
     return { verified: false, status: 'pending', reason: 'Transaction record is missing.' };
   }
 
-  const transactionId = transactionIdFrom(transaction);
-  if (!transactionId) {
-    return {
-      verified: false,
-      status: 'pending',
-      reason: 'Flutterwave transaction ID has not been recorded.'
-    };
-  }
-
   let response;
   try {
-    response = await verifyPayment(transactionId);
+    const transactionId = transactionIdFrom(transaction);
+    response = transactionId
+      ? await verifyPayment(transactionId)
+      : await findPaymentsByReference(transaction.providerReference);
   } catch (error) {
-    return { verified: false, status: 'pending', reason: error.message };
+    return { verified: false, status: 'pending', reason: error.message, providerError: true };
   }
 
-  const payment = response?.data;
-  if (!payment || String(payment.id) !== String(transactionId)) {
+  const responseData = response?.data;
+  const payment = Array.isArray(responseData)
+    ? responseData.find(item => String(item?.tx_ref || '') === String(transaction.providerReference))
+    : responseData;
+  if (!payment) {
     return {
       verified: false,
-      status: 'pending',
-      reason: 'Flutterwave returned an unexpected transaction.'
+      status: 'failed',
+      reason: 'Flutterwave did not find this transaction.'
     };
   }
 
@@ -268,6 +280,7 @@ module.exports = {
   request,
   initializePayment,
   verifyPayment,
+  findPaymentsByReference,
   verifyTransaction,
   verifyWebhookSignature,
   normalizeStatus

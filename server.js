@@ -316,6 +316,10 @@ async function registerRoutes() {
     fastify.post('/api/wallet/fund', { preHandler: auth.authenticate }, walletRoutes.fundWallet);
     fastify.post('/api/wallet/fund-manual', { preHandler: auth.authenticate }, walletRoutes.fundManualWallet);
     fastify.post('/api/wallet/verify', { preHandler: auth.authenticate }, walletRoutes.verifyFunding);
+    fastify.get('/api/wallet/verify', { preHandler: auth.authenticate }, walletRoutes.verifyFunding);
+    fastify.post('/api/wallet/check-pending', { preHandler: auth.authenticate }, walletRoutes.checkPending);
+    fastify.get('/api/wallet/check-pending', { preHandler: auth.authenticate }, walletRoutes.checkPending);
+    fastify.post('/api/wallet/reconcile', { preHandler: auth.authenticate }, walletRoutes.checkPending);
     fastify.post('/api/wallet/withdraw', { preHandler: auth.authenticate }, walletRoutes.withdraw);
     fastify.post('/api/wallet/transfer', { preHandler: auth.authenticate }, walletRoutes.transfer);
     fastify.post('/api/wallet/set-pin', { preHandler: auth.authenticate }, walletRoutes.setPin);
@@ -324,6 +328,9 @@ async function registerRoutes() {
     // Flutterwave webhook: rawBody is captured before JSON parsing. The
     // controller must verify request.rawBody against flutterwave-signature.
     fastify.post('/api/wallet/webhook/flutterwave', {
+        config: { rawBody: true }
+    }, walletRoutes.handleFlutterwaveWebhook);
+    fastify.post('/api/webhooks/flutterwave', {
         config: { rawBody: true }
     }, walletRoutes.handleFlutterwaveWebhook);
 
@@ -536,7 +543,7 @@ function setupSocketIO(server) {
 // CRON JOBS
 // -----------------------------------------------------------------------------
 function startCronJobs() {
-    cron.schedule('*/15 * * * *', async () => {
+    cron.schedule('*/5 * * * *', async () => {
         try {
             const reconciliationService = require('./services/reconciliation');
 

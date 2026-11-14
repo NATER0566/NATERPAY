@@ -1039,6 +1039,9 @@
         if(!authToken) { window.location.href = '/index.html'; return; }
 
         try {
+            await fetch('/api/wallet/check-pending', {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
             const res = await fetch('/api/user/dashboard-data', { headers: { 'Authorization': `Bearer ${authToken}` } });
             const data = await res.json();
 
