@@ -171,6 +171,7 @@ const config = {
         // This application is configured for LIVE mode.
         flutterwave: {
             mode: 'live',
+            baseUrl: 'https://api.flutterwave.com/v3',
 
             secretKey: envVars.FLUTTERWAVE_SECRET_KEY,
             publicKey: envVars.FLUTTERWAVE_PUBLIC_KEY,

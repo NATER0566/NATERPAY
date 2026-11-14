@@ -57,13 +57,6 @@ function chargeIdFrom(response) {
     const d = chargeData(response);
     return d.id || d.charge_id || d.charge?.id || null;
 }
-function customerIdFrom(response) {
-    const d = chargeData(response);
-    return d.id || d.customer_id || d.customer?.id || null;
-}
-function nextActionFrom(response) {
-    return chargeData(response).next_action || null;
-}
 function redirectUrlFrom(action) {
     if (!action || action.type !== 'redirect_url') return null;
     const raw = action.redirect_url?.url || action.redirect_url || action.url;
@@ -141,18 +134,6 @@ async function getWallet(req, reply) {
     } catch (err) { return errorReply(reply, err, 'Unable to retrieve wallet.'); }
 }
 
-/*
- * Payment method keys are deliberately allow-listed. The V4 Orchestrator
- * accepts a method-specific payment_method object; it is not a hosted checkout
- * session and some methods return payment instructions instead of a URL.
- */
-const METHOD_TYPES = Object.freeze({
-    card: 'card',
-    transfer: 'bank_transfer',
-    ussd: 'ussd',
-    opay: 'opay'
-});
-
 async function fundWallet(req, reply) {
     let tx;
     try {
@@ -189,14 +170,13 @@ async function fundWallet(req, reply) {
                 return fail(reply, 409, 'This idempotency key was already used for a different funding request.');
             }
             if (existing.status === TX.FAILED) return fail(reply, 409, 'This funding request failed. Start a new request with a new idempotency key.');
-            const action = metaGet(existing.metadata, 'nextAction');
             return reply.send({
                 success: true, reused: true,
                 paymentReference: existing.providerReference,
-                chargeId: metaGet(existing.metadata, 'flutterwaveChargeId') || null,
+                transactionId: metaGet(existing.metadata, 'flutterwaveTransactionId') || null,
                 status: existing.status,
-                checkoutUrl: redirectUrlFrom(action),
-                nextAction: action || null
+                checkoutUrl: null,
+                nextAction: null
             });
         }
 
@@ -213,51 +193,35 @@ async function fundWallet(req, reply) {
         await tx.save({ validateBeforeSave: false });
 
         try {
-            const customerResponse = await flutterwave.createCustomer({
-                email: user.email,
-                name: safeText(user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email, 120)
-            }, `naterpay-customer-${String(userId)}`);
-
-            const customerId = customerIdFrom(customerResponse);
-            if (!customerId) throw new Error('Flutterwave did not return a customer ID.');
-
-            /*
-             * The Orchestrator schema is method-specific. This route sends
-             * the selected method type only. If the merchant's enabled method
-             * requires additional customer fields, Flutterwave will reject it;
-             * no fabricated card, bank or account details are supplied.
-             */
-            const paymentMethod = { type: METHOD_TYPES[value.method] };
             const payload = {
-                amount, currency: CURRENCY, reference,
-                customer: { id: customerId },
-                payment_method: paymentMethod,
-                redirect_url: `${APP_URL}/fund.html?reference=${encodeURIComponent(reference)}`
+                amount,
+                currency: CURRENCY,
+                reference,
+                method: value.method,
+                customer: {
+                    email: user.email,
+                    name: safeText(user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email, 120)
+                },
+                redirectUrl: `${APP_URL}/fund.html?reference=${encodeURIComponent(reference)}`,
+                idempotencyKey: key
             };
 
-            const chargeResponse = await flutterwave.createCharge(payload, reference);
-            const chargeId = chargeIdFrom(chargeResponse);
-            if (!chargeId || !String(chargeId).startsWith('chg_')) {
-                throw new Error('Flutterwave did not return a valid charge ID.');
+            const paymentResponse = await flutterwave.initializePayment(payload);
+            const paymentData = chargeData(paymentResponse);
+            const transactionId = paymentData.id;
+            if (!transactionId) {
+                throw new Error('Flutterwave did not return a transaction ID.');
             }
 
-            const action = nextActionFrom(chargeResponse);
-            tx.providerResponse = { data: { id: String(chargeId) } };
-            metaSet(tx, 'flutterwaveChargeId', chargeId);
-            metaSet(tx, 'flutterwaveCustomerId', customerId);
-            metaSet(tx, 'nextAction', action || {});
+            tx.providerResponse = { data: paymentData };
+            metaSet(tx, 'flutterwaveTransactionId', transactionId);
             await tx.save({ validateBeforeSave: false });
 
-            const checkoutUrl = redirectUrlFrom(action);
-            const instruction = action?.payment_instruction?.note || action?.payment_instructions?.note || null;
+            const checkoutUrl = typeof paymentData.link === 'string' ? paymentData.link : null;
             return reply.send({
-                success: true, paymentReference: reference, chargeId,
+                success: true, paymentReference: reference, transactionId,
                 status: TX.PENDING, checkoutUrl,
-                nextAction: action || null,
-                paymentInstruction: instruction,
-                message: checkoutUrl ? 'Payment initialized. Continue to Flutterwave.' :
-                    instruction ? 'Follow the payment instructions displayed.' :
-                    'Payment initialized. Awaiting the next authorization step.'
+                message: 'Payment initialized. Continue to Flutterwave.'
             });
         } catch (gatewayError) {
             /*
@@ -358,7 +322,7 @@ async function creditVerifiedFunding(transactionId, req, source) {
 
 async function handleFlutterwaveWebhook(req, reply) {
     try {
-        const signature = req.headers['flutterwave-signature'];
+        const signature = req.headers['verif-hash'] || req.headers['flutterwave-signature'];
         const rawBody = req.rawBody || (Buffer.isBuffer(req.body) ? req.body : null);
         if (!rawBody || !signature) return fail(reply, 400, 'Webhook signature data is missing.');
         if (!flutterwave.verifyWebhookSignature(rawBody, signature)) return fail(reply, 401, 'Invalid webhook signature.');
@@ -382,14 +346,14 @@ async function handleFlutterwaveWebhook(req, reply) {
         }
         if (tx.status === TX.SUCCESS) return reply.code(200).send({ received: true, alreadyProcessed: true });
 
-        const storedId = metaGet(tx.metadata, 'flutterwaveChargeId') || tx.providerResponse?.data?.id;
+        const storedId = metaGet(tx.metadata, 'flutterwaveTransactionId') || tx.providerResponse?.data?.id;
         if (storedId && String(storedId) !== String(chargeId)) {
-            logger.error({ reference, message: 'Webhook charge ID does not match stored charge ID.' });
+            logger.error({ reference, message: 'Webhook transaction ID does not match stored transaction ID.' });
             return reply.code(400).send({ received: false, message: 'Charge ID mismatch.' });
         }
         if (!storedId) {
             tx.providerResponse = { data: { id: String(chargeId) } };
-            metaSet(tx, 'flutterwaveChargeId', chargeId);
+            metaSet(tx, 'flutterwaveTransactionId', chargeId);
             await tx.save({ validateBeforeSave: false });
         }
 
