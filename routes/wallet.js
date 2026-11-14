@@ -50,6 +50,14 @@ function metaSet(doc, key, value) {
     if (doc.metadata && typeof doc.metadata.set === 'function') doc.metadata.set(key, String(value));
     else doc.metadata = { ...(doc.metadata?.toObject?.() || doc.metadata || {}), [key]: String(value) };
 }
+function maskSensitive(value) {
+    if (Array.isArray(value)) return value.map(maskSensitive);
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => {
+        const sensitive = /authorization|secret|token|key|password/i.test(key);
+        return [key, sensitive ? '[REDACTED]' : maskSensitive(item)];
+    }));
+}
 function chargeData(response) {
     return response?.data?.data || response?.data || response || {};
 }
@@ -175,7 +183,7 @@ async function fundWallet(req, reply) {
                 paymentReference: existing.providerReference,
                 transactionId: metaGet(existing.metadata, 'flutterwaveTransactionId') || null,
                 status: existing.status,
-                checkoutUrl: null,
+                checkoutUrl: metaGet(existing.metadata, 'flutterwave_link') || null,
                 nextAction: null
             });
         }
@@ -207,19 +215,23 @@ async function fundWallet(req, reply) {
             };
 
             const paymentResponse = await flutterwave.initializePayment(payload);
+            logger.info({
+                reference,
+                flutterwaveResponse: maskSensitive(paymentResponse.rawResponse || paymentResponse)
+            }, 'Flutterwave payment initialization response');
+
             const paymentData = chargeData(paymentResponse);
-            const transactionId = paymentData.id;
-            if (!transactionId) {
-                throw new Error('Flutterwave did not return a transaction ID.');
+            const checkoutUrl = typeof paymentData.link === 'string' ? paymentData.link : null;
+            if (!checkoutUrl) {
+                throw new Error('Flutterwave did not return a checkout link.');
             }
 
             tx.providerResponse = { data: paymentData };
-            metaSet(tx, 'flutterwaveTransactionId', transactionId);
+            metaSet(tx, 'flutterwave_link', checkoutUrl);
             await tx.save({ validateBeforeSave: false });
 
-            const checkoutUrl = typeof paymentData.link === 'string' ? paymentData.link : null;
             return reply.send({
-                success: true, paymentReference: reference, transactionId,
+                success: true, paymentReference: reference, transactionId: null,
                 status: TX.PENDING, checkoutUrl,
                 message: 'Payment initialized. Continue to Flutterwave.'
             });

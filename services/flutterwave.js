@@ -135,10 +135,22 @@ async function initializePayment({
     }
   };
 
-  return request('POST', '/payments', {
+  const response = await request('POST', '/payments', {
     data,
     idempotencyKey: idempotencyKey || reference
   });
+
+  const payment = {
+    link: response?.data?.link || null,
+    tx_ref: response?.data?.tx_ref || reference
+  };
+  // Keep the provider payload available to the route logger without exposing
+  // it as part of the public initialization contract.
+  Object.defineProperty(payment, 'rawResponse', {
+    value: response,
+    enumerable: false
+  });
+  return payment;
 }
 
 function transactionIdFrom(transaction) {
