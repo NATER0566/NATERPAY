@@ -1,20 +1,67 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>NATER-PAY | Checkout</title>
-    <style>
-        body{margin:0;min-height:100vh;display:grid;place-items:center;background:#030303;color:#fff;font-family:Arial,sans-serif}
-        main{max-width:520px;padding:32px;text-align:center;border:1px solid #d4af37;border-radius:16px}
-        h1{color:#d4af37}
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NATERPAY Checkout</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#030303;color:#fff;font-family:Arial,sans-serif}
+    main{width:min(520px,calc(100% - 32px));padding:28px;border:1px solid #d4af37;border-radius:16px}
+    h1{color:#d4af37}label{display:block;margin:14px 0 6px}input,button{width:100%;padding:12px;border-radius:8px;box-sizing:border-box}input{background:#111;color:#fff;border:1px solid #555}button{margin-top:20px;background:#d4af37;border:0;font-weight:700;cursor:pointer}.muted{color:#aaa}.error{color:#ff8b8b}
+  </style>
 </head>
 <body>
-    <main>
-        <h1>Checkout</h1>
-        <p>Checkout is currently available through the NATER-PAY Flutterwave payment flow.</p>
-        <a href="fund-wallet.html" style="color:#d4af37">Return to NATER-PAY</a>
-    </main>
+<main>
+  <h1 id="title">Secure Checkout</h1>
+  <p id="description" class="muted">Loading payment details...</p>
+  <p id="amount"></p>
+  <form id="checkout" hidden>
+    <label for="customerName">Name</label><input id="customerName" autocomplete="name">
+    <label for="customerEmail">Email</label><input id="customerEmail" type="email" required autocomplete="email">
+    <label for="paymentAmount">Amount</label><input id="paymentAmount" type="number" min="1" step="0.01" required>
+    <button type="submit">Continue to Flutterwave</button>
+  </form>
+  <p id="status" class="muted"></p>
+</main>
+<script>
+  const id = new URLSearchParams(location.search).get('id');
+  const ref = new URLSearchParams(location.search).get('tx_ref');
+  const $ = (name) => document.getElementById(name);
+  let link;
+  async function load() {
+    if (!id) throw new Error('Payment link is missing.');
+    const response = await fetch('/api/payment-links/' + encodeURIComponent(id));
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.message || 'Payment link unavailable.');
+    link = data.link;
+    $('title').textContent = link.title;
+    $('description').textContent = link.description;
+    $('amount').textContent = link.isFlexibleAmount ? 'Enter your payment amount.' : `${link.currency} ${link.amount}`;
+    $('paymentAmount').value = link.isFlexibleAmount ? '' : link.amount;
+    $('paymentAmount').readOnly = !link.isFlexibleAmount;
+    $('checkout').hidden = false;
+  }
+  async function verify(reference) {
+    const response = await fetch(`/api/payment-links/${encodeURIComponent(id)}/pay/verify?tx_ref=${encodeURIComponent(reference)}`);
+    const data = await response.json();
+    $('status').textContent = data.status === 'success' ? 'Payment confirmed.' : 'Payment is still being confirmed.';
+    if (data.status === 'pending') setTimeout(() => verify(reference), 5000);
+  }
+  $('checkout').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = event.target.querySelector('button');
+    button.disabled = true;
+    try {
+      const response = await fetch(`/api/payment-links/${encodeURIComponent(id)}/pay`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({amount: Number($('paymentAmount').value), customerName: $('customerName').value, customerEmail: $('customerEmail').value})
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Unable to initialize payment.');
+      location.href = data.checkoutUrl;
+    } catch (error) { $('status').textContent = error.message; $('status').className = 'error'; button.disabled = false; }
+  });
+  (async () => { try { await load(); if (ref) verify(ref); } catch (error) { $('status').textContent = error.message; $('status').className = 'error'; } })();
+</script>
 </body>
 </html>

@@ -7,6 +7,8 @@ const crypto = require('crypto');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 const Joi = require('joi'); // [1] Strict Request Validation
+const flutterwave = require('../services/flutterwave');
+const { settleMerchantPayment } = require('../services/settlement');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -310,136 +312,104 @@ async function payLink(request, reply) {
 
         const schema = Joi.object({
             amount: Joi.number().min(1).optional(),
-            paidAmount: Joi.number().min(1).optional(),
             customerName: Joi.string().allow('', null),
             customerEmail: Joi.string().email().allow('', null),
-            gatewayReference: Joi.string().required(),
-            paymentMethod: Joi.string().valid('flutterwave').default('flutterwave')
+            customerPhone: Joi.string().allow('', null)
         });
 
         const { error, value } = schema.validate(request.body);
         if (error) throw error;
 
         const { id } = request.params;
-        const rawPaymentAmount = value.amount || value.paidAmount || 0;
-        const paymentAmount = sanitizeAmount(rawPaymentAmount);
+        const paymentLink = await PaymentLink.findOne({ linkId: sanitizeText(id) });
+        if (!paymentLink || !paymentLink.isActive || ['paused', 'archived', 'soldout'].includes(paymentLink.status)) {
+            throw { status: 410, message: 'Product is no longer available' };
+        }
+        if (paymentLink.maxTransactions && paymentLink.transactionCount >= paymentLink.maxTransactions) {
+            throw { status: 410, message: 'Product transaction limit reached' };
+        }
+        if (paymentLink.totalStock !== null && paymentLink.remainingStock <= 0) {
+            throw { status: 410, message: 'Product sold out' };
+        }
 
-        if (paymentAmount <= 0) throw new Error('Invalid payment amount.');
+        const paymentAmount = sanitizeAmount(value.amount ?? paymentLink.amount);
+        if (!paymentLink.isFlexibleAmount && paymentAmount !== sanitizeAmount(paymentLink.amount)) {
+            throw { status: 400, message: 'The payment amount does not match this payment link.' };
+        }
+        if (paymentLink.isFlexibleAmount &&
+            ((paymentLink.minAmount !== null && paymentAmount < sanitizeAmount(paymentLink.minAmount)) ||
+             (paymentLink.maxAmount !== null && paymentAmount > sanitizeAmount(paymentLink.maxAmount)))) {
+            throw { status: 400, message: 'The payment amount is outside this link’s allowed range.' };
+        }
+        if (paymentAmount <= 0 || !value.customerEmail) throw { status: 400, message: 'A valid payment amount and customer email are required.' };
 
-        // Check for double settlement (Idempotency)
-        const idempotencyKey = `plink_pay_${value.gatewayReference}`;
-        const existingTx = await Transaction.findOne({ idempotencyKey });
-        if (existingTx) return reply.send({ success: true, message: 'Payment already processed.', transaction: existingTx });
-
-        // [9] ATOMIC DATABASE SESSION WRAPPER
-        const session = await mongoose.startSession();
-        session.startTransaction();
+        const gatewayFee = Math.min(2000, sanitizeAmount(paymentAmount < 2500 ? paymentAmount * 0.015 : paymentAmount * 0.015 + 100));
+        const platformFee = sanitizeAmount(paymentAmount * 0.025);
+        const merchantCredit = sanitizeAmount(paymentAmount - gatewayFee - platformFee);
+        const reference = `NPL${Date.now()}${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
+        const transaction = await Transaction.create({
+            user: paymentLink.user,
+            type: 'payment_link',
+            description: `Marketplace payment: ${paymentLink.title}`,
+            amount: merchantCredit,
+            fee: sanitizeAmount(gatewayFee + platformFee),
+            balanceBefore: '0',
+            balanceAfter: '0',
+            status: 'pending',
+            provider: 'flutterwave',
+            providerReference: reference,
+            idempotencyKey: `plink_${reference}`,
+            paymentLinkDetails: { linkId: paymentLink.linkId, customerEmail: value.customerEmail, customerName: sanitizeText(value.customerName) || 'Anonymous' },
+            metadata: { linkId: paymentLink.linkId, grossAmount: paymentAmount, merchantCredit, gatewayFee, platformFee, currency: paymentLink.currency },
+            ipAddress: request.ip,
+            userAgent: request.headers['user-agent']
+        });
 
         try {
-            const paymentLink = await PaymentLink.findOne({ linkId: sanitizeText(id) }).session(session);
-            
-            if (!paymentLink) throw { status: 404, message: 'Product route missing' };
-            if (['paused', 'archived'].includes(paymentLink.status)) throw { status: 410, message: 'Product is no longer available' };
-            if (paymentLink.status === 'soldout') throw { status: 410, message: 'Product sold out' };
-
-            // =====================================================================
-            // NATER-PAY CENTRAL FEE ENGINE (STRICT SANITIZED MATH)
-            // =====================================================================
-            let gatewayFee = 0;
-            if (paymentAmount < 2500) {
-                gatewayFee = sanitizeAmount(paymentAmount * 0.015);
-            } else {
-                gatewayFee = sanitizeAmount((paymentAmount * 0.015) + 100);
-            }
-            if (gatewayFee > 2000) gatewayFee = 2000;
-
-            const platformFee = sanitizeAmount(paymentAmount * 0.025); 
-            let finalCredit = sanitizeAmount(paymentAmount - gatewayFee - platformFee);
-
-            if (paymentLink.feePreference === 'buyer' && !paymentLink.isFlexibleAmount) {
-                finalCredit = sanitizeAmount(paymentLink.amount);
-            }
-            
-            if (finalCredit < 0) finalCredit = 0;
-
-            // =====================================================================
-            // WALLET CREDIT
-            // =====================================================================
-            const wallet = await Wallet.findOne({ user: paymentLink.user }).session(session);
-            if (!wallet) throw { status: 404, message: 'Merchant wallet not found' };
-
-            const currentAvail = sanitizeAmount(wallet.availableBalance);
-            const currentLedger = sanitizeAmount(wallet.balance);
-            const newAvail = sanitizeAmount(currentAvail + finalCredit);
-            const newLedger = sanitizeAmount(currentLedger + finalCredit);
-            
-            wallet.availableBalance = String(newAvail);
-            wallet.balance = String(newLedger);
-            await wallet.save({ session });
-
-            const safeCustomerName = sanitizeText(value.customerName) || 'Anonymous';
-            const safeCustomerEmail = sanitizeText(value.customerEmail) || null;
-
-            const transaction = new Transaction({
-                user: paymentLink.user,
-                type: 'payment_link',
-                description: `Marketplace Sale: ${paymentLink.title} (Buyer: ${safeCustomerName})`,
-                amount: finalCredit,
-                fee: sanitizeAmount(gatewayFee + platformFee),
-                balanceBefore: String(currentAvail),
-                balanceAfter: String(newAvail),
-                status: 'success',
-                provider: 'flutterwave',
-                providerReference: sanitizeText(value.gatewayReference),
-                idempotencyKey: idempotencyKey,
-                paymentLinkDetails: { linkId: paymentLink.linkId, customerEmail: safeCustomerEmail, customerName: safeCustomerName },
-                metadata: { grossPaid: paymentAmount, gatewayFee, platformFee },
-                ipAddress: request.ip,
-                userAgent: request.headers['user-agent']
+            const initialized = await flutterwave.initializePayment({
+                amount: paymentAmount,
+                currency: paymentLink.currency || 'NGN',
+                reference,
+                method: 'card',
+                customer: { email: value.customerEmail, name: value.customerName, phonenumber: value.customerPhone },
+                redirectUrl: `${process.env.APP_URL || ''}/pay.html?tx_ref=${encodeURIComponent(reference)}`
             });
-            await transaction.save({ session });
-            
-            paymentLink.transactionCount = (paymentLink.transactionCount || 0) + 1;
-            paymentLink.totalCollected = String(sanitizeAmount(Number(paymentLink.totalCollected || 0) + paymentAmount));
-            paymentLink.feesPaid = sanitizeAmount((paymentLink.feesPaid || 0) + (paymentAmount - finalCredit));
-
-            if (paymentLink.totalStock !== null && paymentLink.totalStock > 0) {
-                paymentLink.remainingStock = (paymentLink.remainingStock !== null ? paymentLink.remainingStock : paymentLink.totalStock) - 1;
-                if (paymentLink.remainingStock <= 0) {
-                    paymentLink.remainingStock = 0;
-                    paymentLink.status = 'soldout';
-                }
+            transaction.providerResponse = initialized.rawResponse || initialized;
+            await transaction.save({ validateBeforeSave: false });
+            return reply.send({ success: true, status: 'pending', paymentReference: reference, checkoutUrl: initialized.link });
+        } catch (error) {
+            if (error.code !== 'ECONNABORTED' && error.code !== 'ETIMEDOUT') {
+                transaction.status = 'failed';
+                await transaction.save({ validateBeforeSave: false });
             }
-            await paymentLink.save({ session });
-
-            await createAuditLog({
-                user: paymentLink.user, transactionId: transaction._id, reference: transaction.providerReference, amount: finalCredit,
-                type: 'marketplace_sale', previousBalance: currentAvail, newBalance: newAvail,
-                ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'success', source: 'Storefront Checkout API'
-            }, session);
-
-            await session.commitTransaction();
-            session.endSession();
-
-            // Send Realtime Notifications
-            if (Notification && typeof Notification.create === 'function') {
-                await Notification.create({ user: paymentLink.user, title: 'Product Sale!', message: `₦${finalCredit.toLocaleString()} received via storefront: ${paymentLink.title}`, type: 'transaction', priority: 'high' }).catch(() => {});
-            }
-            
-            if (request.server && request.server.io) {
-                request.server.io.to(`user:${paymentLink.user}`).emit('wallet:update', { balance: wallet.availableBalance.toString() });
-                request.server.io.to(`user:${paymentLink.user}`).emit('notification', { type: 'success', title: 'New Sale!', message: `You received ₦${finalCredit.toLocaleString()} from: ${paymentLink.title}` });
-            }
-            
-            reply.send({ success: true, message: 'Payment verified and settled.', transaction, redirectUrl: paymentLink.redirectUrl });
-
-        } catch (dbError) {
-            await session.abortTransaction();
-            session.endSession();
-            throw dbError;
+            throw error;
         }
 
     } catch (error) { handleError(reply, error, 'Failed to process payment fulfillment'); }
+}
+
+async function verifyLinkPayment(request, reply) {
+    try {
+        const tx = await Transaction.findOne({
+            providerReference: request.query?.tx_ref,
+            type: 'payment_link',
+            provider: 'flutterwave'
+        });
+        if (!tx || (tx.metadata?.get?.('linkId') || tx.metadata?.linkId) !== sanitizeText(request.params.id)) {
+            return reply.code(404).send({ success: false, message: 'Payment transaction not found.' });
+        }
+        if (tx.status === 'success') return reply.send({ success: true, status: 'success', transaction: tx });
+        const verification = await flutterwave.verifyTransaction(tx);
+        if (verification.status === 'success' && verification.verified) {
+            const settled = await settleMerchantPayment(tx._id, request);
+            return reply.send({ success: true, status: 'success', settled: settled.settled });
+        }
+        if (verification.status === 'failed' || verification.status === 'cancelled') {
+            tx.status = verification.status;
+            await tx.save({ validateBeforeSave: false });
+        }
+        return reply.send({ success: true, status: verification.status || 'pending' });
+    } catch (error) { return handleError(reply, error, 'Unable to verify payment.'); }
 }
 
 /* ============================================================================
@@ -643,6 +613,7 @@ module.exports = {
   createLink,
   getLink,
   payLink,
+  verifyLinkPayment,
   getMyProducts,
   createProductMultipart,
   updateProductStatus,

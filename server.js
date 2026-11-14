@@ -368,6 +368,7 @@ async function registerRoutes() {
     fastify.post('/api/payment-links', { preHandler: auth.authenticate }, paymentLinkRoutes.createLink);
     fastify.get('/api/payment-links/:id', paymentLinkRoutes.getLink);
     fastify.post('/api/payment-links/:id/pay', paymentLinkRoutes.payLink);
+    fastify.get('/api/payment-links/:id/pay/verify', paymentLinkRoutes.verifyLinkPayment);
     fastify.get('/api/marketplace/all', paymentLinkRoutes.getAllMarketplaceLinks);
     fastify.get('/api/payment-links/me', { preHandler: auth.authenticate }, paymentLinkRoutes.getMyProducts);
     fastify.post('/api/payment-links/multipart', { preHandler: auth.authenticate }, paymentLinkRoutes.createProductMultipart);
@@ -395,6 +396,7 @@ async function registerRoutes() {
     fastify.put('/api/invoices/:id/mark-paid', { preHandler: auth.authenticate }, invoiceRoutes.markInvoicePaid);
     fastify.get('/api/invoices/:invoiceId', invoiceRoutes.getInvoice);
     fastify.post('/api/invoices/:invoiceId/pay', invoiceRoutes.payInvoice);
+    fastify.get('/api/invoices/:invoiceId/pay/verify', invoiceRoutes.verifyInvoicePayment);
 
     const notificationRoutes = require('./routes/notification');
     fastify.get('/api/notifications', { preHandler: auth.authenticate }, notificationRoutes.getNotifications);

@@ -17,6 +17,7 @@ class FlutterwaveError extends Error {
     this.name = 'FlutterwaveError';
     this.statusCode = statusCode;
     this.details = details;
+    this.code = details?.code || null;
   }
 }
 
@@ -87,9 +88,11 @@ async function request(method, path, options = {}) {
 function paymentOptions(method) {
   const options = {
     card: 'card',
+    banktransfer: 'banktransfer',
     transfer: 'banktransfer',
     ussd: 'ussd',
-    opay: 'banktransfer',
+    opay: 'opay',
+    nqr: 'nqr',
     qr: 'nqr'
   };
   return options[method] || null;
@@ -161,6 +164,31 @@ async function initializePayment({
   const selectedMethod = paymentOptions(method);
   if (!selectedMethod) {
     throw new FlutterwaveError('Unsupported Flutterwave payment method.', 400);
+  }
+
+  if (selectedMethod === 'nqr') {
+    const response = await request('POST', '/charges?type=qr', {
+      data: {
+        amount: Number(amount),
+        email: customer.email,
+        tx_ref: reference,
+        currency: 'NGN',
+        is_nqr: 1
+      },
+      idempotencyKey: idempotencyKey || reference
+    });
+    const charge = response?.data || {};
+    const qrCode = charge.qr_code || charge.qrCode || charge.qr_image || charge.qrImage;
+    if (typeof qrCode !== 'string' || !qrCode.trim()) {
+      throw new FlutterwaveError('Flutterwave did not return a native NQR image.', 502, response);
+    }
+    return {
+      link: charge.link || null,
+      tx_ref: charge.tx_ref || reference,
+      qrCode,
+      transactionId: charge.id || charge.charge_id || null,
+      rawResponse: response
+    };
   }
 
   const data = {
@@ -243,7 +271,10 @@ async function findPaymentsByReference(reference) {
   if (!reference) {
     throw new FlutterwaveError('A Flutterwave transaction reference is required.', 400);
   }
-  return request('GET', '/transactions', { params: { tx_ref: reference } });
+  return request(
+    'GET',
+    `/transactions/verify_by_reference?tx_ref=${encodeURIComponent(String(reference))}`
+  );
 }
 
 async function verifyTransaction(transaction) {
@@ -268,7 +299,7 @@ async function verifyTransaction(transaction) {
   if (!payment) {
     return {
       verified: false,
-      status: 'cancelled',
+      status: 'pending',
       found: false,
       reason: 'Flutterwave did not find this transaction.'
     };

@@ -8,6 +8,7 @@ const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const flutterwave = require('../services/flutterwave');
+const { settleFunding } = require('../services/settlement');
 const { decrypt } = require('../utils/secure-kyc');
 
 let AuditLog;
@@ -248,7 +249,7 @@ async function fundWallet(req, reply) {
         tx = new Transaction({
             user: userId, type: 'funding',
             description: 'Wallet funding via Flutterwave',
-            amount, fee: 0, status: TX.PROCESSING, provider: PROVIDER,
+            amount, fee: 0,             status: TX.PENDING, provider: PROVIDER,
             providerReference: reference, idempotencyKey: key,
             balanceBefore: String(money(wallet.availableBalance)),
             balanceAfter: String(money(wallet.availableBalance)),
@@ -280,17 +281,23 @@ async function fundWallet(req, reply) {
 
             const paymentData = chargeData(paymentResponse);
             const checkoutUrl = typeof paymentData.link === 'string' ? paymentData.link : null;
-            if (!checkoutUrl) {
+            const qrCode = paymentResponse.qrCode || paymentData.qr_code || paymentData.qrCode;
+            if (value.method === 'qr' && !qrCode) {
+                throw new Error('Flutterwave did not return a native NQR image.');
+            }
+            if (value.method !== 'qr' && !checkoutUrl) {
                 throw new Error('Flutterwave did not return a checkout link.');
             }
 
             tx.providerResponse = { data: paymentData };
+            if (paymentResponse.transactionId) metaSet(tx, 'flutterwaveTransactionId', paymentResponse.transactionId);
             metaSet(tx, 'flutterwave_link', checkoutUrl);
+            if (qrCode) metaSet(tx, 'flutterwave_qr_code', qrCode);
             await tx.save({ validateBeforeSave: false });
 
             return reply.send({
                 success: true, paymentReference: reference, transactionId: null,
-                status: TX.PENDING, checkoutUrl,
+                status: TX.PENDING, checkoutUrl, qrCode: qrCode || null,
                 message: 'Payment initialized. Continue to Flutterwave.'
             });
         } catch (gatewayError) {
@@ -302,10 +309,12 @@ async function fundWallet(req, reply) {
             const code = gatewayError.code || '';
             const ambiguous = ['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'EAI_AGAIN'].includes(code) ||
                 gatewayError.response == null;
-            await Transaction.updateOne(
-                { _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
-                { $set: { status: 'cancelled', description: ambiguous ? 'Flutterwave initialization could not be confirmed; no payment was verified.' : safeText(gatewayError.message || 'Flutterwave initialization failed.') } }
-            );
+            if (!ambiguous) {
+                await Transaction.updateOne(
+                    { _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
+                    { $set: { status: TX.FAILED, description: safeText(gatewayError.message || 'Flutterwave initialization failed.') } }
+                );
+            }
             throw gatewayError;
         }
     } catch (err) {
@@ -394,11 +403,12 @@ async function cancelFunding(req, reply) {
             return reply.send({ success: false, status: TX.PENDING, message: 'We received your payment, confirming...' });
         }
         if (['cancelled', 'failed'].includes(verification.status)) {
+            const nextStatus = verification.status === 'cancelled' ? 'cancelled' : TX.FAILED;
             await Transaction.updateOne(
                 { _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
-                { $set: { status: 'cancelled', description: 'Payment cancelled; Flutterwave confirmed that no money was taken.' } }
+                { $set: { status: nextStatus, description: 'Flutterwave confirmed payment failure or cancellation.' } }
             );
-            return reply.send({ success: true, status: 'cancelled', message: 'Payment Cancelled - No money was taken.' });
+            return reply.send({ success: true, status: nextStatus, message: 'Flutterwave confirmed that this payment was not successful.' });
         }
         return reply.send({ success: false, status: TX.PENDING, message: 'Payment status could not be confirmed yet. Please try again shortly.' });
     } catch (err) {
@@ -407,48 +417,7 @@ async function cancelFunding(req, reply) {
 }
 
 async function creditVerifiedFunding(transactionId, req, source) {
-    const session = await mongoose.startSession();
-    let result = { credited: false, alreadyProcessed: false };
-    try {
-        await session.withTransaction(async () => {
-            const tx = await Transaction.findOneAndUpdate({
-                _id: transactionId, provider: PROVIDER, type: 'funding',
-                    status: { $in: [TX.PENDING, TX.PROCESSING] }
-            }, { $set: { status: TX.SUCCESS, description: 'Flutterwave payment verified' } },
-            { new: true, session });
-            if (!tx) {
-                const prior = await Transaction.findById(transactionId).session(session);
-                result.alreadyProcessed = prior?.status === TX.SUCCESS;
-                return;
-            }
-            const amount = money(tx.amount);
-            if (amount <= 0) throw new Error('Invalid transaction amount.');
-            const wallet = await Wallet.findOneAndUpdate({ user: tx.user }, {
-                $inc: { balance: decimal(amount), availableBalance: decimal(amount) }
-            }, { new: true, session });
-            if (!wallet) throw new Error('Wallet not found while crediting verified payment.');
-            const after = money(wallet.availableBalance);
-            const before = Number((after - amount).toFixed(2));
-            tx.balanceBefore = String(before);
-            tx.balanceAfter = String(after);
-            await tx.save({ session, validateBeforeSave: false });
-            await audit({
-                user: tx.user, transactionId: tx._id, reference: tx.providerReference,
-                amount, type: 'funding', before, after, status: TX.SUCCESS,
-                ip: req?.ip || 'FLUTTERWAVE', ua: req?.headers?.['user-agent'] || 'SYSTEM', source
-            }, session);
-            await notify(tx.user, amount, null, session);
-            result = { credited: true, alreadyProcessed: false, balance: String(after), userId: String(tx.user) };
-        });
-        if (result.credited) {
-            req?.server?.io?.to(`user:${result.userId}`).emit('wallet:update', { balance: result.balance });
-            if (Notification) {
-                // Notification persisted in the same transaction; socket event is best-effort.
-                req?.server?.io?.to(`user:${result.userId}`).emit('notification:wallet-funded', { amount: result.balance });
-            }
-        }
-        return result;
-    } finally { await session.endSession(); }
+    return settleFunding(transactionId, req, source);
 }
 
 async function checkPending(req, reply) {

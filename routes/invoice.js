@@ -6,6 +6,8 @@ const User = require('../models/User');
 const crypto = require('crypto');
 const { Resend } = require('resend');
 const Joi = require('joi'); // [1] Strict Request Validation
+const flutterwave = require('../services/flutterwave');
+const { settleMerchantPayment } = require('../services/settlement');
 
 let resend = null;
 
@@ -267,70 +269,85 @@ async function getInvoice(request, reply) {
 ============================================================================ */
 async function payInvoice(request, reply) {
     try {
-        const schema = Joi.object({ paymentMethod: Joi.string().required(), gatewayReference: Joi.string().required() });
+        const schema = Joi.object({
+            paymentMethod: Joi.string().valid('card', 'banktransfer', 'ussd', 'opay').default('card'),
+            customerEmail: Joi.string().email().required(),
+            customerName: Joi.string().allow('', null),
+            customerPhone: Joi.string().allow('', null)
+        });
         const { error, value } = schema.validate(request.body);
         if (error) throw error;
 
         const { invoiceId } = request.params;
-        const idempotencyKey = `inv_pay_${value.gatewayReference}`; 
+        const invoice = await Invoice.findOne({ invoiceId: sanitizeText(invoiceId) });
+        if (!invoice) throw { status: 404, message: 'Invoice not found' };
+        if (['paid', 'cancelled'].includes(invoice.status)) throw { status: 409, message: `Invoice is ${invoice.status}` };
 
-        const existingTx = await Transaction.findOne({ idempotencyKey });
-        if (existingTx) return reply.send({ success: true, message: 'Payment already processed.', transaction: existingTx });
-
-        // [9] ATOMIC SESSION WRAPPER (Prevents Double Spends & Data Inconsistency)
-        const session = await mongoose.startSession();
-        session.startTransaction();
-
+        const grossAmount = sanitizeAmount(invoice.total);
+        const platformFee = sanitizeAmount(grossAmount * 0.015);
+        const merchantCredit = sanitizeAmount(grossAmount - platformFee);
+        const reference = `NPI${Date.now()}${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
+        const transaction = await Transaction.create({
+            user: invoice.user,
+            type: 'invoice',
+            description: `Invoice payment: ${invoice.invoiceId}`,
+            amount: merchantCredit,
+            fee: platformFee,
+            balanceBefore: '0',
+            balanceAfter: '0',
+            status: 'pending',
+            provider: 'flutterwave',
+            providerReference: reference,
+            idempotencyKey: `inv_${reference}`,
+            invoiceDetails: { invoiceId: invoice.invoiceId, customerEmail: value.customerEmail, customerName: value.customerName || invoice.customerName },
+            metadata: { invoiceId: invoice.invoiceId, grossAmount, merchantCredit, currency: invoice.currency || 'NGN' },
+            ipAddress: request.ip,
+            userAgent: request.headers['user-agent']
+        });
         try {
-            const invoice = await Invoice.findOne({ invoiceId: sanitizeText(invoiceId) }).session(session);
-            if (!invoice) throw new Error('Invoice not found');
-            if (['paid', 'cancelled'].includes(invoice.status)) throw new Error(`Invoice is already ${invoice.status}`);
-
-            const paidAmount = sanitizeAmount(invoice.total);
-            const platformFee = sanitizeAmount(paidAmount * 0.015);
-            const finalCredit = sanitizeAmount(paidAmount - platformFee);
-
-            const wallet = await Wallet.findOne({ user: invoice.user }).session(session);
-            if (!wallet) throw new Error("Merchant wallet not found");
-
-            const currentAvail = sanitizeAmount(wallet.availableBalance);
-            const newAvail = currentAvail + finalCredit;
-
-            wallet.availableBalance = String(newAvail);
-            wallet.balance = String(sanitizeAmount(wallet.balance) + finalCredit);
-            await wallet.save({ session });
-            
-            const transaction = new Transaction({
-                user: invoice.user, type: 'invoice', description: `Invoice Payment Settled: ${invoice.customerName} (#${invoice.invoiceId})`,
-                amount: finalCredit, fee: platformFee, balanceBefore: String(currentAvail), balanceAfter: String(newAvail),
-                status: 'success', provider: 'flutterwave', providerReference: sanitizeText(value.gatewayReference),
-                idempotencyKey, invoiceDetails: { invoiceId: invoice.invoiceId, customerEmail: invoice.customerEmail, customerName: invoice.customerName },
-                ipAddress: request.ip, userAgent: request.headers['user-agent']
+            const initialized = await flutterwave.initializePayment({
+                amount: grossAmount,
+                currency: invoice.currency || 'NGN',
+                reference,
+                method: value.paymentMethod,
+                customer: { email: value.customerEmail, name: value.customerName || invoice.customerName, phonenumber: value.customerPhone },
+                redirectUrl: `${process.env.APP_URL || ''}/invoice-view.html?invoiceId=${encodeURIComponent(invoice.invoiceId)}&tx_ref=${encodeURIComponent(reference)}`
             });
-            await transaction.save({ session });
-            
-            invoice.status = 'paid';
-            invoice.paidAt = new Date();
-            await invoice.save({ session });
-
-            await createAuditLog({
-                user: invoice.user, transactionId: transaction._id, reference: invoice.invoiceId, amount: finalCredit,
-                type: 'invoice_settlement', previousBalance: currentAvail, newBalance: newAvail, 
-                ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'success', source: 'Invoice Payment API'
-            }, session);
-
-            await session.commitTransaction();
-            session.endSession();
-            
-            if (request.server && request.server.io) request.server.io.to(`user:${invoice.user}`).emit('wallet:update', { balance: wallet.availableBalance });
-            reply.send({ success: true, message: 'Invoice payment authorized and settled.', transaction });
-
-        } catch (dbError) {
-            await session.abortTransaction();
-            session.endSession();
-            throw dbError;
+            transaction.providerResponse = initialized.rawResponse || initialized;
+            await transaction.save({ validateBeforeSave: false });
+            return reply.send({ success: true, status: 'pending', paymentReference: reference, checkoutUrl: initialized.link });
+        } catch (gatewayError) {
+            if (gatewayError.code !== 'ECONNABORTED' && gatewayError.code !== 'ETIMEDOUT') {
+                transaction.status = 'failed';
+                await transaction.save({ validateBeforeSave: false });
+            }
+            throw gatewayError;
         }
     } catch (error) { handleError(reply, error, 'Failed to process invoice payment'); }
+}
+
+async function verifyInvoicePayment(request, reply) {
+    try {
+        const tx = await Transaction.findOne({
+            providerReference: request.query?.tx_ref,
+            type: 'invoice',
+            provider: 'flutterwave'
+        });
+        if (!tx || (tx.metadata?.get?.('invoiceId') || tx.metadata?.invoiceId) !== sanitizeText(request.params.invoiceId)) {
+            return reply.code(404).send({ success: false, message: 'Payment transaction not found.' });
+        }
+        if (tx.status === 'success') return reply.send({ success: true, status: 'success', transaction: tx });
+        const verification = await flutterwave.verifyTransaction(tx);
+        if (verification.status === 'success' && verification.verified) {
+            const settled = await settleMerchantPayment(tx._id, request);
+            return reply.send({ success: true, status: 'success', settled: settled.settled });
+        }
+        if (verification.status === 'failed' || verification.status === 'cancelled') {
+            tx.status = verification.status;
+            await tx.save({ validateBeforeSave: false });
+        }
+        return reply.send({ success: true, status: verification.status || 'pending' });
+    } catch (error) { return handleError(reply, error, 'Unable to verify invoice payment.'); }
 }
 
 /* ============================================================================
@@ -358,14 +375,15 @@ async function markInvoicePaid(request, reply) {
         if (!await checkRateLimit(request, 'mark_invoice', 20)) throw { status: 429, message: 'Too many requests.' };
 
         const updated = await Invoice.findOneAndUpdate(
-            { _id: sanitizeText(id), user: request.user._id }, 
-            { status: 'paid', paidAt: new Date() }, { new: true }
+            { _id: sanitizeText(id), user: request.user._id, status: { $in: ['sent', 'viewed', 'overdue'] } },
+            { $set: { status: 'paid', paidAt: new Date(), paymentMethod: 'manual', paymentReference: `MANUAL-${request.user._id}-${Date.now()}` } },
+            { new: true }
         );
         if (!updated) throw { status: 404, message: 'Invoice not found or unauthorized.' };
         
-        await createAuditLog({ user: request.user._id, action: `Marked Invoice Paid: ${id}`, ipAddress: request.ip, userAgent: request.headers['user-agent'] });
+        await createAuditLog({ user: request.user._id, transactionId: updated._id, reference: updated.invoiceId, amount: updated.total, type: 'invoice_manual_payment', previousBalance: '0', newBalance: '0', ipAddress: request.ip, userAgent: request.headers['user-agent'], status: 'success', source: `Manual payment by ${request.user._id}` });
         reply.send({ success: true, message: 'Invoice marked as paid.' });
     } catch (error) { handleError(reply, error, 'System error updating status.'); }
 }
 
-module.exports = { getInvoices, createInvoice, getInvoice, payInvoice, deleteInvoice, markInvoicePaid };
+module.exports = { getInvoices, createInvoice, getInvoice, payInvoice, verifyInvoicePayment, deleteInvoice, markInvoicePaid };
