@@ -618,17 +618,19 @@ async function start() {
 
         startCronJobs();
 
+        const PORT = process.env.PORT || 10000;
         await fastify.listen({
-            port: config.port,
-            host: config.host
+            port: Number(PORT),
+            host: '0.0.0.0'
         });
 
-        logger.info('[SYSTEM] NATERPAY server started.', {
-            port: config.port,
-            host: config.host
+        logger.info(`[SYSTEM] NATERPAY server listening on PORT ${PORT}.`, {
+            port: PORT,
+            host: '0.0.0.0'
         });
     } catch (error) {
-        logger.error('[FATAL] Server startup failed.', error);
+        logger.error({ err: error, stack: error.stack }, `[FATAL] Server startup failed: ${error.message}`);
+        console.error(error.stack);
         try {
             await fastify.close();
         } catch (_) {}

@@ -8,11 +8,21 @@ try {
 } catch (e) { 
     logger = { 
         info: (msg, meta = {}) => console.log(JSON.stringify({ level: 'info', timestamp: new Date().toISOString(), message: msg, ...meta })),
+        warn: (msg, meta = {}) => console.warn(JSON.stringify({ level: 'warn', timestamp: new Date().toISOString(), message: msg, ...meta })),
         error: (msg, err, meta = {}) => console.error(JSON.stringify({ level: 'error', timestamp: new Date().toISOString(), message: msg, error: err?.message || err, ...meta }))
     };
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend = null;
+if (process.env.RESEND_API_KEY) {
+    try {
+        resend = new Resend(process.env.RESEND_API_KEY);
+    } catch (error) {
+        logger.warn(`[EMAIL] Resend initialization skipped: ${error.message}`);
+    }
+} else {
+    logger.warn('[EMAIL] RESEND_API_KEY is not configured. Email delivery is disabled.');
+}
 const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 
 // [2] TEXT SANITIZATION (XSS Protection for Email Clients)
@@ -104,6 +114,7 @@ function getEmailHTML(title, mainText, bigHighlightText) {
 async function sendOTPEmail(email, otp) {
     const safeEmail = sanitizeText(email);
     try {
+        if (!resend) throw new Error('Email service is not configured.');
         await withRetry(() => resend.emails.send({
             from: `"NATER-PAY" <${fromEmail}>`,
             to: safeEmail,
@@ -125,6 +136,7 @@ async function sendOTPEmail(email, otp) {
 async function sendPasswordResetEmail(email, otp) {
     const safeEmail = sanitizeText(email);
     try {
+        if (!resend) throw new Error('Email service is not configured.');
         await withRetry(() => resend.emails.send({
             from: `"NATER-PAY SECURITY" <${fromEmail}>`,
             to: safeEmail,

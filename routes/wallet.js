@@ -348,6 +348,43 @@ async function creditVerifiedFunding(transactionId, req, source) {
     } finally { await session.endSession(); }
 }
 
+async function checkPending(req, reply) {
+    try {
+        const cutoff = new Date(Date.now() - 2 * 60 * 1000);
+        const pending = await Transaction.find({
+            user: userIdOf(req), provider: PROVIDER, type: 'funding',
+            status: { $in: [TX.PENDING, TX.PROCESSING] },
+            createdAt: { $lt: cutoff }
+        }).sort({ createdAt: 1 }).limit(50);
+        const results = [];
+        for (const tx of pending) {
+            const verification = await flutterwave.verifyTransaction(tx);
+            if (verification.status === 'success' && verification.verified) {
+                if (verification.data) {
+                    tx.providerResponse = { data: verification.data };
+                    if (verification.data.id) metaSet(tx, 'flutterwaveTransactionId', verification.data.id);
+                    await tx.save({ validateBeforeSave: false });
+                }
+                const credited = await creditVerifiedFunding(tx._id, req, 'Flutterwave reconciliation');
+                results.push({ tx_ref: tx.providerReference, status: TX.SUCCESS, credited: credited.credited });
+            } else if (['failed', 'cancelled'].includes(verification.status)) {
+                await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
+                    { $set: { status: verification.status, description: 'Flutterwave confirmed payment failure or cancellation.' } });
+                results.push({ tx_ref: tx.providerReference, status: verification.status });
+            } else if (new Date(tx.createdAt).getTime() < Date.now() - 30 * 60 * 1000) {
+                await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
+                    { $set: { status: TX.FAILED, description: 'Payment could not be found after the reconciliation window.' } });
+                results.push({ tx_ref: tx.providerReference, status: TX.FAILED });
+            } else {
+                results.push({ tx_ref: tx.providerReference, status: TX.PENDING });
+            }
+        }
+        return reply.send({ success: true, results });
+    } catch (err) {
+        return errorReply(reply, err, 'Unable to reconcile pending payments.');
+    }
+}
+
 async function handleFlutterwaveWebhook(req, reply) {
     try {
         const signature = req.headers['verif-hash'] || req.headers['flutterwave-signature'];
@@ -374,42 +411,6 @@ async function handleFlutterwaveWebhook(req, reply) {
             return reply.code(200).send({ received: true, ignored: true });
         }
 
-        async function checkPending(req, reply) {
-            try {
-                const cutoff = new Date(Date.now() - 2 * 60 * 1000);
-                const pending = await Transaction.find({
-                    user: userIdOf(req), provider: PROVIDER, type: 'funding',
-                    status: { $in: [TX.PENDING, TX.PROCESSING] },
-                    createdAt: { $lt: cutoff }
-                }).sort({ createdAt: 1 }).limit(50);
-                const results = [];
-                for (const tx of pending) {
-                    const verification = await flutterwave.verifyTransaction(tx);
-                    if (verification.status === 'success' && verification.verified) {
-                        if (verification.data) {
-                            tx.providerResponse = { data: verification.data };
-                            if (verification.data.id) metaSet(tx, 'flutterwaveTransactionId', verification.data.id);
-                            await tx.save({ validateBeforeSave: false });
-                        }
-                        const credited = await creditVerifiedFunding(tx._id, req, 'Flutterwave reconciliation');
-                        results.push({ tx_ref: tx.providerReference, status: TX.SUCCESS, credited: credited.credited });
-                    } else if (['failed', 'cancelled'].includes(verification.status)) {
-                        await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
-                            { $set: { status: verification.status, description: 'Flutterwave confirmed payment failure or cancellation.' } });
-                        results.push({ tx_ref: tx.providerReference, status: verification.status });
-                    } else if (new Date(tx.createdAt).getTime() < Date.now() - 30 * 60 * 1000) {
-                        await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
-                            { $set: { status: TX.FAILED, description: 'Payment could not be found after the reconciliation window.' } });
-                        results.push({ tx_ref: tx.providerReference, status: TX.FAILED });
-                    } else {
-                        results.push({ tx_ref: tx.providerReference, status: TX.PENDING });
-                    }
-                }
-                return reply.send({ success: true, results });
-            } catch (err) {
-                return errorReply(reply, err, 'Unable to reconcile pending payments.');
-            }
-        }
         if (tx.status === TX.SUCCESS) return reply.code(200).send({ received: true, alreadyProcessed: true });
 
         const storedId = metaGet(tx.metadata, 'flutterwaveTransactionId') || tx.providerResponse?.data?.id;

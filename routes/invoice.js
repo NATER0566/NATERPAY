@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const { Resend } = require('resend');
 const Joi = require('joi'); // [1] Strict Request Validation
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend = null;
 
 // [2] STRUCTURED LOGGING ENGINE
 let logger;
@@ -19,6 +19,16 @@ try {
         warn: (msg, meta = {}) => console.warn(JSON.stringify({ level: 'warn', timestamp: new Date().toISOString(), message: msg, ...meta })),
         error: (msg, err, meta = {}) => console.error(JSON.stringify({ level: 'error', timestamp: new Date().toISOString(), message: msg, error: err?.message || err, ...meta }))
     };
+}
+
+if (process.env.RESEND_API_KEY) {
+    try {
+        resend = new Resend(process.env.RESEND_API_KEY);
+    } catch (error) {
+        logger.warn(`[EMAIL] Invoice email initialization skipped: ${error.message}`);
+    }
+} else {
+    logger.warn('[EMAIL] Invoice email delivery is disabled because RESEND_API_KEY is not configured.');
 }
 
 let AuditLog, Redis;

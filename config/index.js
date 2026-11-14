@@ -16,6 +16,11 @@ try {
             timestamp: new Date().toISOString(),
             message: msg
         })),
+        warn: (msg) => console.warn(JSON.stringify({
+            level: 'warn',
+            timestamp: new Date().toISOString(),
+            message: msg
+        })),
         error: (msg) => console.error(JSON.stringify({
             level: 'error',
             timestamp: new Date().toISOString(),
@@ -34,10 +39,9 @@ const checkBool = (val, fallback = false) => {
 
 // ============================================================================
 // ENVIRONMENT VALIDATION
-// Flutterwave credentials are required in production.
-// They remain optional in development so local work can continue.
+// Flutterwave credentials are checked when payment operations are requested.
+// They remain optional at boot so health checks and the web server can start.
 // ============================================================================
-const productionSecret = Joi.string().trim().required();
 const optionalSecret = Joi.string().trim().allow('').optional();
 
 const envVarsSchema = Joi.object({
@@ -69,29 +73,12 @@ const envVarsSchema = Joi.object({
     PAYSTACK_PUBLIC_KEY: Joi.string().optional(),
 
     // Flutterwave LIVE credentials
-    FLUTTERWAVE_SECRET_KEY: Joi.when('NODE_ENV', {
-        is: 'production',
-        then: productionSecret,
-        otherwise: optionalSecret
-    }),
-
-    FLUTTERWAVE_PUBLIC_KEY: Joi.when('NODE_ENV', {
-        is: 'production',
-        then: productionSecret,
-        otherwise: optionalSecret
-    }),
-
-    FLUTTERWAVE_SECRET_HASH: Joi.when('NODE_ENV', {
-        is: 'production',
-        then: productionSecret,
-        otherwise: optionalSecret
-    }),
-
-    FLUTTERWAVE_ENCRYPTION_KEY: Joi.when('NODE_ENV', {
-        is: 'production',
-        then: productionSecret,
-        otherwise: optionalSecret
-    }),
+    // Payment credentials are checked when a payment operation is requested.
+    // Their absence must not prevent health checks and the web server from booting.
+    FLUTTERWAVE_SECRET_KEY: optionalSecret,
+    FLUTTERWAVE_PUBLIC_KEY: optionalSecret,
+    FLUTTERWAVE_SECRET_HASH: optionalSecret,
+    FLUTTERWAVE_ENCRYPTION_KEY: optionalSecret,
 
     // VTpass
     VTPASS_API_KEY: Joi.string().optional(),
@@ -246,7 +233,19 @@ const config = {
 };
 
 logger.info(
-    '[CONFIG] Environment variables validated. Flutterwave LIVE configuration loaded; secret values masked.'
+    '[CONFIG] Environment variables validated. Secret values masked.'
 );
+
+const missingFlutterwave = [
+    'FLUTTERWAVE_SECRET_KEY',
+    'FLUTTERWAVE_PUBLIC_KEY',
+    'FLUTTERWAVE_SECRET_HASH'
+].filter((name) => !envVars[name]);
+
+if (missingFlutterwave.length > 0) {
+    logger.warn(
+        `[CONFIG] Flutterwave is not fully configured. Missing: ${missingFlutterwave.join(', ')}.`
+    );
+}
 
 module.exports = config;
