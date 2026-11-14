@@ -29,8 +29,8 @@ const walletSchema = new mongoose.Schema({
     type: String,
     default: 'NGN'
   },
-  // [NEW] Secure storage for Korapay permanent virtual account
   virtualAccount: {
+    provider: { type: String, default: null },
     bankName: { type: String, default: null },
     accountNumber: { type: String, default: null },
     accountName: { type: String, default: null },

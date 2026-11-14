@@ -313,6 +313,7 @@ async function registerRoutes() {
 
     const walletRoutes = require('./routes/wallet');
     fastify.get('/api/wallet', { preHandler: auth.authenticate }, walletRoutes.getWallet);
+    fastify.get('/api/wallet/virtual-account', { preHandler: auth.authenticate }, walletRoutes.getVirtualAccount);
     fastify.post('/api/wallet/fund', { preHandler: auth.authenticate }, walletRoutes.fundWallet);
     fastify.post('/api/wallet/fund-manual', { preHandler: auth.authenticate }, walletRoutes.fundManualWallet);
     fastify.post('/api/wallet/verify', { preHandler: auth.authenticate }, walletRoutes.verifyFunding);

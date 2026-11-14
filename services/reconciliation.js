@@ -184,10 +184,10 @@ async function reconcileTransactions() {
         logger.info('[SYSTEM] Starting transaction reconciliation...');
 
         const twoMinutesAgo =
-            new Date(Date.now() - 2 * 60 * 1000);
+            new Date(Date.now() - 5 * 60 * 1000);
 
         const pendingTransactions = await Transaction.find({
-            status: 'pending',
+            status: { $in: ['pending', 'processing'] },
             provider: 'flutterwave',
             type: 'funding',
             createdAt: { $lt: twoMinutesAgo }
@@ -346,7 +346,7 @@ async function reconcileTransactions() {
                         }, session);
                     }
 
-                    lockedTx.status = 'failed';
+                    lockedTx.status = 'cancelled';
 
                     lockedTx.metadata =
                         lockedTx.metadata || {};
@@ -358,7 +358,7 @@ async function reconcileTransactions() {
                         new Date();
 
                     lockedTx.metadata.failureReason =
-                        'Transaction failed at provider gateway.';
+                        'Transaction was not found or was cancelled at the provider.';
 
                     await lockedTx.save({ session });
 

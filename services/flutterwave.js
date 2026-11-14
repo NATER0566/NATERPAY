@@ -89,9 +89,40 @@ function paymentOptions(method) {
     card: 'card',
     transfer: 'banktransfer',
     ussd: 'ussd',
-    opay: 'opay'
+    opay: 'banktransfer',
+    qr: 'nqr'
   };
   return options[method] || null;
+}
+
+async function createVirtualAccount({ email, firstname, lastname, phonenumber, bvn, reference }) {
+  if (!email || !firstname || !lastname || !phonenumber) {
+    throw new FlutterwaveError('Complete name, email and phone details are required to create your dedicated account.', 400);
+  }
+  if (!bvn) {
+    throw new FlutterwaveError('A verified BVN is required by Flutterwave to create your dedicated account.', 400);
+  }
+
+  const response = await request('POST', '/virtual-account-numbers', {
+    data: {
+      email,
+      is_permanent: true,
+      bvn,
+      firstname,
+      lastname,
+      phonenumber,
+      tx_ref: reference
+    },
+    idempotencyKey: reference
+  });
+  const data = response?.data || {};
+  const accountNumber = data.account_number || data.accountNumber;
+  const bankName = data.bank_name || data.bankName;
+  const accountName = data.account_name || data.accountName;
+  if (!accountNumber || !bankName || !accountName) {
+    throw new FlutterwaveError('Flutterwave did not return a complete dedicated account.', 502, response);
+  }
+  return { accountNumber, bankName, accountName, reference: data.order_ref || data.account_reference || reference };
 }
 
 async function initializePayment({
@@ -224,7 +255,8 @@ async function verifyTransaction(transaction) {
   if (!payment) {
     return {
       verified: false,
-      status: 'failed',
+      status: 'cancelled',
+      found: false,
       reason: 'Flutterwave did not find this transaction.'
     };
   }
@@ -279,6 +311,7 @@ module.exports = {
   FlutterwaveError,
   request,
   initializePayment,
+  createVirtualAccount,
   verifyPayment,
   findPaymentsByReference,
   verifyTransaction,
