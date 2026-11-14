@@ -421,7 +421,7 @@ async function healthCheck(_req, reply) {
     return reply.send({
         success: true, status: 'Active',
         database: mongoose.connection.readyState === 1 ? 'OK' : 'DOWN',
-        flutterwave: process.env.FLW_CLIENT_ID && process.env.FLW_CLIENT_SECRET ? 'CONFIGURED' : 'NOT_CONFIGURED',
+        flutterwave: process.env.FLUTTERWAVE_SECRET_KEY && process.env.FLUTTERWAVE_PUBLIC_KEY ? 'CONFIGURED' : 'NOT_CONFIGURED',
         timestamp: new Date()
     });
 }

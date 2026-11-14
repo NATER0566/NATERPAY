@@ -69,13 +69,13 @@ const envVarsSchema = Joi.object({
     PAYSTACK_PUBLIC_KEY: Joi.string().optional(),
 
     // Flutterwave LIVE credentials
-    FLW_CLIENT_ID: Joi.when('NODE_ENV', {
+    FLUTTERWAVE_SECRET_KEY: Joi.when('NODE_ENV', {
         is: 'production',
         then: productionSecret,
         otherwise: optionalSecret
     }),
 
-    FLW_CLIENT_SECRET: Joi.when('NODE_ENV', {
+    FLUTTERWAVE_PUBLIC_KEY: Joi.when('NODE_ENV', {
         is: 'production',
         then: productionSecret,
         otherwise: optionalSecret
@@ -172,13 +172,10 @@ const config = {
         flutterwave: {
             mode: 'live',
 
-            clientId: envVars.FLW_CLIENT_ID,
-            clientSecret: envVars.FLW_CLIENT_SECRET,
+            secretKey: envVars.FLUTTERWAVE_SECRET_KEY,
+            publicKey: envVars.FLUTTERWAVE_PUBLIC_KEY,
             secretHash: envVars.FLUTTERWAVE_SECRET_HASH,
             encryptionKey: envVars.FLUTTERWAVE_ENCRYPTION_KEY,
-
-            tokenUrl:
-                'https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token'
         },
 
         // Retained temporarily to avoid breaking any existing

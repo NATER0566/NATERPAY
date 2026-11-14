@@ -12,13 +12,10 @@ const BASE_URL =
   FLW_CONFIG.baseUrl ||
   'https://f4bexperience.flutterwave.com';
 
-const TOKEN_URL =
-  FLW_CONFIG.tokenUrl ||
-  'https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token';
-
-const CLIENT_ID = FLW_CONFIG.clientId || process.env.FLW_CLIENT_ID;
-const CLIENT_SECRET =
-  FLW_CONFIG.clientSecret || process.env.FLW_CLIENT_SECRET;
+const SECRET_KEY =
+  FLW_CONFIG.secretKey || process.env.FLUTTERWAVE_SECRET_KEY;
+const PUBLIC_KEY =
+  FLW_CONFIG.publicKey || process.env.FLUTTERWAVE_PUBLIC_KEY;
 
 const SECRET_HASH =
   FLW_CONFIG.secretHash || process.env.FLUTTERWAVE_SECRET_HASH;
@@ -28,7 +25,6 @@ const TOKEN_REFRESH_BUFFER = 30000;
 
 let cachedToken = null;
 let tokenExpiresAt = 0;
-let tokenPromise = null;
 
 class FlutterwaveError extends Error {
   constructor(message, statusCode = 502, details = null) {
@@ -40,7 +36,7 @@ class FlutterwaveError extends Error {
 }
 
 function requireCredentials() {
-  if (!CLIENT_ID || !CLIENT_SECRET) {
+  if (!SECRET_KEY || !PUBLIC_KEY) {
     throw new FlutterwaveError(
       'Flutterwave API credentials are not configured.',
       500
@@ -69,7 +65,7 @@ function safeErrorMessage(error) {
 }
 
 /**
- * Obtain and cache a V4 OAuth access token.
+ * Obtain and cache the Flutterwave bearer credential.
  */
 async function getAccessToken(forceRefresh = false) {
   requireCredentials();
@@ -82,58 +78,11 @@ async function getAccessToken(forceRefresh = false) {
     return cachedToken;
   }
 
-  if (tokenPromise) {
-    return tokenPromise;
-  }
-
-  tokenPromise = (async () => {
-    try {
-      const body = new URLSearchParams({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        grant_type: 'client_credentials'
-      });
-
-      const response = await axios.post(TOKEN_URL, body.toString(), {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Accept: 'application/json'
-        },
-        timeout: REQUEST_TIMEOUT
-      });
-
-      const accessToken = response.data?.access_token;
-      const expiresIn = Number(response.data?.expires_in);
-
-      if (!accessToken || !Number.isFinite(expiresIn) || expiresIn <= 0) {
-        throw new FlutterwaveError(
-          'Flutterwave did not return a valid access token.',
-          502
-        );
-      }
-
-      cachedToken = accessToken;
-      tokenExpiresAt = Date.now() + expiresIn * 1000;
-
-      return cachedToken;
-    } catch (error) {
-      cachedToken = null;
-      tokenExpiresAt = 0;
-
-      if (error instanceof FlutterwaveError) {
-        throw error;
-      }
-
-      throw new FlutterwaveError(
-        safeErrorMessage(error),
-        error?.response?.status || 502
-      );
-    } finally {
-      tokenPromise = null;
-    }
-  })();
-
-  return tokenPromise;
+  // Flutterwave API requests authenticate directly with the secret key.
+  // Keep the existing cache contract so callers do not need to change.
+  cachedToken = SECRET_KEY;
+  tokenExpiresAt = Date.now() + 3600000;
+  return cachedToken;
 }
 
 /**

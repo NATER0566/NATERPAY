@@ -25,6 +25,10 @@ services:
         sync: false
       - key: FLUTTERWAVE_PUBLIC_KEY
         sync: false
+      - key: FLUTTERWAVE_SECRET_HASH
+        sync: false
+      - key: FLUTTERWAVE_ENCRYPTION_KEY
+        sync: false
       - key: MONNIFY_SECRET_KEY
         sync: false
       - key: MONNIFY_PUBLIC_KEY
