@@ -210,7 +210,7 @@ async function verifyKYC(request, reply) {
 }
 
 /* =========================================================================
-   SUBMIT LEVEL 1: MANUAL BACKEND LOGIC (PAYSTACK COMPLETELY REMOVED)
+   SUBMIT LEVEL 1: LEGACY MANUAL BACKEND LOGIC
 ========================================================================= */
 async function submitLevel1(request, reply) {
     try {

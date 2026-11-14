@@ -68,10 +68,6 @@ const envVarsSchema = Joi.object({
     RESEND_API_KEY: Joi.string().optional(),
     FROM_EMAIL: Joi.string().email().optional(),
 
-    // Existing Paystack configuration retained for compatibility
-    PAYSTACK_SECRET_KEY: Joi.string().optional(),
-    PAYSTACK_PUBLIC_KEY: Joi.string().optional(),
-
     // Flutterwave LIVE credentials
     // Payment credentials are checked when a payment operation is requested.
     // Their absence must not prevent health checks and the web server from booting.
@@ -166,12 +162,6 @@ const config = {
             encryptionKey: envVars.FLUTTERWAVE_ENCRYPTION_KEY,
         },
 
-        // Retained temporarily to avoid breaking any existing
-        // unrelated code that may still reference Paystack.
-        paystack: {
-            secretKey: envVars.PAYSTACK_SECRET_KEY,
-            publicKey: envVars.PAYSTACK_PUBLIC_KEY
-        }
     },
 
     vtu: {

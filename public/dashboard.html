@@ -1249,9 +1249,9 @@
         loadNotifications(); 
 
         const urlParams = new URLSearchParams(window.location.search);
-        const paystackRef = urlParams.get('reference') || urlParams.get('trxref');
-        if (paystackRef) {
-            verifyReturnedPayment(paystackRef);
+        const paymentReference = urlParams.get('reference') || urlParams.get('trxref');
+        if (paymentReference) {
+            verifyReturnedPayment(paymentReference);
         }
         
         try {

@@ -232,7 +232,7 @@
             <div class="row g-3 mt-3 border-top border-secondary pt-3">
                 <div class="col-md-6">
                     <span class="input-label">Tax Rate (%) / Processing Fee</span>
-                    <input type="number" id="invTax" class="input-dark" placeholder="e.g. 1.5 for Paystack Fee" value="0" min="0" step="0.1" oninput="calcTotals()">
+                    <input type="number" id="invTax" class="input-dark" placeholder="e.g. 1.5 for gateway fee" value="0" min="0" step="0.1" oninput="calcTotals()">
                 </div>
                 <div class="col-md-6">
                     <span class="input-label">Discount (%)</span>
@@ -255,9 +255,9 @@
             <h5 class="form-section-title"><i class="fas fa-credit-card"></i> Payment Gateway</h5>
             <div class="payment-toggle" style="pointer-events: none; border-color: var(--gold);">
                 <i class="fas fa-check-circle text-success fs-4"></i> 
-                <span>Secure Payments via <strong>Paystack</strong></span>
+                <span>Secure Payments via <strong>Flutterwave</strong></span>
             </div>
-            <p class="text-muted small mt-2">All invoice payments are automatically routed through your NATER-PAY Paystack integration.</p>
+            <p class="text-muted small mt-2">All invoice payments are automatically routed through the NATER-PAY Flutterwave integration.</p>
         </div>
 
         <div class="form-card" id="premiumFeaturesBox">

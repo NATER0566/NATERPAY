@@ -95,7 +95,7 @@
         <div class="service-status">
             <div>
                 <strong>Payment Processors</strong>
-                <div class="small text-muted" id="pay-desc">Paystack & Monnify Sync...</div>
+                <div class="small text-muted" id="pay-desc">Flutterwave Sync...</div>
             </div>
             <span class="status-indicator checking" id="status-payment"></span>
         </div>
@@ -154,7 +154,7 @@
                 // Update Indicators
                 updateIndicator('status-api', data.services.api, 'api-desc', 'Routing Operational');
                 updateIndicator('status-database', data.services.database, 'db-desc', data.services.database === 'online' ? 'MongoDB Atlas Connected' : 'Database Disconnected');
-                updateIndicator('status-payment', data.services.payment, 'pay-desc', 'Paystack/Monnify Gateway Active');
+                updateIndicator('status-payment', data.services.payment, 'pay-desc', 'Flutterwave Gateway Active');
                 updateIndicator('status-vtu', data.services.vtu, 'vtu-desc', 'VTpass API Operational');
                 
                 // Update Global Text

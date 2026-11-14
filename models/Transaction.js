@@ -77,9 +77,7 @@ const transactionSchema = new mongoose.Schema({
   provider: {
     type: String,
     enum: [
-      'paystack',
       'flutterwave',
-      'monnify',
       'vtpass',
       'vtugate',
       'internal',

@@ -368,7 +368,7 @@ async function processWithdrawal(request, reply) {
 }
 
 // ============================================================================
-// DIRECT PAYSTACK KYC VERIFICATION ENGINE
+// KYC ADMINISTRATION
 // ============================================================================
 
 async function getPendingKYC(request, reply) {
@@ -377,30 +377,6 @@ async function getPendingKYC(request, reply) {
         const pendingKYC = await KYC.find({ status: 'under_review' }).populate('user', 'name email phoneNumber kycLevel role').sort({ createdAt: 1 });
         reply.send({ success: true, kycRequests: pendingKYC });
     } catch (error) { handleError(reply, error, 'Failed to fetch pending KYC requests'); }
-}
-
-async function verifyRealWorldKYC(request, reply) {
-    try {
-        if (!await checkRateLimit(request, 'admin_verify_kyc_api', 30)) throw { status: 429, message: 'Too many requests.' };
-        const { kycId } = request.params;
-        const kycRecord = await KYC.findById(sanitizeText(kycId)).populate('user', 'name');
-        
-        if (!kycRecord) throw { status: 404, message: 'KYC record not found' };
-        
-        const bvn = kycRecord.level1?.bvn;
-        if (!bvn) throw { status: 400, message: 'No BVN provided by user to verify.' };
-
-        try {
-            const paystackResponse = await axios.get(`https://api.paystack.co/bank/resolve_bvn/${bvn}`, {
-                headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }, timeout: 15000
-            });
-            const paystackData = paystackResponse.data.data;
-            return reply.send({ success: true, message: 'Paystack verification complete', systemName: kycRecord.user.name, paystackDetails: { firstName: paystackData.first_name, lastName: paystackData.last_name, dob: paystackData.formatted_dob, phone: paystackData.mobile } });
-        } catch (paystackError) {
-            const errorMessage = paystackError.response?.data?.message || 'Paystack BVN service is offline or rejected the request.';
-            throw { status: 400, message: `Paystack Error: ${errorMessage}` };
-        }
-    } catch (error) { handleError(reply, error, 'Server error during verification.'); }
 }
 
 async function approveKYC(request, reply) {
@@ -940,7 +916,7 @@ module.exports = {
   getSupportTickets, assignTicket, resolveTicket,
   updateUserBalance, verifyTransaction, sendPushNotification,
   getPendingWithdrawals, processWithdrawal, 
-  getPendingKYC, verifyRealWorldKYC, approveKYC, rejectKYC,
+  getPendingKYC, approveKYC, rejectKYC,
   updateProduct, deleteProduct,
   getPendingAds, approveAd, rejectAd, deleteAd,
   deleteTicket, deleteKycRecord, updateInvoice, editAd,

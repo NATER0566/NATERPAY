@@ -249,7 +249,7 @@ async function getInvoice(request, reply) {
         if (!invoice) throw { status: 404, message: 'Invoice not found in the ledger' };
         
         reply.send({
-            success: true, paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
+            success: true,
             invoice: {
                 invoiceId: invoice.invoiceId, customerName: invoice.customerName, customerEmail: invoice.customerEmail,
                 items: invoice.items, subtotal: invoice.subtotal ? invoice.subtotal.toString() : '0',
@@ -303,7 +303,7 @@ async function payInvoice(request, reply) {
             const transaction = new Transaction({
                 user: invoice.user, type: 'invoice', description: `Invoice Payment Settled: ${invoice.customerName} (#${invoice.invoiceId})`,
                 amount: finalCredit, fee: platformFee, balanceBefore: String(currentAvail), balanceAfter: String(newAvail),
-                status: 'success', provider: sanitizeText(value.paymentMethod) || 'paystack', providerReference: sanitizeText(value.gatewayReference),
+                status: 'success', provider: 'flutterwave', providerReference: sanitizeText(value.gatewayReference),
                 idempotencyKey, invoiceDetails: { invoiceId: invoice.invoiceId, customerEmail: invoice.customerEmail, customerName: invoice.customerName },
                 ipAddress: request.ip, userAgent: request.headers['user-agent']
             });

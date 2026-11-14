@@ -420,7 +420,6 @@ async function registerRoutes() {
     fastify.get('/api/admin/withdrawals/pending', { preHandler: auth.authenticateAdmin }, adminRoutes.getPendingWithdrawals);
     fastify.put('/api/admin/withdrawals/:id/:action', { preHandler: auth.authenticateAdmin }, adminRoutes.processWithdrawal);
     fastify.get('/api/admin/kyc/pending', { preHandler: auth.authenticateAdmin }, adminRoutes.getPendingKYC);
-    fastify.get('/api/admin/kyc/:kycId/verify', { preHandler: auth.authenticateAdmin }, adminRoutes.verifyRealWorldKYC);
     fastify.put('/api/admin/kyc/:kycId/approve', { preHandler: auth.authenticateAdmin }, adminRoutes.approveKYC);
     fastify.put('/api/admin/kyc/:kycId/reject', { preHandler: auth.authenticateAdmin }, adminRoutes.rejectKYC);
 

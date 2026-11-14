@@ -278,7 +278,6 @@ async function getLink(request, reply) {
 
         reply.send({
             success: true,
-            paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY, 
             link: {
                 linkId: paymentLink.linkId,
                 title: paymentLink.title,
@@ -315,7 +314,7 @@ async function payLink(request, reply) {
             customerName: Joi.string().allow('', null),
             customerEmail: Joi.string().email().allow('', null),
             gatewayReference: Joi.string().required(),
-            paymentMethod: Joi.string().default('paystack')
+            paymentMethod: Joi.string().valid('flutterwave').default('flutterwave')
         });
 
         const { error, value } = schema.validate(request.body);
@@ -346,16 +345,16 @@ async function payLink(request, reply) {
             // =====================================================================
             // NATER-PAY CENTRAL FEE ENGINE (STRICT SANITIZED MATH)
             // =====================================================================
-            let paystackFee = 0;
+            let gatewayFee = 0;
             if (paymentAmount < 2500) {
-                paystackFee = sanitizeAmount(paymentAmount * 0.015);
+                gatewayFee = sanitizeAmount(paymentAmount * 0.015);
             } else {
-                paystackFee = sanitizeAmount((paymentAmount * 0.015) + 100);
+                gatewayFee = sanitizeAmount((paymentAmount * 0.015) + 100);
             }
-            if (paystackFee > 2000) paystackFee = 2000;
+            if (gatewayFee > 2000) gatewayFee = 2000;
 
             const platformFee = sanitizeAmount(paymentAmount * 0.025); 
-            let finalCredit = sanitizeAmount(paymentAmount - paystackFee - platformFee);
+            let finalCredit = sanitizeAmount(paymentAmount - gatewayFee - platformFee);
 
             if (paymentLink.feePreference === 'buyer' && !paymentLink.isFlexibleAmount) {
                 finalCredit = sanitizeAmount(paymentLink.amount);
@@ -386,15 +385,15 @@ async function payLink(request, reply) {
                 type: 'payment_link',
                 description: `Marketplace Sale: ${paymentLink.title} (Buyer: ${safeCustomerName})`,
                 amount: finalCredit,
-                fee: sanitizeAmount(paystackFee + platformFee),
+                fee: sanitizeAmount(gatewayFee + platformFee),
                 balanceBefore: String(currentAvail),
                 balanceAfter: String(newAvail),
                 status: 'success',
-                provider: sanitizeText(value.paymentMethod) || 'paystack',
+                provider: 'flutterwave',
                 providerReference: sanitizeText(value.gatewayReference),
                 idempotencyKey: idempotencyKey,
                 paymentLinkDetails: { linkId: paymentLink.linkId, customerEmail: safeCustomerEmail, customerName: safeCustomerName },
-                metadata: { grossPaid: paymentAmount, paystackFee, platformFee },
+                metadata: { grossPaid: paymentAmount, gatewayFee, platformFee },
                 ipAddress: request.ip,
                 userAgent: request.headers['user-agent']
             });
