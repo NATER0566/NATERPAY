@@ -15,10 +15,11 @@ const kycSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
-    bvn: {
+    bvnEncrypted: {
       type: String,
       required: false
     },
+    bvnLast4: String,
     bvnVerified: {
       type: Boolean,
       default: false
@@ -148,8 +149,9 @@ kycSchema.index({ currentLevel: 1 });
 kycSchema.index({ status: 1 });
 
 // Instance methods
-kycSchema.methods.submitLevel1 = async function(bvn, nin) {
-  this.level1.bvn = bvn;
+kycSchema.methods.submitLevel1 = async function(bvnEncrypted, nin, bvnLast4) {
+  this.level1.bvnEncrypted = bvnEncrypted;
+  this.level1.bvnLast4 = bvnLast4 || null;
   this.level1.nin = nin;
   this.level1.submittedAt = new Date();
   this.status = 'under_review';

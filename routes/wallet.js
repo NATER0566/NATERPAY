@@ -8,6 +8,7 @@ const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const flutterwave = require('../services/flutterwave');
+const { decrypt } = require('../utils/secure-kyc');
 
 let AuditLog;
 let Notification;
@@ -142,44 +143,58 @@ async function getWallet(req, reply) {
     } catch (err) { return errorReply(reply, err, 'Unable to retrieve wallet.'); }
 }
 
+async function createDedicatedAccountForUser(userId) {
+    const [user, wallet] = await Promise.all([
+        User.findById(userId).select('email name phoneNumber kycVerified bvnVerified kycData'),
+        Wallet.findOne({ user: userId })
+    ]);
+    if (!user || !wallet) throw Object.assign(new Error('Wallet not found.'), { status: 404 });
+    if (!user.kycVerified || !user.bvnVerified) {
+        throw Object.assign(new Error('Complete your KYC to get your dedicated account.'), { status: 403 });
+    }
+
+    const existing = wallet.virtualAccount;
+    if (existing?.provider === PROVIDER && existing.bankName && existing.accountNumber && existing.accountName) {
+        return existing;
+    }
+
+    const bvn = decrypt(user.kycData?.bvnEncrypted);
+    if (!bvn) throw Object.assign(new Error('Verified BVN is unavailable. Please complete KYC again.'), { status: 409 });
+    const names = String(user.name || '').trim().split(/\s+/).filter(Boolean);
+    const firstname = names.shift() || '';
+    const lastname = names.join(' ') || firstname;
+    const reference = `NPVA${Date.now()}${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
+    const account = await flutterwave.createVirtualAccount({
+        email: user.email,
+        firstname,
+        lastname,
+        phonenumber: user.phoneNumber,
+        bvn,
+        reference
+    });
+
+    wallet.virtualAccount = {
+        provider: PROVIDER,
+        bankName: account.bankName,
+        accountNumber: account.accountNumber,
+        accountName: account.accountName,
+        accountReference: account.reference
+    };
+    await wallet.save();
+    return wallet.virtualAccount;
+}
+
 async function getVirtualAccount(req, reply) {
     try {
-        const userId = userIdOf(req);
-        const [user, wallet] = await Promise.all([
-            User.findById(userId).select('email name phoneNumber kycData'),
-            Wallet.findOne({ user: userId })
-        ]);
-        if (!user || !wallet) return fail(reply, 404, 'Wallet not found.');
-
-        const existing = wallet.virtualAccount;
-        if (existing?.provider === PROVIDER && existing.bankName && existing.accountNumber && existing.accountName) {
-            return reply.send({ success: true, virtualAccount: existing });
+        const user = await User.findById(userIdOf(req)).select('kycVerified bvnVerified');
+        if (!user) return fail(reply, 404, 'Wallet not found.');
+        if (!user.kycVerified || !user.bvnVerified) {
+            return fail(reply, 403, 'Complete your KYC to get your dedicated account.');
         }
-
-        const names = String(user.name || '').trim().split(/\s+/).filter(Boolean);
-        const firstname = names.shift() || '';
-        const lastname = names.join(' ') || firstname;
-        const reference = `NPVA${Date.now()}${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
-        const account = await flutterwave.createVirtualAccount({
-            email: user.email,
-            firstname,
-            lastname,
-            phonenumber: user.phoneNumber,
-            bvn: user.kycData?.bvn,
-            reference
-        });
-
-        wallet.virtualAccount = {
-            provider: PROVIDER,
-            bankName: account.bankName,
-            accountNumber: account.accountNumber,
-            accountName: account.accountName,
-            accountReference: account.reference
-        };
-        await wallet.save();
-        return reply.send({ success: true, virtualAccount: wallet.virtualAccount });
+        const virtualAccount = await createDedicatedAccountForUser(userIdOf(req));
+        return reply.send({ success: true, virtualAccount });
     } catch (err) {
-        return errorReply(reply, err, 'Dedicated account is being created from Flutterwave, please use Card / Bank Transfer for now.');
+        return errorReply(reply, err, 'Unable to create your dedicated account from Flutterwave.');
     }
 }
 
@@ -310,7 +325,7 @@ async function verifyFunding(req, reply) {
         });
         if (!tx) return fail(reply, 404, 'Funding transaction not found.');
         if (tx.status === TX.SUCCESS) return reply.send({ success: true, status: TX.SUCCESS, credited: false, message: 'Payment was already credited.' });
-        if (tx.status === TX.FAILED) {
+        if ([TX.FAILED, 'cancelled'].includes(tx.status)) {
             return reply.send({ success: false, status: tx.status, message: 'This payment was cancelled or failed.' });
         }
 
@@ -320,6 +335,7 @@ async function verifyFunding(req, reply) {
             if (verification.data.id) metaSet(tx, 'flutterwaveTransactionId', verification.data.id);
             await tx.save({ validateBeforeSave: false });
         }
+
         if (!verification?.verified) {
             if (['failed', 'cancelled'].includes(verification.status)) {
                 await Transaction.updateOne({ _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
@@ -347,6 +363,49 @@ async function verifyFunding(req, reply) {
     } catch (err) { return errorReply(reply, err, 'Unable to verify the payment.'); }
 }
 
+async function cancelFunding(req, reply) {
+    try {
+        const reference = req.body?.tx_ref || req.body?.reference || req.query?.tx_ref;
+        const { error, value } = Joi.object({
+            reference: Joi.string().trim().min(8).max(150).required()
+        }).validate({ reference });
+        if (error) return fail(reply, 400, 'A valid payment reference is required.');
+
+        const tx = await Transaction.findOne({
+            providerReference: value.reference,
+            user: userIdOf(req),
+            provider: PROVIDER,
+            type: 'funding'
+        });
+        if (!tx) return fail(reply, 404, 'Funding transaction not found.');
+        if (tx.status === TX.SUCCESS) {
+            return reply.send({ success: false, status: TX.SUCCESS, message: 'This payment was already successful and cannot be cancelled.' });
+        }
+        if (tx.status === 'cancelled') {
+            return reply.send({ success: true, status: 'cancelled', message: 'Payment Cancelled - No money was taken.' });
+        }
+
+        const verification = await flutterwave.verifyTransaction(tx);
+        if (verification.verified && verification.status === 'success') {
+            const result = await creditVerifiedFunding(tx._id, req, 'Flutterwave cancellation check');
+            return reply.send({ success: true, status: TX.SUCCESS, credited: result.credited, message: 'Payment verified and wallet credited.' });
+        }
+        if (verification.verified && verification.status === TX.PENDING) {
+            return reply.send({ success: false, status: TX.PENDING, message: 'We received your payment, confirming...' });
+        }
+        if (['cancelled', 'failed'].includes(verification.status)) {
+            await Transaction.updateOne(
+                { _id: tx._id, status: { $in: [TX.PENDING, TX.PROCESSING] } },
+                { $set: { status: 'cancelled', description: 'Payment cancelled; Flutterwave confirmed that no money was taken.' } }
+            );
+            return reply.send({ success: true, status: 'cancelled', message: 'Payment Cancelled - No money was taken.' });
+        }
+        return reply.send({ success: false, status: TX.PENDING, message: 'Payment status could not be confirmed yet. Please try again shortly.' });
+    } catch (err) {
+        return errorReply(reply, err, 'Unable to cancel the payment safely.');
+    }
+}
+
 async function creditVerifiedFunding(transactionId, req, source) {
     const session = await mongoose.startSession();
     let result = { credited: false, alreadyProcessed: false };
@@ -354,7 +413,7 @@ async function creditVerifiedFunding(transactionId, req, source) {
         await session.withTransaction(async () => {
             const tx = await Transaction.findOneAndUpdate({
                 _id: transactionId, provider: PROVIDER, type: 'funding',
-                    status: { $in: [TX.PENDING, TX.PROCESSING, 'cancelled'] }
+                    status: { $in: [TX.PENDING, TX.PROCESSING] }
             }, { $set: { status: TX.SUCCESS, description: 'Flutterwave payment verified' } },
             { new: true, session });
             if (!tx) {
@@ -498,7 +557,7 @@ async function healthCheck(_req, reply) {
 }
 
 module.exports = {
-    getWallet, getVirtualAccount, fundWallet, verifyFunding, checkPending, handleFlutterwaveWebhook, healthCheck,
+    getWallet, getVirtualAccount, createDedicatedAccountForUser, fundWallet, verifyFunding, cancelFunding, checkPending, handleFlutterwaveWebhook, healthCheck,
     fundManualWallet: disabled('Manual wallet funding'),
     adminApproveManualFunding: disabled('Manual funding approval'),
     adminRejectManualFunding: disabled('Manual funding rejection'),

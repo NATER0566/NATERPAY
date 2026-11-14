@@ -99,6 +99,7 @@ async function createVirtualAccount({ email, firstname, lastname, phonenumber, b
   if (!email || !firstname || !lastname || !phonenumber) {
     throw new FlutterwaveError('Complete name, email and phone details are required to create your dedicated account.', 400);
   }
+
   if (!bvn) {
     throw new FlutterwaveError('A verified BVN is required by Flutterwave to create your dedicated account.', 400);
   }
@@ -123,6 +124,18 @@ async function createVirtualAccount({ email, firstname, lastname, phonenumber, b
     throw new FlutterwaveError('Flutterwave did not return a complete dedicated account.', 502, response);
   }
   return { accountNumber, bankName, accountName, reference: data.order_ref || data.account_reference || reference };
+}
+
+async function verifyBVN(bvn) {
+  if (!/^\d{11}$/.test(String(bvn || ''))) {
+    throw new FlutterwaveError('A valid 11-digit BVN is required.', 400);
+  }
+  const response = await request('GET', `/kyc/bvns/${encodeURIComponent(String(bvn))}`);
+  const data = response?.data || {};
+  if (String(response?.status || '').toLowerCase() !== 'success' || !data) {
+    throw new FlutterwaveError('BVN verification failed - check your BVN matches your name', 400, response);
+  }
+  return data;
 }
 
 async function initializePayment({
@@ -312,6 +325,7 @@ module.exports = {
   request,
   initializePayment,
   createVirtualAccount,
+  verifyBVN,
   verifyPayment,
   findPaymentsByReference,
   verifyTransaction,

@@ -49,7 +49,8 @@ const userSchema = new mongoose.Schema({
   },
 
   kycData: {
-    bvn: String,
+    bvnEncrypted: String,
+    bvnLast4: String,
     nin: String,
     idType: String,
     idNumber: String,
@@ -67,6 +68,16 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
+  },
+
+  kycVerified: {
+    type: Boolean,
+    default: false
+  },
+
+  bvnVerified: {
+    type: Boolean,
+    default: false
   },
 
   kycSubmittedAt: Date,

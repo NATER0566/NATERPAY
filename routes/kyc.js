@@ -3,6 +3,9 @@ const KYC = require('../models/KYC');
 const User = require('../models/User');
 const Joi = require('joi'); 
 const cloudinary = require('cloudinary').v2;
+const flutterwave = require('../services/flutterwave');
+const { encrypt } = require('../utils/secure-kyc');
+const walletRoutes = require('./wallet');
 
 // [2] STRUCTURED LOGGING ENGINE
 let logger;
@@ -90,8 +93,120 @@ async function getKYC(request, reply) {
             kyc = new KYC({ user: request.user._id, currentLevel: 0, status: 'pending' });
             await kyc.save();
         }
-        reply.send({ success: true, kyc: { currentLevel: kyc.currentLevel, status: kyc.status } });
+        const user = await User.findById(request.user._id).select('email phoneNumber name kycVerified bvnVerified kycData.bvnLast4');
+        reply.send({
+            success: true,
+            kyc: {
+                currentLevel: kyc.currentLevel,
+                status: kyc.status,
+                kycVerified: user?.kycVerified === true,
+                bvnVerified: user?.bvnVerified === true,
+                bvnLast4: user?.kycData?.bvnLast4 || null,
+                ninCollected: Boolean(kyc.level1?.nin)
+            },
+            user: user ? {
+                name: user.name,
+                email: user.email,
+                phoneNumber: user.phoneNumber
+            } : null
+        });
     } catch (error) { handleError(reply, error, 'Failed to retrieve KYC data.'); }
+}
+
+function normalizedName(value) {
+    return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).sort().join(' ');
+}
+
+function bvnMatchesName(fullName, bvnData) {
+    const returnedName = bvnData?.full_name ||
+        [bvnData?.first_name, bvnData?.middle_name, bvnData?.last_name].filter(Boolean).join(' ');
+    return Boolean(returnedName) && normalizedName(fullName) === normalizedName(returnedName);
+}
+
+async function verifyKYC(request, reply) {
+    try {
+        const schema = Joi.object({
+            bvn: Joi.string().pattern(/^\d{11}$/).required(),
+            nin: Joi.string().pattern(/^\d{11}$/).required(),
+            dob: Joi.date().iso().required(),
+            fullName: Joi.string().min(2).max(120).required()
+        });
+        const { error, value } = schema.validate(request.body || {});
+        if (error) return reply.code(400).send({ success: false, message: error.details[0].message });
+        if (!await checkRateLimit(request, 'verify_kyc', 3)) {
+            return reply.code(429).send({ success: false, message: 'Too many verification attempts. Please wait 60 seconds.' });
+        }
+
+        const user = await User.findById(request.user._id);
+        if (!user) return reply.code(404).send({ success: false, message: 'User account not found.' });
+        if (user.kycVerified && user.bvnVerified) {
+            try {
+                await walletRoutes.createDedicatedAccountForUser(user._id);
+                return reply.send({ success: true, message: 'KYC Verified - Your dedicated account has been created' });
+            } catch (accountError) {
+                return reply.code(502).send({ success: false, kycVerified: true, message: accountError.message || 'Your dedicated account could not be created yet.' });
+            }
+        }
+
+        let bvnData;
+        try {
+            bvnData = await flutterwave.verifyBVN(value.bvn);
+        } catch (_) {
+            return reply.code(400).send({
+                success: false,
+                message: 'BVN verification failed - check your BVN matches your name'
+            });
+        }
+        if (!bvnMatchesName(value.fullName, bvnData)) {
+            return reply.code(400).send({
+                success: false,
+                message: 'BVN verification failed - check your BVN matches your name'
+            });
+        }
+
+        const kyc = await KYC.findOne({ user: user._id }) || new KYC({ user: user._id });
+        kyc.level1 = kyc.level1 || {};
+        kyc.level1.completed = true;
+        kyc.level1.bvnEncrypted = encrypt(value.bvn);
+        kyc.level1.bvnLast4 = value.bvn.slice(-4);
+        kyc.level1.nin = value.nin;
+        kyc.level1.ninVerified = false;
+        kyc.level1.bvnVerified = true;
+        kyc.level1.submittedAt = new Date();
+        kyc.level1.verifiedAt = new Date();
+        kyc.level1.legalName = value.fullName;
+        kyc.currentLevel = Math.max(kyc.currentLevel || 0, 1);
+        kyc.status = 'approved';
+
+        user.kycData = user.kycData || {};
+        user.kycData.bvnEncrypted = encrypt(value.bvn);
+        user.kycData.bvnLast4 = value.bvn.slice(-4);
+        user.kycData.nin = value.nin;
+        user.kycData.dateOfBirth = value.dob;
+        user.kycVerified = true;
+        user.bvnVerified = true;
+        user.kycLevel = Math.max(user.kycLevel || 0, 1);
+        user.kycStatus = 'approved';
+        user.kycSubmittedAt = new Date();
+        user.kycVerifiedAt = new Date();
+        await Promise.all([kyc.save(), user.save()]);
+        try {
+            await walletRoutes.createDedicatedAccountForUser(user._id);
+        } catch (accountError) {
+            return reply.code(502).send({
+                success: false,
+                kycVerified: true,
+                message: accountError.message || 'KYC was verified, but your dedicated account could not be created yet.'
+            });
+        }
+
+        return reply.send({
+            success: true,
+            message: 'KYC Verified - Your dedicated account has been created',
+        });
+    } catch (error) {
+        handleError(reply, error, 'Unable to verify KYC.');
+    }
 }
 
 /* =========================================================================
@@ -113,15 +228,6 @@ async function submitLevel1(request, reply) {
 
         const { bvn, nin, firstName, lastName } = value;
 
-        const orConditions = [];
-        if (bvn) orConditions.push({ 'level1.bvn': bvn });
-        if (nin) orConditions.push({ 'level1.nin': nin });
-
-        const duplicateCheck = await KYC.findOne({ $or: orConditions, user: { $ne: request.user._id } });
-        if (duplicateCheck) {
-            throw { status: 403, message: 'SECURITY ALERT: This BVN or NIN is already linked to an existing account.' };
-        }
-
         let kyc = await KYC.findOne({ user: request.user._id });
         if (!kyc) kyc = new KYC({ user: request.user._id });
 
@@ -130,15 +236,13 @@ async function submitLevel1(request, reply) {
         }
 
         kyc.currentLevel = 1; 
-        await kyc.submitLevel1(bvn, nin);
+        await kyc.submitLevel1(encrypt(bvn), nin, bvn ? bvn.slice(-4) : null);
 
         // Instantly mark as under review for Admin processing
         kyc.status = 'under_review';
         if (kyc.level1) kyc.level1.status = 'under_review';
         if (firstName && lastName) kyc.legalName = `${firstName} ${lastName}`;
         await kyc.save();
-
-        await User.findByIdAndUpdate(request.user._id, { bvn: bvn });
 
         return reply.send({ success: true, message: 'Your record has been securely captured.' });
 
@@ -250,4 +354,4 @@ async function submitLevel3(request, reply) {
     } catch (error) { handleError(reply, error, 'Failed to process address verification.'); }
 }
 
-module.exports = { getKYC, submitLevel1, submitLevel2, submitLevel3 };
+module.exports = { getKYC, verifyKYC, submitLevel1, submitLevel2, submitLevel3 };

@@ -66,6 +66,8 @@
 
         /* Spinner container logic */
         .swal2-html-container { overflow: hidden !important; }
+        #legacyKycTiers { display: none; }
+        .kyc-status-note { color: #00ff88; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -86,6 +88,53 @@
         <p class="text-muted">Complete your KYC to unlock higher transaction limits and premium features.</p>
     </div>
 
+    <div class="tier-card active" id="kycFirstCard">
+        <div class="tier-badge badge-active" id="kycFirstBadge">ACTION REQUIRED</div>
+        <h4 style="color: var(--gold);"><i class="fas fa-shield-halved me-2"></i> KYC VERIFICATION</h4>
+        <p class="text-muted small mb-4">Your BVN and NIN are collected once and used to create your real Flutterwave dedicated account.</p>
+        <form id="kycFirstForm">
+            <div class="input-group-custom">
+                <label>FULL NAME (MUST MATCH BVN)</label>
+                <input type="text" id="kycFullName" required autocomplete="name">
+            </div>
+            <div class="row">
+                <div class="col-12 col-md-6">
+                    <div class="input-group-custom">
+                        <label>BVN (11 DIGITS)</label>
+                        <input type="text" id="kycBvn" inputmode="numeric" maxlength="11" pattern="[0-9]{11}" required>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="input-group-custom">
+                        <label>NIN (11 DIGITS)</label>
+                        <input type="text" id="kycNin" inputmode="numeric" maxlength="11" pattern="[0-9]{11}" required>
+                    </div>
+                </div>
+            </div>
+            <div class="input-group-custom">
+                <label>DATE OF BIRTH</label>
+                <input type="date" id="kycDob" required>
+            </div>
+            <div class="row">
+                <div class="col-12 col-md-6">
+                    <div class="input-group-custom">
+                        <label>PHONE</label>
+                        <input type="tel" id="kycPhone" readonly style="opacity: 0.7; cursor: not-allowed;">
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="input-group-custom">
+                        <label>EMAIL</label>
+                        <input type="email" id="kycEmail" readonly style="opacity: 0.7; cursor: not-allowed;">
+                    </div>
+                </div>
+            </div>
+            <button class="btn-submit" type="submit" id="kycVerifyButton"><i class="fas fa-check-circle me-2"></i> Verify KYC &amp; Create My Dedicated Account</button>
+            <div id="kycVerifiedNote" class="kyc-status-note text-center mt-3" style="display:none;">KYC Verified - Your dedicated account has been created</div>
+        </form>
+    </div>
+
+    <div id="legacyKycTiers">
     <!-- BASE TIER: EMAIL VERIFICATION -->
     <div class="tier-card locked" id="tier0Card">
         <div class="tier-badge badge-locked" id="tier0Badge">LOCKED</div>
@@ -235,6 +284,7 @@
     
     <div class="text-center text-muted small mt-4 fw-bold mb-5">
         <p><i class="fas fa-shield-alt text-success me-1"></i> Global verification check enforced before approval.</p>
+    </div>
     </div>
 </div>
 
@@ -520,6 +570,65 @@
 
     window.onload = () => { initStars(); checkKYCStatus(); };
     window.onresize = initStars;
+</script>
+<script>
+    (() => {
+        const authToken = () => localStorage.getItem('naterpay_token') || localStorage.getItem('token') || '';
+        const onlyDigits = (id) => {
+            const input = document.getElementById(id);
+            input.addEventListener('input', () => { input.value = input.value.replace(/\D/g, '').slice(0, 11); });
+        };
+        async function loadKycFirstForm() {
+            const response = await fetch('/api/kyc?_t=' + Date.now(), { headers: { Authorization: `Bearer ${authToken()}` } });
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load KYC details.');
+            document.getElementById('kycFullName').value = data.user?.name || '';
+            document.getElementById('kycPhone').value = data.user?.phoneNumber || '';
+            document.getElementById('kycEmail').value = data.user?.email || '';
+            if (data.kyc?.kycVerified && data.kyc?.bvnVerified) {
+                document.getElementById('kycFirstBadge').textContent = 'COMPLETED';
+                document.getElementById('kycFirstBadge').className = 'tier-badge badge-completed';
+                document.getElementById('kycVerifyButton').style.display = 'none';
+                document.getElementById('kycVerifiedNote').style.display = 'block';
+            }
+        }
+        async function submitKycFirst(event) {
+            event.preventDefault();
+            const payload = {
+                fullName: document.getElementById('kycFullName').value.trim(),
+                bvn: document.getElementById('kycBvn').value.trim(),
+                nin: document.getElementById('kycNin').value.trim(),
+                dob: document.getElementById('kycDob').value
+            };
+            const button = document.getElementById('kycVerifyButton');
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Verifying KYC...';
+            try {
+                const response = await fetch('/api/kyc/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken()}` },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || 'KYC verification failed.');
+                await Swal.fire({ icon: 'success', title: 'KYC Verified', text: 'KYC Verified - Your dedicated account has been created', background: '#111', color: '#fff', confirmButtonColor: '#d4af37' });
+                document.getElementById('kycFirstBadge').textContent = 'COMPLETED';
+                document.getElementById('kycFirstBadge').className = 'tier-badge badge-completed';
+                document.getElementById('kycVerifyButton').style.display = 'none';
+                document.getElementById('kycVerifiedNote').style.display = 'block';
+            } catch (error) {
+                await Swal.fire({ icon: 'error', title: 'Verification Failed', text: error.message, background: '#111', color: '#fff', confirmButtonColor: '#d4af37' });
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-check-circle me-2"></i> Verify KYC &amp; Create My Dedicated Account';
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            onlyDigits('kycBvn');
+            onlyDigits('kycNin');
+            document.getElementById('kycFirstForm').addEventListener('submit', submitKycFirst);
+            loadKycFirstForm().catch(error => Swal.fire({ icon: 'error', title: 'KYC Error', text: error.message, background: '#111', color: '#fff', confirmButtonColor: '#d4af37' }));
+        });
+    })();
 </script>
 </body>
 </html>

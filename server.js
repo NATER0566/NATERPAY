@@ -318,6 +318,7 @@ async function registerRoutes() {
     fastify.post('/api/wallet/fund-manual', { preHandler: auth.authenticate }, walletRoutes.fundManualWallet);
     fastify.post('/api/wallet/verify', { preHandler: auth.authenticate }, walletRoutes.verifyFunding);
     fastify.get('/api/wallet/verify', { preHandler: auth.authenticate }, walletRoutes.verifyFunding);
+    fastify.post('/api/wallet/cancel', { preHandler: auth.authenticate }, walletRoutes.cancelFunding);
     fastify.post('/api/wallet/check-pending', { preHandler: auth.authenticate }, walletRoutes.checkPending);
     fastify.get('/api/wallet/check-pending', { preHandler: auth.authenticate }, walletRoutes.checkPending);
     fastify.post('/api/wallet/reconcile', { preHandler: auth.authenticate }, walletRoutes.checkPending);
@@ -357,6 +358,7 @@ async function registerRoutes() {
 
     const kycRoutes = require('./routes/kyc');
     fastify.get('/api/kyc', { preHandler: auth.authenticate }, kycRoutes.getKYC);
+    fastify.post('/api/kyc/verify', { preHandler: auth.authenticate }, kycRoutes.verifyKYC);
     fastify.post('/api/kyc/level1', { preHandler: auth.authenticate }, kycRoutes.submitLevel1);
     fastify.post('/api/kyc/level2', { preHandler: auth.authenticate }, kycRoutes.submitLevel2);
     fastify.post('/api/kyc/level3', { preHandler: auth.authenticate }, kycRoutes.submitLevel3);
