@@ -7,7 +7,7 @@ A complete, production-ready fintech services platform with authentication, KYC,
 - **Authentication**: JWT tokens, refresh tokens, OTP verification
 - **KYC System**: Multi-level verification (BVN/NIN, ID documents, address)
 - **VTU Services**: Airtime, data, electricity, cable TV subscriptions
-- **Payment Processing**: Paystack, Flutterwave, Monnify integration
+- **Payment Processing**: Flutterwave integration
 - **Wallet System**: Secure balance management with Decimal128
 - **Merchant Services**: Payment links, invoices, QR codes
 - **Security**: Device tracking, withdrawal PIN, fraud monitoring
@@ -26,7 +26,7 @@ A complete, production-ready fintech services platform with authentication, KYC,
 - **Cron Jobs**: node-cron
 - **Security**: Helmet, CORS, rate limiting
 - **VTU Providers**: VTpass, VTUGate
-- **Payment Providers**: Paystack, Flutterwave, Monnify
+- **Payment Providers**: Flutterwave
 
 ## Installation
 
@@ -61,11 +61,12 @@ JWT_REFRESH_SECRET=your_refresh_secret_key
 JWT_EXPIRES_IN=1h
 JWT_REFRESH_EXPIRES_IN=7d
 
-# Payment Providers
-PAYSTACK_SECRET_KEY=your_paystack_secret
-PAYSTACK_PUBLIC_KEY=your_paystack_public
+# Payment Provider
 FLUTTERWAVE_SECRET_KEY=your_flutterwave_secret
 FLUTTERWAVE_PUBLIC_KEY=your_flutterwave_public
+NIN_PROVIDER=dojah
+DOJAH_API_KEY=your_dojah_api_key
+DOJAH_APP_ID=your_dojah_app_id
 MONNIFY_SECRET_KEY=your_monnify_secret
 MONNIFY_PUBLIC_KEY=your_monnify_public
 MONNIFY_API_KEY=your_monnify_api_key
@@ -307,7 +308,8 @@ The platform is configured for deployment on Render.com using the provided `rend
 - `MONGODB_URI` - MongoDB connection string
 - `JWT_SECRET` - JWT secret key
 - `JWT_REFRESH_SECRET` - JWT refresh secret
-- Payment provider API keys (Paystack, Flutterwave, Monnify)
+- Payment provider API keys (Flutterwave)
+- NIN verification credentials: `NIN_PROVIDER`, `DOJAH_API_KEY`, `DOJAH_APP_ID`
 - VTU provider credentials (VTpass, VTUGate)
 - Email and SMS provider credentials
 

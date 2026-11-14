@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Joi = require('joi'); 
 const cloudinary = require('cloudinary').v2;
 const flutterwave = require('../services/flutterwave');
+const ninProvider = require('../services/nin');
 const { encrypt } = require('../utils/secure-kyc');
 const walletRoutes = require('./wallet');
 
@@ -93,7 +94,7 @@ async function getKYC(request, reply) {
             kyc = new KYC({ user: request.user._id, currentLevel: 0, status: 'pending' });
             await kyc.save();
         }
-        const user = await User.findById(request.user._id).select('email phoneNumber name kycVerified bvnVerified kycData.bvnLast4');
+        const user = await User.findById(request.user._id).select('email phoneNumber name kycVerified bvnVerified ninVerified kycData.bvnLast4 kycData.ninLast4');
         reply.send({
             success: true,
             kyc: {
@@ -101,8 +102,10 @@ async function getKYC(request, reply) {
                 status: kyc.status,
                 kycVerified: user?.kycVerified === true,
                 bvnVerified: user?.bvnVerified === true,
+                ninVerified: user?.ninVerified === true,
                 bvnLast4: user?.kycData?.bvnLast4 || null,
-                ninCollected: Boolean(kyc.level1?.nin)
+                ninLast4: user?.kycData?.ninLast4 || null,
+                ninCollected: Boolean(kyc.level1?.ninEncrypted)
             },
             user: user ? {
                 name: user.name,
@@ -117,10 +120,52 @@ function normalizedName(value) {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).sort().join(' ');
 }
 
+function nameDistance(first, second) {
+    const a = normalizedName(first);
+    const b = normalizedName(second);
+    if (!a || !b) return Infinity;
+    const matrix = Array.from({ length: a.length + 1 }, (_, row) => [row]);
+    for (let column = 0; column <= b.length; column++) matrix[0][column] = column;
+    for (let row = 1; row <= a.length; row++) {
+        for (let column = 1; column <= b.length; column++) {
+            matrix[row][column] = a[row - 1] === b[column - 1]
+                ? matrix[row - 1][column - 1]
+                : Math.min(matrix[row - 1][column] + 1, matrix[row][column - 1] + 1, matrix[row - 1][column - 1] + 1);
+        }
+    }
+    return matrix[a.length][b.length];
+}
+
 function bvnMatchesName(fullName, bvnData) {
     const returnedName = bvnData?.full_name ||
         [bvnData?.first_name, bvnData?.middle_name, bvnData?.last_name].filter(Boolean).join(' ');
-    return Boolean(returnedName) && normalizedName(fullName) === normalizedName(returnedName);
+    if (!returnedName) return false;
+    const first = normalizedName(fullName);
+    const second = normalizedName(returnedName);
+    return first === second || nameDistance(first, second) <= 2;
+}
+
+function providerName(data) {
+    return data?.full_name || data?.fullName ||
+        [data?.first_name || data?.firstname, data?.middle_name || data?.middlename, data?.last_name || data?.lastname]
+            .filter(Boolean).join(' ');
+}
+
+function providerDob(data) {
+    return data?.date_of_birth || data?.dateOfBirth || data?.dob || null;
+}
+
+function providerPhone(data) {
+    return data?.phone_number || data?.phoneNumber || data?.mobile || data?.phone || null;
+}
+
+function sameDate(first, second) {
+    if (!first || !second) return false;
+    const normalize = value => {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? String(value).slice(0, 10) : date.toISOString().slice(0, 10);
+    };
+    return normalize(first) === normalize(second);
 }
 
 async function verifyKYC(request, reply) {
@@ -139,10 +184,10 @@ async function verifyKYC(request, reply) {
 
         const user = await User.findById(request.user._id);
         if (!user) return reply.code(404).send({ success: false, message: 'User account not found.' });
-        if (user.kycVerified && user.bvnVerified) {
+        if (user.kycVerified && user.bvnVerified && user.ninVerified) {
             try {
                 await walletRoutes.createDedicatedAccountForUser(user._id);
-                return reply.send({ success: true, message: 'KYC Verified - Your dedicated account has been created' });
+                return reply.send({ success: true, message: 'KYC Verified - BVN and NIN Verified - Your dedicated account has been created' });
             } catch (accountError) {
                 return reply.code(502).send({ success: false, kycVerified: true, message: accountError.message || 'Your dedicated account could not be created yet.' });
             }
@@ -152,16 +197,49 @@ async function verifyKYC(request, reply) {
         try {
             bvnData = await flutterwave.verifyBVN(value.bvn);
         } catch (_) {
+            const failedKyc = await KYC.findOne({ user: user._id }) || new KYC({ user: user._id });
+            failedKyc.status = 'rejected';
+            failedKyc.rejectionReason = 'BVN verification failed';
+            await failedKyc.save();
+            user.kycVerified = false;
+            user.bvnVerified = false;
+            user.ninVerified = false;
+            user.kycStatus = 'rejected';
+            await user.save();
             return reply.code(400).send({
                 success: false,
-                message: 'BVN verification failed - check your BVN matches your name'
+                message: 'BVN verification failed'
             });
         }
+        const returnedBvnName = providerName(bvnData);
+        const returnedBvnDob = providerDob(bvnData);
+        const returnedBvnPhone = providerPhone(bvnData);
         if (!bvnMatchesName(value.fullName, bvnData)) {
+            const failedKyc = await KYC.findOne({ user: user._id }) || new KYC({ user: user._id });
+            failedKyc.status = 'rejected';
+            failedKyc.rejectionReason = 'BVN name does not match your name';
+            await failedKyc.save();
+            user.kycVerified = false;
+            user.bvnVerified = false;
+            user.ninVerified = false;
+            user.kycStatus = 'rejected';
+            await user.save();
             return reply.code(400).send({
                 success: false,
-                message: 'BVN verification failed - check your BVN matches your name'
+                message: 'BVN name does not match your name'
             });
+        }
+        if (returnedBvnDob && !sameDate(value.dob, returnedBvnDob)) {
+            const failedKyc = await KYC.findOne({ user: user._id }) || new KYC({ user: user._id });
+            failedKyc.status = 'rejected';
+            failedKyc.rejectionReason = 'BVN verification failed';
+            await failedKyc.save();
+            user.kycVerified = false;
+            user.bvnVerified = false;
+            user.ninVerified = false;
+            user.kycStatus = 'rejected';
+            await user.save();
+            return reply.code(400).send({ success: false, message: 'BVN verification failed' });
         }
 
         const kyc = await KYC.findOne({ user: user._id }) || new KYC({ user: user._id });
@@ -169,26 +247,76 @@ async function verifyKYC(request, reply) {
         kyc.level1.completed = true;
         kyc.level1.bvnEncrypted = encrypt(value.bvn);
         kyc.level1.bvnLast4 = value.bvn.slice(-4);
-        kyc.level1.nin = value.nin;
-        kyc.level1.ninVerified = false;
+        kyc.level1.bvnName = returnedBvnName;
+        kyc.level1.bvnPhoneNumber = returnedBvnPhone;
+        kyc.level1.bvnDateOfBirth = returnedBvnDob;
+        kyc.level1.ninEncrypted = encrypt(value.nin);
+        kyc.level1.ninLast4 = value.nin.slice(-4);
         kyc.level1.bvnVerified = true;
+        kyc.level1.bvnVerifiedAt = new Date();
         kyc.level1.submittedAt = new Date();
-        kyc.level1.verifiedAt = new Date();
         kyc.level1.legalName = value.fullName;
         kyc.currentLevel = Math.max(kyc.currentLevel || 0, 1);
-        kyc.status = 'approved';
 
         user.kycData = user.kycData || {};
         user.kycData.bvnEncrypted = encrypt(value.bvn);
         user.kycData.bvnLast4 = value.bvn.slice(-4);
-        user.kycData.nin = value.nin;
+        user.kycData.bvnName = returnedBvnName;
+        user.kycData.bvnPhoneNumber = returnedBvnPhone;
+        user.kycData.bvnDateOfBirth = returnedBvnDob;
+        user.kycData.ninEncrypted = encrypt(value.nin);
+        user.kycData.ninLast4 = value.nin.slice(-4);
         user.kycData.dateOfBirth = value.dob;
-        user.kycVerified = true;
         user.bvnVerified = true;
-        user.kycLevel = Math.max(user.kycLevel || 0, 1);
-        user.kycStatus = 'approved';
         user.kycSubmittedAt = new Date();
-        user.kycVerifiedAt = new Date();
+
+        let ninData;
+        try {
+            ninData = await ninProvider.verifyNIN(value.nin);
+        } catch (ninError) {
+            const awaiting = ninError.statusCode === 503;
+            kyc.level1.ninVerified = false;
+            kyc.status = awaiting ? 'bvn_verified_awaiting_nin' : 'bvn_verified_nin_failed';
+            user.ninVerified = false;
+            user.kycVerified = false;
+            user.kycStatus = awaiting ? 'bvn_verified_awaiting_nin' : 'bvn_verified_nin_failed';
+            await Promise.all([kyc.save(), user.save()]);
+            return reply.code(ninError.statusCode || 400).send({
+                success: false,
+                message: ninError.message
+            });
+        }
+
+        const returnedNinName = providerName(ninData);
+        const returnedNinDob = providerDob(ninData);
+        if (!bvnMatchesName(value.fullName, ninData) ||
+            !bvnMatchesName(returnedBvnName, ninData) ||
+            !sameDate(value.dob, returnedNinDob) ||
+            (returnedBvnDob && !sameDate(returnedBvnDob, returnedNinDob))) {
+            kyc.level1.ninVerified = false;
+            kyc.status = 'bvn_verified_nin_failed';
+            user.ninVerified = false;
+            user.kycVerified = false;
+            user.kycStatus = 'bvn_verified_nin_failed';
+            await Promise.all([kyc.save(), user.save()]);
+            return reply.code(400).send({
+                success: false,
+                message: 'BVN and NIN details do not match - same person must own both'
+            });
+        }
+
+        const verifiedAt = new Date();
+        kyc.level1.ninVerified = true;
+        kyc.level1.ninVerifiedAt = verifiedAt;
+        kyc.level1.verifiedAt = verifiedAt;
+        kyc.status = 'verified';
+        user.ninVerified = true;
+        user.kycVerified = true;
+        user.kycLevel = Math.max(user.kycLevel || 0, 1);
+        user.kycStatus = 'verified';
+        user.bvnVerifiedAt = kyc.level1.bvnVerifiedAt;
+        user.ninVerifiedAt = verifiedAt;
+        user.kycVerifiedAt = verifiedAt;
         await Promise.all([kyc.save(), user.save()]);
         try {
             await walletRoutes.createDedicatedAccountForUser(user._id);
@@ -202,7 +330,7 @@ async function verifyKYC(request, reply) {
 
         return reply.send({
             success: true,
-            message: 'KYC Verified - Your dedicated account has been created',
+            message: 'KYC Verified - BVN and NIN Verified - Your dedicated account has been created',
         });
     } catch (error) {
         handleError(reply, error, 'Unable to verify KYC.');
@@ -236,7 +364,7 @@ async function submitLevel1(request, reply) {
         }
 
         kyc.currentLevel = 1; 
-        await kyc.submitLevel1(encrypt(bvn), nin, bvn ? bvn.slice(-4) : null);
+        await kyc.submitLevel1(encrypt(bvn), nin ? encrypt(nin) : null, bvn ? bvn.slice(-4) : null, nin ? nin.slice(-4) : null);
 
         // Instantly mark as under review for Admin processing
         kyc.status = 'under_review';

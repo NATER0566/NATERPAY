@@ -76,6 +76,13 @@ const envVarsSchema = Joi.object({
     FLUTTERWAVE_SECRET_HASH: optionalSecret,
     FLUTTERWAVE_ENCRYPTION_KEY: optionalSecret,
 
+    // NIN verification provider. Credentials are checked when KYC is requested.
+    NIN_PROVIDER: Joi.string().valid('dojah', 'prembly').default('dojah'),
+    DOJAH_API_KEY: optionalSecret,
+    DOJAH_APP_ID: optionalSecret,
+    DOJAH_BASE_URL: Joi.string().uri().default('https://api.dojah.io'),
+    PREMBLY_API_KEY: optionalSecret,
+
     // VTpass
     VTPASS_API_KEY: Joi.string().optional(),
     VTPASS_SECRET_KEY: Joi.string().optional(),
@@ -160,8 +167,17 @@ const config = {
             publicKey: envVars.FLUTTERWAVE_PUBLIC_KEY,
             secretHash: envVars.FLUTTERWAVE_SECRET_HASH,
             encryptionKey: envVars.FLUTTERWAVE_ENCRYPTION_KEY,
-        },
+        }
+    },
 
+    kyc: {
+        nin: {
+            provider: envVars.NIN_PROVIDER,
+            dojahApiKey: envVars.DOJAH_API_KEY,
+            dojahAppId: envVars.DOJAH_APP_ID,
+            dojahBaseUrl: String(envVars.DOJAH_BASE_URL).replace(/\/+$/, ''),
+            premblyApiKey: envVars.PREMBLY_API_KEY
+        }
     },
 
     vtu: {

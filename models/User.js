@@ -51,7 +51,11 @@ const userSchema = new mongoose.Schema({
   kycData: {
     bvnEncrypted: String,
     bvnLast4: String,
-    nin: String,
+    ninEncrypted: String,
+    ninLast4: String,
+    bvnName: String,
+    bvnPhoneNumber: String,
+    bvnDateOfBirth: Date,
     idType: String,
     idNumber: String,
     idImage: String,
@@ -66,7 +70,7 @@ const userSchema = new mongoose.Schema({
 
   kycStatus: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
+    enum: ['pending', 'approved', 'rejected', 'verified', 'bvn_verified_awaiting_nin', 'bvn_verified_nin_failed'],
     default: 'pending'
   },
 
@@ -80,7 +84,14 @@ const userSchema = new mongoose.Schema({
     default: false
   },
 
+  ninVerified: {
+    type: Boolean,
+    default: false
+  },
+
   kycSubmittedAt: Date,
+  bvnVerifiedAt: Date,
+  ninVerifiedAt: Date,
   kycVerifiedAt: Date,
 
   // Wallet

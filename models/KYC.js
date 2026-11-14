@@ -20,18 +20,24 @@ const kycSchema = new mongoose.Schema({
       required: false
     },
     bvnLast4: String,
+    bvnName: String,
+    bvnPhoneNumber: String,
+    bvnDateOfBirth: Date,
     bvnVerified: {
       type: Boolean,
       default: false
     },
-    nin: {
+    ninEncrypted: {
       type: String,
       required: false
     },
+    ninLast4: String,
     ninVerified: {
       type: Boolean,
       default: false
     },
+    ninVerifiedAt: Date,
+    bvnVerifiedAt: Date,
     submittedAt: Date,
     verifiedAt: Date,
     verifiedBy: {
@@ -126,7 +132,7 @@ const kycSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ['pending', 'under_review', 'approved', 'rejected'],
+    enum: ['pending', 'under_review', 'approved', 'rejected', 'verified', 'bvn_verified_awaiting_nin', 'bvn_verified_nin_failed'],
     default: 'pending'
   },
 
@@ -149,10 +155,11 @@ kycSchema.index({ currentLevel: 1 });
 kycSchema.index({ status: 1 });
 
 // Instance methods
-kycSchema.methods.submitLevel1 = async function(bvnEncrypted, nin, bvnLast4) {
+kycSchema.methods.submitLevel1 = async function(bvnEncrypted, ninEncrypted, bvnLast4, ninLast4) {
   this.level1.bvnEncrypted = bvnEncrypted;
   this.level1.bvnLast4 = bvnLast4 || null;
-  this.level1.nin = nin;
+  this.level1.ninEncrypted = ninEncrypted;
+  this.level1.ninLast4 = ninLast4 || null;
   this.level1.submittedAt = new Date();
   this.status = 'under_review';
   return this.save();

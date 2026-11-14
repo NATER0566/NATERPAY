@@ -91,7 +91,7 @@
     <div class="tier-card active" id="kycFirstCard">
         <div class="tier-badge badge-active" id="kycFirstBadge">ACTION REQUIRED</div>
         <h4 style="color: var(--gold);"><i class="fas fa-shield-halved me-2"></i> KYC VERIFICATION</h4>
-        <p class="text-muted small mb-4">Your BVN and NIN are collected once and used to create your real Flutterwave dedicated account.</p>
+        <p class="text-muted small mb-4">Both your BVN and NIN must be automatically verified before your real Flutterwave dedicated account can be created.</p>
         <form id="kycFirstForm">
             <div class="input-group-custom">
                 <label>FULL NAME (MUST MATCH BVN)</label>
@@ -130,7 +130,7 @@
                 </div>
             </div>
             <button class="btn-submit" type="submit" id="kycVerifyButton"><i class="fas fa-check-circle me-2"></i> Verify KYC &amp; Create My Dedicated Account</button>
-            <div id="kycVerifiedNote" class="kyc-status-note text-center mt-3" style="display:none;">KYC Verified - Your dedicated account has been created</div>
+            <div id="kycVerifiedNote" class="kyc-status-note text-center mt-3" style="display:none;"></div>
         </form>
     </div>
 
@@ -585,10 +585,18 @@
             document.getElementById('kycFullName').value = data.user?.name || '';
             document.getElementById('kycPhone').value = data.user?.phoneNumber || '';
             document.getElementById('kycEmail').value = data.user?.email || '';
-            if (data.kyc?.kycVerified && data.kyc?.bvnVerified) {
+            if (data.kyc?.kycVerified && data.kyc?.bvnVerified && data.kyc?.ninVerified) {
                 document.getElementById('kycFirstBadge').textContent = 'COMPLETED';
                 document.getElementById('kycFirstBadge').className = 'tier-badge badge-completed';
                 document.getElementById('kycVerifyButton').style.display = 'none';
+                document.getElementById('kycVerifiedNote').textContent = 'KYC Verified - BVN and NIN Verified - Your dedicated account has been created';
+                document.getElementById('kycVerifiedNote').style.display = 'block';
+            } else if (data.kyc?.bvnVerified) {
+                document.getElementById('kycFirstBadge').textContent = 'PENDING / NOT FULLY VERIFIED';
+                document.getElementById('kycFirstBadge').className = 'tier-badge badge-pending';
+                document.getElementById('kycVerifiedNote').textContent = data.kyc.status === 'bvn_verified_awaiting_nin'
+                    ? 'Pending / Not Fully Verified - Awaiting NIN verification'
+                    : 'Pending / Not Fully Verified - Both BVN and NIN must be verified';
                 document.getElementById('kycVerifiedNote').style.display = 'block';
             }
         }
@@ -611,10 +619,11 @@
                 });
                 const data = await response.json();
                 if (!response.ok || !data.success) throw new Error(data.message || 'KYC verification failed.');
-                await Swal.fire({ icon: 'success', title: 'KYC Verified', text: 'KYC Verified - Your dedicated account has been created', background: '#111', color: '#fff', confirmButtonColor: '#d4af37' });
+                await Swal.fire({ icon: 'success', title: 'KYC Verified', text: 'KYC Verified - BVN and NIN Verified - Your dedicated account has been created', background: '#111', color: '#fff', confirmButtonColor: '#d4af37' });
                 document.getElementById('kycFirstBadge').textContent = 'COMPLETED';
                 document.getElementById('kycFirstBadge').className = 'tier-badge badge-completed';
                 document.getElementById('kycVerifyButton').style.display = 'none';
+                document.getElementById('kycVerifiedNote').textContent = 'KYC Verified - BVN and NIN Verified - Your dedicated account has been created';
                 document.getElementById('kycVerifiedNote').style.display = 'block';
             } catch (error) {
                 await Swal.fire({ icon: 'error', title: 'Verification Failed', text: error.message, background: '#111', color: '#fff', confirmButtonColor: '#d4af37' });

@@ -145,12 +145,12 @@ async function getWallet(req, reply) {
 
 async function createDedicatedAccountForUser(userId) {
     const [user, wallet] = await Promise.all([
-        User.findById(userId).select('email name phoneNumber kycVerified bvnVerified kycData'),
+        User.findById(userId).select('email name phoneNumber kycVerified bvnVerified ninVerified kycData'),
         Wallet.findOne({ user: userId })
     ]);
     if (!user || !wallet) throw Object.assign(new Error('Wallet not found.'), { status: 404 });
-    if (!user.kycVerified || !user.bvnVerified) {
-        throw Object.assign(new Error('Complete your KYC to get your dedicated account.'), { status: 403 });
+    if (!user.kycVerified || !user.bvnVerified || !user.ninVerified) {
+        throw Object.assign(new Error('Complete your KYC - Both BVN and NIN must be verified'), { status: 403 });
     }
 
     const existing = wallet.virtualAccount;
@@ -186,10 +186,10 @@ async function createDedicatedAccountForUser(userId) {
 
 async function getVirtualAccount(req, reply) {
     try {
-        const user = await User.findById(userIdOf(req)).select('kycVerified bvnVerified');
+        const user = await User.findById(userIdOf(req)).select('kycVerified bvnVerified ninVerified');
         if (!user) return fail(reply, 404, 'Wallet not found.');
-        if (!user.kycVerified || !user.bvnVerified) {
-            return fail(reply, 403, 'Complete your KYC to get your dedicated account.');
+        if (!user.kycVerified || !user.bvnVerified || !user.ninVerified) {
+            return fail(reply, 403, 'Complete your KYC - Both BVN and NIN must be verified');
         }
         const virtualAccount = await createDedicatedAccountForUser(userIdOf(req));
         return reply.send({ success: true, virtualAccount });

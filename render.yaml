@@ -17,10 +17,6 @@ services:
         sync: false
       - key: JWT_REFRESH_SECRET
         sync: false
-      - key: PAYSTACK_SECRET_KEY
-        sync: false
-      - key: PAYSTACK_PUBLIC_KEY
-        sync: false
       - key: FLUTTERWAVE_SECRET_KEY
         sync: false
       - key: FLUTTERWAVE_PUBLIC_KEY
@@ -28,6 +24,12 @@ services:
       - key: FLUTTERWAVE_SECRET_HASH
         sync: false
       - key: FLUTTERWAVE_ENCRYPTION_KEY
+        sync: false
+      - key: NIN_PROVIDER
+        value: dojah
+      - key: DOJAH_API_KEY
+        sync: false
+      - key: DOJAH_APP_ID
         sync: false
       - key: MONNIFY_SECRET_KEY
         sync: false

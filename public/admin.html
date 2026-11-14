@@ -954,8 +954,8 @@
         try {
             const k = JSON.parse(decodeURIComponent(encodedData));
             let bvnSection = '';
-            if (k.level1 && (k.level1.bvn || k.level1.nin)) {
-                bvnSection = `<h6 class="text-gold mt-3 border-bottom border-secondary pb-1"><i class="fas fa-fingerprint"></i> Identity Numbers</h6>${k.level1.bvn ? `<p class="mb-1 text-white"><strong class="text-secondary">BVN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">${k.level1.bvn}</span></p>` : ''}${k.level1.nin ? `<p class="mb-1 text-white"><strong class="text-secondary">NIN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">${k.level1.nin}</span></p>` : ''}`;
+            if (k.level1 && (k.level1.bvnLast4 || k.level1.ninLast4)) {
+                bvnSection = `<h6 class="text-gold mt-3 border-bottom border-secondary pb-1"><i class="fas fa-fingerprint"></i> Identity Numbers</h6>${k.level1.bvnLast4 ? `<p class="mb-1 text-white"><strong class="text-secondary">BVN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">******${k.level1.bvnLast4}</span></p>` : ''}${k.level1.ninLast4 ? `<p class="mb-1 text-white"><strong class="text-secondary">NIN:</strong> <span class="fs-5 fw-bold" style="letter-spacing: 2px;">*******${k.level1.ninLast4}</span></p>` : ''}`;
             }
 
             let docSection = '';
